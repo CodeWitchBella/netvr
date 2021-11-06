@@ -1,7 +1,8 @@
 using UnityEngine;
-using UnityEngine.InputSystem.XR;
 using GLTFast;
 using System.Threading.Tasks;
+using UnityEngine.XR;
+using System.Collections.Generic;
 
 public class XRTrackedController : MonoBehaviour
 {
@@ -13,7 +14,8 @@ public class XRTrackedController : MonoBehaviour
     {
         if (info == null)
         {
-            Debug.LogError(string.Format("Unknown controller \"{0}\"", controllerName));
+            if (controllerName != "none")
+                Debug.LogError(string.Format("Unknown controller \"{0}\"", controllerName));
             return null;
         }
 
@@ -28,16 +30,14 @@ public class XRTrackedController : MonoBehaviour
         return gltf;
     }
 
-    async void InitializeIfNeeded(XRController controller)
+    async void InitializeIfNeeded(string currentName)
     {
-        var currentName = controller?.name ?? "none";
         if (currentName == _initializedControllerName) return;
         _initializedControllerName = currentName;
 
-        var builder = TrackedObjectModel.GetInfo(controllerName: controller.name, leftHand: LeftHand);
-        var gltf = await LoadModel(builder, controller.name);
+        var builder = TrackedObjectModel.GetInfo(deviceName: currentName, leftHand: LeftHand);
+        var gltf = await LoadModel(builder, currentName);
 
-        // cleanup after we loaded model, but also if no model was found
         for (var i = 0; i < transform.childCount; ++i)
             Destroy(transform.GetChild(i).gameObject);
 
@@ -45,10 +45,10 @@ public class XRTrackedController : MonoBehaviour
         {
             gltf.InstantiateMainScene(transform);
             var model = transform.GetChild(0);
-            var parent = model.parent;
-            var root = model.GetChild(0);
-            root.parent = parent;
+            var root = model.Find(builder.RootNode);
+            root.parent = transform;
             Destroy(model.gameObject);
+
             root.localPosition = builder.Position;
             root.localEulerAngles = builder.Rotation;
         }
@@ -56,12 +56,30 @@ public class XRTrackedController : MonoBehaviour
 
     void Update()
     {
-        var controller = LeftHand ? XRController.leftHand : XRController.rightHand;
-        InitializeIfNeeded(controller);
-        if (controller == null) return;
+        var devices = new List<InputDevice>();
+        if (LeftHand) InputDevices.GetDevicesAtXRNode(XRNode.LeftHand, devices);
+        else InputDevices.GetDevicesAtXRNode(XRNode.RightHand, devices);
 
-        var pos = controller.devicePosition.ReadValue();
-        var rot = controller.deviceRotation.ReadValue();
+        if (devices.Count < 1)
+        {
+            InitializeIfNeeded("none");
+            return;
+        }
+        var device = devices[0];
+        InitializeIfNeeded(device.name);
+
+        // SteamVR with Quest 2 Link: Primary2DAxis Grip GripButton Menu PrimaryButton PrimaryTouch SecondaryButton SecondaryTouch Trigger TriggerButton TriggerTouch Primary2DAxisClick Primary2DAxisTouch IsTracked TrackingState DevicePosition DeviceRotation DeviceVelocity DeviceAngularVelocity IsTracked TrackingState PointerPosition PointerRotation PointerVelocity PointerAngularVelocity
+        /*var featureUsages = new List<InputFeatureUsage>();
+        if (device.TryGetFeatureUsages(featureUsages))
+        {
+            string list = string.Join(" ", featureUsages.ConvertAll((usage) => usage.name));
+            Debug.Log(list);
+        }*/
+
+        Vector3 pos;
+        device.TryGetFeatureValue(new InputFeatureUsage<Vector3>("DevicePosition"), out pos);
+        Quaternion rot;
+        device.TryGetFeatureValue(new InputFeatureUsage<Quaternion>("DeviceRotation"), out rot);
 
         gameObject.transform.localPosition = pos;
         gameObject.transform.localRotation = rot;
