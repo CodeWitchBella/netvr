@@ -39,13 +39,13 @@ sealed class TrackedObjectModel
                 ),
                 new TrackedObjectModel("Oculus Touch Controller OpenXR", "oculus-touch-v3", "left.glb",
                     hand: ControllerHand.LEFT,
-                    position: new Vector3(-0.0074f,-0.00340000005f,-0.0755999982f),
-                    rotation: new Vector3(5.41097164f,181.338409f,0.173849955f),
+                    position: new Vector3(0.00630000001f,-0.00419999985f,0.0223999992f),
+                    rotation: new Vector3(346.88382f, 360f - 173.581345f, 360f - 359.492523f),
                     rootNode: "root"),
                 new TrackedObjectModel("Oculus Touch Controller OpenXR", "oculus-touch-v3", "right.glb",
                     hand: ControllerHand.RIGHT,
-                    position: new Vector3(0.00639999984f,-0.00350000011f,-0.0759000033f),
-                    rotation: new Vector3(5.41301298f, 178.543762f, 359.910217f),
+                    position: new Vector3(-0.0055999998f,-0.00499999989f,0.0187999997f),
+                    rotation: new Vector3(346.88382f,173.581345f,359.492523f),
                     rootNode: "root")
             };
         }
