@@ -4,7 +4,7 @@ using System.Threading.Tasks;
 using UnityEngine.XR;
 using System.Collections.Generic;
 
-public class XRTrackedController : MonoBehaviour
+public class IsblTrackedPoseDriver : MonoBehaviour
 {
     public bool LeftHand = true;
 
@@ -37,7 +37,7 @@ public class XRTrackedController : MonoBehaviour
         InitializeIfNeeded();
     }
 
-    static async Task<GltfImport> LoadModel(TrackedObjectModel info, string controllerName)
+    static async Task<GltfImport> LoadModel(IsblDeviceModel info, string controllerName)
     {
         if (info == null)
         {
@@ -77,7 +77,7 @@ public class XRTrackedController : MonoBehaviour
         _device = device;
 
         // load model
-        var builder = TrackedObjectModel.GetInfo(deviceName: device.Device.name, leftHand: LeftHand);
+        var builder = IsblDeviceModel.GetInfo(deviceName: device.Device.name, leftHand: LeftHand);
         var gltf = await LoadModel(builder, device.Device.name);
 
         // check for disconnect/reconnect in the mean time
