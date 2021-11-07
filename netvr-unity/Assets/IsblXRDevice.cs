@@ -1,4 +1,3 @@
-using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.XR;
@@ -37,56 +36,105 @@ public class IsblXRDevice
 {
     public InputDevice Device { get; }
 
-    InputFeatureUsage<Vector3> _deviceAngularVelocity;
+    InputFeatureUsage<Vector3>? _deviceAngularVelocity;
     public Vector3 DeviceAngularVelocity { get { return Read(_deviceAngularVelocity); } }
-    InputFeatureUsage<Vector3> _devicePosition;
+    InputFeatureUsage<Vector3>? _devicePosition;
     public Vector3 DevicePosition { get { return Read(_devicePosition); } }
-    InputFeatureUsage<Quaternion> _deviceRotation;
+    InputFeatureUsage<Quaternion>? _deviceRotation;
     public Quaternion DeviceRotation { get { return Read(_deviceRotation); } }
-    InputFeatureUsage<Vector3> _deviceVelocity;
+    InputFeatureUsage<Vector3>? _deviceVelocity;
     public Vector3 DeviceVelocity { get { return Read(_deviceVelocity); } }
-    InputFeatureUsage<float> _grip;
+    InputFeatureUsage<float>? _grip;
     public float Grip { get { return Read(_grip); } }
-    InputFeatureUsage<bool> _gripButton;
+    InputFeatureUsage<bool>? _gripButton;
     public bool GripButton { get { return Read(_gripButton); } }
-    InputFeatureUsage<bool> _isTracked;
+    InputFeatureUsage<bool>? _isTracked;
     public bool IsTracked { get { return Read(_isTracked); } }
     // Note: I merged Oculus Touch's MenuButton and Vive's Menu into MenuButton only
-    InputFeatureUsage<bool> _menuButton;
+    InputFeatureUsage<bool>? _menuButton;
     public bool MenuButton { get { return Read(_menuButton); } }
-    InputFeatureUsage<Vector3> _pointerAngularVelocity;
+    InputFeatureUsage<Vector3>? _pointerAngularVelocity;
     public Vector3 PointerAngularVelocity { get { return Read(_pointerAngularVelocity); } }
-    InputFeatureUsage<Vector3> _pointerPosition;
+    InputFeatureUsage<Vector3>? _pointerPosition;
     public Vector3 PointerPosition { get { return Read(_pointerPosition); } }
-    InputFeatureUsage<Quaternion> _pointerRotation;
+    InputFeatureUsage<Quaternion>? _pointerRotation;
     public Quaternion PointerRotation { get { return Read(_pointerRotation); } }
-    InputFeatureUsage<Vector3> _pointerVelocity;
+    InputFeatureUsage<Vector3>? _pointerVelocity;
     public Vector3 PointerVelocity { get { return Read(_pointerVelocity); } }
-    InputFeatureUsage<Vector2> _primary2DAxis;
+    InputFeatureUsage<Vector2>? _primary2DAxis;
     public Vector2 Primary2DAxis { get { return Read(_primary2DAxis); } }
-    InputFeatureUsage<bool> _primary2DAxisClick;
+    InputFeatureUsage<bool>? _primary2DAxisClick;
     public bool Primary2DAxisClick { get { return Read(_primary2DAxisClick); } }
-    InputFeatureUsage<bool> _primary2DAxisTouch;
+    InputFeatureUsage<bool>? _primary2DAxisTouch;
     public bool Primary2DAxisTouch { get { return Read(_primary2DAxisTouch); } }
-    InputFeatureUsage<bool> _primaryButton;
-    public bool PrimaryButton { get { return Read(_primaryButton); } }
-    InputFeatureUsage<bool> _primaryTouch;
-    public bool PrimaryTouch { get { return Read(_primaryTouch); } }
-    InputFeatureUsage<bool> _secondaryButton;
-    public bool SecondaryButton { get { return Read(_secondaryButton); } }
-    InputFeatureUsage<bool> _secondaryTouch;
-    public bool SecondaryTouch { get { return Read(_secondaryTouch); } }
-    InputFeatureUsage<bool> _systemButton;
-    public bool SystemButton { get { return Read(_systemButton); } }
-    InputFeatureUsage<uint> _trackingState;
+    InputFeatureUsage<bool>? _primaryButton;
+    public bool PrimaryButton
+    {
+        get
+        {
+            if (_primaryButton == null) return false; // button is not there, it can't be pressed
+            return Read(_primaryButton);
+        }
+    }
+    public bool PrimaryButtonAvailable { get { return _primaryButton != null; } }
+    InputFeatureUsage<bool>? _primaryTouch;
+    public bool PrimaryTouch
+    {
+        get
+        {
+            if (_primaryTouch == null) return false; // button is not there, it can't be touched
+            return Read(_primaryTouch);
+        }
+    }
+    public bool PrimaryTouchAvailable { get { return _primaryTouch != null; } }
+    InputFeatureUsage<bool>? _secondaryButton;
+    public bool SecondaryButton
+    {
+        get
+        {
+            if (_secondaryButton == null) return false; // button is not there, it can't be pressed
+            return Read(_secondaryButton);
+        }
+    }
+    public bool SecondaryButtonAvailable { get { return _secondaryButton != null; } }
+    InputFeatureUsage<bool>? _secondaryTouch;
+    public bool SecondaryTouch
+    {
+        get
+        {
+            if (_secondaryTouch == null) return false; // button is not there, it can't be touched
+            return Read(_secondaryTouch);
+        }
+    }
+    public bool SecondaryTouchAvailable { get { return _secondaryTouch != null; } }
+    InputFeatureUsage<bool>? _systemButton;
+    public bool SystemButton
+    {
+        get
+        {
+            if (_systemButton == null) return false; // button is not there, it can't be pressed
+            return Read(_systemButton);
+        }
+    }
+    public bool SystemButtonAvailable { get { return _systemButton != null; } }
+    InputFeatureUsage<uint>? _trackingState;
     public uint TrackingState { get { return Read(_trackingState); } }
-    InputFeatureUsage<float> _trigger;
+    InputFeatureUsage<float>? _trigger;
     public float Trigger { get { return Read(_trigger); } }
-    InputFeatureUsage<bool> _triggerButton;
+    InputFeatureUsage<bool>? _triggerButton;
     public bool TriggerButton { get { return Read(_triggerButton); } }
-    InputFeatureUsage<bool> _triggerTouch;
-    public bool TriggerTouch { get { return Read(_triggerTouch); } }
-    // ADD_FEATURE step 1: two lines above this line
+    InputFeatureUsage<bool>? _triggerTouch;
+    public bool TriggerTouch
+    {
+        get
+        {
+            // emulate using "slightly pressed trigger"
+            if (_triggerTouch == null && _trigger != null) return Read(_trigger) > 0;
+            return Read(_triggerTouch);
+        }
+    }
+    public bool TriggerTouchAvailable { get { return _triggerTouch != null; } }
+    // ADD_FEATURE step 1: two to three lines above this line
     public IsblXRDevice(InputDevice device)
     {
         Device = device;

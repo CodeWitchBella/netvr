@@ -3,15 +3,31 @@ using GLTFast;
 using System.Threading.Tasks;
 using UnityEngine.XR;
 using System.Collections.Generic;
+using System;
+using System.Diagnostics.CodeAnalysis;
 
 public class IsblTrackedPoseDriver : MonoBehaviour
 {
     public XRNode Node = XRNode.LeftHand;
 
-    IsblXRDevice _device;
+    public IsblXRDevice Device { get; private set; }
+
+#if UNITY_EDITOR
+    public class SelfPropertyAttribute : PropertyAttribute { };
+    [SuppressMessage("Its a hack", "RCS1213")]
+    [SuppressMessage("Its a hack", "IDE0052")]
+    [SuppressMessage("Its a hack", "RCS1169")]
+    [SuppressMessage("Its a hack", "IDE0044")]
+    [SerializeField]
+    [SelfPropertyAttribute]
+    IsblTrackedPoseDriver _displayedDevice;
+#endif
 
     void OnEnable()
     {
+#if UNITY_EDITOR
+        _displayedDevice = this;
+#endif
         InputDevices.deviceConnected += DeviceConnected;
         InputDevices.deviceDisconnected += DeviceDisconnected;
         Cleanup();
@@ -27,13 +43,13 @@ public class IsblTrackedPoseDriver : MonoBehaviour
 
     void DeviceDisconnected(InputDevice obj)
     {
-        if (_device?.Device == obj) Cleanup();
+        if (Device?.Device == obj) Cleanup();
         InitializeIfNeeded();
     }
 
     void DeviceConnected(InputDevice obj)
     {
-        if (_device != null) return; // device already connected
+        if (Device != null) return; // device already connected
         InitializeIfNeeded();
     }
 
@@ -59,28 +75,28 @@ public class IsblTrackedPoseDriver : MonoBehaviour
 
     void Cleanup()
     {
-        _device = null;
+        Device = null;
         for (var i = 0; i < transform.childCount; ++i)
             Destroy(transform.GetChild(i).gameObject);
     }
 
     async void InitializeIfNeeded()
     {
-        if (_device != null) return; // not needed
+        if (Device != null) return; // not needed
 
         // get device
         var devices = new List<InputDevice>();
         InputDevices.GetDevicesAtXRNode(Node, devices);
         if (devices.Count < 1) return;
         var device = new IsblXRDevice(devices[0]);
-        _device = device;
+        Device = device;
 
         // load model
         var builder = IsblDeviceModel.GetInfo(deviceName: device.Device.name, node: Node);
         var gltf = await LoadModel(builder, device.Device.name);
 
         // check for disconnect/reconnect in the mean time
-        if (device != _device) return;
+        if (device != Device) return;
 
         // instantiate model
         if (gltf != null)
@@ -98,8 +114,8 @@ public class IsblTrackedPoseDriver : MonoBehaviour
 
     void Update()
     {
-        if (_device == null) return;
-        gameObject.transform.localPosition = _device.DevicePosition;
-        gameObject.transform.localRotation = _device.DeviceRotation;
+        if (Device == null) return;
+        gameObject.transform.localPosition = Device.DevicePosition;
+        gameObject.transform.localRotation = Device.DeviceRotation;
     }
 }
