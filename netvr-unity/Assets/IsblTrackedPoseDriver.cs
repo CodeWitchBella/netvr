@@ -6,7 +6,7 @@ using System.Collections.Generic;
 
 public class IsblTrackedPoseDriver : MonoBehaviour
 {
-    public bool LeftHand = true;
+    public XRNode Node = XRNode.LeftHand;
 
     IsblXRDevice _device;
 
@@ -70,14 +70,13 @@ public class IsblTrackedPoseDriver : MonoBehaviour
 
         // get device
         var devices = new List<InputDevice>();
-        if (LeftHand) InputDevices.GetDevicesAtXRNode(XRNode.LeftHand, devices);
-        else InputDevices.GetDevicesAtXRNode(XRNode.RightHand, devices);
+        InputDevices.GetDevicesAtXRNode(Node, devices);
         if (devices.Count < 1) return;
         var device = new IsblXRDevice(devices[0]);
         _device = device;
 
         // load model
-        var builder = IsblDeviceModel.GetInfo(deviceName: device.Device.name, leftHand: LeftHand);
+        var builder = IsblDeviceModel.GetInfo(deviceName: device.Device.name, node: Node);
         var gltf = await LoadModel(builder, device.Device.name);
 
         // check for disconnect/reconnect in the mean time
@@ -99,6 +98,7 @@ public class IsblTrackedPoseDriver : MonoBehaviour
 
     void Update()
     {
+        if (_device == null) return;
         gameObject.transform.localPosition = _device.DevicePosition;
         gameObject.transform.localRotation = _device.DeviceRotation;
     }

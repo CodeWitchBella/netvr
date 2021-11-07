@@ -1,5 +1,6 @@
 using System.IO;
 using UnityEngine;
+using UnityEngine.XR;
 
 sealed class IsblDeviceModel
 {
@@ -26,7 +27,7 @@ sealed class IsblDeviceModel
 
     static IsblDeviceModel[] _database;
 
-    public static IsblDeviceModel GetInfo(string deviceName, bool leftHand)
+    public static IsblDeviceModel GetInfo(string deviceName, XRNode node)
     {
         if (_database == null)
         {
@@ -50,9 +51,14 @@ sealed class IsblDeviceModel
             };
         }
 
+        bool isLeft = node == XRNode.LeftHand;
+        bool isRight = node == XRNode.RightHand;
+
         foreach (var info in _database)
         {
-            var correctHand = info.Hand == ControllerHand.BOTH || (leftHand == (info.Hand == ControllerHand.LEFT));
+            var correctHand = (info.Hand == ControllerHand.BOTH && (isLeft || isRight))
+                || (isLeft && info.Hand == ControllerHand.LEFT)
+                || (isRight && info.Hand == ControllerHand.RIGHT);
             if (correctHand && deviceName == info.Name)
             {
                 return info;
