@@ -13,8 +13,13 @@ charset = utf-8
 trim_trailing_whitespace = false
 insert_final_newline = false
 
+[*.{js,ts}]
+indent_size = 2
+insert_final_newline = true
+
 
 [*.cs]
+insert_final_newline = true
 # do not warn about unused Update etc. Also doubles as typo check, because if
 # there is a typo it will warn that method is unused :-)
 roslynator.RCS1213.suppress_unity_script_methods = true
