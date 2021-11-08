@@ -4,10 +4,10 @@ using UnityEditor;
 [CustomPropertyDrawer(typeof(IsblTrackedPoseDriver.SelfPropertyAttribute))]
 public class IsblXRDeviceDrawer : PropertyDrawer
 {
-    const float lineHeight = 20;
+    const float LineHeight = 20;
     public override float GetPropertyHeight(SerializedProperty property, GUIContent label)
     {
-        return lineHeight * 24;
+        return LineHeight * 24;
     }
 
     public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
@@ -19,7 +19,7 @@ public class IsblXRDeviceDrawer : PropertyDrawer
         void DrawLine(string text, string text2 = "")
         {
             EditorGUI.LabelField(new Rect(position.x, y, position.width, 20), text, text2);
-            y += lineHeight;
+            y += LineHeight;
         };
         void DrawField<T>(string name, T value, bool native = true)
         {
