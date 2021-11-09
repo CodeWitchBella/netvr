@@ -14,20 +14,13 @@ public class IsblTrackedPoseDriver : MonoBehaviour
 
 #if UNITY_EDITOR
     public class SelfPropertyAttribute : PropertyAttribute { };
-    [SuppressMessage("Its a hack", "RCS1213")]
-    [SuppressMessage("Its a hack", "IDE0052")]
-    [SuppressMessage("Its a hack", "RCS1169")]
-    [SuppressMessage("Its a hack", "IDE0044")]
     [SerializeField]
-    [SelfPropertyAttribute]
-    IsblTrackedPoseDriver _displayedDevice;
+    [SelfProperty]
+    public GameObject Hack;
 #endif
 
     void OnEnable()
     {
-#if UNITY_EDITOR
-        _displayedDevice = this;
-#endif
         InputDevices.deviceConnected += DeviceConnected;
         InputDevices.deviceDisconnected += DeviceDisconnected;
         Cleanup();

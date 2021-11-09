@@ -20,12 +20,11 @@ public class IsblXRDeviceDrawer : PropertyDrawer
         {
             EditorGUI.LabelField(new Rect(position.x, y, position.width, 20), text, text2);
             y += LineHeight;
-        };
+        }
         void DrawField<T>(string name, T value, bool native = true)
         {
             DrawLine(name, $"{value}{(native ? "" : " (emulated)")}");
-        };
-
+        }
 
         EditorGUI.BeginProperty(position, label, property);
         if (go == null)

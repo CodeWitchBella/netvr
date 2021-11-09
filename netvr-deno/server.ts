@@ -43,6 +43,7 @@ function addPeerAndCleanup(peer: Deno.NetAddr, timestamp: number) {
     if (
       peer.hostname === existingPeer.hostname && peer.port === existingPeer.port
     ) {
+      existingPeer.timestamp = timestamp;
       exists = true;
     }
   }
