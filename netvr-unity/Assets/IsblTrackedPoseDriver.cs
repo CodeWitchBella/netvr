@@ -16,11 +16,14 @@ public class IsblTrackedPoseDriver : MonoBehaviour
     public class SelfPropertyAttribute : PropertyAttribute { };
     [SerializeField]
     [SelfProperty]
-    public GameObject Hack;
+    public IsblTrackedPoseDriver EditorOnly;
 #endif
 
     void OnEnable()
     {
+#if UNITY_EDITOR
+        EditorOnly = this;
+#endif
         InputDevices.deviceConnected += DeviceConnected;
         InputDevices.deviceDisconnected += DeviceDisconnected;
         Cleanup();
