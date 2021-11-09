@@ -67,4 +67,6 @@ async function handleRequest(data: Uint8Array, peer: Deno.NetAddr) {
   addPeerAndCleanup(peer, Date.now());
   console.log("new request", data, peer);
   console.log("peers", peers);
+
+  await socket.send(new TextEncoder().encode("abcd"), peer);
 }
