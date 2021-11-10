@@ -116,10 +116,40 @@ async function handleUdpRequest(data: Uint8Array, peer: Deno.NetAddr) {
  */
 async function handleTcpConnection(conn: Deno.Conn) {
   conn.write(new TextEncoder().encode(JSON.stringify({ type: "hello" })));
+  let remainingData = new Uint8Array(0);
   const buffer = new Uint8Array(2048);
+  const textDecoder = new TextDecoder("utf-8");
+
   while (true) {
     const length = await conn.read(buffer);
     if (length === null) return;
-    console.log("tcp message:", buffer.slice(0, length));
+
+    remainingData = concat(remainingData, buffer.subarray(0, length));
+    console.log(remainingData);
+    while (remainingData.length > 4) {
+      const view = new DataView(
+        remainingData.buffer,
+        remainingData.byteOffset,
+        remainingData.byteLength,
+      );
+      const stringLength = view.getUint32(0, true);
+      if (remainingData.byteLength < stringLength + 4) break;
+
+      const message = textDecoder.decode(
+        remainingData.subarray(4, stringLength + 4),
+      );
+      console.log(message);
+      remainingData = remainingData.subarray(stringLength + 4);
+    }
   }
+}
+
+/**
+ * Concatenates two TypedArrays into a third, newly allocated one
+ */
+function concat(a: ArrayLike<number>, b: ArrayLike<number>) {
+  const res = new Uint8Array(a.length + b.length);
+  res.set(a);
+  res.set(b, a.length);
+  return res;
 }

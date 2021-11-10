@@ -53,19 +53,27 @@ class ReconnectingTcpClient : IDisposable
     /// </summary>
     public void QueueBytes(byte[] bytes)
     {
-        _task = _task.ContinueWith(async (prevTask) =>
+        _task = QueueBytesImpl(_task, bytes);
+    }
+
+    /// <summary>
+    /// Implementation of QueueBytes - first awaits previous task and then sends
+    /// data. Returns resulting Task to be awaited before next sending.
+    /// </summary>
+    async Task QueueBytesImpl(Task prev, byte[] bytes)
+    {
+        try { await prev; }
+        catch (Exception e) { Debug.LogError(e); }
+
+        await EnsureConnected();
+        try
         {
-            if (prevTask.Exception != null) Debug.LogError(prevTask.Exception);
-            await EnsureConnected();
-            try
-            {
-                await _client.GetStream().WriteAsync(bytes);
-            }
-            catch (Exception e)
-            {
-                Debug.LogError(e);
-            }
-        });
+            await _client.GetStream().WriteAsync(bytes);
+        }
+        catch (Exception e)
+        {
+            Debug.LogError(e);
+        }
     }
 
     public void Dispose()
