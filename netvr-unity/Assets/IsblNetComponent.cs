@@ -19,17 +19,10 @@ public class IsblNetComponent : MonoBehaviour
     /// </summary>
     public static IsblNet Instance
     {
-        get
-        {
-            if (_instance?._net == null) IsblNet.EnsureInstanceExists();
-            return _instance._net;
-        }
+        get { return _instance._net; }
         set
         {
-            if (_instance == null)
-            {
-                _instance = FindObjectOfType<IsblNetComponent>();
-            }
+            if (_instance == null) _instance = FindObjectOfType<IsblNetComponent>();
 
             if (_instance == null)
             {
@@ -44,12 +37,13 @@ public class IsblNetComponent : MonoBehaviour
             _instance._net = value;
         }
     }
-    public static bool InstanceExists { get { return _instance != null; } }
+    public static bool InstanceExists { get { return _instance?._net != null; } }
     void Start()
     {
         if (_instance == null)
         {
             _instance = this;
+            IsblNet.EnsureInstanceExists();
         }
         else if (_instance != this)
         {
@@ -63,7 +57,7 @@ public class IsblNetComponent : MonoBehaviour
 
     void OnDestroy()
     {
-        _net.Dispose();
+        _net?.Dispose();
         _net = null;
     }
 

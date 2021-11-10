@@ -24,7 +24,8 @@ public class IsblNetDrawer : PropertyDrawer
         EditorGUI.BeginProperty(position, label, property);
         if (net == null)
         {
-            DrawLine("Couldn't find IsblNet.");
+            DrawLine("IsblNet is not active.");
+            DrawLine("ServerPort", IsblNet.ServerPort.ToString());
         }
         else
         {
