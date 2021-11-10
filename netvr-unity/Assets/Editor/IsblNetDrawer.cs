@@ -30,6 +30,8 @@ public class IsblNetDrawer : PropertyDrawer
         else
         {
             DrawLine("ServerPort", IsblNet.ServerPort.ToString());
+            Debug.Log(net);
+            DrawLine("TcpConnected", net.TcpConnected ? "Yes" : "No");
         }
         EditorGUI.EndProperty();
     }

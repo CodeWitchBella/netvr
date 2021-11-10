@@ -1,9 +1,7 @@
 using System;
-using System.Collections.Generic;
-using System.Linq;
-using System.Net;
 using System.Net.Sockets;
 using System.Text;
+using Newtonsoft.Json;
 using UnityEngine;
 
 /// <summary>
@@ -27,15 +25,36 @@ public sealed class IsblNet : IDisposable
     public static IsblNet Instance { get { EnsureInstanceExists(); return IsblNetComponent.Instance; } }
 
     public const int ServerPort = 10000;
+    public const string ServerHost = "127.0.0.1";
     readonly UdpClient _client;
+    readonly ReconnectingTcpClient _tcp;
+    public bool TcpConnected => _tcp.Connected;
 
     /// <summary>Private constructor. Only place where this is called is from
     /// EnsureInstanceExists and that only happens if other instance does not
     /// exist already.</summary>
     IsblNet()
     {
-        _client = new UdpClient("127.0.0.1", ServerPort);
+        _client = new UdpClient(ServerHost, ServerPort);
+        _tcp = new ReconnectingTcpClient(ServerHost, ServerPort);
+
         UDPTest();
+        TCPSend(new { type = "hello" });
+        TCPSend(new { type = "hello world" });
+    }
+
+    /// <summary>
+    /// Sends JSON-formatted message via reliable connection of TCP channel.
+    /// Do not use for time-critical updates.
+    /// </summary>
+    public void TCPSend(object data)
+    {
+        // the 1234 pre-creates space for 4byte size information
+        // this skips extra copy and avoids sending packet just with size
+        // could probably be done better but this works ¯\_(ツ)_/¯ 🤷‍♀️
+        var jsonBytes = Encoding.UTF8.GetBytes("1234" + JsonConvert.SerializeObject(data) + "\n");
+        BitConverter.TryWriteBytes(jsonBytes, jsonBytes.Length - 4);
+        _tcp.QueueBytes(jsonBytes);
     }
 
     async void UDPTest()
@@ -52,5 +71,6 @@ public sealed class IsblNet : IDisposable
     public void Dispose()
     {
         _client.Dispose();
+        _tcp.Dispose();
     }
 }

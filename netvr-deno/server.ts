@@ -4,9 +4,12 @@
  * Example invocation:
  * $ deno run --unstable --allow-net --watch server.ts
  */
+import { iterateReader } from "https://deno.land/std@0.114.0/streams/conversion.ts";
 
-const socket = Deno.listenDatagram({ port: 10000, transport: "udp" });
-console.log(socket.addr);
+const port = 10_000;
+const udp = Deno.listenDatagram({ port, transport: "udp" });
+const tcp = Deno.listen({ port, transport: "tcp" });
+console.log(udp.addr);
 
 /**
  * Global list of recently connected peers to which we want to send updates
@@ -17,13 +20,48 @@ let peers = new Set<{
   port: number;
 }>();
 
-for await (const [data, peer] of socket) {
-  if (peer.transport === "udp") {
-    handleRequest(data, peer).catch((e) => {
+Promise.all([
+  listenTcp(handleTcpConnection),
+  listenUdp(handleUdpRequest),
+])
+  .catch((e) => {
+    // something failed spectacularly bad, do not attempt to recover and quit instead
+    console.error(e);
+    Deno.exit(1);
+  });
+
+/**
+ * Listen to messages on UDP server port
+ */
+async function listenUdp(
+  // deno-lint-ignore no-explicit-any
+  handler: (data: Uint8Array, peer: Deno.NetAddr) => any,
+) {
+  for await (const [data, peer] of udp) {
+    if (peer.transport === "udp") {
+      Promise.resolve(handler(data, peer)).catch((e) => {
+        console.error(e);
+      });
+    } else {
+      console.warn("Recieved message with unexpected transport", peer);
+    }
+  }
+}
+
+/**
+ * Listen to messages on UDP server port
+ */
+async function listenTcp(
+  // deno-lint-ignore no-explicit-any
+  handler: (conn: Deno.Conn) => Promise<any>,
+) {
+  for await (const connection of tcp) {
+    handler(connection).catch((e) => {
       console.error(e);
+    }).then(function _finally() {
+      // close the connection upon handleTcpConnection finishing
+      connection.close();
     });
-  } else {
-    console.warn("Recieved message with unexpected transport", peer);
   }
 }
 
@@ -63,11 +101,25 @@ function addPeerAndCleanup(peer: Deno.NetAddr, timestamp: number) {
  * @param data binary incoming data
  * @param peer information about peer which sent the data
  */
-// deno-lint-ignore require-await
-async function handleRequest(data: Uint8Array, peer: Deno.NetAddr) {
+async function handleUdpRequest(data: Uint8Array, peer: Deno.NetAddr) {
   addPeerAndCleanup(peer, Date.now());
   console.log("new request", data, peer);
   console.log("peers", peers);
 
-  await socket.send(new TextEncoder().encode("abcd"), peer);
+  await udp.send(new TextEncoder().encode("abcd"), peer);
+}
+
+/**
+ * Function to handle incoming connection from client.
+ *
+ * @param conn object representing open tcp connection
+ */
+async function handleTcpConnection(conn: Deno.Conn) {
+  conn.write(new TextEncoder().encode(JSON.stringify({ type: "hello" })));
+  const buffer = new Uint8Array(2048);
+  while (true) {
+    const length = await conn.read(buffer);
+    if (length === null) return;
+    console.log("tcp message:", buffer.slice(0, length));
+  }
 }
