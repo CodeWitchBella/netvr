@@ -9,7 +9,6 @@ class ReconnectingTcpClient : IDisposable
 {
     TcpClient _client;
     Task _task;
-    readonly Task _pollTask;
     readonly string _host;
     readonly int _port;
 
@@ -80,6 +79,5 @@ class ReconnectingTcpClient : IDisposable
     {
         _client.Dispose();
         _task.Dispose();
-        _pollTask.Dispose();
     }
 }
