@@ -96,7 +96,7 @@ class ReconnectingTcpClient : IDisposable
             }
         }
         catch (TaskCanceledException) { /* ignore */ }
-        catch (Exception e) { Debug.LogError(e); }
+        catch (Exception e) { if (Application.isPlaying) Debug.LogError(e); }
     }
 
     /// <summary>
