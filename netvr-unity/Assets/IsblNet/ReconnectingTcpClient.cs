@@ -3,9 +3,19 @@ using System.Net.Sockets;
 using System.Threading;
 using System.Threading.Tasks;
 using UnityEngine;
+
 /// <summary>
-/// Encapsulates TcpClient with reconnect logic
+/// Encapsulates TcpClient with reconnect logic.
 /// </summary>
+///
+/// It handles:
+/// - parsing incoming stream into separate messages and .Invokes OnMessage,
+/// - cancels everything when disposed
+/// - queues messages until TCP connection is established
+///
+/// Note that there is a possibility that last message in flight might get
+/// dropped (see TODO below). It's possible to fix, but I don't want to bother
+/// right now.
 class ReconnectingTcpClient : IDisposable
 {
     TcpClient _client;
@@ -135,7 +145,14 @@ class ReconnectingTcpClient : IDisposable
 
         try { await _client.GetStream().WriteAsync(bytes, _cancellationToken.Token); }
         catch (TaskCanceledException) { return; }
-        catch (Exception e) { Debug.LogError(e); }
+        catch (Exception e)
+        {
+            // TODO: if this happens, message is gonna be dropped...
+            // I should requeue it again here (but in the front of the queue)
+            // It would probably be better to do explicit while(true) loop than
+            // this callback magic dance, and use a actual queue of byte[]s
+            Debug.LogError(e);
+        }
     }
 
     public void Dispose()
