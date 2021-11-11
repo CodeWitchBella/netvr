@@ -37,7 +37,12 @@ public sealed class IsblNet : IDisposable
     {
         _client = new UdpClient(ServerHost, ServerPort);
         _tcp = new ReconnectingTcpClient(ServerHost, ServerPort);
-        _tcp.OnMessage += (message) => Debug.Log(message);
+        _tcp.OnMessage += (message) =>
+        {
+            var obj = JsonConvert.DeserializeObject<Isbl.NetIncomingTCPMessage>(message);
+            if (obj.Action == "id's here") NetState.Id = obj.IntValue;
+            Debug.Log(message);
+        };
 
         UDPTest();
         TCPSend(new { action = "gimme id" });
@@ -59,6 +64,8 @@ public sealed class IsblNet : IDisposable
         _tcp.QueueBytes(jsonBytes);
     }
 
+    public Isbl.NetStateData NetState;
+
     async void UDPTest()
     {
         //_client.Connect("192.168.1.31", 10000);
@@ -74,5 +81,17 @@ public sealed class IsblNet : IDisposable
     {
         _client.Dispose();
         _tcp.Dispose();
+    }
+
+    /// <summary>
+    /// Periodically called from IsblNetComponent to upload current NetState to
+    /// server via UDP
+    /// </summary>
+    public void Tick()
+    {
+        if (NetState.Id < 1) return;
+        var bytes = new byte[Isbl.NetStateData.ByteLength];
+        Isbl.NetData.WriteTo(NetState, bytes, 0);
+        _client.SendAsync(bytes, bytes.Length);
     }
 }

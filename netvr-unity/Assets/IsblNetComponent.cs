@@ -55,6 +55,11 @@ public class IsblNetComponent : MonoBehaviour
         DontDestroyOnLoad(gameObject); // only explicit destroying
     }
 
+    void FixedUpdate()
+    {
+        _net?.Tick();
+    }
+
     void OnDestroy()
     {
         _net?.Dispose();
