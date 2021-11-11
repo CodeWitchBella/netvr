@@ -86,7 +86,6 @@ async function handleUdpRequest(data: Uint8Array, peer: Deno.NetAddr) {
  * @param conn object representing open tcp connection
  */
 async function handleTcpConnection(conn: Deno.Conn) {
-  conn.write(new TextEncoder().encode(JSON.stringify({ type: "hello" })));
   let remainingData = new Uint8Array(0);
   const buffer = new Uint8Array(2048);
   const textDecoder = new TextDecoder("utf-8");
@@ -96,7 +95,6 @@ async function handleTcpConnection(conn: Deno.Conn) {
     if (length === null) return;
 
     remainingData = concat(remainingData, buffer.subarray(0, length));
-    console.log(remainingData);
     while (remainingData.length > 4) {
       const view = new DataView(
         remainingData.buffer,

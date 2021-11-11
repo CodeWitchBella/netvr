@@ -96,6 +96,7 @@ class ReconnectingTcpClient : IDisposable
             }
         }
         catch (TaskCanceledException) { /* ignore */ }
+        catch (Exception e) { Debug.LogError(e); }
     }
 
     /// <summary>
@@ -157,7 +158,7 @@ class ReconnectingTcpClient : IDisposable
 
     public void Dispose()
     {
-        _cancellationToken.Cancel();
-        _client.Dispose();
+        _cancellationToken?.Cancel();
+        _client?.Dispose();
     }
 }
