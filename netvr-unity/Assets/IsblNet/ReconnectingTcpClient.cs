@@ -88,6 +88,9 @@ class ReconnectingTcpClient : IDisposable
         catch (TaskCanceledException) { /* ignore */ }
     }
 
+    /// <summary>
+    /// Reads four bytes as little-endian uint32
+    /// </summary>
     int ReadLength(byte[] bytes)
     {
 #pragma warning disable RCS1123 // extra parenthesis would not make this easier to read...
@@ -95,6 +98,9 @@ class ReconnectingTcpClient : IDisposable
 #pragma warning restore RCS1123
     }
 
+    /// <summary>
+    /// Merges two Span&lt;byte&gt; together to create byte[]
+    /// </summary>
     static byte[] ConcatByteArrays(Span<byte> a, Span<byte> b)
     {
         var newBytes = new byte[a.Length + b.Length];
@@ -134,7 +140,7 @@ class ReconnectingTcpClient : IDisposable
 
     public void Dispose()
     {
-        _client.Dispose();
         _cancellationToken.Cancel();
+        _client.Dispose();
     }
 }
