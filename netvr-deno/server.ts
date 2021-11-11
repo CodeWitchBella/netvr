@@ -4,21 +4,21 @@
  * Example invocation:
  * $ deno run --unstable --allow-net --watch server.ts
  */
-import { iterateReader } from "https://deno.land/std@0.114.0/streams/conversion.ts";
 
 const port = 10_000;
 const udp = Deno.listenDatagram({ port, transport: "udp" });
 const tcp = Deno.listen({ port, transport: "tcp" });
-console.log(udp.addr);
+const textEncoder = new TextEncoder();
 
 /**
  * Global list of recently connected peers to which we want to send updates
  */
-let peers = new Set<{
-  timestamp: number;
-  hostname: string;
-  port: number;
-}>();
+class Peer {
+  udp?: Deno.NetAddr;
+  constructor(public uniqueId: number, public tcp: Deno.Conn) {}
+}
+const peers = new Map</* uniqueId */ number, Peer>();
+let idgen = 1;
 
 Promise.all([
   listenTcp(handleTcpConnection),
@@ -29,6 +29,7 @@ Promise.all([
     console.error(e);
     Deno.exit(1);
   });
+console.log("Started");
 
 /**
  * Listen to messages on UDP server port
@@ -66,35 +67,6 @@ async function listenTcp(
 }
 
 /**
- * Add peer to list of peers and remove old timeouted peers.
- *
- * @param peer to add to list
- * @param timestamp current time
- */
-function addPeerAndCleanup(peer: Deno.NetAddr, timestamp: number) {
-  const timeout = 60 * 1000; // 60 seconds
-  let exists = false;
-  for (const existingPeer of peers) {
-    if (existingPeer.timestamp + timeout < timestamp) {
-      peers.delete(existingPeer);
-    }
-    if (
-      peer.hostname === existingPeer.hostname && peer.port === existingPeer.port
-    ) {
-      existingPeer.timestamp = timestamp;
-      exists = true;
-    }
-  }
-  if (!exists) {
-    peers.add({
-      hostname: peer.hostname,
-      port: peer.port,
-      timestamp,
-    });
-  }
-}
-
-/**
  * Function to handle incoming message from client. Mostly updates info to be
  * broadcast to other peers.
  *
@@ -102,7 +74,6 @@ function addPeerAndCleanup(peer: Deno.NetAddr, timestamp: number) {
  * @param peer information about peer which sent the data
  */
 async function handleUdpRequest(data: Uint8Array, peer: Deno.NetAddr) {
-  addPeerAndCleanup(peer, Date.now());
   console.log("new request", data, peer);
   console.log("peers", peers);
 
@@ -138,7 +109,7 @@ async function handleTcpConnection(conn: Deno.Conn) {
       const message = textDecoder.decode(
         remainingData.subarray(4, stringLength + 4),
       );
-      console.log(message);
+      await handleTcpMessage(conn, JSON.parse(message));
       remainingData = remainingData.subarray(stringLength + 4);
     }
   }
@@ -152,4 +123,28 @@ function concat(a: ArrayLike<number>, b: ArrayLike<number>) {
   res.set(a);
   res.set(b, a.length);
   return res;
+}
+
+// deno-lint-ignore no-explicit-any
+async function handleTcpMessage(conn: Deno.Conn, message: any): Promise<void> {
+  if (message.action === "gimme id") {
+    if (conn.remoteAddr.transport !== "tcp") {
+      throw new Error("TCP message should come from TCP");
+    }
+    const uniqueId = ++idgen;
+    const bytes = textEncoder.encode(
+      "1234" + JSON.stringify({ action: "id's here", intValue: uniqueId }) +
+        "\n",
+    );
+    new DataView(bytes.buffer, 0, bytes.length).setUint32(
+      0,
+      bytes.length - 4,
+      true,
+    );
+
+    peers.set(uniqueId, new Peer(uniqueId, conn));
+    conn.write(bytes);
+  }
+  console.log("message", message);
+  await Promise.resolve();
 }

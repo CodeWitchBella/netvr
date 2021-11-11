@@ -37,8 +37,10 @@ public sealed class IsblNet : IDisposable
     {
         _client = new UdpClient(ServerHost, ServerPort);
         _tcp = new ReconnectingTcpClient(ServerHost, ServerPort);
+        _tcp.OnMessage += (message) => Debug.Log(message);
 
         UDPTest();
+        TCPSend(new { action = "gimme id" });
         TCPSend(new { type = "hello" });
         TCPSend(new { type = "hello world" });
     }
@@ -60,11 +62,11 @@ public sealed class IsblNet : IDisposable
     async void UDPTest()
     {
         //_client.Connect("192.168.1.31", 10000);
-        byte[] sendBytes = Encoding.ASCII.GetBytes("Hello, from the client");
+        byte[] sendBytes = Encoding.UTF8.GetBytes("Hello, from the client");
         await _client.SendAsync(sendBytes, sendBytes.Length);
 
         UdpReceiveResult recv = await _client.ReceiveAsync();
-        string receivedString = Encoding.ASCII.GetString(recv.Buffer);
+        string receivedString = Encoding.UTF8.GetString(recv.Buffer);
         Debug.Log("Message received from the server \n " + receivedString);
     }
 

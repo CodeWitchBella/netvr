@@ -1,5 +1,6 @@
 using System;
 using System.Net.Sockets;
+using System.Threading;
 using System.Threading.Tasks;
 using UnityEngine;
 /// <summary>
@@ -9,10 +10,14 @@ class ReconnectingTcpClient : IDisposable
 {
     TcpClient _client;
     Task _task;
+    CancellationTokenSource _cancellationToken;
     readonly string _host;
     readonly int _port;
 
     public bool Connected => _client?.Connected ?? false;
+
+    public delegate void MessageHandler(string message);
+    public MessageHandler OnMessage;
 
     public ReconnectingTcpClient(string host, int port)
     {
@@ -30,11 +35,10 @@ class ReconnectingTcpClient : IDisposable
         int timeout = 50;
         while (_client == null)
         {
+            _cancellationToken?.Cancel();
+            _cancellationToken = new();
             var client = new TcpClient();
-            try
-            {
-                await client.ConnectAsync(_host, _port);
-            }
+            try { await client.ConnectAsync(_host, _port); }
             catch (Exception e)
             {
                 Debug.LogWarning(e);
@@ -42,8 +46,61 @@ class ReconnectingTcpClient : IDisposable
                 if (timeout > 60_000) timeout = 60_000;
                 await Task.Delay(timeout);
             }
-            if (client.Connected) _client = client;
+
+            if (client.Connected)
+            {
+                _client = client;
+                StartReading(_cancellationToken.Token);
+            }
         }
+    }
+
+    /// <summary>
+    /// Reads bytes from client in a loop and generates messages as OnMessage events.
+    /// </summary>
+    async void StartReading(CancellationToken token)
+    {
+        try
+        {
+            var buffer = new byte[2048];
+            var remainingBytes = new byte[0];
+            while (_client.Connected)
+            {
+                var bytes = await _client.GetStream().ReadAsync(buffer, token);
+                remainingBytes = ConcatByteArrays(remainingBytes, buffer.AsSpan(0, bytes));
+
+                while (remainingBytes.Length > 4)
+                {
+                    var length = ReadLength(remainingBytes);
+                    if (remainingBytes.Length < length + 4) break;
+
+                    var message = System.Text.Encoding.UTF8.GetString(remainingBytes.AsSpan(4, length));
+                    try { OnMessage?.Invoke(message); }
+                    catch (Exception e) { Debug.LogError(e); }
+
+                    // remove message bytes
+                    var newRemainingBytes = new byte[remainingBytes.Length - length - 4];
+                    remainingBytes.AsSpan(length + 4).CopyTo(newRemainingBytes);
+                    remainingBytes = newRemainingBytes;
+                }
+            }
+        }
+        catch (TaskCanceledException) { /* ignore */ }
+    }
+
+    int ReadLength(byte[] bytes)
+    {
+#pragma warning disable RCS1123 // extra parenthesis would not make this easier to read...
+        return bytes[0] + 256 * (bytes[1] + 256 * (bytes[2] + 256 * bytes[3]));
+#pragma warning restore RCS1123
+    }
+
+    static byte[] ConcatByteArrays(Span<byte> a, Span<byte> b)
+    {
+        var newBytes = new byte[a.Length + b.Length];
+        a.CopyTo(newBytes);
+        b.CopyTo(newBytes.AsSpan(a.Length));
+        return newBytes;
     }
 
     /// <summary>
@@ -62,22 +119,22 @@ class ReconnectingTcpClient : IDisposable
     async Task QueueBytesImpl(Task prev, byte[] bytes)
     {
         try { await prev; }
+        catch (TaskCanceledException) { return; }
         catch (Exception e) { Debug.LogError(e); }
 
-        await EnsureConnected();
-        try
-        {
-            await _client.GetStream().WriteAsync(bytes);
-        }
-        catch (Exception e)
-        {
-            Debug.LogError(e);
-        }
+        if (_cancellationToken.IsCancellationRequested) return;
+        try { await EnsureConnected(); }
+        catch (TaskCanceledException) { return; }
+        if (_cancellationToken.IsCancellationRequested) return;
+
+        try { await _client.GetStream().WriteAsync(bytes, _cancellationToken.Token); }
+        catch (TaskCanceledException) { return; }
+        catch (Exception e) { Debug.LogError(e); }
     }
 
     public void Dispose()
     {
         _client.Dispose();
-        _task.Dispose();
+        _cancellationToken.Cancel();
     }
 }
