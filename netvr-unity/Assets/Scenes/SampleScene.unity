@@ -215,6 +215,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d471b26cc78a8254a86abb6699411abf, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  PrintDebug: 0
   Hack: {fileID: 0}
 --- !u!4 &514694571
 Transform:
