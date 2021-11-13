@@ -5,19 +5,24 @@
  * $ deno run --unstable --allow-net --watch server.ts
  */
 
-import { promisifyWebsocket, PWebSocket } from "./utils.ts";
+import { getRandomString, promisifyWebsocket, PWebSocket } from "./utils.ts";
 
 const l = Deno.listen({ port: 10_000 });
 
 let idgen = 0;
 
 const peersById = new Map<number, Peer>();
+const peerTokens = new Map<number, string>();
 
 class Peer {
+  token;
   constructor(
     public id: number,
     public socket: PWebSocket,
-  ) {}
+  ) {
+    this.token = peerTokens.get(id) ?? getRandomString(64);
+    peerTokens.set(id, this.token);
+  }
 }
 
 for await (const tcpConn of l) {
@@ -53,40 +58,58 @@ for await (const tcpConn of l) {
  */
 async function onSocket(socketIn: WebSocket) {
   const socket = await promisifyWebsocket(socketIn);
-  let thisPeer = createPeer(++idgen, socket);
-  for await (const event of socket) {
-    if (event.data instanceof ArrayBuffer) {
-      //console.log(new Uint8Array(event.data));
-      // binary data
-      continue;
-    }
-    console.log("event.data:", event.data);
-    const message = JSON.parse(event.data);
-    if (message.action === "keep alive") {
-      // ignore
-    } else if (message.action === "gimme id") {
-      socket.send(
-        JSON.stringify({ action: "id's here", intValue: thisPeer.id }),
-      );
-    } else if (message.action === "i already has id") {
-      const requestedId = message.id;
-      if (requestedId <= idgen && !peersById.has(requestedId)) {
-        thisPeer = createPeer(requestedId, socket);
-      } else {
+  let thisPeer: Peer | null = null;
+  try {
+    for await (const event of socket) {
+      if (event.data instanceof ArrayBuffer) {
+        //console.log(new Uint8Array(event.data));
+        // binary data
+        continue;
+      }
+      console.log("event.data:", event.data);
+      const message = JSON.parse(event.data);
+      if (message.action === "keep alive") {
+        // ignore
+      } else if (message.action === "gimme id") {
+        thisPeer = createPeer(++idgen, socket);
         socket.send(
-          JSON.stringify({ action: "id's here", intValue: thisPeer.id }),
+          JSON.stringify({
+            action: "id's here",
+            intValue: thisPeer.id,
+            stringValue: thisPeer.token,
+          }),
+        );
+      } else if (message.action === "i already has id") {
+        const requestedId = message.id;
+        const token = peerTokens.get(requestedId);
+        if (token && token === message.token) {
+          thisPeer = createPeer(requestedId, socket);
+          console.log(peersById);
+        } else {
+          thisPeer = createPeer(++idgen, socket);
+          console.log(peersById);
+          socket.send(
+            JSON.stringify({
+              action: "id's here",
+              intValue: thisPeer.id,
+              stringValue: thisPeer.token,
+            }),
+          );
+        }
+      } else {
+        console.log(
+          "message with unknown action",
+          JSON.stringify(message.action),
         );
       }
-    } else {
-      console.log(
-        "message with unknown action",
-        JSON.stringify(message.action),
-      );
     }
+  } finally {
+    if (thisPeer) {
+      peersById.delete(thisPeer.id);
+      console.log(peersById);
+    }
+    console.log("Socket finished");
   }
-  peersById.delete(thisPeer.id);
-  console.log(peersById);
-  console.log("Socket finished");
 }
 
 function createPeer(...params: ConstructorParameters<typeof Peer>) {

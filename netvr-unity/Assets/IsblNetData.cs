@@ -10,6 +10,7 @@ namespace Isbl
     public struct NetStateData
     {
         public int Id;
+        public string IdToken;
         public NetDeviceData Head, Left, Right;
 
         public static readonly int ByteLength = NetData.WriteTo(new NetStateData(), new Span<byte>(), 0);
@@ -67,5 +68,7 @@ namespace Isbl
 
         [JsonProperty("intValue")]
         public int IntValue;
+        [JsonProperty("stringValue")]
+        public string StringValue;
     }
 }

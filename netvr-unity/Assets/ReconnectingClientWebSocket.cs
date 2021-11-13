@@ -214,4 +214,9 @@ public class ReconnectingClientWebSocket : IDisposable
         _keepAliveTokenSource?.Cancel();
         _ = CloseNicely(_webSocket);
     }
+
+    public void SimulateDisconnect()
+    {
+        _ = CloseNicely(_webSocket);
+    }
 }

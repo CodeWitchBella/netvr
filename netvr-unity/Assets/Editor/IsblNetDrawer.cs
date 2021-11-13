@@ -30,8 +30,13 @@ public class IsblNetDrawer : PropertyDrawer
         {
             DrawLine("Uri", net.Socket?.Uri.ToString() ?? "no socket");
             DrawLine("State", net.Socket.State.ToString());
+            DrawLine("ClientId", net.NetState.Id.ToString());
             DrawLine("Last Successful Message", net.Socket.LastSuccessfulMessage.ToLongTimeString());
         }
         EditorGUI.EndProperty();
+        if (GUI.Button(new Rect(position.x, y, position.width, 20), "Simulate Disconnect"))
+        {
+            net?.Socket.SimulateDisconnect();
+        }
     }
 }

@@ -35,12 +35,16 @@ public sealed class IsblNet : IDisposable
         Socket.OnConnect += () =>
         {
             if (NetState.Id == 0) Socket.SendAsync(new { action = "gimme id" });
-            else Socket.SendAsync(new { action = "i already has id", id = NetState.Id });
+            else Socket.SendAsync(new { action = "i already has id", id = NetState.Id, token = NetState.IdToken });
         };
         Socket.OnTextMessage += (text) =>
         {
             var obj = JsonConvert.DeserializeObject<Isbl.NetIncomingTCPMessage>(text);
-            if (obj.Action == "id's here") NetState.Id = obj.IntValue;
+            if (obj.Action == "id's here")
+            {
+                NetState.Id = obj.IntValue;
+                NetState.IdToken = obj.StringValue;
+            }
             Debug.Log(text);
         };
         Socket.OnBinaryMessage += (data) =>
