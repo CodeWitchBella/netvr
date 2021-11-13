@@ -25,12 +25,12 @@ public class IsblNetDrawer : PropertyDrawer
         if (net == null)
         {
             DrawLine("IsblNet is not active.");
-            DrawLine("ServerPort", IsblNet.ServerPort.ToString());
         }
         else
         {
-            DrawLine("ServerPort", IsblNet.ServerPort.ToString());
-            DrawLine("TcpConnected", net.TcpConnected ? "Yes" : "No");
+            DrawLine("Uri", net.Socket?.Uri.ToString() ?? "no socket");
+            DrawLine("State", net.Socket.State.ToString());
+            DrawLine("Last Successful Message", net.Socket.LastSuccessfulMessage.ToLongTimeString());
         }
         EditorGUI.EndProperty();
     }

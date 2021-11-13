@@ -13,6 +13,7 @@ using UnityEngine;
 /// that IsblNet gets properly disposed.
 public class IsblNetComponent : MonoBehaviour
 {
+    public bool PrintDebug;
     static IsblNetComponent _instance;
     /// <summary>
     /// Unity part of IsblNet singleton scheme.
@@ -43,7 +44,7 @@ public class IsblNetComponent : MonoBehaviour
         if (_instance == null)
         {
             _instance = this;
-            IsblNet.EnsureInstanceExists();
+            IsblNet.EnsureInstanceExists(PrintDebug);
         }
         else if (_instance != this)
         {
@@ -58,6 +59,10 @@ public class IsblNetComponent : MonoBehaviour
     void FixedUpdate()
     {
         _net?.Tick();
+
+#if UNITY_EDITOR
+        if (_net != null) _net.Socket.PrintDebug = PrintDebug;
+#endif
     }
 
     void OnDestroy()

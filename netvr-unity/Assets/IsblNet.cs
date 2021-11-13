@@ -1,8 +1,7 @@
 using System;
-using System.Net.Sockets;
-using System.Text;
 using Newtonsoft.Json;
 using UnityEngine;
+using System.Linq;
 
 /// <summary>
 /// Main implementation of network interface
@@ -16,71 +15,46 @@ public sealed class IsblNet : IDisposable
     /// </summary>
     /// This method is used in Singleton instantiation scheme and is the only
     /// place where IsblNet constructor is called.
-    public static void EnsureInstanceExists() { if (!IsblNetComponent.InstanceExists) IsblNetComponent.Instance = new(); }
+    public static void EnsureInstanceExists(bool printDebug) { if (!IsblNetComponent.InstanceExists) IsblNetComponent.Instance = new(printDebug); }
 
     /// <summary>
     /// When you need to send or recieve message via network use this to access
     /// primary IsblNet instance
     /// </summary>
-    public static IsblNet Instance { get { EnsureInstanceExists(); return IsblNetComponent.Instance; } }
+    public static IsblNet Instance { get { EnsureInstanceExists(false); return IsblNetComponent.Instance; } }
 
-    public const int ServerPort = 10000;
-    public const string ServerHost = "127.0.0.1";
-    readonly UdpClient _client;
-    readonly ReconnectingTcpClient _tcp;
-    public bool TcpConnected => _tcp.Connected;
+    public readonly ReconnectingClientWebSocket Socket;
+    public bool Connected => false;
 
     /// <summary>Private constructor. Only place where this is called is from
     /// EnsureInstanceExists and that only happens if other instance does not
     /// exist already.</summary>
-    IsblNet()
+    IsblNet(bool printDebug)
     {
-        _client = new UdpClient(ServerHost, ServerPort);
-        _tcp = new ReconnectingTcpClient(ServerHost, ServerPort);
-        _tcp.OnMessage += (message) =>
+        Socket = new("ws://127.0.0.1:10000", printDebug);
+        Socket.OnConnect += () =>
         {
-            var obj = JsonConvert.DeserializeObject<Isbl.NetIncomingTCPMessage>(message);
-            if (obj.Action == "id's here") NetState.Id = obj.IntValue;
-            Debug.Log(message);
+            if (NetState.Id == 0) Socket.SendAsync(new { action = "gimme id" });
+            else Socket.SendAsync(new { action = "i already has id", id = NetState.Id });
         };
-
-        UDPTest();
-        TCPSend(new { action = "gimme id" });
-        TCPSend(new { type = "hello" });
-        TCPSend(new { type = "hello world" });
-    }
-
-    /// <summary>
-    /// Sends JSON-formatted message via reliable connection of TCP channel.
-    /// Do not use for time-critical updates.
-    /// </summary>
-    public void TCPSend(object data)
-    {
-        // the 1234 pre-creates space for 4byte size information
-        // this skips extra copy and avoids sending packet just with size
-        // could probably be done better but this works ¯\_(ツ)_/¯ 🤷‍♀️
-        var jsonBytes = Encoding.UTF8.GetBytes("1234" + JsonConvert.SerializeObject(data) + "\n");
-        BitConverter.TryWriteBytes(jsonBytes, jsonBytes.Length - 4);
-        _tcp.QueueBytes(jsonBytes);
+        Socket.OnTextMessage += (text) =>
+        {
+            var obj = JsonConvert.DeserializeObject<Isbl.NetIncomingTCPMessage>(text);
+            if (obj.Action == "id's here") NetState.Id = obj.IntValue;
+            Debug.Log(text);
+        };
+        Socket.OnBinaryMessage += (data) =>
+        {
+            var text = from i in data select i.ToString();
+            Debug.Log($"binary message ({data.Length}) {string.Join(" ", text)}");
+        };
     }
 
     public Isbl.NetStateData NetState;
 
-    async void UDPTest()
-    {
-        //_client.Connect("192.168.1.31", 10000);
-        byte[] sendBytes = Encoding.UTF8.GetBytes("Hello, from the client");
-        await _client.SendAsync(sendBytes, sendBytes.Length);
-
-        UdpReceiveResult recv = await _client.ReceiveAsync();
-        string receivedString = Encoding.UTF8.GetString(recv.Buffer);
-        Debug.Log("Message received from the server \n " + receivedString);
-    }
-
     public void Dispose()
     {
-        _client.Dispose();
-        _tcp.Dispose();
+        Socket.Dispose();
     }
 
     /// <summary>
@@ -92,6 +66,6 @@ public sealed class IsblNet : IDisposable
         if (NetState.Id < 1) return;
         var bytes = new byte[Isbl.NetStateData.ByteLength];
         Isbl.NetData.WriteTo(NetState, bytes, 0);
-        _client.SendAsync(bytes, bytes.Length);
+        _ = Socket.SendAsync(bytes, System.Net.WebSockets.WebSocketMessageType.Binary);
     }
 }
