@@ -11,7 +11,7 @@ const l = Deno.listen({ port: 10_000 });
 
 let idgen = 0;
 
-const peers = new Map<number, Peer>();
+const peersById = new Map<number, Peer>();
 
 class Peer {
   constructor(
@@ -56,7 +56,7 @@ async function onSocket(socketIn: WebSocket) {
   let thisPeer = createPeer(++idgen, socket);
   for await (const event of socket) {
     if (event.data instanceof ArrayBuffer) {
-      console.log(new Uint8Array(event.data));
+      //console.log(new Uint8Array(event.data));
       // binary data
       continue;
     }
@@ -70,8 +70,12 @@ async function onSocket(socketIn: WebSocket) {
       );
     } else if (message.action === "i already has id") {
       const requestedId = message.id;
-      if (requestedId <= idgen && !peers.has(requestedId)) {
+      if (requestedId <= idgen && !peersById.has(requestedId)) {
         thisPeer = createPeer(requestedId, socket);
+      } else {
+        socket.send(
+          JSON.stringify({ action: "id's here", intValue: thisPeer.id }),
+        );
       }
     } else {
       console.log(
@@ -80,12 +84,14 @@ async function onSocket(socketIn: WebSocket) {
       );
     }
   }
-  peers.delete(thisPeer.id);
+  peersById.delete(thisPeer.id);
+  console.log(peersById);
   console.log("Socket finished");
 }
 
 function createPeer(...params: ConstructorParameters<typeof Peer>) {
   const peer = new Peer(...params);
-  peers.set(peer.id, peer);
+  peersById.set(peer.id, peer);
+  console.log(peersById);
   return peer;
 }
