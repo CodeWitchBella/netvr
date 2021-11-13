@@ -39,22 +39,34 @@ public sealed class IsblNet : IDisposable
         };
         Socket.OnTextMessage += (text) =>
         {
+            Debug.Log(text);
             var obj = JsonConvert.DeserializeObject<Isbl.NetIncomingTCPMessage>(text);
             if (obj.Action == "id's here")
             {
                 NetState.Id = obj.IntValue;
                 NetState.IdToken = obj.StringValue;
             }
-            Debug.Log(text);
         };
         Socket.OnBinaryMessage += (data) =>
         {
             var text = from i in data select i.ToString();
-            Debug.Log($"binary message ({data.Length}) {string.Join(" ", text)}");
+            var segments = data.Length / Isbl.NetStateData.ByteLength;
+            Debug.Log($"binary message, length: {data.Length}, segments: {segments}, segment length: {Isbl.NetStateData.ByteLength}");
+            //if (segments < 1) return;
+            if (segments != OtherStates.Length) OtherStates = new Isbl.NetStateData[segments];
+
+            Isbl.NetStateData temp = new();
+            for (int i = 0; i < segments; i++)
+            {
+                Isbl.NetData.ReadFrom(data, ref temp, i * Isbl.NetStateData.ByteLength);
+                if (temp.Id != NetState.Id)
+                    OtherStates[i] = temp;
+            }
         };
     }
 
     public Isbl.NetStateData NetState;
+    public Isbl.NetStateData[] OtherStates = new Isbl.NetStateData[0];
 
     public void Dispose()
     {

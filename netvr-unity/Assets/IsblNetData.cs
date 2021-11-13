@@ -27,12 +27,30 @@ namespace Isbl
             return offset + 4;
         }
 
+        public static int ReadFrom(Span<byte> source, ref float target, int offset)
+        {
+            if (source.Length >= offset + 4)
+            { target = BitConverter.ToSingle(source[offset..]); }
+            else
+            { throw new Exception("Source is too smol."); }
+            return offset + 4;
+        }
+
         public static int WriteTo(int data, Span<byte> target, int offset)
         {
             if (target.Length >= offset + 4)
             { BitConverter.TryWriteBytes(target[offset..], data); }
             else if (target.Length > 0)
             { throw new Exception("Target is too smol."); }
+            return offset + 4;
+        }
+
+        public static int ReadFrom(Span<byte> source, ref int target, int offset)
+        {
+            if (source.Length >= offset + 4)
+            { target = BitConverter.ToInt32(source[offset..]); }
+            else
+            { throw new Exception("Source is too smol."); }
             return offset + 4;
         }
 
@@ -44,10 +62,25 @@ namespace Isbl
             return offset;
         }
 
+        public static int ReadFrom(Span<byte> source, ref Vector3 target, int offset)
+        {
+            offset = ReadFrom(source, ref target.x, offset);
+            offset = ReadFrom(source, ref target.y, offset);
+            offset = ReadFrom(source, ref target.z, offset);
+            return offset;
+        }
+
         public static int WriteTo(NetDeviceData data, Span<byte> target, int offset)
         {
             offset = WriteTo(data.Position, target, offset);
             offset = WriteTo(data.Rotation, target, offset);
+            return offset;
+        }
+
+        public static int ReadFrom(Span<byte> source, ref NetDeviceData target, int offset)
+        {
+            offset = ReadFrom(source, ref target.Position, offset);
+            offset = ReadFrom(source, ref target.Rotation, offset);
             return offset;
         }
 
@@ -57,6 +90,15 @@ namespace Isbl
             offset = WriteTo(data.Head, target, offset);
             offset = WriteTo(data.Left, target, offset);
             offset = WriteTo(data.Right, target, offset);
+            return offset;
+        }
+
+        public static int ReadFrom(Span<byte> source, ref NetStateData target, int offset)
+        {
+            offset = ReadFrom(source, ref target.Id, offset);
+            offset = ReadFrom(source, ref target.Head, offset);
+            offset = ReadFrom(source, ref target.Left, offset);
+            offset = ReadFrom(source, ref target.Right, offset);
             return offset;
         }
     }

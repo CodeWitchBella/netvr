@@ -34,6 +34,9 @@ export async function promisifyWebsocket<Message = any>(
   onQueueHasMessage = null;
 
   return {
+    get bufferedAmount() {
+      return socket.bufferedAmount;
+    },
     send(data: string | ArrayBufferLike | Blob | ArrayBufferView): void {
       console.log(
         "Sending",

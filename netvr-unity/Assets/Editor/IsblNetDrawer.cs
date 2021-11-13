@@ -32,6 +32,7 @@ public class IsblNetDrawer : PropertyDrawer
             DrawLine("State", net.Socket.State.ToString());
             DrawLine("ClientId", net.NetState.Id.ToString());
             DrawLine("Last Successful Message", net.Socket.LastSuccessfulMessage.ToLongTimeString());
+            DrawLine("Peer count", net.OtherStates.Length.ToString());
         }
         EditorGUI.EndProperty();
         if (GUI.Button(new Rect(position.x, y, position.width, 20), "Simulate Disconnect"))
