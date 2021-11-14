@@ -2,13 +2,16 @@
  * Server used for relaying messages between multiple users.
  *
  * Example invocation:
- * $ deno run --unstable --allow-net --watch server.ts
+ * $ deno run --allow-net --watch server.ts
  */
 
 import { Peer } from "./peer.ts";
 import { getRandomString, promisifyWebsocket } from "./utils.ts";
 
+await Deno.permissions.request({ name: "net" });
+
 const l = Deno.listen({ port: 10_000 });
+console.log(l.addr);
 
 let idgen = 0;
 
