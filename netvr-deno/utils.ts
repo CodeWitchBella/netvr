@@ -35,14 +35,10 @@ export async function promisifyWebsocket<Message = any>(
 
   return {
     get bufferedAmount() {
-      return socket.bufferedAmount;
+      const amount = socket.bufferedAmount;
+      return Number.isNaN(amount) ? 0 : amount;
     },
     send(data: string | ArrayBufferLike | Blob | ArrayBufferView): void {
-      console.log(
-        "Sending",
-        typeof data === "string" ? `(${data.length})` : "",
-        data,
-      );
       socket.send(data);
     },
     [Symbol.asyncIterator](): AsyncIterator<MessageEvent<Message>> {

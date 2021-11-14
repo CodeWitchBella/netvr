@@ -32,7 +32,7 @@ public sealed class IsblNet : IDisposable
     /// exist already.</summary>
     IsblNet(bool printDebug)
     {
-        Socket = new("ws://127.0.0.1:10000", printDebug);
+        Socket = new("ws://192.168.1.31:10000", printDebug);
         Socket.OnConnect += () =>
         {
             if (NetState.Id == 0) Socket.SendAsync(new { action = "gimme id" });
