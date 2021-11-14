@@ -27,7 +27,7 @@ sealed class IsblDeviceModel
 
     static IsblDeviceModel[] _database;
 
-    public static IsblDeviceModel GetInfo(string deviceName, XRNode node)
+    static void InitDatabase()
     {
         if (_database == null)
         {
@@ -50,6 +50,17 @@ sealed class IsblDeviceModel
                     rootNode: "root")
             };
         }
+    }
+
+    public static IsblDeviceModel GetInfo(byte id)
+    {
+        InitDatabase();
+        return _database[0];
+    }
+
+    public static IsblDeviceModel GetInfo(string deviceName, XRNode node)
+    {
+        InitDatabase();
 
         bool isLeft = node == XRNode.LeftHand;
         bool isRight = node == XRNode.RightHand;

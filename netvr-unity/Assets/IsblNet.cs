@@ -2,6 +2,7 @@ using System;
 using Newtonsoft.Json;
 using UnityEngine;
 using System.Linq;
+using System.Collections.Generic;
 
 /// <summary>
 /// Main implementation of network interface
@@ -49,24 +50,13 @@ public sealed class IsblNet : IDisposable
         };
         Socket.OnBinaryMessage += (data) =>
         {
-            var text = from i in data select i.ToString();
-            var segments = data.Length / Isbl.NetStateData.ByteLength;
-            Debug.Log($"binary message, length: {data.Length}, segments: {segments}, segment length: {Isbl.NetStateData.ByteLength}");
-            //if (segments < 1) return;
-            if (segments != OtherStates.Length) OtherStates = new Isbl.NetStateData[segments];
-
-            Isbl.NetStateData temp = new();
-            for (int i = 0; i < segments; i++)
-            {
-                Isbl.NetData.ReadFrom(data, ref temp, i * Isbl.NetStateData.ByteLength);
-                if (temp.Id != NetState.Id)
-                    OtherStates[i] = temp;
-            }
+            var offset = 0;
+            Isbl.NetData.Convert(ref offset, OtherStates, data, false);
         };
     }
 
     public Isbl.NetStateData NetState;
-    public Isbl.NetStateData[] OtherStates = new Isbl.NetStateData[0];
+    public List<Isbl.NetStateData> OtherStates = new();
 
     public void Dispose()
     {
@@ -81,7 +71,8 @@ public sealed class IsblNet : IDisposable
     {
         if (NetState.Id < 1) return;
         var bytes = new byte[Isbl.NetStateData.ByteLength];
-        Isbl.NetData.WriteTo(NetState, bytes, 0);
+        int offset = 0;
+        Isbl.NetData.Convert(ref offset, ref NetState, bytes, true);
         _ = Socket.SendAsync(bytes, System.Net.WebSockets.WebSocketMessageType.Binary);
     }
 }

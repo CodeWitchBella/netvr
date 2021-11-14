@@ -29,6 +29,7 @@ roslynator.RCS1018.invert = true
 dotnet_diagnostic.RCS1110.severity = none 
 dotnet_diagnostic.RCS1090.severity = none # disable having to add .ConfigureAwait(false)
 dotnet_diagnostic.IDE0051.severity = none # unused method, handled by RCS1213
+dotnet_diagnostic.RCS1123.severity = none # do not force extra parenthesis
 
 #force naming conventions (so that I can finally stop thinking about it)
 dotnet_diagnostic.IDE1006.severity = warning

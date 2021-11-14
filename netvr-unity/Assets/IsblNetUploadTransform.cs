@@ -15,6 +15,7 @@ public class IsblNetUploadTransform : MonoBehaviour
         if (net == null) return;
         var data = new Isbl.NetDeviceData
         {
+            Type = 1, // TODO: set proper model id
             Position = transform.localPosition,
             Rotation = transform.localEulerAngles
         };

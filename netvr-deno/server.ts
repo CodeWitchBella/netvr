@@ -25,7 +25,7 @@ async function tick() {
   } catch (e) {
     console.log("Error in tick", e);
   }
-  setTimeout(tick, 100);
+  setTimeout(tick, 15);
 }
 
 for await (const tcpConn of l) {

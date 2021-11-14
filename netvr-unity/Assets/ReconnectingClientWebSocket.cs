@@ -5,6 +5,7 @@ using System.Threading;
 using System.Threading.Tasks;
 using UnityEngine;
 using Newtonsoft.Json;
+using System.Linq;
 
 public class ReconnectingClientWebSocket : IDisposable
 {

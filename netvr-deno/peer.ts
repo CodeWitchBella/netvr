@@ -1,6 +1,6 @@
 import type { PWebSocket } from "./utils.ts";
 
-const dataLength = 76;
+const dataLength = 79;
 export class Peer {
   data?: ArrayBuffer;
   constructor(
@@ -21,21 +21,23 @@ export class Peer {
 
   // deno-lint-ignore require-await
   static async tick(clients: Iterable<Peer>) {
-    let workingPeers: Peer[] = [];
+    const workingPeers: Peer[] = [];
     for (const client of clients) {
       workingPeers.push(client);
     }
     if (workingPeers.length === 0) return;
 
-    const sendBuffer = new Uint8Array(dataLength * workingPeers.length);
-    let i = 0;
+    const sendBuffer = new Uint8Array(dataLength * workingPeers.length + 4);
+    const sizeView = new DataView(sendBuffer.buffer, 0, 4);
+    sizeView.setInt32(0, workingPeers.length, true);
+    let offset = 4;
     for (const client of workingPeers) {
       if (!client.data || client.data.byteLength < dataLength) continue;
       sendBuffer.set(
         new Uint8Array(client.data, 0, dataLength),
-        i * dataLength,
+        offset,
       );
-      i++;
+      offset += dataLength;
     }
 
     // TODO: do not self own data

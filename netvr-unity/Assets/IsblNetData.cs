@@ -1,11 +1,16 @@
 using System;
 using Newtonsoft.Json;
 using UnityEngine;
+using System.Collections.Generic;
+using System.Linq;
 
 namespace Isbl
 {
     public struct NetDeviceData
-    { public Vector3 Position, Rotation; }
+    {
+        public byte Type;
+        public Vector3 Position, Rotation;
+    }
 
     public struct NetStateData
     {
@@ -13,94 +18,108 @@ namespace Isbl
         public string IdToken;
         public NetDeviceData Head, Left, Right;
 
-        public static readonly int ByteLength = NetData.WriteTo(new NetStateData(), new Span<byte>(), 0);
+        static int _byteLength;
+        public static int ByteLength
+        {
+            get
+            {
+                if (_byteLength == 0)
+                {
+                    NetStateData data = new();
+                    NetData.Convert(ref _byteLength, ref data, new Span<byte>(), false);
+                }
+                return _byteLength;
+            }
+        }
     }
 
     public static class NetData
     {
-        public static int WriteTo(float data, Span<byte> target, int offset)
+        public static void Convert(ref int offset, ref float parsed, Span<byte> binary, bool toBinary)
         {
-            if (target.Length >= offset + 4)
-            { BitConverter.TryWriteBytes(target[offset..], data); }
-            else if (target.Length > 0)
+            if (binary.Length >= offset + 4)
+            {
+                if (toBinary) BitConverter.TryWriteBytes(binary[offset..], parsed);
+                else parsed = BitConverter.ToSingle(binary[offset..]);
+            }
+            else if (binary.Length > 0)
             { throw new Exception("Target is too smol."); }
-            return offset + 4;
+
+            offset += 4;
         }
 
-        public static int ReadFrom(Span<byte> source, ref float target, int offset)
+        public static void Convert(ref int offset, ref int parsed, Span<byte> binary, bool toBinary)
         {
-            if (source.Length >= offset + 4)
-            { target = BitConverter.ToSingle(source[offset..]); }
-            else
-            { throw new Exception("Source is too smol."); }
-            return offset + 4;
-        }
-
-        public static int WriteTo(int data, Span<byte> target, int offset)
-        {
-            if (target.Length >= offset + 4)
-            { BitConverter.TryWriteBytes(target[offset..], data); }
-            else if (target.Length > 0)
+            if (binary.Length >= offset + 4)
+            {
+                if (toBinary) BitConverter.TryWriteBytes(binary[offset..], parsed);
+                else parsed = BitConverter.ToInt32(binary[offset..]);
+            }
+            else if (binary.Length > 0)
             { throw new Exception("Target is too smol."); }
-            return offset + 4;
+
+            offset += 4;
         }
 
-        public static int ReadFrom(Span<byte> source, ref int target, int offset)
+        public static void Convert(ref int offset, ref byte parsed, Span<byte> binary, bool toBinary)
         {
-            if (source.Length >= offset + 4)
-            { target = BitConverter.ToInt32(source[offset..]); }
-            else
-            { throw new Exception("Source is too smol."); }
-            return offset + 4;
+            if (binary.Length >= offset + 1)
+            {
+                if (toBinary) binary[offset] = parsed;
+                else parsed = binary[offset];
+            }
+            else if (binary.Length > 0)
+            { throw new Exception("Target is too smol."); }
+
+            offset++;
         }
 
-        public static int WriteTo(Vector3 data, Span<byte> target, int offset)
+        public static void Convert(ref int offset, ref Vector3 parsed, Span<byte> binary, bool toBinary)
         {
-            offset = WriteTo(data.x, target, offset);
-            offset = WriteTo(data.y, target, offset);
-            offset = WriteTo(data.z, target, offset);
-            return offset;
+            Convert(ref offset, ref parsed.x, binary, toBinary);
+            Convert(ref offset, ref parsed.y, binary, toBinary);
+            Convert(ref offset, ref parsed.z, binary, toBinary);
         }
 
-        public static int ReadFrom(Span<byte> source, ref Vector3 target, int offset)
+        public static void Convert(ref int offset, ref NetDeviceData parsed, Span<byte> binary, bool toBinary)
         {
-            offset = ReadFrom(source, ref target.x, offset);
-            offset = ReadFrom(source, ref target.y, offset);
-            offset = ReadFrom(source, ref target.z, offset);
-            return offset;
+            Convert(ref offset, ref parsed.Type, binary, toBinary);
+            Convert(ref offset, ref parsed.Position, binary, toBinary);
+            Convert(ref offset, ref parsed.Rotation, binary, toBinary);
         }
 
-        public static int WriteTo(NetDeviceData data, Span<byte> target, int offset)
+        public static void Convert(ref int offset, ref NetStateData parsed, Span<byte> binary, bool toBinary)
         {
-            offset = WriteTo(data.Position, target, offset);
-            offset = WriteTo(data.Rotation, target, offset);
-            return offset;
+            Convert(ref offset, ref parsed.Id, binary, toBinary);
+            Convert(ref offset, ref parsed.Head, binary, toBinary);
+            Convert(ref offset, ref parsed.Left, binary, toBinary);
+            Convert(ref offset, ref parsed.Right, binary, toBinary);
         }
 
-        public static int ReadFrom(Span<byte> source, ref NetDeviceData target, int offset)
+        public static void Convert(ref int offset, List<NetStateData> parsed, Span<byte> binary, bool toBinary)
         {
-            offset = ReadFrom(source, ref target.Position, offset);
-            offset = ReadFrom(source, ref target.Rotation, offset);
-            return offset;
+            int count = parsed.Count;
+            Convert(ref offset, ref count, binary, toBinary);
+
+            if (!toBinary)
+            {
+                // resize
+                if (count < parsed.Count)
+                    parsed.RemoveRange(count, parsed.Count - count);
+                else if (count > parsed.Capacity) parsed.Capacity = count;
+
+                while (count > parsed.Count)
+                    parsed.Add(new());
+            }
+
+            for (var i = 0; i < parsed.Count; i++)
+            {
+                NetStateData value = parsed[i];
+                Convert(ref offset, ref value, binary, toBinary);
+                parsed[i] = value;
+            }
         }
 
-        public static int WriteTo(NetStateData data, Span<byte> target, int offset)
-        {
-            offset = WriteTo(data.Id, target, offset);
-            offset = WriteTo(data.Head, target, offset);
-            offset = WriteTo(data.Left, target, offset);
-            offset = WriteTo(data.Right, target, offset);
-            return offset;
-        }
-
-        public static int ReadFrom(Span<byte> source, ref NetStateData target, int offset)
-        {
-            offset = ReadFrom(source, ref target.Id, offset);
-            offset = ReadFrom(source, ref target.Head, offset);
-            offset = ReadFrom(source, ref target.Left, offset);
-            offset = ReadFrom(source, ref target.Right, offset);
-            return offset;
-        }
     }
 
     public struct NetIncomingTCPMessage
