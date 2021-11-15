@@ -12,20 +12,20 @@ export async function promisifyWebsocket<Message = any>(
 
   let onQueueHasMessage: (() => void) | null = null;
 
-  socket.onmessage = (e) => {
+  socket.addEventListener("message", (e) => {
     messageQueue.push({ type: "message", value: e });
     onQueueHasMessage?.();
-  };
+  });
   socket.onerror = (e) => {
     messageQueue.push({ type: "error", value: e });
     onQueueHasMessage?.();
     finished = true;
   };
-  socket.onclose = () => {
+  socket.addEventListener("close", () => {
     messageQueue.push({ type: "close" });
     onQueueHasMessage?.();
     finished = true;
-  };
+  });
 
   await new Promise<void>((resolve) => {
     socket.onopen = () => resolve();
@@ -36,7 +36,7 @@ export async function promisifyWebsocket<Message = any>(
   return {
     get bufferedAmount() {
       const amount = socket.bufferedAmount;
-      return Number.isNaN(amount) ? 0 : amount;
+      return !Number.isInteger(amount) ? 0 : amount;
     },
     send(data: string | ArrayBufferLike | Blob | ArrayBufferView): void {
       socket.send(data);

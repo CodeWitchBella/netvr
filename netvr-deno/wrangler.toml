@@ -1,0 +1,24 @@
+name = "esbuild-worker"
+type = "javascript"
+account_id = ""
+workers_dev = true
+route = ""
+zone_id = ""
+kv_namespaces = [
+  { binding = "COUNTER_NAMESPACE", id = "", preview_id = "" },
+]
+
+[build]
+command = "npm run build"
+[build.upload]
+format = "modules"
+dir = "dist"
+main = "worker.js"
+
+[site]
+bucket = "./public"
+
+[durable_objects]
+bindings = [
+  { name = "WEBSOCKET", class_name = "DurableObjectWebSocket" }
+]

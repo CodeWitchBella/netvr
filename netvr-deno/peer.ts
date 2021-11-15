@@ -23,16 +23,15 @@ export class Peer {
   // deno-lint-ignore require-await
   static async tick(clients: Iterable<Peer>) {
     const workingPeers: Peer[] = [];
+    const otherPeers: Peer[] = [];
     for (const client of clients) {
-      if (client.data.byteLength !== dataLength) continue;
-      workingPeers.push(client);
+      if (client.data.byteLength !== dataLength) otherPeers.push(client);
+      else workingPeers.push(client);
     }
     if (workingPeers.length === 0) return;
 
     const sendPeerCount = (workingPeers.length - (sendToSelfAsDebug ? 0 : 1));
-    const sendBuffer = new Uint8Array(
-      dataLength * sendPeerCount + 4,
-    );
+    const sendBuffer = completeBuffer(workingPeers, sendPeerCount);
 
     const sizeView = new DataView(sendBuffer.buffer, 0, 4);
     sizeView.setInt32(0, sendPeerCount, true);
@@ -74,5 +73,26 @@ export class Peer {
         }
       }
     }
+
+    if (otherPeers.length > 0) {
+      const sendBuffer = completeBuffer(workingPeers, workingPeers.length);
+      for (const { socket } of otherPeers) {
+        if (socket.bufferedAmount > 0) continue;
+        socket.send(sendBuffer);
+      }
+    }
   }
+}
+
+function completeBuffer(workingPeers: readonly Peer[], sendPeerCount: number) {
+  const sendBuffer = new Uint8Array(dataLength * sendPeerCount + 4);
+  const sizeView = new DataView(sendBuffer.buffer, 0, 4);
+  sizeView.setInt32(0, sendPeerCount, true);
+  let offset = 4;
+  for (let i = 0; i < sendPeerCount; ++i) {
+    const client = workingPeers[i];
+    sendBuffer.set(client.data, offset);
+    offset += dataLength;
+  }
+  return sendBuffer;
 }
