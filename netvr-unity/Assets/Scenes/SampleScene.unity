@@ -242,6 +242,7 @@ GameObject:
   m_Component:
   - component: {fileID: 541096546}
   - component: {fileID: 541096549}
+  - component: {fileID: 541096550}
   - component: {fileID: 541096548}
   m_Layer: 0
   m_Name: RightController
@@ -277,7 +278,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ac2d74d30629fc0468e28c04e3e4dce4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  Node: 5
   EditorOnly: {fileID: 0}
 --- !u!114 &541096549
 MonoBehaviour:
@@ -292,6 +292,19 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   Part: 1
+--- !u!114 &541096550
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 541096545}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: dcc18c891c75c9d4aa2760b5a8db83a9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  Node: 5
 --- !u!1 &599916901
 GameObject:
   m_ObjectHideFlags: 0
@@ -695,6 +708,7 @@ GameObject:
   m_Component:
   - component: {fileID: 1728657556}
   - component: {fileID: 1728657558}
+  - component: {fileID: 1728657559}
   - component: {fileID: 1728657557}
   m_Layer: 0
   m_Name: LeftController
@@ -730,7 +744,6 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: ac2d74d30629fc0468e28c04e3e4dce4, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  Node: 4
   EditorOnly: {fileID: 0}
 --- !u!114 &1728657558
 MonoBehaviour:
@@ -745,6 +758,19 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   Part: 0
+--- !u!114 &1728657559
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1728657555}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: dcc18c891c75c9d4aa2760b5a8db83a9, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  Node: 4
 --- !u!1 &2023549369
 GameObject:
   m_ObjectHideFlags: 0

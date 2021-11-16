@@ -58,18 +58,20 @@ sealed class IsblDeviceModel
         return _database[0];
     }
 
-    public static IsblDeviceModel GetInfo(string deviceName, XRNode node)
+    public static IsblDeviceModel GetInfo(string deviceName, InputDeviceCharacteristics characteristics)
     {
         InitDatabase();
 
-        bool isLeft = node == XRNode.LeftHand;
-        bool isRight = node == XRNode.RightHand;
+        bool isHand = (characteristics & InputDeviceCharacteristics.HeldInHand) != 0;
+        bool isLeft = (characteristics & InputDeviceCharacteristics.Left) != 0;
+        bool isLeftHand = isHand && isLeft;
+        bool isRightHand = isHand && !isLeft;
 
         foreach (var info in _database)
         {
-            var correctHand = (info.Hand == ControllerHand.BOTH && (isLeft || isRight))
-                || (isLeft && info.Hand == ControllerHand.LEFT)
-                || (isRight && info.Hand == ControllerHand.RIGHT);
+            var correctHand = (info.Hand == ControllerHand.BOTH && (isLeftHand || isRightHand))
+                || (isLeftHand && info.Hand == ControllerHand.LEFT)
+                || (isRightHand && info.Hand == ControllerHand.RIGHT);
             if (correctHand && deviceName == info.Name)
             {
                 return info;

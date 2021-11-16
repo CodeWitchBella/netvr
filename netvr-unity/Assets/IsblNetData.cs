@@ -8,7 +8,6 @@ namespace Isbl
 {
     public struct NetDeviceData
     {
-        public byte Type;
         public Vector3 Position, Rotation;
     }
 
@@ -16,7 +15,8 @@ namespace Isbl
     {
         public int Id;
         public string IdToken;
-        public NetDeviceData Head, Left, Right;
+        public NetDeviceData Head;
+        public IsblStaticXRDevice Left, Right;
 
         static int _byteLength;
         public static int ByteLength
@@ -83,9 +83,41 @@ namespace Isbl
 
         public static void Convert(ref int offset, ref NetDeviceData parsed, Span<byte> binary, bool toBinary)
         {
-            Convert(ref offset, ref parsed.Type, binary, toBinary);
             Convert(ref offset, ref parsed.Position, binary, toBinary);
             Convert(ref offset, ref parsed.Rotation, binary, toBinary);
+        }
+
+        public static void Convert(ref int offset, ref IsblStaticXRDevice parsed, Span<byte> binary, bool toBinary)
+        {
+            const int Length = IsblStaticXRDevice.DataLength;
+            if (binary.Length == 0)
+            {
+                offset += Length;
+                return;
+            }
+
+            if (binary.Length >= offset + Length)
+            {
+                if (toBinary)
+                {
+                    if (parsed == null)
+                        for (int i = 0; i < Length; ++i) binary[i + offset] = 0;
+                    else
+                        for (int i = 0; i < Length; ++i) binary[i + offset] = parsed.Data[i];
+                }
+                else
+                {
+                    if (parsed == null) parsed = new();
+                    for (int i = 0; i < Length; ++i)
+                        parsed.Data[i] = binary[i + offset];
+                }
+            }
+            else
+            {
+                throw new Exception("Target is too smol.");
+            }
+
+            offset += Length;
         }
 
         public static void Convert(ref int offset, ref NetStateData parsed, Span<byte> binary, bool toBinary)
@@ -119,7 +151,6 @@ namespace Isbl
                 parsed[i] = value;
             }
         }
-
     }
 
     public struct NetIncomingTCPMessage

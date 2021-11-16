@@ -30,6 +30,24 @@ public class IsblNetRemoteDeviceManager : MonoBehaviour
         foreach (var id in toBeRemoved) _remoteDevices.Remove(id);
     }
 
+    void SyncDevice(int id, IsblStaticXRDevice deviceData)
+    {
+        var device = _remoteDevices.GetValueOrDefault(id, null);
+        if (device == null)
+        {
+            var go = new GameObject($"Synced {id / 3}:{id % 3}");
+            go.transform.parent = transform;
+            device = go.AddComponent<IsblNetRemoteDevice>();
+            device.Id = id;
+            go.AddComponent<IsblTrackedPoseDriver>();
+            _remoteDevices.Add(id, device);
+        }
+        device.Visited = true;
+        var driver = device.GetComponent<IsblTrackedPoseDriver>();
+        if (deviceData?.Data != null)
+            driver.NetDevice = deviceData;
+    }
+
     void SyncDevice(int id, Isbl.NetDeviceData deviceData)
     {
         var device = _remoteDevices.GetValueOrDefault(id, null);
@@ -39,7 +57,6 @@ public class IsblNetRemoteDeviceManager : MonoBehaviour
             go.transform.parent = transform;
             device = go.AddComponent<IsblNetRemoteDevice>();
             device.Id = id;
-            device.Type = deviceData.Type;
             _remoteDevices.Add(id, device);
         }
         device.Visited = true;

@@ -1,6 +1,6 @@
 import type { PWebSocket } from "./utils.ts";
 
-const dataLength = 79;
+const dataLength = 265;
 const sendToSelfAsDebug = false;
 export class Peer {
   data: Uint8Array = new Uint8Array();

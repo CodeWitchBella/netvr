@@ -2,15 +2,25 @@ using UnityEngine;
 using GLTFast;
 using System.Threading.Tasks;
 using UnityEngine.XR;
-using System.Collections.Generic;
-using System;
-using System.Diagnostics.CodeAnalysis;
 
 public class IsblTrackedPoseDriver : MonoBehaviour
 {
-    public XRNode Node = XRNode.LeftHand;
+    public IsblStaticXRDevice NetDevice = new();
 
-    public IsblXRDevice Device { get; private set; }
+    IsblXRDeviceComponent _localDriver;
+    void Start()
+    {
+        _localDriver = GetComponent<IsblXRDeviceComponent>();
+        if (_localDriver != null)
+        {
+            var net = IsblNet.Instance;
+            if (net != null)
+            {
+                if (_localDriver.Node == XRNode.RightHand) net.NetState.Right = NetDevice;
+                else if (_localDriver.Node == XRNode.LeftHand) net.NetState.Left = NetDevice;
+            }
+        }
+    }
 
 #if UNITY_EDITOR
     public class SelfPropertyAttribute : PropertyAttribute { };
@@ -24,29 +34,13 @@ public class IsblTrackedPoseDriver : MonoBehaviour
 #if UNITY_EDITOR
         EditorOnly = this;
 #endif
-        InputDevices.deviceConnected += DeviceConnected;
-        InputDevices.deviceDisconnected += DeviceDisconnected;
         Cleanup();
         InitializeIfNeeded();
     }
 
     void OnDisable()
     {
-        InputDevices.deviceConnected -= DeviceConnected;
-        InputDevices.deviceDisconnected -= DeviceDisconnected;
         Cleanup();
-    }
-
-    void DeviceDisconnected(InputDevice obj)
-    {
-        if (Device?.Device == obj) Cleanup();
-        InitializeIfNeeded();
-    }
-
-    void DeviceConnected(InputDevice obj)
-    {
-        if (Device != null) return; // device already connected
-        InitializeIfNeeded();
     }
 
     static async Task<GltfImport> LoadModel(IsblDeviceModel info, string controllerName)
@@ -71,28 +65,32 @@ public class IsblTrackedPoseDriver : MonoBehaviour
 
     void Cleanup()
     {
-        Device = null;
         for (var i = 0; i < transform.childCount; ++i)
             Destroy(transform.GetChild(i).gameObject);
     }
 
+    string _loadedDevice;
+    int _loadId;
     async void InitializeIfNeeded()
     {
-        if (Device != null) return; // not needed
+        if (_loadedDevice == NetDevice.Name) return;
 
-        // get device
-        var devices = new List<InputDevice>();
-        InputDevices.GetDevicesAtXRNode(Node, devices);
-        if (devices.Count < 1) return;
-        var device = new IsblXRDevice(devices[0]);
-        Device = device;
+        Cleanup();
+        _loadedDevice = NetDevice.Name;
+        var thisLoadId = ++_loadId;
+
+        if (NetDevice.Name.Length == 0)
+        {
+            Cleanup();
+            return;
+        }
 
         // load model
-        var builder = IsblDeviceModel.GetInfo(deviceName: device.Device.name, node: Node);
-        var gltf = await LoadModel(builder, device.Device.name);
+        var builder = IsblDeviceModel.GetInfo(deviceName: NetDevice.Name, characteristics: NetDevice.Characteristics);
+        var gltf = await LoadModel(builder, NetDevice.Name);
 
         // check for disconnect/reconnect in the mean time
-        if (device != Device) return;
+        if (thisLoadId != _loadId) return;
 
         // instantiate model
         if (gltf != null)
@@ -110,8 +108,11 @@ public class IsblTrackedPoseDriver : MonoBehaviour
 
     void Update()
     {
-        if (Device == null) return;
-        gameObject.transform.localPosition = Device.DevicePosition;
-        gameObject.transform.localRotation = Device.DeviceRotation;
+        // Called here so that I do not have to rely on Script Execution Order
+        if (_localDriver != null) NetDevice.UpdateFromDevice(_localDriver.Device);
+
+        InitializeIfNeeded();
+        gameObject.transform.localPosition = NetDevice.DevicePosition;
+        gameObject.transform.localRotation = NetDevice.DeviceRotation;
     }
 }
