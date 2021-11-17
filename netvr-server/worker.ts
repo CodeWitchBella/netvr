@@ -41,27 +41,10 @@ export class DurableObjectWebSocket {
     this.state = state;
   }
 
-  timeout: ReturnType<typeof setTimeout> | null = null;
-  lastTick = 0;
-  tick = () => {
-    this.lastTick = Date.now();
-    this.room.tick().then(() => {
-      this.timeout = null;
-    });
-  };
-
   async fetch(request: Request) {
     const ip = request.headers.get("CF-Connecting-IP");
 
     const [client, server] = Object.values(new WebSocketPair());
-    // only tick if there are incoming messages, and throttle to room.interval
-    server.addEventListener("message", () => {
-      if (!this.timeout) {
-        const ms = this.room.interval + this.lastTick - Date.now();
-        if (ms < 0) this.tick();
-        else this.timeout = setTimeout(this.tick, ms);
-      }
-    });
 
     this.room.onSocket(server).catch((e) => {
       console.error(e);

@@ -15,12 +15,6 @@ const l = Deno.listen({ port: 10_000 });
 console.log(l.addr);
 const room = createRoom();
 
-setTimeout(tick, 0);
-async function tick() {
-  await room.tick();
-  setTimeout(tick, 15);
-}
-
 const socketState = {
   CONNECTING: 0, // Socket has been created. The connection is not yet open.
   OPEN: 1, // The connection is open and ready to communicate.

@@ -38,7 +38,11 @@ public sealed class IsblNet : IDisposable
             if (NetState.Id == 0) Socket.SendAsync(new { action = "gimme id" });
             else Socket.SendAsync(new { action = "i already has id", id = NetState.Id, token = NetState.IdToken });
         };
-        Socket.OnDisconnect += () => NetState.Initialized = false;
+        Socket.OnDisconnect += () =>
+        {
+            NetState.Initialized = false;
+            OtherStates.Clear();
+        };
         Socket.OnTextMessage += (text) =>
         {
             var obj = JsonConvert.DeserializeObject<Isbl.NetIncomingTCPMessage>(text);
@@ -62,9 +66,18 @@ public sealed class IsblNet : IDisposable
         };
         Socket.OnBinaryMessage += (data) =>
         {
-            var offset = 0;
-            Isbl.NetData.Convert(ref offset, OtherStates, data, false);
-            foreach (var state in OtherStates) { }
+            int count = BitConverter.ToInt32(data, 0);
+            var offset = 4;
+
+            for (int i = 0; i < count; ++i)
+            {
+                var id = BitConverter.ToInt32(data, offset);
+                if (OtherStates.ContainsKey(id))
+                {
+                    var state = OtherStates[id];
+                    Isbl.NetData.Convert(ref offset, state, data, toBinary: false);
+                }
+            }
         };
     }
 
@@ -85,7 +98,7 @@ public sealed class IsblNet : IDisposable
         if (!NetState.Initialized) return;
         var bytes = new byte[Isbl.NetStateData.ByteLength];
         int offset = 0;
-        Isbl.NetData.Convert(ref offset, ref NetState, bytes, true);
+        Isbl.NetData.Convert(ref offset, NetState, bytes, true);
         _ = Socket.SendAsync(bytes, System.Net.WebSockets.WebSocketMessageType.Binary);
     }
 }

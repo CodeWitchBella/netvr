@@ -6,7 +6,7 @@ export function createRoom() {
   const peersById = new Map<number, Peer>();
   const peerTokens = new Map<number, string>();
 
-  return { interval: 15, onSocket, tick };
+  return { interval: 15, onSocket };
 
   /**
    * Function to handle incoming connection from client.
@@ -24,15 +24,16 @@ export function createRoom() {
               "Invoked binary action without setting up id first",
             );
           } else {
-            thisPeer.onBinary(event.data, peersById.values());
+            thisPeer.onBinary(
+              event.data,
+              other(peersById.values(), thisPeer.id),
+            );
           }
           continue;
         }
         console.log("event.data:", event.data);
         const message = JSON.parse(event.data);
-        if (message.action === "keep alive") {
-          // ignore
-        } else if (message.action === "gimme id") {
+        if (message.action === "gimme id") {
           thisPeer = createPeer(++idgen, socket);
           socket.send(
             JSON.stringify({
@@ -60,7 +61,9 @@ export function createRoom() {
             );
           }
         } else if (thisPeer) {
-          thisPeer.onJson(message, peersById.values());
+          thisPeer.onJson(message, other(peersById.values(), thisPeer.id));
+        } else if (message.action === "keep alive") {
+          /* ignore */
         } else {
           console.error(
             "Invoked",
@@ -88,12 +91,14 @@ export function createRoom() {
     console.log(peersById);
     return peer;
   }
+}
 
-  async function tick() {
-    try {
-      await Peer.tick(peersById.values());
-    } catch (e) {
-      console.log("Error in tick", e);
-    }
+function* otherImpl(peers: Iterable<Peer>, selfId: number) {
+  for (const peer of peers) {
+    if (peer.id !== selfId) yield peer;
   }
+}
+
+function other(peers: Iterable<Peer>, selfId: number) {
+  return Array.from(otherImpl(peers, selfId));
 }
