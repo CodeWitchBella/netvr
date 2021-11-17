@@ -47,6 +47,7 @@ export function createRoom() {
           if (token && token === message.token) {
             thisPeer = createPeer(requestedId, socket);
             console.log(peersById);
+            socket.send(JSON.stringify({ action: "id ack" }));
           } else {
             thisPeer = createPeer(++idgen, socket);
             console.log(peersById);
@@ -59,7 +60,7 @@ export function createRoom() {
             );
           }
         } else if (thisPeer) {
-          thisPeer?.onJson(message, peersById.values());
+          thisPeer.onJson(message, peersById.values());
         } else {
           console.error(
             "Invoked",

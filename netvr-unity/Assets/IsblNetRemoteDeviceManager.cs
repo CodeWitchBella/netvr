@@ -14,9 +14,9 @@ public class IsblNetRemoteDeviceManager : MonoBehaviour
 
         foreach (var peer in net.OtherStates)
         {
-            SyncDevice(peer.Id * 3, peer.Head);
-            SyncDevice(peer.Id * 3 + 1, peer.Left);
-            SyncDevice(peer.Id * 3 + 2, peer.Right);
+            SyncDevice(peer.Value.Id * 3, peer.Value.Head);
+            SyncDevice(peer.Value.Id * 3 + 1, peer.Value.Left);
+            SyncDevice(peer.Value.Id * 3 + 2, peer.Value.Right);
         }
 
         // remove untracked

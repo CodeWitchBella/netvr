@@ -11,8 +11,9 @@ namespace Isbl
         public Vector3 Position, Rotation;
     }
 
-    public struct NetStateData
+    public class NetStateData
     {
+        public bool Initialized;
         public int Id;
         public string IdToken;
         public NetDeviceData Head;
@@ -128,20 +129,37 @@ namespace Isbl
             Convert(ref offset, ref parsed.Right, binary, toBinary);
         }
 
-        public static void Convert(ref int offset, List<NetStateData> parsed, Span<byte> binary, bool toBinary)
+        public static void Convert(ref int offset, Dictionary<int, NetStateData> parsed, Span<byte> binary, bool toBinary)
         {
             int count = parsed.Count;
             Convert(ref offset, ref count, binary, toBinary);
 
-            if (!toBinary)
+            if (toBinary)
             {
-                // resize
-                if (count < parsed.Count)
-                    parsed.RemoveRange(count, parsed.Count - count);
-                else if (count > parsed.Capacity) parsed.Capacity = count;
+                foreach (var key in parsed.Keys)
+                {
+                    NetStateData value = parsed[key];
+                    Convert(ref offset, ref value, binary, toBinary);
+                }
+            }
+            else
+            {
+                foreach (var key in parsed.Keys)
+                { parsed[key].Initialized = false; }
 
-                while (count > parsed.Count)
-                    parsed.Add(new());
+                for (int i = 0; i < count; ++i)
+                {
+                    var id = 0;
+                    var offsetCopy = offset;
+                    Convert(ref offsetCopy, ref id, binary, toBinary);
+
+                    NetStateData value = parsed[id] ?? new();
+                    Convert(ref offset, ref value, binary, toBinary);
+                    value.Initialized = true;
+                }
+
+                foreach (var i in parsed.Where(d => !d.Value.Initialized).ToList())
+                { parsed.Remove(i.Key); }
             }
 
             for (var i = 0; i < parsed.Count; i++)

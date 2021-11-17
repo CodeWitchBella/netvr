@@ -22,6 +22,7 @@ public class ReconnectingClientWebSocket : IDisposable
     public Action<string> OnTextMessage;
     public Action<byte[]> OnBinaryMessage;
     public Action OnConnect;
+    public Action OnDisconnect;
 
     public bool PrintDebug = true;
 
@@ -29,7 +30,7 @@ public class ReconnectingClientWebSocket : IDisposable
     {
         PrintDebug = printDebug;
         Uri = new(uri);
-        _ = Connect();
+        _ = Connect(fromConstructor: true);
     }
 
     public async Task SendAsync(byte[] buffer, WebSocketMessageType messageType = WebSocketMessageType.Binary)
@@ -103,10 +104,12 @@ public class ReconnectingClientWebSocket : IDisposable
         }
     }
 
-    async Task Connect()
+    async Task Connect(bool fromConstructor = false)
     {
         if (_connecting || !ShouldReconnect(_webSocket)) return;
         if (PrintDebug) Debug.Log("Initializing connection process");
+        try { if (!fromConstructor) OnDisconnect?.Invoke(); } catch (Exception e) { Debug.LogError(e); }
+
         _connecting = true;
         var timeout = 200;
         try

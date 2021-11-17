@@ -38,25 +38,38 @@ public sealed class IsblNet : IDisposable
             if (NetState.Id == 0) Socket.SendAsync(new { action = "gimme id" });
             else Socket.SendAsync(new { action = "i already has id", id = NetState.Id, token = NetState.IdToken });
         };
+        Socket.OnDisconnect += () => NetState.Initialized = false;
         Socket.OnTextMessage += (text) =>
         {
-            Debug.Log(text);
             var obj = JsonConvert.DeserializeObject<Isbl.NetIncomingTCPMessage>(text);
             if (obj.Action == "id's here")
             {
                 NetState.Id = obj.IntValue;
                 NetState.IdToken = obj.StringValue;
             }
+            if (obj.Action == "id's here" || obj.Action == "id ack")
+            {
+                NetState.Initialized = true;
+                Socket.SendAsync(new
+                {
+                    action = "device info",
+                    info = new[] {
+                        new { node = "left", name = NetState.Left.Name, characteristics = NetState.Left.Characteristics },
+                        new { node = "right", name = NetState.Right.Name, characteristics = NetState.Right.Characteristics },
+                    }
+                });
+            }
         };
         Socket.OnBinaryMessage += (data) =>
         {
             var offset = 0;
             Isbl.NetData.Convert(ref offset, OtherStates, data, false);
+            foreach (var state in OtherStates) { }
         };
     }
 
-    public Isbl.NetStateData NetState;
-    public List<Isbl.NetStateData> OtherStates = new();
+    public Isbl.NetStateData NetState = new();
+    public Dictionary<int, Isbl.NetStateData> OtherStates = new();
 
     public void Dispose()
     {
@@ -69,7 +82,7 @@ public sealed class IsblNet : IDisposable
     /// </summary>
     public void Tick()
     {
-        if (NetState.Id < 1) return;
+        if (!NetState.Initialized) return;
         var bytes = new byte[Isbl.NetStateData.ByteLength];
         int offset = 0;
         Isbl.NetData.Convert(ref offset, ref NetState, bytes, true);
