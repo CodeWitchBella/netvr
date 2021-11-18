@@ -25,6 +25,12 @@ public class IsblStaticXRDevice
     public const int DataLength = 118;
     public byte[] Data = new byte[DataLength];
     public string Name = "";
+    /// <summary>
+    /// Denotes whether information stored outside of Data chaned
+    /// </summary>
+    ///
+    /// True means that the data needs to be transmitted to the server.
+    public bool DeviceInfoChanged;
     public InputDeviceCharacteristics Characteristics;
 
     public Quaternion DeviceRotation => ReadQuaternion(Offsets.DeviceRotation);
@@ -88,12 +94,21 @@ public class IsblStaticXRDevice
         if (device == null)
         {
             for (int i = 0; i < Data.Length; ++i) Data[i] = 0;
-            Name = "";
-            Characteristics = 0;
+            if (Name.Length != 0 || Characteristics != 0)
+            {
+                Name = "";
+                Characteristics = 0;
+                DeviceInfoChanged = true;
+            }
             return;
         }
-        Characteristics = device.Device.characteristics;
-        Name = device.Device.name;
+
+        if (Characteristics != device.Device.characteristics || Name != device.Device.name)
+        {
+            Characteristics = device.Device.characteristics;
+            Name = device.Device.name;
+            DeviceInfoChanged = true;
+        }
         UpdateFromDevice(Offsets.DeviceRotation, device.DeviceRotation); // Quaternion
         UpdateFromDevice(Offsets.PointerRotation, device.PointerRotation); // Quaternion
         UpdateFromDevice(Offsets.DeviceAngularVelocity, device.DeviceAngularVelocity); // Vector3

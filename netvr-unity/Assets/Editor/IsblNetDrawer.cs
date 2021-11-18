@@ -28,9 +28,10 @@ public class IsblNetDrawer : PropertyDrawer
         }
         else
         {
-            DrawLine("Uri", net.Socket?.Uri.ToString() ?? "no socket");
-            DrawLine("State", net.Socket.State.ToString());
+            DrawLine("Socket.Uri", net.Socket?.Uri.ToString() ?? "no socket");
+            DrawLine("Socket.State", net.Socket.State.ToString());
             DrawLine("ClientId", net.NetState.Id.ToString());
+            DrawLine("Initialized", net.NetState.Initialized.ToString());
             DrawLine("Last Successful Message", net.Socket.LastSuccessfulMessage.ToLongTimeString());
             DrawLine("NetState ByteLength", Isbl.NetStateData.ByteLength.ToString());
             DrawLine("Peer count", net.OtherStates.Count.ToString());

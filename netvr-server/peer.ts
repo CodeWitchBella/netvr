@@ -1,7 +1,7 @@
 import type { PWebSocket } from "./utils.ts";
 
 const dataLength = 264;
-const sendToSelfAsDebug = true;
+const sendToSelfAsDebug = false;
 export class Peer {
   data: Uint8Array = new Uint8Array();
   info?: any;
@@ -53,9 +53,15 @@ export class Peer {
 
   private sendJsonUnsent(peers: readonly Peer[]) {
     const info = [];
-    for (const peer of peers) {
-      if (!this.jsonSent.has(peer.id)) info.push({ id: peer.id, ...peer.info });
+    for (const peer of (sendToSelfAsDebug ? peers.concat([this]) : peers)) {
+      if (!this.jsonSent.has(peer.id)) {
+        this.jsonSent.add(peer.id);
+        info.push({ id: peer.id, info: peer.info });
+      }
     }
+    if (info.length === 0) return;
+
+    this.socket.send(JSON.stringify({ action: "device info", info }));
   }
 
   onBinary(data: ArrayBuffer, peers: readonly Peer[]) {

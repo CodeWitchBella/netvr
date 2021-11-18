@@ -1,5 +1,4 @@
 using System;
-using Newtonsoft.Json;
 using UnityEngine;
 using System.Collections.Generic;
 using System.Linq;
@@ -18,6 +17,15 @@ namespace Isbl
         public string IdToken;
         public NetDeviceData Head;
         public IsblStaticXRDevice Left, Right;
+        public bool DeviceInfoChanged
+        {
+            get => Left.DeviceInfoChanged || Right.DeviceInfoChanged;
+            set
+            {
+                Left.DeviceInfoChanged = value;
+                Right.DeviceInfoChanged = value;
+            }
+        }
 
         static int _byteLength;
         public static int ByteLength
@@ -133,16 +141,5 @@ namespace Isbl
             Convert(ref offset, ref parsed.Left, binary, toBinary);
             Convert(ref offset, ref parsed.Right, binary, toBinary);
         }
-    }
-
-    public struct NetIncomingTCPMessage
-    {
-        [JsonProperty("action")]
-        public string Action;
-
-        [JsonProperty("intValue")]
-        public int IntValue;
-        [JsonProperty("stringValue")]
-        public string StringValue;
     }
 }

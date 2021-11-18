@@ -3,6 +3,8 @@ using Newtonsoft.Json;
 using UnityEngine;
 using System.Linq;
 using System.Collections.Generic;
+using Newtonsoft.Json.Linq;
+using UnityEngine.XR;
 
 /// <summary>
 /// Main implementation of network interface
@@ -45,40 +47,92 @@ public sealed class IsblNet : IDisposable
         };
         Socket.OnTextMessage += (text) =>
         {
-            var obj = JsonConvert.DeserializeObject<Isbl.NetIncomingTCPMessage>(text);
-            if (obj.Action == "id's here")
+            try
             {
-                NetState.Id = obj.IntValue;
-                NetState.IdToken = obj.StringValue;
-            }
-            if (obj.Action == "id's here" || obj.Action == "id ack")
-            {
-                NetState.Initialized = true;
-                Socket.SendAsync(new
+                var obj = JObject.Parse(text);
+                var action = obj.Value<string>("action");
+                if (action == "id's here" || action == "id ack")
                 {
-                    action = "device info",
-                    info = new[] {
-                        new { node = "left", name = NetState.Left.Name, characteristics = NetState.Left.Characteristics },
-                        new { node = "right", name = NetState.Right.Name, characteristics = NetState.Right.Characteristics },
+                    if (action == "id's here")
+                    {
+                        NetState.Id = obj.Value<int>("intValue");
+                        NetState.IdToken = obj.Value<string>("stringValue");
                     }
-                });
+                    NetState.Initialized = true;
+                    NetState.DeviceInfoChanged = true;
+                }
+                else if (action == "device info")
+                {
+                    HandleDeviceInfo(obj);
+                }
+                else
+                {
+                    Debug.Log($"Unknown action \"{action}\"");
+                }
+            }
+            catch (Exception e)
+            {
+                Debug.LogError(e);
             }
         };
         Socket.OnBinaryMessage += (data) =>
-        {
-            int count = BitConverter.ToInt32(data, 0);
-            var offset = 4;
-
-            for (int i = 0; i < count; ++i)
             {
-                var id = BitConverter.ToInt32(data, offset);
-                if (OtherStates.ContainsKey(id))
+                int count = BitConverter.ToInt32(data, 0);
+                var offset = 4;
+
+                for (int i = 0; i < count; ++i)
                 {
-                    var state = OtherStates[id];
-                    Isbl.NetData.Convert(ref offset, state, data, toBinary: false);
+                    var id = BitConverter.ToInt32(data, offset);
+                    if (OtherStates.ContainsKey(id))
+                    {
+                        var state = OtherStates[id];
+                        Isbl.NetData.Convert(ref offset, state, data, toBinary: false);
+                    }
                 }
+            };
+    }
+
+    void HandleDeviceInfo(JObject obj)
+    {
+        foreach (var peer in obj.GetValue("info").Children<JObject>())
+        {
+            var id = peer.Value<int>("id");
+            Isbl.NetStateData localState = OtherStates.GetValueOrDefault(id, null);
+            if (localState == null)
+            {
+                localState = new()
+                {
+                    Id = id,
+                    Initialized = true,
+                    Left = new(),
+                    Right = new(),
+                };
+                OtherStates.Add(id, localState);
             }
-        };
+            if (!peer.ContainsKey("info")) continue;
+
+            foreach (var device in peer.GetValue("info").Children<JObject>())
+            {
+                var node = device.Value<string>("node");
+                if (node != "left" && node != "right") continue;
+                var localDevice = node == "left" ? localState.Left : localState.Right;
+                localDevice.Name = device.Value<string>("name");
+                localDevice.Characteristics = (InputDeviceCharacteristics)device.Value<int>("characteristics");
+            }
+        }
+    }
+
+    void SendDeviceInfo()
+    {
+        _ = Socket.SendAsync(new
+        {
+            action = "device info",
+            info = new[] {
+                new { node = "left", name = NetState.Left.Name, characteristics = NetState.Left.Characteristics },
+                new { node = "right", name = NetState.Right.Name, characteristics = NetState.Right.Characteristics },
+            }
+        });
+        NetState.DeviceInfoChanged = false;
     }
 
     public Isbl.NetStateData NetState = new();
@@ -100,5 +154,6 @@ public sealed class IsblNet : IDisposable
         int offset = 0;
         Isbl.NetData.Convert(ref offset, NetState, bytes, true);
         _ = Socket.SendAsync(bytes, System.Net.WebSockets.WebSocketMessageType.Binary);
+        if (NetState.DeviceInfoChanged) SendDeviceInfo();
     }
 }
