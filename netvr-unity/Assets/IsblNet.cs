@@ -49,7 +49,11 @@ public sealed class IsblNet : IDisposable
                 _socket.Dispose();
             }
             // reinit
-            _socket = new(value);
+            var data = IsblPersistentData.Instance.GetConnection(value);
+            Debug.Log($"Connecting to: {data.SocketUrl} with {data.PeerId}, {data.PeerIdToken}");
+            NetState.Id = data.PeerId;
+            NetState.IdToken = data.PeerIdToken;
+            _socket = new(data.SocketUrl);
             InitializeSocket();
         }
     }
@@ -60,10 +64,7 @@ public sealed class IsblNet : IDisposable
     IsblNet()
     {
         var data = IsblPersistentData.Instance.GetLatestConnection();
-        NetState.Id = data.PeerId;
-        NetState.IdToken = data.PeerIdToken;
-        _socket = new(data.SocketUrl);
-        InitializeSocket();
+        SocketUrl = data.SocketUrl;
     }
 
     void InitializeSocket()
@@ -99,7 +100,7 @@ public sealed class IsblNet : IDisposable
                 {
                     HandleDeviceInfo(obj);
                 }
-                else if (action.Length > 0)
+                else if (!string.IsNullOrEmpty(action))
                 {
                     Debug.Log($"Unknown action \"{action}\"");
                 }

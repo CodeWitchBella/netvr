@@ -63,6 +63,18 @@ public sealed class IsblPersistentData
         return _connections[^1];
     }
 
+    public Connection GetConnection(string socketUrl)
+    {
+        socketUrl = new System.Uri(socketUrl).ToString(); // normalize
+        var con = _connections.Find(c => c.SocketUrl == socketUrl);
+        return con ?? new Connection
+        {
+            PeerId = 0,
+            PeerIdToken = "",
+            SocketUrl = socketUrl,
+        };
+    }
+
     public void SaveConnection(string socketUrl, int peerId, string peerIdToken)
     {
         var existingIndex = _connections.FindIndex(conn => conn.SocketUrl == socketUrl);

@@ -8,6 +8,7 @@ public class IsblTrackedPoseDriver : MonoBehaviour
     public IsblStaticXRDevice NetDevice = new();
 
     IsblXRDeviceComponent _localDriver;
+    GameObject _modelWrapper;
     void Start()
     {
         _localDriver = GetComponent<IsblXRDeviceComponent>();
@@ -65,8 +66,8 @@ public class IsblTrackedPoseDriver : MonoBehaviour
 
     void Cleanup()
     {
-        for (var i = 0; i < transform.childCount; ++i)
-            Destroy(transform.GetChild(i).gameObject);
+        Destroy(_modelWrapper);
+        _modelWrapper = null;
     }
 
     string _loadedDevice;
@@ -95,10 +96,18 @@ public class IsblTrackedPoseDriver : MonoBehaviour
         // instantiate model
         if (gltf != null)
         {
-            gltf.InstantiateMainScene(transform);
-            var model = transform.GetChild(0);
+            if (_modelWrapper == null)
+            {
+                _modelWrapper = new GameObject("device model");
+                _modelWrapper.transform.parent = transform;
+                _modelWrapper.transform.localPosition = Vector3.zero;
+                _modelWrapper.transform.localRotation = Quaternion.identity;
+                _modelWrapper.transform.localScale = Vector3.one;
+            }
+            gltf.InstantiateMainScene(_modelWrapper.transform);
+            var model = _modelWrapper.transform.GetChild(0);
             var root = model.Find(builder.RootNode);
-            root.parent = transform;
+            root.parent = _modelWrapper.transform;
             Destroy(model.gameObject);
 
             root.localPosition = builder.Position;

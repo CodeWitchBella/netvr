@@ -243,6 +243,7 @@ GameObject:
   - component: {fileID: 541096546}
   - component: {fileID: 541096550}
   - component: {fileID: 541096548}
+  - component: {fileID: 541096551}
   m_Layer: 0
   m_Name: RightController
   m_TagString: Untagged
@@ -291,6 +292,18 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   Node: 5
+--- !u!114 &541096551
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 541096545}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 138316888a2c5bb408984e50edb529d8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &599916901
 GameObject:
   m_ObjectHideFlags: 0
@@ -694,6 +707,7 @@ GameObject:
   - component: {fileID: 1728657556}
   - component: {fileID: 1728657559}
   - component: {fileID: 1728657557}
+  - component: {fileID: 1728657560}
   m_Layer: 0
   m_Name: LeftController
   m_TagString: Untagged
@@ -742,6 +756,18 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   Node: 4
+--- !u!114 &1728657560
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 1728657555}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 138316888a2c5bb408984e50edb529d8, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
 --- !u!1 &2023549369
 GameObject:
   m_ObjectHideFlags: 0
