@@ -13,6 +13,7 @@ public class ChangeServer : MonoBehaviour
     void Start()
     {
         _menu = Instantiate(Resources.Load<GameObject>("url"), transform);
+        _menu.SetActive(false);
         _driver = GetComponent<IsblTrackedPoseDriver>();
     }
 
