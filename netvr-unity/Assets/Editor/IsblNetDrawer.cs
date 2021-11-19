@@ -5,6 +5,8 @@ using UnityEditor;
 public class IsblNetDrawer : PropertyDrawer
 {
     const float LineHeight = 20;
+    string _url;
+
     public override float GetPropertyHeight(SerializedProperty property, GUIContent label)
     {
         return LineHeight * 24;
@@ -20,26 +22,46 @@ public class IsblNetDrawer : PropertyDrawer
             EditorGUI.LabelField(new Rect(position.x, y, position.width, 20), text, text2);
             y += LineHeight;
         }
+        bool Button(string text)
+        {
+            var ret = GUI.Button(new Rect(position.x, y, position.width, 20), text);
+            y += LineHeight;
+            return ret;
+        }
 
         EditorGUI.BeginProperty(position, label, property);
         if (net == null)
         {
             DrawLine("IsblNet is not active.");
+            DrawLine("");
+            DrawLine("IsblPersistentData");
+            DrawLine(".DataPath", IsblPersistentData.DataPath);
+            DrawLine(".GetLatestConnection()");
+            var data = IsblPersistentData.Instance.GetLatestConnection();
+            DrawLine("    PeerId", data.PeerId.ToString());
+            DrawLine("    PeerIdToken", $"({data.PeerIdToken.Length}){new string('•', data.PeerIdToken.Length)}");
+            DrawLine("    SocketUrl", data.SocketUrl);
         }
         else
         {
-            DrawLine("Socket.Uri", net.Socket?.Uri.ToString() ?? "no socket");
-            DrawLine("Socket.State", net.Socket.State.ToString());
-            DrawLine("ClientId", net.NetState.Id.ToString());
+            DrawLine("SocketUrl", net.SocketUrl ?? "no socket");
+            const int TextWidth = 75;
+            _url = EditorGUI.TextField(new Rect(position.x, y, position.width - TextWidth, 20), "New URL", _url);
+            if (GUI.Button(new Rect(position.width - TextWidth + 10, y, TextWidth, 20), "change"))
+                net.SocketUrl = _url;
+            y += LineHeight;
+
+            DrawLine("Socket.State", net.UnityEditorOnlyDebug.State.ToString());
+            DrawLine("PeerId", net.NetState.Id.ToString());
             DrawLine("Initialized", net.NetState.Initialized.ToString());
-            DrawLine("Last Successful Message", net.Socket.LastSuccessfulMessage.ToLongTimeString());
+            DrawLine("Last Successful Message", net.UnityEditorOnlyDebug.LastSuccessfulMessage.ToLongTimeString());
             DrawLine("NetState ByteLength", Isbl.NetStateData.ByteLength.ToString());
             DrawLine("Peer count", net.OtherStates.Count.ToString());
         }
         EditorGUI.EndProperty();
-        if (GUI.Button(new Rect(position.x, y, position.width, 20), "Simulate Disconnect"))
+        if (net != null && Button("Simulate Disconnect"))
         {
-            net?.Socket.SimulateDisconnect();
+            net?.UnityEditorOnlyDebug.SimulateDisconnect();
         }
     }
 }

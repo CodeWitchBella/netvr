@@ -17,34 +17,68 @@ public sealed class IsblNet : IDisposable
     /// </summary>
     /// This method is used in Singleton instantiation scheme and is the only
     /// place where IsblNet constructor is called.
-    public static void EnsureInstanceExists(bool printDebug) { if (!IsblNetComponent.InstanceExists) IsblNetComponent.Instance = new(printDebug); }
+    public static void EnsureInstanceExists() { if (!IsblNetComponent.InstanceExists) IsblNetComponent.Instance = new(); }
 
     /// <summary>
     /// When you need to send or recieve message via network use this to access
     /// primary IsblNet instance
     /// </summary>
-    public static IsblNet Instance { get { EnsureInstanceExists(false); return IsblNetComponent.Instance; } }
+    public static IsblNet Instance { get { EnsureInstanceExists(); return IsblNetComponent.Instance; } }
 
-    public readonly ReconnectingClientWebSocket Socket;
+    ReconnectingClientWebSocket _socket;
     public bool Connected => false;
+#if UNITY_EDITOR
+    /// <summary>
+    /// UNITY_EDITOR-only getter for _socket so that I don't have to implement
+    /// readonly getter for everything I want to access from Editor GUI
+    /// </summary>
+    public ReconnectingClientWebSocket UnityEditorOnlyDebug { get { return _socket; } }
+#endif
+
+    public string SocketUrl
+    {
+        get { return _socket?.Uri.ToString() ?? ""; }
+        set
+        {
+            if (_socket != null)
+            {
+                // simulate disconnect
+                _socket.OnDisconnect?.Invoke();
+                _socket.OnDisconnect = null;
+                // cleanup
+                _socket.Dispose();
+            }
+            // reinit
+            _socket = new(value);
+            InitializeSocket();
+        }
+    }
 
     /// <summary>Private constructor. Only place where this is called is from
     /// EnsureInstanceExists and that only happens if other instance does not
     /// exist already.</summary>
-    IsblNet(bool printDebug)
+    IsblNet()
     {
-        Socket = new("ws://192.168.1.31:10000", printDebug);
-        Socket.OnConnect += () =>
+        var data = IsblPersistentData.Instance.GetLatestConnection();
+        NetState.Id = data.PeerId;
+        NetState.IdToken = data.PeerIdToken;
+        _socket = new(data.SocketUrl);
+        InitializeSocket();
+    }
+
+    void InitializeSocket()
+    {
+        _socket.OnConnect += () =>
         {
-            if (NetState.Id == 0) Socket.SendAsync(new { action = "gimme id" });
-            else Socket.SendAsync(new { action = "i already has id", id = NetState.Id, token = NetState.IdToken });
+            if (NetState.Id == 0) _socket.SendAsync(new { action = "gimme id" });
+            else _socket.SendAsync(new { action = "i already has id", id = NetState.Id, token = NetState.IdToken });
         };
-        Socket.OnDisconnect += () =>
+        _socket.OnDisconnect += () =>
         {
             NetState.Initialized = false;
             OtherStates.Clear();
         };
-        Socket.OnTextMessage += (text) =>
+        _socket.OnTextMessage += (text) =>
         {
             try
             {
@@ -57,6 +91,7 @@ public sealed class IsblNet : IDisposable
                         NetState.Id = obj.Value<int>("intValue");
                         NetState.IdToken = obj.Value<string>("stringValue");
                     }
+                    IsblPersistentData.Instance.SaveConnection(socketUrl: _socket.Uri.ToString(), peerId: NetState.Id, peerIdToken: NetState.IdToken);
                     NetState.Initialized = true;
                     NetState.DeviceInfoChanged = true;
                 }
@@ -64,7 +99,7 @@ public sealed class IsblNet : IDisposable
                 {
                     HandleDeviceInfo(obj);
                 }
-                else
+                else if (action.Length > 0)
                 {
                     Debug.Log($"Unknown action \"{action}\"");
                 }
@@ -74,7 +109,7 @@ public sealed class IsblNet : IDisposable
                 Debug.LogError(e);
             }
         };
-        Socket.OnBinaryMessage += (data) =>
+        _socket.OnBinaryMessage += (data) =>
             {
                 int count = BitConverter.ToInt32(data, 0);
                 var offset = 4;
@@ -123,7 +158,7 @@ public sealed class IsblNet : IDisposable
 
     void SendDeviceInfo()
     {
-        _ = Socket.SendAsync(new
+        _ = _socket.SendAsync(new
         {
             action = "device info",
             info = new[] {
@@ -139,7 +174,7 @@ public sealed class IsblNet : IDisposable
 
     public void Dispose()
     {
-        Socket.Dispose();
+        _socket?.Dispose();
     }
 
     /// <summary>
@@ -148,11 +183,11 @@ public sealed class IsblNet : IDisposable
     /// </summary>
     public void Tick()
     {
-        if (!NetState.Initialized) return;
+        if (!NetState.Initialized || _socket == null) return;
         var bytes = new byte[Isbl.NetStateData.ByteLength];
         int offset = 0;
         Isbl.NetData.Convert(ref offset, NetState, bytes, true);
-        _ = Socket.SendAsync(bytes, System.Net.WebSockets.WebSocketMessageType.Binary);
+        _ = _socket.SendAsync(bytes, System.Net.WebSockets.WebSocketMessageType.Binary);
         if (NetState.DeviceInfoChanged) SendDeviceInfo();
     }
 }

@@ -24,11 +24,10 @@ public class ReconnectingClientWebSocket : IDisposable
     public Action OnConnect;
     public Action OnDisconnect;
 
-    public bool PrintDebug = true;
+    public bool PrintDebug;
 
-    public ReconnectingClientWebSocket(string uri, bool printDebug)
+    public ReconnectingClientWebSocket(string uri)
     {
-        PrintDebug = printDebug;
         Uri = new(uri);
         _ = Connect(fromConstructor: true);
     }
@@ -158,7 +157,7 @@ public class ReconnectingClientWebSocket : IDisposable
 
         try
         {
-            while (_webSocket?.State == WebSocketState.Open)
+            while (_webSocket?.State == WebSocketState.Open && !token.IsCancellationRequested)
             {
                 var result = await socket.ReceiveAsync(new ArraySegment<byte>(buffer, idx, buffer.Length - idx), token);
                 idx += result.Count;
@@ -214,6 +213,11 @@ public class ReconnectingClientWebSocket : IDisposable
 
     public void Dispose()
     {
+        OnTextMessage = null;
+        OnBinaryMessage = null;
+        OnConnect = null;
+        OnDisconnect = null;
+
         _cancellationTokenSource.Cancel();
         _keepAliveTokenSource?.Cancel();
         _ = CloseNicely(_webSocket);

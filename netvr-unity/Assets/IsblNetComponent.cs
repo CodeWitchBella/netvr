@@ -44,7 +44,7 @@ public class IsblNetComponent : MonoBehaviour
         if (_instance == null)
         {
             _instance = this;
-            IsblNet.EnsureInstanceExists(PrintDebug);
+            IsblNet.EnsureInstanceExists();
         }
         else if (_instance != this)
         {
@@ -54,6 +54,10 @@ public class IsblNetComponent : MonoBehaviour
         }
 
         DontDestroyOnLoad(gameObject); // only explicit destroying
+
+#if UNITY_EDITOR
+        if (_net != null) _net.UnityEditorOnlyDebug.PrintDebug = PrintDebug;
+#endif
     }
 
     void FixedUpdate()
@@ -61,7 +65,7 @@ public class IsblNetComponent : MonoBehaviour
         _net?.Tick();
 
 #if UNITY_EDITOR
-        if (_net != null) _net.Socket.PrintDebug = PrintDebug;
+        if (_net != null) _net.UnityEditorOnlyDebug.PrintDebug = PrintDebug;
 #endif
     }
 
