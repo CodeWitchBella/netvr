@@ -112,7 +112,40 @@ public class IsblTrackedPoseDriver : MonoBehaviour
 
             root.localPosition = builder.Position;
             root.localEulerAngles = builder.Rotation;
+
+            ConnectAxes(_modelWrapper.transform);
         }
+    }
+
+    void ConnectAxisSync(Transform child, System.Func<float> getter)
+    {
+        var syncer = child.gameObject.AddComponent<AxisSynchronizer>();
+        syncer.ValueGetter = getter;
+    }
+
+    void ConnectTouchpoint(Transform child)
+    {
+        var primitive = GameObject.CreatePrimitive(PrimitiveType.Sphere);
+        primitive.transform.parent = child;
+        primitive.transform.localRotation = Quaternion.identity;
+        primitive.transform.localPosition = Vector3.zero;
+        primitive.transform.localScale = Vector3.one * 0.005f; // 5mm
+        var syncer = child.gameObject.AddComponent<AxisSynchronizer>();
+        syncer.VisibilityGetter = () => NetDevice.Primary2DAxisTouch;
+    }
+
+    void ConnectAxes(Transform parent)
+    {
+        if (parent.name == "xr_standard_trigger_pressed_value") ConnectAxisSync(parent, () => NetDevice.Trigger);
+        else if (parent.name == "xr_standard_squeeze_pressed_value") ConnectAxisSync(parent, () => NetDevice.Grip);
+        else if (parent.name == "xr_standard_squeeze_pressed_mirror_value") ConnectAxisSync(parent, () => NetDevice.Grip);
+        else if (parent.name == "xr_standard_touchpad_pressed_value") ConnectAxisSync(parent, () => NetDevice.Primary2DAxisClick ? 1 : 0);
+        else if (parent.name == "menu_pressed_value") ConnectAxisSync(parent, () => NetDevice.MenuButton ? 1 : 0);
+        else if (parent.name == "xr_standard_touchpad_axes_touched_value") ConnectTouchpoint(parent);
+        else if (parent.name == "xr_standard_touchpad_xaxis_touched_value") ConnectAxisSync(parent, () => (NetDevice.Primary2DAxis.x + 1) * .5f);
+        else if (parent.name == "xr_standard_touchpad_yaxis_touched_value") ConnectAxisSync(parent, () => 1 - (NetDevice.Primary2DAxis.y + 1) * .5f);
+
+        foreach (Transform child in parent) ConnectAxes(child);
     }
 
     void Update()
