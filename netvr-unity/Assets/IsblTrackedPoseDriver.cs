@@ -139,11 +139,18 @@ public class IsblTrackedPoseDriver : MonoBehaviour
         if (parent.name == "xr_standard_trigger_pressed_value") ConnectAxisSync(parent, () => NetDevice.Trigger);
         else if (parent.name == "xr_standard_squeeze_pressed_value") ConnectAxisSync(parent, () => NetDevice.Grip);
         else if (parent.name == "xr_standard_squeeze_pressed_mirror_value") ConnectAxisSync(parent, () => NetDevice.Grip);
-        else if (parent.name == "xr_standard_touchpad_pressed_value") ConnectAxisSync(parent, () => NetDevice.Primary2DAxisClick ? 1 : 0);
+        else if (parent.name == "xr_standard_touchpad_pressed_value" || parent.name == "xr_standard_thumbstick_pressed_min")
+            ConnectAxisSync(parent, () => NetDevice.Primary2DAxisClick ? 1 : 0);
         else if (parent.name == "menu_pressed_value") ConnectAxisSync(parent, () => NetDevice.MenuButton ? 1 : 0);
         else if (parent.name == "xr_standard_touchpad_axes_touched_value") ConnectTouchpoint(parent);
-        else if (parent.name == "xr_standard_touchpad_xaxis_touched_value") ConnectAxisSync(parent, () => (NetDevice.Primary2DAxis.x + 1) * .5f);
-        else if (parent.name == "xr_standard_touchpad_yaxis_touched_value") ConnectAxisSync(parent, () => 1 - (NetDevice.Primary2DAxis.y + 1) * .5f);
+        else if (parent.name == "xr_standard_touchpad_xaxis_touched_value" || parent.name == "xr_standard_thumbstick_xaxis_pressed_value")
+            ConnectAxisSync(parent, () => (NetDevice.Primary2DAxis.x + 1) * .5f);
+        else if (parent.name == "xr_standard_touchpad_yaxis_touched_value" || parent.name == "xr_standard_thumbstick_yaxis_pressed_value")
+            ConnectAxisSync(parent, () => 1 - (NetDevice.Primary2DAxis.y + 1) * .5f);
+        else if (parent.name == "x_button_pressed_value" || parent.name == "a_button_pressed_value")
+            ConnectAxisSync(parent, () => NetDevice.PrimaryButton ? 1 : 0);
+        else if (parent.name == "y_button_pressed_value" || parent.name == "b_button_pressed_value")
+            ConnectAxisSync(parent, () => NetDevice.SecondaryButton ? 1 : 0);
 
         foreach (Transform child in parent) ConnectAxes(child);
     }
