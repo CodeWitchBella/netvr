@@ -4,29 +4,28 @@ public class AxisSynchronizer : MonoBehaviour
 {
     public System.Func<float> ValueGetter;
     public System.Func<bool> VisibilityGetter;
-    public Transform Min;
-    public Transform Max;
-    public float Value;
-    public MeshRenderer MeshRenderer;
+    Transform _min;
+    Transform _max;
+    MeshRenderer _meshRenderer;
 
     void Start()
     {
-        Min = transform.parent.Find(gameObject.name.Replace("_value", "_min"));
-        Max = transform.parent.Find(gameObject.name.Replace("_value", "_max"));
-        MeshRenderer = FindObjectOfType<MeshRenderer>();
+        _min = transform.parent.Find(gameObject.name.Replace("_value", "_min"));
+        _max = transform.parent.Find(gameObject.name.Replace("_value", "_max"));
+        _meshRenderer = FindObjectOfType<MeshRenderer>();
     }
 
     void Update()
     {
-        if (ValueGetter != null)
+        if (ValueGetter != null && _min != null && _max != null)
         {
-            Value = ValueGetter();
-            transform.localPosition = Vector3.Lerp(Min.localPosition, Max.localPosition, Value);
-            transform.localRotation = Quaternion.Slerp(Min.localRotation, Max.localRotation, Value);
+            var value = ValueGetter();
+            transform.localPosition = Vector3.Lerp(_min.localPosition, _max.localPosition, value);
+            transform.localRotation = Quaternion.Slerp(_min.localRotation, _max.localRotation, value);
         }
-        if (VisibilityGetter != null && MeshRenderer != null)
+        if (VisibilityGetter != null && _meshRenderer != null)
         {
-            MeshRenderer.enabled = VisibilityGetter();
+            _meshRenderer.enabled = VisibilityGetter();
         }
     }
 }
