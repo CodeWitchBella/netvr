@@ -31,6 +31,7 @@ public class IsblStaticXRDevice
     ///
     /// True means that the data needs to be transmitted to the server.
     public bool DeviceInfoChanged;
+    public bool IsLocal { get; private set; }
     public InputDeviceCharacteristics Characteristics;
 
     public Quaternion DeviceRotation => ReadQuaternion(Offsets.DeviceRotation);
@@ -91,6 +92,7 @@ public class IsblStaticXRDevice
 
     public void UpdateFromDevice(IsblXRDevice device)
     {
+        IsLocal = true;
         if (device == null)
         {
             for (int i = 0; i < Data.Length; ++i) Data[i] = 0;

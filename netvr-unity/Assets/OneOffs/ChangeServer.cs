@@ -26,7 +26,7 @@ public class ChangeServer : MonoBehaviour
             _menu.SetActive(!_menu.activeSelf);
         }
         _lastMenuValue = menuValue;
-        bool switchValue = (_driver.NetDevice.PrimaryButton || _driver.NetDevice.Primary2DAxisClick);
+        bool switchValue = _driver.NetDevice.PrimaryButton || _driver.NetDevice.Primary2DAxisClick;
         if (_menu.activeSelf && switchValue && !_lastSwitchValue)
         {
             IsblNet.Instance.SocketUrl = IsblNet.Instance.SocketUrl.StartsWith("wss://") ? "ws://192.168.1.31:10000" : "wss://netvr.isbl.workers.dev";

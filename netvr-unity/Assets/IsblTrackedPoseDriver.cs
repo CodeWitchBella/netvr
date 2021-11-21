@@ -2,10 +2,13 @@ using UnityEngine;
 using GLTFast;
 using System.Threading.Tasks;
 using UnityEngine.XR;
+using System.Collections.Generic;
 
 public class IsblTrackedPoseDriver : MonoBehaviour
 {
     public IsblStaticXRDevice NetDevice = new();
+
+    public static List<IsblTrackedPoseDriver> Devices = new();
 
     IsblXRDeviceComponent _localDriver;
     GameObject _modelWrapper;
@@ -37,11 +40,13 @@ public class IsblTrackedPoseDriver : MonoBehaviour
 #endif
         Cleanup();
         InitializeIfNeeded();
+        Devices.Add(this);
     }
 
     void OnDisable()
     {
         Cleanup();
+        Devices.Remove(this);
     }
 
     static async Task<GltfImport> LoadModel(IsblDeviceModel info, string controllerName)
