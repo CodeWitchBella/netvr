@@ -1,0 +1,37 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <style>
+      .event {
+        border: 1px solid gray;
+        margin: 8px;
+        padding: 8px;
+      }
+      pre {
+        margin-bottom: 2px;
+      }
+      #events {
+        max-width: 600px;
+      }
+      .device {
+        margin-left: 8px;
+      }
+    </style>
+  </head>
+  <body>
+    <div>Hello world!</div>
+    <div id="events"></div>
+    <script type="module">
+      import { run } from "/src/index.ts";
+      run()
+        .then((e) => {
+          console.error(e);
+        })
+        .then(() => {
+          setTimeout(() => {
+            location.reload();
+          }, 1000);
+        });
+    </script>
+  </body>
+</html>

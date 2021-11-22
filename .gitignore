@@ -1,6 +1,8 @@
 *_BackUpThisFolder_ButDontShipItWithYourGame
 netvr-unity-build
 isbl-persistent-data.json
+node_modules
+dist
 
 # This .gitignore file should be placed at the root of your Unity project directory
 #

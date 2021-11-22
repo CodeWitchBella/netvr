@@ -12,7 +12,7 @@ dir = "dist"
 main = "worker.mjs"
 
 [site]
-bucket = "./public"
+bucket = "../netvr-dashboard/dist"
 
 [durable_objects]
 bindings = [
