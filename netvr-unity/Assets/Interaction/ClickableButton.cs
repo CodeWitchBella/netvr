@@ -35,11 +35,6 @@ public class ClickableButton : MonoBehaviour
 
     void OnDeviceDisconnected(IsblTrackedPoseDriver driver) { _pressedHere.Remove(driver); }
 
-    void Start()
-    {
-
-    }
-
     bool IsThisButtonClosest(IsblTrackedPoseDriver dev)
     {
         var thisDist = Vector3.Distance(dev.transform.position, transform.position);
@@ -75,7 +70,6 @@ public class ClickableButton : MonoBehaviour
 
                 if (val && !_pressedHere.Contains(dev) && IsThisButtonClosest(dev))
                     _pressedHere.Add(dev);
-
             }
         }
 
