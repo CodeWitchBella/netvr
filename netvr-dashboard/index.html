@@ -22,16 +22,16 @@
     <div>Hello world!</div>
     <div id="events"></div>
     <script type="module">
-      import { run } from "/src/index.ts";
+      import { run } from '/src/index.tsx'
       run()
         .then((e) => {
-          console.error(e);
+          console.error(e)
         })
         .then(() => {
           setTimeout(() => {
-            location.reload();
-          }, 1000);
-        });
+            location.reload()
+          }, 1000)
+        })
     </script>
   </body>
 </html>
