@@ -26,6 +26,11 @@ public sealed class IsblPersistentData
                 {
                     using var reader = new StreamReader(DataPath);
                     _instance = JsonConvert.DeserializeObject<IsblPersistentData>(reader.ReadToEnd());
+                    if (_instance._connections.Count < 1)
+                    {
+                        _instance._connections.Add(new Connection { SocketUrl = "wss://netvr.isbl.workers.dev/" });
+                        _instance._connections.Add(new Connection { SocketUrl = "ws://192.168.1.31:10000/" });
+                    }
                 }
                 catch
                 {
@@ -39,9 +44,9 @@ public sealed class IsblPersistentData
     public class Connection
     {
         [JsonProperty(propertyName: "peerId")]
-        public int PeerId;
+        public int PeerId = 0;
         [JsonProperty(propertyName: "peerIdToken")]
-        public string PeerIdToken;
+        public string PeerIdToken = "";
         [JsonProperty(propertyName: "socketUrl")]
         public string SocketUrl;
     }
@@ -51,16 +56,17 @@ public sealed class IsblPersistentData
 
     public Connection GetLatestConnection()
     {
-        if (_connections.Count == 0)
-        {
-            return new Connection
-            {
-                PeerId = 0,
-                PeerIdToken = "",
-                SocketUrl = "wss://netvr.isbl.workers.dev",
-            };
-        }
         return _connections[^1];
+    }
+
+    public string GetConnectionSocketUrl(int id)
+    {
+        return _connections[id]?.SocketUrl ?? "<none>";
+    }
+
+    public int GetConnectionCount()
+    {
+        return _connections.Count;
     }
 
     public Connection GetConnection(string socketUrl)

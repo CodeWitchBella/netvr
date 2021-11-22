@@ -3,12 +3,14 @@ using GLTFast;
 using System.Threading.Tasks;
 using UnityEngine.XR;
 using System.Collections.Generic;
+using System;
 
 public class IsblTrackedPoseDriver : MonoBehaviour
 {
     public IsblStaticXRDevice NetDevice = new();
 
     public static List<IsblTrackedPoseDriver> Devices = new();
+    public static Action<IsblTrackedPoseDriver> OnDeviceDisconnected;
 
     IsblXRDeviceComponent _localDriver;
     GameObject _modelWrapper;
@@ -47,6 +49,7 @@ public class IsblTrackedPoseDriver : MonoBehaviour
     {
         Cleanup();
         Devices.Remove(this);
+        OnDeviceDisconnected?.Invoke(this);
     }
 
     static async Task<GltfImport> LoadModel(IsblDeviceModel info, string controllerName)

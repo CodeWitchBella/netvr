@@ -1,18 +1,13 @@
-using System;
-using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.Events;
 
 /// <summary>
 /// Implements button which you can interact with by physically hiting it
 /// </summary>
 ///
-/// Invokes ButtonResponder.OnClick in parent. Also invokes OnClick which you
-/// directly set in the editor.
+/// Invokes ButtonResponder.OnClick in parent.
 public class ProximityButton : MonoBehaviour
 {
-    public UnityEvent OnClick;
     public string ButtonName;
 
     public float FarInteraction = .5f;
@@ -25,7 +20,7 @@ public class ProximityButton : MonoBehaviour
         foreach (var dev in IsblTrackedPoseDriver.Devices)
         {
             var dist = Vector3.Distance(dev.transform.position, transform.position);
-            if (dist < CloseInteraction) _disabled.Add(dev);
+            if (dist < FarInteraction) _disabled.Add(dev);
         }
     }
 
@@ -59,7 +54,6 @@ public class ProximityButton : MonoBehaviour
 
     void InvokeClick()
     {
-        OnClick?.Invoke();
         var responder = GetComponentInParent<ButtonResponder>();
         responder?.OnClick(ButtonName);
     }

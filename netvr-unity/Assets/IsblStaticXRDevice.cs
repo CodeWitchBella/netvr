@@ -18,8 +18,23 @@ public class IsblStaticXRDevice
         public const int Grip = 104;
         public const int Trigger = 108;
         public const int TrackingState = 112;
-        public const int Bool1 = 116;
-        public const int Bool2 = 117;
+        public const int Bools = 116;
+    }
+
+    public enum Button
+    {
+        GripButton = 0,
+        IsTracked = 1,
+        MenuButton = 2,
+        Primary2DAxisClick = 3,
+        Primary2DAxisTouch = 4,
+        PrimaryButton = 5,
+        PrimaryTouch = 6,
+        SecondaryButton = 7,
+        SecondaryTouch = 8,
+        SystemButton = 9,
+        TriggerButton = 10,
+        TriggerTouch = 11,
     }
 
     public const int DataLength = 118;
@@ -46,19 +61,18 @@ public class IsblStaticXRDevice
     public float Grip => ReadFloat(Offsets.Grip);
     public float Trigger => ReadFloat(Offsets.Trigger);
     public uint TrackingState => ReadUint(Offsets.TrackingState);
-    public bool GripButton => ReadBool(Offsets.Bool1, 0);
-    public bool IsTracked => ReadBool(Offsets.Bool1, 1);
-    public bool MenuButton => ReadBool(Offsets.Bool1, 2);
-    public bool Primary2DAxisClick => ReadBool(Offsets.Bool1, 3);
-    public bool Primary2DAxisTouch => ReadBool(Offsets.Bool1, 4);
-    public bool PrimaryButton => ReadBool(Offsets.Bool1, 5);
-    public bool PrimaryTouch => ReadBool(Offsets.Bool1, 6);
-    public bool SecondaryButton => ReadBool(Offsets.Bool1, 7);
-    public bool SecondaryTouch => ReadBool(Offsets.Bool2, 0);
-    public bool SystemButton => ReadBool(Offsets.Bool2, 1);
-    public bool TriggerButton => ReadBool(Offsets.Bool2, 2);
-    public bool TriggerTouch => ReadBool(Offsets.Bool2, 3);
-    public bool IsLeft => ReadBool(Offsets.Bool2, 4);
+    public bool GripButton => ReadButton(Button.GripButton);
+    public bool IsTracked => ReadButton(Button.IsTracked);
+    public bool MenuButton => ReadButton(Button.MenuButton);
+    public bool Primary2DAxisClick => ReadButton(Button.Primary2DAxisClick);
+    public bool Primary2DAxisTouch => ReadButton(Button.Primary2DAxisTouch);
+    public bool PrimaryButton => ReadButton(Button.PrimaryButton);
+    public bool PrimaryTouch => ReadButton(Button.PrimaryTouch);
+    public bool SecondaryButton => ReadButton(Button.SecondaryButton);
+    public bool SecondaryTouch => ReadButton(Button.SecondaryTouch);
+    public bool SystemButton => ReadButton(Button.SystemButton);
+    public bool TriggerButton => ReadButton(Button.TriggerButton);
+    public bool TriggerTouch => ReadButton(Button.TriggerTouch);
 
     float ReadFloat(int offset)
     {
@@ -85,9 +99,14 @@ public class IsblStaticXRDevice
         return BitConverter.ToUInt32(Data, offset);
     }
 
+    public bool ReadButton(Button bit)
+    {
+        return ReadBool(Offsets.Bools, (int)bit);
+    }
+
     bool ReadBool(int offset, int bit)
     {
-        return (Data[offset] & (1 << bit)) != 0;
+        return (Data[offset + bit / 8] & (1 << (bit % 8))) != 0;
     }
 
     public void UpdateFromDevice(IsblXRDevice device)
@@ -123,10 +142,10 @@ public class IsblStaticXRDevice
         UpdateFromDevice(Offsets.Grip, device.Grip); // float
         UpdateFromDevice(Offsets.Trigger, device.Trigger); // float
         UpdateFromDevice(Offsets.TrackingState, device.TrackingState); // uint
-        UpdateFromDevice(Offsets.Bool1,
+        UpdateFromDevice(Offsets.Bools,
             device.GripButton, device.IsTracked, device.MenuButton, device.Primary2DAxisClick,
             device.Primary2DAxisTouch, device.PrimaryButton, device.PrimaryTouch, device.SecondaryButton); // 8 bools
-        UpdateFromDevice(Offsets.Bool2,
+        UpdateFromDevice(Offsets.Bools + 1,
             device.SecondaryTouch, device.SystemButton, device.TriggerButton, device.TriggerTouch,
             false, false, false, false); // 8 bools
     }
