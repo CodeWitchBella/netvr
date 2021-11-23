@@ -43,32 +43,32 @@ public class IsblXRDeviceDrawer : PropertyDrawer
             DrawField("Device", localDeviceComponent == null ? "Networked" : localDevice == null ? "Local (disconnected)" : "Local");
             DrawField("Name", device.Name);
             DrawField("Characteristics", SerializeCharacteristics(device.Characteristics));
-            DrawField("DeviceAngularVelocity", device.DeviceAngularVelocity);
-            DrawField("DevicePosition", device.DevicePosition);
-            DrawField("DeviceRotation", device.DeviceRotation);
-            DrawField("DeviceVelocity", device.DeviceVelocity);
-            DrawField("Grip", device.Grip);
-            DrawField("GripButton", device.GripButton);
-            DrawField("IsTracked", device.IsTracked);
-            DrawField("MenuButton", device.MenuButton);
-            DrawField("PointerAngularVelocity", device.PointerAngularVelocity);
-            DrawField("PointerPosition", device.PointerPosition);
-            DrawField("PointerRotation", device.PointerRotation);
-            DrawField("PointerVelocity", device.PointerVelocity);
-            DrawField("Primary2DAxis", device.Primary2DAxis);
-            DrawField("Primary2DAxisClick", device.Primary2DAxisClick);
-            DrawField("Primary2DAxisTouch", device.Primary2DAxisTouch);
-            DrawField("TrackingState", device.TrackingState);
-            DrawField("Trigger", device.Trigger);
-            DrawField("TriggerButton", device.TriggerButton);
+            DrawField("DeviceAngularVelocity", device.DeviceAngularVelocity, device.DeviceAngularVelocityAvailable);
+            DrawField("DevicePosition", device.DevicePosition, device.DevicePositionAvailable);
+            DrawField("DeviceRotation", device.DeviceRotation, device.DeviceRotationAvailable);
+            DrawField("DeviceVelocity", device.DeviceVelocity, device.DeviceVelocityAvailable);
+            DrawField("Grip", device.Grip, device.GripAvailable);
+            DrawField("GripButton", device.GripButton, device.GripButtonAvailable);
+            DrawField("IsTracked", device.IsTracked, device.IsTrackedAvailable);
+            DrawField("MenuButton", device.MenuButton, device.MenuButtonAvailable);
+            DrawField("PointerAngularVelocity", device.PointerAngularVelocity, device.PointerAngularVelocityAvailable);
+            DrawField("PointerPosition", device.PointerPosition, device.PointerPositionAvailable);
+            DrawField("PointerRotation", device.PointerRotation, device.PointerRotationAvailable);
+            DrawField("PointerVelocity", device.PointerVelocity, device.PointerVelocityAvailable);
+            DrawField("Primary2DAxis", device.Primary2DAxis, device.Primary2DAxisAvailable);
+            DrawField("Primary2DAxisClick", device.Primary2DAxisClick, device.Primary2DAxisClickAvailable);
+            DrawField("Primary2DAxisTouch", device.Primary2DAxisTouch, device.Primary2DAxisTouchAvailable);
+            DrawField("TrackingState", device.TrackingState, device.TrackingStateAvailable);
+            DrawField("Trigger", device.Trigger, device.TriggerAvailable);
+            DrawField("TriggerButton", device.TriggerButton, device.TriggerButtonAvailable);
             // oculus touch
-            DrawField("PrimaryButton", device.PrimaryButton, localDevice?.PrimaryButtonAvailable ?? true);
-            DrawField("PrimaryTouch", device.PrimaryTouch, localDevice?.PrimaryTouchAvailable ?? true);
-            DrawField("SecondaryButton", device.SecondaryButton, localDevice?.SecondaryButtonAvailable ?? true);
-            DrawField("SecondaryTouch", device.SecondaryTouch, localDevice?.SecondaryTouchAvailable ?? true);
-            DrawField("TriggerTouch", device.TriggerTouch, localDevice?.TriggerTouchAvailable ?? true);
+            DrawField("PrimaryButton", device.PrimaryButton, device.PrimaryButtonAvailable);
+            DrawField("PrimaryTouch", device.PrimaryTouch, device.PrimaryTouchAvailable);
+            DrawField("SecondaryButton", device.SecondaryButton, device.SecondaryButtonAvailable);
+            DrawField("SecondaryTouch", device.SecondaryTouch, device.SecondaryTouchAvailable);
+            DrawField("TriggerTouch", device.TriggerTouch, device.TriggerTouchAvailable);
             // vive
-            DrawField("SystemButton", device.SystemButton, localDevice?.SystemButtonAvailable ?? true);
+            DrawField("SystemButton", device.SystemButton, device.SystemButtonAvailable);
         }
         EditorGUI.EndProperty();
     }

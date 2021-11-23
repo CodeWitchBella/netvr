@@ -26,8 +26,9 @@ public class IsblXRDeviceComponent : MonoBehaviour
     {
         get
         {
+            if (_devices.Count < 1) return null;
             int index = _devices.FindIndex(d => d.TrackingState != 0);
-            if (index < 0) return null;
+            if (index < 0) return _devices[0];
             if (index != 0)
             {
                 // move the object to the start so that even if other conroller

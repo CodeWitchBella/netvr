@@ -1,8 +1,5 @@
-using System;
-using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.Events;
 
 /// <summary>
 /// Implements button which you can interact with by getting physically close
@@ -16,7 +13,6 @@ public class ClickableButton : MonoBehaviour
 
     public float FarInteraction = .3f;
     public float CloseInteraction = .15f;
-    public IsblStaticXRDevice.Button Button = IsblStaticXRDevice.Button.TriggerButton;
     public bool LocalOnly = false;
 
     readonly HashSet<IsblTrackedPoseDriver> _pressedHere = new();
@@ -61,7 +57,7 @@ public class ClickableButton : MonoBehaviour
                 if (dist < CloseInteraction) maxPortion = 1f;
                 else maxPortion = 1f - (dist - CloseInteraction) / (FarInteraction - CloseInteraction);
 
-                var val = dev.NetDevice.ReadButton(Button);
+                var val = dev.NetDevice.TriggerButton;
                 if (!val && _pressedHere.Contains(dev))
                 {
                     _pressedHere.Remove(dev);
