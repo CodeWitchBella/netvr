@@ -27,7 +27,7 @@ public class IsblXRDeviceComponent : MonoBehaviour
         get
         {
             if (_devices.Count < 1) return null;
-            int index = _devices.FindIndex(d => d.TrackingState != 0);
+            int index = _devices.FindIndex(d => d.ReadTrackingState() != 0);
             if (index < 0) return _devices[0];
             if (index != 0)
             {

@@ -12,6 +12,7 @@ public class IsblTrackedPoseDriver : MonoBehaviour
     public static List<IsblTrackedPoseDriver> Devices = new();
     public static Action<IsblTrackedPoseDriver> OnDeviceDisconnected;
 
+    bool _isLocalHMD;
     IsblXRDeviceComponent _localDriver;
     GameObject _modelWrapper;
     void Start()
@@ -26,6 +27,7 @@ public class IsblTrackedPoseDriver : MonoBehaviour
                 else if (_localDriver.Node == XRNode.LeftHand) net.NetState.Left = NetDevice;
             }
         }
+        _isLocalHMD = GetComponent<Camera>() == Camera.main;
     }
 
 #if UNITY_EDITOR
@@ -168,8 +170,12 @@ public class IsblTrackedPoseDriver : MonoBehaviour
         // Called here so that I do not have to rely on Script Execution Order
         if (_localDriver != null) NetDevice.UpdateFromDevice(_localDriver.Device);
 
-        InitializeIfNeeded();
-        gameObject.transform.localPosition = NetDevice.DevicePosition;
-        gameObject.transform.localRotation = NetDevice.DeviceRotation;
+        // Do not track local HMD, leave that to unity so that it's setup correctly
+        if (!_isLocalHMD)
+        {
+            InitializeIfNeeded();
+            gameObject.transform.localPosition = NetDevice.DevicePosition;
+            gameObject.transform.localRotation = NetDevice.DeviceRotation;
+        }
     }
 }

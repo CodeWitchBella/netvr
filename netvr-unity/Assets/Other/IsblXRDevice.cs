@@ -31,19 +31,15 @@ public class IsblXRDevice
     #endregion untested
 
     InputFeatureUsage<uint> _trackingState = new("TrackingState");
-
     /// <summary>Returns raw tracking state</summary>
     ///
     /// Used to find correct controller in case multiple controllers are
     /// associated with the same XRNode.
-    public uint TrackingState
+    public uint ReadTrackingState()
     {
-        get
-        {
-            uint value;
-            if (!Device.TryGetFeatureValue(_trackingState, out value)) throw new System.Exception("Failed to read TrackingState");
-            return value;
-        }
+        uint value;
+        if (!Device.TryGetFeatureValue(_trackingState, out value)) throw new System.Exception("Failed to read TrackingState");
+        return value;
     }
 
     /// <summary>

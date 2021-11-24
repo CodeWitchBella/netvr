@@ -40,6 +40,7 @@ public sealed class IsblNet : IDisposable
         get { return _socket?.Uri.ToString() ?? ""; }
         set
         {
+            if (SocketUrl == value) return;
             if (_socket != null)
             {
                 // simulate disconnect
@@ -151,8 +152,7 @@ public sealed class IsblNet : IDisposable
                 var node = device.Value<string>("node");
                 if (node != "left" && node != "right") continue;
                 var localDevice = node == "left" ? localState.Left : localState.Right;
-                localDevice.Name = device.Value<string>("name");
-                localDevice.Characteristics = (InputDeviceCharacteristics)device.Value<int>("characteristics");
+                localDevice.DeSerializeConfiguration(device);
             }
         }
     }
@@ -163,8 +163,8 @@ public sealed class IsblNet : IDisposable
         {
             action = "device info",
             info = new[] {
-                new { node = "left", name = NetState.Left.Name, characteristics = NetState.Left.Characteristics },
-                new { node = "right", name = NetState.Right.Name, characteristics = NetState.Right.Characteristics },
+                NetState.Left.SerializeConfiguration(),
+                NetState.Right.SerializeConfiguration(),
             }
         });
         NetState.DeviceInfoChanged = false;

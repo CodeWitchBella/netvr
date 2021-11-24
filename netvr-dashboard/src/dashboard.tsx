@@ -61,42 +61,97 @@ function useSendKeepAlive(socket: PWebSocket) {
   }, [socket])
 }
 
+type MessageData<T extends 'binary' | 'json'> = {
+  type: T
+  key: number
+  message: T extends 'binary' ? ArrayBuffer : any
+  timestamp: string
+}
+
 export function Dashboard({ socket }: { socket: PWebSocket }) {
-  const [events, dispatch] = useReducer(
-    (state: { key: number; message: any; timestamp: string }[], action: any) =>
-      state
-        .concat({
-          message: action,
-          key: (state[state.length - 1]?.key ?? 0) + 1,
-          timestamp: new Date().toISOString(),
-        })
-        .slice(-10),
+  const [devices, dispatchDevices] = useReducer(
+    (state: { id: number; [key: string]: any }[], action: any) => {
+      return state
+    },
     []
   )
-  useListenToSocket(socket, dispatch)
+  const [log, dispatchLog] = useReducer(
+    (
+      state: {
+        events: MessageData<'json'>[]
+        binaryEvents: MessageData<'binary'>[]
+        keyGen: number
+      },
+      action: any
+    ) => {
+      const timestamp = new Date().toISOString()
+      if (typeof action === 'string') {
+        return {
+          ...state,
+          events: state.events.concat({
+            type: 'json',
+            message: JSON.parse(action),
+            key: state.keyGen,
+            timestamp,
+          }),
+          keyGen: state.keyGen + 1,
+        }
+      }
+      return {
+        ...state,
+        keyGen: state.keyGen + 1,
+        binaryEvents: state.binaryEvents
+          .concat({
+            type: 'binary',
+            message: action,
+            key: state.keyGen,
+            timestamp,
+          })
+          .slice(-10),
+      }
+    },
+    { events: [], binaryEvents: [], keyGen: 1 }
+  )
+  useListenToSocket(socket, (message) => {
+    dispatchLog(message)
+    dispatchDevices(message)
+  })
   useSendKeepAlive(socket)
 
   return (
     <div className="events">
-      {events.map((event) => (
-        <Message
-          message={event.message}
-          key={event.key}
-          timestamp={event.timestamp}
-        />
-      ))}
+      {([] as readonly (MessageData<'binary'> | MessageData<'json'>)[])
+        .concat(log.events)
+        .concat(log.binaryEvents)
+        .sort((a, b) => -a.timestamp.localeCompare(b.timestamp))
+        .map((event) => (
+          <Message
+            message={event.message}
+            key={event.key}
+            timestamp={event.timestamp}
+            type={event.type}
+          />
+        ))}
     </div>
   )
 }
 
-function Message({ message, timestamp }: { message: any; timestamp: string }) {
+function Message({
+  message,
+  timestamp,
+  type,
+}: {
+  message: any
+  timestamp: string
+  type: 'binary' | 'json'
+}) {
   return (
     <div className="event">
       <div>🔽 {timestamp}</div>
       <pre>
-        {typeof message === 'string'
-          ? JSON.stringify(JSON.parse(message), null, 2)
-          : stringify(message)}
+        {type === 'binary'
+          ? stringify(message)
+          : JSON.stringify(message, null, 2)}
       </pre>
     </div>
   )
