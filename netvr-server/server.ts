@@ -5,47 +5,48 @@
  * $ deno run --allow-net --watch server.ts
  */
 
-import { createRoom } from "./room.ts";
+import { createRoom } from './room.ts'
 
-declare const Deno: any;
+declare const Deno: any
 
-await Deno.permissions.request({ name: "net" });
+await Deno.permissions.request({ name: 'net' })
 
-const l = Deno.listen({ port: 10_000 });
-console.log(l.addr);
-const room = createRoom();
+const l = Deno.listen({ port: 10_000 })
+console.log(l.addr)
+const room = createRoom()
 
 const socketState = {
   CONNECTING: 0, // Socket has been created. The connection is not yet open.
   OPEN: 1, // The connection is open and ready to communicate.
   CLOSING: 2, // The connection is in the process of closing.
   CLOSED: 3, // The connection is closed or couldn't be opened.
-};
+}
 
 for await (const tcpConn of l) {
   for await (const event of Deno.serveHttp(tcpConn)) {
-    const { socket, response } = Deno.upgradeWebSocket(event.request);
-    room.onSocket(socket)
+    const { socket, response } = Deno.upgradeWebSocket(event.request)
+    room
+      .onSocket(socket)
       .catch((e) => void console.error(e))
       .then(() => {
         console.log(
           socket.readyState === socketState.CLOSING
-            ? "WebSocket.CLOSING"
+            ? 'WebSocket.CLOSING'
             : socket.readyState === socketState.CLOSED
-            ? "WebSocket.CLOSED"
+            ? 'WebSocket.CLOSED'
             : socket.readyState === socketState.OPEN
-            ? "WebSocket.OPEN"
+            ? 'WebSocket.OPEN'
             : socket.readyState === socketState.CONNECTING
-            ? "WebSocket.CONNECTING"
+            ? 'WebSocket.CONNECTING'
             : socket.readyState,
-        );
+        )
         if (
           socket.readyState !== socketState.CLOSING &&
           socket.readyState !== socketState.CLOSED
         ) {
-          socket.close();
+          socket.close()
         }
-      });
-    event.respondWith(response);
+      })
+    event.respondWith(response)
   }
 }

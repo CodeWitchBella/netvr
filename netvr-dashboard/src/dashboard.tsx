@@ -3,7 +3,7 @@ import type { PWebSocket } from './utils'
 
 function cancellableAsyncIterable<Data>(
   signal: AbortSignal,
-  iterable: AsyncIterable<Data>
+  iterable: AsyncIterable<Data>,
 ): AsyncIterable<Data> {
   const iterator = iterable[Symbol.asyncIterator]()
   const rejectedOnAbort = new Promise<never>((resolve, reject) => {
@@ -24,7 +24,7 @@ function cancellableAsyncIterable<Data>(
 
 function useListenToSocket(
   socket: PWebSocket,
-  onMessage: (event: string | ArrayBuffer) => void
+  onMessage: (event: string | ArrayBuffer) => void,
 ) {
   const [error, setError] = useState(null)
   const lastOnMessage = useRef(onMessage)
@@ -37,7 +37,7 @@ function useListenToSocket(
     ;(async () => {
       for await (const message of cancellableAsyncIterable(
         controller.signal,
-        socket
+        socket,
       )) {
         lastOnMessage?.current(message.data as any)
       }
@@ -73,7 +73,7 @@ export function Dashboard({ socket }: { socket: PWebSocket }) {
     (state: { id: number; [key: string]: any }[], action: any) => {
       return state
     },
-    []
+    [],
   )
   const [log, dispatchLog] = useReducer(
     (
@@ -82,7 +82,7 @@ export function Dashboard({ socket }: { socket: PWebSocket }) {
         binaryEvents: MessageData<'binary'>[]
         keyGen: number
       },
-      action: any
+      action: any,
     ) => {
       const timestamp = new Date().toISOString()
       if (typeof action === 'string') {
@@ -110,7 +110,7 @@ export function Dashboard({ socket }: { socket: PWebSocket }) {
           .slice(-10),
       }
     },
-    { events: [], binaryEvents: [], keyGen: 1 }
+    { events: [], binaryEvents: [], keyGen: 1 },
   )
   useListenToSocket(socket, (message) => {
     dispatchLog(message)

@@ -62,7 +62,7 @@ export async function promisifyWebsocket(socket: WebSocket) {
                   resolve({ done: true, value: null })
                 }
               }
-            }
+            },
           )
           if (messageQueue.length > 0) {
             // run this even if finished to properly consume queue first
