@@ -14,18 +14,24 @@ function useSendKeepAlive(socket: PWebSocket) {
   }, [socket])
 }
 
-export function Dashboard({ socket }: { socket: PWebSocket }) {
-  const [devices, dispatchDevices] = useReducer(
-    (state: { id: number; [key: string]: any }[], action: any) => {
-      if (typeof action === 'string') {
-        const message = JSON.parse(action)
-        if (message.action === 'device info') {
-        }
-      }
+type DeviceData = { id: number; [key: string]: any }
+function deviceReducer(state: DeviceData[], action: any) {
+  if (typeof action === 'string') {
+    const message = JSON.parse(action)
+    if (message.action === 'device info') {
+      const incomingIds = new Set<number>(
+        message.info.map((info: any) => info.id),
+      )
       return state
-    },
-    [],
-  )
+        .filter((dev) => !incomingIds.has(dev.id))
+        .concat(message.info)
+    }
+  }
+  return state
+}
+
+export function Dashboard({ socket }: { socket: PWebSocket }) {
+  const [devices, dispatchDevices] = useReducer(deviceReducer, [])
 
   const [log, dispatchLog] = useLog()
   useListenToSocket(socket, (message) => {
@@ -35,16 +41,38 @@ export function Dashboard({ socket }: { socket: PWebSocket }) {
   useSendKeepAlive(socket)
 
   return (
-    <div className="events">
-      {log.map((event) => (
-        <Message
-          message={event.message}
-          key={event.key}
-          timestamp={event.timestamp}
-          type={event.type}
-        />
-      ))}
+    <div
+      style={{
+        display: 'flex',
+        flexDirection: 'row',
+        flexWrap: 'wrap',
+        justifyContent: 'space-between',
+      }}
+    >
+      <div className="devices" style={{ width: 'auto' }}>
+        {devices.map((device) => (
+          <Device key={device.id} device={device} />
+        ))}
+      </div>
+      <div className="events">
+        {log.map((event) => (
+          <Message
+            message={event.message}
+            key={event.key}
+            timestamp={event.timestamp}
+            type={event.type}
+          />
+        ))}
+      </div>
     </div>
+  )
+}
+
+function Device({ device }: { device: DeviceData }) {
+  return (
+    <code>
+      <pre>{JSON.stringify(device, null, 2)}</pre>
+    </code>
   )
 }
 
