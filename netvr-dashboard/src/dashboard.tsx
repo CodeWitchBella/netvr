@@ -1,4 +1,5 @@
 import { useEffect, useReducer, useRef, useState } from 'react'
+import { useLog } from './log'
 import type { PWebSocket } from './utils'
 
 function cancellableAsyncIterable<Data>(
@@ -61,57 +62,20 @@ function useSendKeepAlive(socket: PWebSocket) {
   }, [socket])
 }
 
-type MessageData<T extends 'binary' | 'json'> = {
-  type: T
-  key: number
-  message: T extends 'binary' ? ArrayBuffer : any
-  timestamp: string
-}
-
 export function Dashboard({ socket }: { socket: PWebSocket }) {
   const [devices, dispatchDevices] = useReducer(
     (state: { id: number; [key: string]: any }[], action: any) => {
+      if (typeof action === 'string') {
+        const message = JSON.parse(action)
+        if (message.action === 'device info') {
+        }
+      }
       return state
     },
     [],
   )
-  const [log, dispatchLog] = useReducer(
-    (
-      state: {
-        events: MessageData<'json'>[]
-        binaryEvents: MessageData<'binary'>[]
-        keyGen: number
-      },
-      action: any,
-    ) => {
-      const timestamp = new Date().toISOString()
-      if (typeof action === 'string') {
-        return {
-          ...state,
-          events: state.events.concat({
-            type: 'json',
-            message: JSON.parse(action),
-            key: state.keyGen,
-            timestamp,
-          }),
-          keyGen: state.keyGen + 1,
-        }
-      }
-      return {
-        ...state,
-        keyGen: state.keyGen + 1,
-        binaryEvents: state.binaryEvents
-          .concat({
-            type: 'binary',
-            message: action,
-            key: state.keyGen,
-            timestamp,
-          })
-          .slice(-10),
-      }
-    },
-    { events: [], binaryEvents: [], keyGen: 1 },
-  )
+
+  const [log, dispatchLog] = useLog()
   useListenToSocket(socket, (message) => {
     dispatchLog(message)
     dispatchDevices(message)
@@ -120,18 +84,14 @@ export function Dashboard({ socket }: { socket: PWebSocket }) {
 
   return (
     <div className="events">
-      {([] as readonly (MessageData<'binary'> | MessageData<'json'>)[])
-        .concat(log.events)
-        .concat(log.binaryEvents)
-        .sort((a, b) => -a.timestamp.localeCompare(b.timestamp))
-        .map((event) => (
-          <Message
-            message={event.message}
-            key={event.key}
-            timestamp={event.timestamp}
-            type={event.type}
-          />
-        ))}
+      {log.map((event) => (
+        <Message
+          message={event.message}
+          key={event.key}
+          timestamp={event.timestamp}
+          type={event.type}
+        />
+      ))}
     </div>
   )
 }
