@@ -1,16 +1,16 @@
 import type { PWebSocket } from "./utils.ts";
 
-const dataLength = 264;
 const sendToSelfAsDebug = false;
 export class Peer {
   data: Uint8Array = new Uint8Array();
   info?: any;
-  constructor(
-    public readonly id: number,
-    public readonly socket: PWebSocket,
-  ) {}
+  constructor(public readonly id: number, public readonly socket: PWebSocket) {}
 
   onJson(message: any, peers: readonly Peer[]) {
+    if (message.action !== "keep alive") {
+      console.log("event.data:", message);
+    }
+
     if (message.action === "keep alive") {
       // noop
     } else if (message.action === "device info") {
@@ -29,18 +29,23 @@ export class Peer {
   }
 
   binaryUnsent = new Map<number, Uint8Array>();
+  private binaryUnsentBytes() {
+    let bytes = 0;
+    for (const v of this.binaryUnsent.values()) bytes += v.byteLength;
+    return bytes;
+  }
 
   private sendBinaryUnsent() {
     const count = this.binaryUnsent.size;
     if (count === 0) return;
     try {
-      const sendBuffer = new Uint8Array(count * dataLength + 4);
+      const sendBuffer = new Uint8Array(this.binaryUnsentBytes() + 4);
       const sizeView = new DataView(sendBuffer.buffer, 0, 4);
       sizeView.setInt32(0, count, true);
       let offset = 4;
       for (const buff of this.binaryUnsent.values()) {
         sendBuffer.set(buff, offset);
-        offset += dataLength;
+        offset += buff.byteLength;
       }
 
       this.socket.send(sendBuffer);
@@ -53,7 +58,7 @@ export class Peer {
 
   private sendJsonUnsent(peers: readonly Peer[]) {
     const info = [];
-    for (const peer of (sendToSelfAsDebug ? peers.concat([this]) : peers)) {
+    for (const peer of sendToSelfAsDebug ? peers.concat([this]) : peers) {
       if (!this.jsonSent.has(peer.id)) {
         this.jsonSent.add(peer.id);
         info.push({ id: peer.id, info: peer.info });

@@ -1,3 +1,4 @@
+using System;
 using System.IO;
 using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
@@ -48,6 +49,7 @@ using UnityEngine.XR;
 /// | TriggerTouch(bool)              | ❌ |  ✅  |
 public class IsblStaticXRDevice
 {
+    #region members (outside this region go only getters and methods, ie. no data)
     // ADDING_NEW_TYPE:
     // (search for ADDING_NEW_TYPE to see all relevant markers)
     // add new Type[] member
@@ -58,24 +60,42 @@ public class IsblStaticXRDevice
     bool[] _dataBool;
     uint[] _dataUint;
 
+    public string Name { get; private set; }
+    int _localUniqueId; // used for detecting device change, zero for remote devices
+    public InputDeviceCharacteristics Characteristics { get; private set; }
+    Locations _locations = new();
+    #endregion
+
+    /// <summary>
+    /// Denotes whether information stored outside of Data chaned
+    /// </summary>
+    ///
+    /// True means that the data needs to be transmitted to the server.
+    public bool DeviceInfoChanged;
+
+    // ADDING_NEW_TYPE:
+    // Increment this by one
+    const int TypeCount = 6;
+
+    #region (De)Serialization
     /// <summary>
     /// Count number of bytes required to 7bit encode the number
     /// </summary>
-    static int CountSizeBytes(int v)
+    static int CountSizeBytes(int count, int perElement)
     {
-        int r = 0;
-        while ((v >>= 7) != 0) r++;
-        return r + 1;
+        int r = perElement * count + 1;
+        while ((count >>= 7) != 0) r++;
+        return r;
     }
 
     static void Write7BitEncodedInt(BinaryWriter writer, int i)
     {
-        while (i != 0)
+        do
         {
             var next = i >> 7;
-            writer.Write((next != 0 ? 0x80 : 0) | i);
+            writer.Write((byte)((next != 0 ? 0x80 : 0) | i));
             i = next;
-        }
+        } while (i != 0);
     }
 
     // Copied from: https://github.com/dotnet/runtime/issues/24473#issuecomment-450755980
@@ -91,89 +111,169 @@ public class IsblStaticXRDevice
 
     public int CalculateSerializationSize()
     {
+        if (_dataQuaternion == null) return TypeCount;
         // ADDING_NEW_TYPE:
         // add line for calculating serialization size here
-        return CountSizeBytes(_dataQuaternion.Length) + _dataQuaternion.Length * 4 * 3
-            + CountSizeBytes(_dataVector3.Length) + _dataVector3.Length * 4 * 3
-            + CountSizeBytes(_dataVector2.Length) + _dataVector2.Length * 4 * 2
-            + CountSizeBytes(_dataFloat.Length) + _dataFloat.Length * 4
-            + CountSizeBytes(_dataBool.Length) + _dataBool.Length
-            + CountSizeBytes(_dataUint.Length) + _dataUint.Length * 4;
+        return CountSizeBytes(_dataQuaternion.Length, 4 * 3)
+            + CountSizeBytes(_dataVector3.Length, 4 * 3)
+            + CountSizeBytes(_dataVector2.Length, 4 * 2)
+            + CountSizeBytes(_dataFloat.Length, 4)
+            + CountSizeBytes(_dataBool.Length, 1)
+            + CountSizeBytes(_dataUint.Length, 4);
     }
 
+    class SerializationSection : IDisposable
+    {
+        MemoryStream _stream;
+        int _initialPosition;
+        int _expectedSize;
+        public SerializationSection(MemoryStream stream, int expectedSize)
+        {
+            _stream = stream;
+            _initialPosition = (int)stream.Position;
+            _expectedSize = expectedSize;
+        }
+        public void Dispose()
+        {
+            if (_stream.Position - _initialPosition != _expectedSize)
+            {
+                Debug.LogWarning($"Expected section to write {_expectedSize} bytes. Got {_stream.Position - _initialPosition} bytes instead.");
+            }
+        }
+    }
 
-    public void DeSerializeData(byte[] source)
+    public int DeSerializeData(byte[] source, int offset)
     {
         MemoryStream stream = new(source);
+        stream.Position = offset;
         BinaryReader reader = new(stream);
 
-        int len = Read7BitEncodedInt(reader);
-        if (_dataQuaternion.Length != len) return;
-        for (int i = 0; i < len; ++i) _dataQuaternion[i] = Quaternion.Euler(reader.ReadSingle(), reader.ReadSingle(), reader.ReadSingle());
+        using (new SerializationSection(stream, CountSizeBytes(_dataQuaternion.Length, 4 * 3)))
+        {
+            var len = Read7BitEncodedInt(reader);
+            if (_dataQuaternion?.Length == len)
+                for (int i = 0; i < len; ++i) _dataQuaternion[i] = Quaternion.Euler(reader.ReadSingle(), reader.ReadSingle(), reader.ReadSingle());
+            else
+                for (int i = 0; i < len; ++i) Quaternion.Euler(reader.ReadSingle(), reader.ReadSingle(), reader.ReadSingle());
+        }
 
-        len = Read7BitEncodedInt(reader);
-        if (_dataVector3.Length != len) return;
-        for (int i = 0; i < len; ++i) _dataVector3[i] = new Vector3(reader.ReadSingle(), reader.ReadSingle(), reader.ReadSingle());
+        using (new SerializationSection(stream, CountSizeBytes(_dataVector3.Length, 4 * 3)))
+        {
+            var len = Read7BitEncodedInt(reader);
+            if (_dataVector3?.Length == len)
+                for (int i = 0; i < len; ++i) _dataVector3[i] = new Vector3(reader.ReadSingle(), reader.ReadSingle(), reader.ReadSingle());
+            else
+                for (int i = 0; i < len; ++i) new Vector3(reader.ReadSingle(), reader.ReadSingle(), reader.ReadSingle());
+        }
 
-        len = Read7BitEncodedInt(reader);
-        if (_dataVector2.Length != len) return;
-        for (int i = 0; i < len; ++i) _dataVector2[i] = new Vector2(reader.ReadSingle(), reader.ReadSingle());
+        using (new SerializationSection(stream, CountSizeBytes(_dataVector2.Length, 4 * 3)))
+        {
+            var len = Read7BitEncodedInt(reader);
+            if (_dataVector2?.Length == len)
+                for (int i = 0; i < len; ++i) _dataVector2[i] = new Vector2(reader.ReadSingle(), reader.ReadSingle());
+            else
+                for (int i = 0; i < len; ++i) new Vector2(reader.ReadSingle(), reader.ReadSingle());
+        }
 
-        len = Read7BitEncodedInt(reader);
-        if (_dataFloat.Length != len) return;
-        for (int i = 0; i < len; ++i) _dataFloat[i] = reader.ReadSingle();
+        using (new SerializationSection(stream, CountSizeBytes(_dataFloat.Length, 4 * 3)))
+        {
+            var len = Read7BitEncodedInt(reader);
+            if (_dataFloat?.Length == len)
+                for (int i = 0; i < len; ++i) _dataFloat[i] = reader.ReadSingle();
+            else
+                for (int i = 0; i < len; ++i) reader.ReadSingle();
+        }
 
-        len = Read7BitEncodedInt(reader);
-        if (_dataBool.Length != len) return;
-        for (int i = 0; i < len; ++i) _dataBool[i] = reader.ReadBoolean();
+        using (new SerializationSection(stream, CountSizeBytes(_dataBool.Length, 4 * 3)))
+        {
+            var len = Read7BitEncodedInt(reader);
+            if (_dataBool?.Length == len)
+                for (int i = 0; i < len; ++i) _dataBool[i] = reader.ReadBoolean();
+            else
+                for (int i = 0; i < len; ++i) reader.ReadBoolean();
+        }
 
-        len = Read7BitEncodedInt(reader);
-        if (_dataUint.Length != len) return;
-        for (int i = 0; i < len; ++i) _dataUint[i] = reader.ReadUInt32();
+        using (new SerializationSection(stream, CountSizeBytes(_dataUint.Length, 4 * 3)))
+        {
+            var len = Read7BitEncodedInt(reader);
+            if (_dataUint?.Length == len)
+                for (int i = 0; i < len; ++i) _dataUint[i] = reader.ReadUInt32();
+            else
+                for (int i = 0; i < len; ++i) reader.ReadUInt32();
+        }
 
         // ADDING_NEW_TYPE:
-        // Add deserialization code here
+        // Add deserialization code above this comment
+
+        return (int)stream.Position - offset;
     }
 
-    public void SerializeData(byte[] target)
+    public int SerializeData(byte[] target, int offset)
     {
         MemoryStream stream = new(target);
+        stream.Position = offset;
         BinaryWriter writer = new(stream);
-
-        Write7BitEncodedInt(writer, _dataQuaternion.Length);
-        foreach (var el in _dataQuaternion)
+        if (_dataQuaternion == null)
         {
-            writer.Write(el.eulerAngles.x);
-            writer.Write(el.eulerAngles.y);
-            writer.Write(el.eulerAngles.z);
+            for (int i = 0; i < TypeCount; ++i)
+                Write7BitEncodedInt(writer, 0);
+            return TypeCount;
         }
 
-        Write7BitEncodedInt(writer, _dataVector3.Length);
-        foreach (var el in _dataVector3)
+        using (new SerializationSection(stream, CountSizeBytes(_dataQuaternion.Length, 4 * 3)))
         {
-            writer.Write(el.x);
-            writer.Write(el.y);
-            writer.Write(el.z);
+            Write7BitEncodedInt(writer, _dataQuaternion.Length);
+            foreach (var el in _dataQuaternion)
+            {
+                writer.Write(el.eulerAngles.x);
+                writer.Write(el.eulerAngles.y);
+                writer.Write(el.eulerAngles.z);
+            }
         }
 
-        Write7BitEncodedInt(writer, _dataVector2.Length);
-        foreach (var el in _dataVector2)
+        using (new SerializationSection(stream, CountSizeBytes(_dataVector3.Length, 4 * 3)))
         {
-            writer.Write(el.x);
-            writer.Write(el.y);
+            Write7BitEncodedInt(writer, _dataVector3.Length);
+            foreach (var el in _dataVector3)
+            {
+                writer.Write(el.x);
+                writer.Write(el.y);
+                writer.Write(el.z);
+            }
         }
 
-        Write7BitEncodedInt(writer, _dataFloat.Length);
-        foreach (var el in _dataFloat) writer.Write(el);
+        using (new SerializationSection(stream, CountSizeBytes(_dataVector2.Length, 4 * 2)))
+        {
+            Write7BitEncodedInt(writer, _dataVector2.Length);
+            foreach (var el in _dataVector2)
+            {
+                writer.Write(el.x);
+                writer.Write(el.y);
+            }
+        }
 
-        Write7BitEncodedInt(writer, _dataBool.Length);
-        foreach (var el in _dataBool) writer.Write(el);
+        using (new SerializationSection(stream, CountSizeBytes(_dataFloat.Length, 4)))
+        {
+            Write7BitEncodedInt(writer, _dataFloat.Length);
+            foreach (var el in _dataFloat) writer.Write(el);
+        }
 
-        Write7BitEncodedInt(writer, _dataUint.Length);
-        foreach (var el in _dataUint) writer.Write(el);
+        using (new SerializationSection(stream, CountSizeBytes(_dataBool.Length, 1)))
+        {
+            Write7BitEncodedInt(writer, _dataBool.Length);
+            foreach (var el in _dataBool) writer.Write(el);
+        }
+
+        using (new SerializationSection(stream, CountSizeBytes(_dataUint.Length, 4)))
+        {
+            Write7BitEncodedInt(writer, _dataUint.Length);
+            foreach (var el in _dataUint) writer.Write(el);
+        }
 
         // ADDING_NEW_TYPE:
-        // Add serialization code here
+        // Add serialization code above this comment
+
+        return (int)stream.Position - offset;
     }
 
     public JObject SerializeConfiguration()
@@ -202,6 +302,17 @@ public class IsblStaticXRDevice
             { ContractResolver = new CamelCasePropertyNamesContractResolver() }),
             name = Name,
             characteristics,
+            lengths = new
+            {
+                quaternion = _dataQuaternion?.Length ?? 0,
+                vector3 = _dataVector3?.Length ?? 0,
+                vector2 = _dataVector2?.Length ?? 0,
+                @float = _dataFloat?.Length ?? 0,
+                @bool = _dataBool?.Length ?? 0,
+                @uint = _dataUint?.Length ?? 0,
+                // ADDING_NEW_TYPE:
+                // Add line here
+            }
         });
     }
 
@@ -228,26 +339,19 @@ public class IsblStaticXRDevice
         }
         _locations = message.Value<Locations>("locations");
         Name = message.Value<string>("name");
+        var lengths = message.Value<JObject>("lengths");
+        _dataQuaternion = new Quaternion[lengths.Value<int>("quaternion")];
+        _dataVector3 = new Vector3[lengths.Value<int>("vector3")];
+        _dataVector2 = new Vector2[lengths.Value<int>("vector2")];
+        _dataFloat = new float[lengths.Value<int>("float")];
+        _dataBool = new bool[lengths.Value<int>("bool")];
+        _dataUint = new uint[lengths.Value<int>("uint")];
+        // ADDING_NEW_TYPE:
+        // Add line here
     }
+    #endregion
 
-    public string Name { get; private set; }
-
-    int _localUniqueId; // used for detecting device change, zero for remote devices
-
-    // TODO: remove these
-    public byte[] Data = new byte[0];
-    public const int DataLength = 0;
-
-    /// <summary>
-    /// Denotes whether information stored outside of Data chaned
-    /// </summary>
-    ///
-    /// True means that the data needs to be transmitted to the server.
-    public bool DeviceInfoChanged;
     public bool IsLocal => _localUniqueId != 0;
-    public InputDeviceCharacteristics Characteristics { get; private set; }
-
-    Locations _locations = new();
 
     class Locations
     {

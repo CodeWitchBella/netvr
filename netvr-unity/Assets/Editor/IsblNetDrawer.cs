@@ -55,7 +55,7 @@ public class IsblNetDrawer : PropertyDrawer
             DrawLine("PeerId", net.NetState.Id.ToString());
             DrawLine("Initialized", net.NetState.Initialized.ToString());
             DrawLine("Last Successful Message", net.UnityEditorOnlyDebug.LastSuccessfulMessage.ToLongTimeString());
-            DrawLine("NetState ByteLength", Isbl.NetStateData.ByteLength.ToString());
+            DrawLine("NetState ByteLength", net.NetState.CalculateSerializationSize().ToString());
             DrawLine("Peer count", net.OtherStates.Count.ToString());
         }
         EditorGUI.EndProperty();

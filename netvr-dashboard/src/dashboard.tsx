@@ -149,38 +149,8 @@ function Message({
     <div className="event">
       <div>🔽 {timestamp}</div>
       <pre>
-        {type === 'binary'
-          ? stringify(message)
-          : JSON.stringify(message, null, 2)}
+        {type === 'binary' ? message + '' : JSON.stringify(message, null, 2)}
       </pre>
     </div>
   )
-}
-
-function stringify(data: ArrayBuffer) {
-  let view = new DataView(data, 0, data.byteLength)
-  const length = view.getInt32(0, true)
-  let res = ''
-  for (let i = 0; i < length; ++i) {
-    view = new DataView(data, 4 + 79 * i, 79)
-    res += `#${view.getInt32(0, true)}`
-    res += getTypePosRot(view, 4)
-    res += getTypePosRot(view, 29)
-    res += getTypePosRot(view, 54)
-  }
-  return res
-}
-
-function getTypePosRot(view: DataView, offset: number) {
-  return `
-    type: ${view.getUint8(offset)}
-    position: ${getVector3(view, offset + 1)}
-    rotation: ${getVector3(view, offset + 13)}`
-}
-
-function getVector3(view: DataView, offset: number) {
-  const fixed = 3
-  return `${view.getFloat32(offset, true).toFixed(fixed)}, ${view
-    .getFloat32(offset + 4, true)
-    .toFixed(fixed)}, ${view.getFloat32(offset + 8, true).toFixed(fixed)}`
 }

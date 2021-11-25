@@ -48,7 +48,9 @@ public class ReconnectingClientWebSocket : IDisposable
     }
     public Task SendAsync(object obj)
     {
-        return SendAsync(Encoding.UTF8.GetBytes(JsonConvert.SerializeObject(obj)), WebSocketMessageType.Text);
+        var text = JsonConvert.SerializeObject(obj);
+        // Debug.Log($"Sending: {text}");
+        return SendAsync(Encoding.UTF8.GetBytes(text), WebSocketMessageType.Text);
     }
 
     async Task KeepAlive()

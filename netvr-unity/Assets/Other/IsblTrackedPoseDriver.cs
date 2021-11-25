@@ -15,20 +15,7 @@ public class IsblTrackedPoseDriver : MonoBehaviour
     bool _isLocalHMD;
     IsblXRDeviceComponent _localDriver;
     GameObject _modelWrapper;
-    void Start()
-    {
-        _localDriver = GetComponent<IsblXRDeviceComponent>();
-        if (_localDriver != null)
-        {
-            var net = IsblNet.Instance;
-            if (net != null)
-            {
-                if (_localDriver.Node == XRNode.RightHand) net.NetState.Right = NetDevice;
-                else if (_localDriver.Node == XRNode.LeftHand) net.NetState.Left = NetDevice;
-            }
-        }
-        _isLocalHMD = GetComponent<Camera>() == Camera.main;
-    }
+
 
 #if UNITY_EDITOR
     public class SelfPropertyAttribute : PropertyAttribute { };
@@ -39,12 +26,24 @@ public class IsblTrackedPoseDriver : MonoBehaviour
 
     void OnEnable()
     {
+        _localDriver = GetComponent<IsblXRDeviceComponent>();
+        _isLocalHMD = GetComponent<Camera>() == Camera.main;
+
 #if UNITY_EDITOR
         EditorOnly = this;
 #endif
         Cleanup();
         InitializeIfNeeded();
         Devices.Add(this);
+
+        NetDevice.DeviceInfoChanged = true; // it's a new device
+        if (_localDriver != null)
+        {
+            Debug.Log("Adding to IsblNet");
+            var net = IsblNet.Instance;
+            net?.NetState.Devices.Add(NetDevice);
+            if (net == null) Debug.LogWarning("IsblNet is null");
+        }
     }
 
     void OnDisable()
@@ -52,6 +51,8 @@ public class IsblTrackedPoseDriver : MonoBehaviour
         Cleanup();
         Devices.Remove(this);
         OnDeviceDisconnected?.Invoke(this);
+
+        if (_localDriver != null) IsblNet.Instance?.NetState.Devices.Remove(NetDevice);
     }
 
     static async Task<GltfImport> LoadModel(IsblDeviceModel info, string controllerName)

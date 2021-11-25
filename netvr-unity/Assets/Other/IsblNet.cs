@@ -3,7 +3,7 @@ using UnityEngine;
 using System.Linq;
 using System.Collections.Generic;
 using Newtonsoft.Json.Linq;
-using UnityEngine.XR;
+using System.Buffers.Binary;
 
 /// <summary>
 /// Main implementation of network interface
@@ -95,7 +95,7 @@ public sealed class IsblNet : IDisposable
                     }
                     IsblPersistentData.Instance.SaveConnection(socketUrl: _socket.Uri.ToString(), peerId: NetState.Id, peerIdToken: NetState.IdToken);
                     NetState.Initialized = true;
-                    NetState.DeviceInfoChanged = true;
+                    SendDeviceInfo();
                 }
                 else if (action == "device info")
                 {
@@ -113,7 +113,7 @@ public sealed class IsblNet : IDisposable
         };
         _socket.OnBinaryMessage += (data) =>
             {
-                int count = BitConverter.ToInt32(data, 0);
+                int count = BinaryPrimitives.ReadInt32LittleEndian(data);
                 var offset = 4;
 
                 for (int i = 0; i < count; ++i)
@@ -140,19 +140,20 @@ public sealed class IsblNet : IDisposable
                 {
                     Id = id,
                     Initialized = true,
-                    Left = new(),
-                    Right = new(),
                 };
                 OtherStates.Add(id, localState);
             }
             if (!peer.ContainsKey("info")) continue;
 
-            foreach (var device in peer.GetValue("info").Children<JObject>())
+            var children = peer.GetValue("info").Children<JObject>();
+            localState.ResizeDevices(children.Count());
+            var i = 0;
+            foreach (var device in children)
             {
                 var node = device.Value<string>("node");
-                if (node != "left" && node != "right") continue;
-                var localDevice = node == "left" ? localState.Left : localState.Right;
+                var localDevice = localState.Devices[i];
                 localDevice.DeSerializeConfiguration(device);
+                i++;
             }
         }
     }
@@ -162,10 +163,8 @@ public sealed class IsblNet : IDisposable
         _ = _socket.SendAsync(new
         {
             action = "device info",
-            info = new[] {
-                NetState.Left.SerializeConfiguration(),
-                NetState.Right.SerializeConfiguration(),
-            }
+            deviceCount = NetState.Devices.Count, // TODO remove this line
+            info = NetState.Devices.ConvertAll(v => v.SerializeConfiguration()),
         });
         NetState.DeviceInfoChanged = false;
     }
@@ -185,7 +184,7 @@ public sealed class IsblNet : IDisposable
     public void Tick()
     {
         if (!NetState.Initialized || _socket == null) return;
-        var bytes = new byte[Isbl.NetStateData.ByteLength];
+        var bytes = new byte[NetState.CalculateSerializationSize()];
         int offset = 0;
         Isbl.NetData.Convert(ref offset, NetState, bytes, true);
         _ = _socket.SendAsync(bytes, System.Net.WebSockets.WebSocketMessageType.Binary);

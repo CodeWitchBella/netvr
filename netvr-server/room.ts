@@ -20,9 +20,7 @@ export function createRoom() {
       for await (const event of socket) {
         if (event.data instanceof ArrayBuffer) {
           if (!thisPeer) {
-            console.error(
-              "Invoked binary action without setting up id first",
-            );
+            console.error("Invoked binary action without setting up id first");
           } else {
             thisPeer.onBinary(
               event.data,
@@ -31,7 +29,6 @@ export function createRoom() {
           }
           continue;
         }
-        console.log("event.data:", event.data);
         const message = JSON.parse(event.data);
         if (message.action === "gimme id") {
           thisPeer = createPeer(++idgen, socket);
