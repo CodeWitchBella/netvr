@@ -2,10 +2,12 @@
  * Server used for relaying messages between multiple users.
  *
  * Example invocation:
- * $ deno run --allow-net --watch server.ts
+ * $ deno run --watch --import-map ./import_map.json --allow-net server.ts
+ * Compile using:
+ * $ deno compile --import-map ./import_map.json --allow-net server.ts
  */
 
-import { createRoom } from './room.ts'
+import { createRoom } from './room.js'
 
 declare const Deno: any
 

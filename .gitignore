@@ -3,6 +3,8 @@ netvr-unity-build
 isbl-persistent-data.json
 node_modules
 dist
+deno-dist
+*.exe
 
 # This .gitignore file should be placed at the root of your Unity project directory
 #

@@ -8,7 +8,7 @@
 
 import { getAssetFromKV } from '@cloudflare/kv-asset-handler'
 import manifestJSON from '__STATIC_CONTENT_MANIFEST'
-import { createRoom } from './room'
+import { createRoom } from './room.js'
 const manifest = JSON.parse(manifestJSON)
 
 export default {

@@ -1,4 +1,4 @@
-import type { PWebSocket } from './utils.ts'
+import type { PWebSocket } from './utils.js'
 
 const sendToSelfAsDebug = false
 export class Peer {
