@@ -8,7 +8,7 @@ public class IsblXRDeviceDrawer : PropertyDrawer
     const float LineHeight = 20;
     public override float GetPropertyHeight(SerializedProperty property, GUIContent label)
     {
-        return LineHeight * 27;
+        return LineHeight * 29;
     }
 
     public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
@@ -41,8 +41,10 @@ public class IsblXRDeviceDrawer : PropertyDrawer
         else
         {
             DrawField("Device", localDeviceComponent == null ? "Networked" : localDevice == null ? "Local (disconnected)" : "Local");
+            DrawField("LocallyUniqueId", device.LocallyUniqueId);
             DrawField("Name", device.Name);
             DrawField("Characteristics", SerializeCharacteristics(device.Characteristics));
+            DrawField("HasData", device.HasData);
             DrawField("DeviceAngularVelocity", device.DeviceAngularVelocity, device.DeviceAngularVelocityAvailable);
             DrawField("DevicePosition", device.DevicePosition, device.DevicePositionAvailable);
             DrawField("DeviceRotation", device.DeviceRotation, device.DeviceRotationAvailable);

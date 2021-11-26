@@ -20,14 +20,15 @@ namespace Isbl
         }
         public bool DeviceInfoChanged
         {
-            get => Devices.Exists(d => d.DeviceInfoChanged);
-            set { foreach (var d in Devices) d.DeviceInfoChanged = value; }
+            get => Devices.Exists(d => d.DeviceInfoChanged && d.HasData);
+            set { foreach (var d in Devices) if (d.HasData) d.DeviceInfoChanged = value; }
         }
 
         public int CalculateSerializationSize()
         {
-            return 4 + 4 + 4 * Devices.Count +
-                +(from d in Devices select d.CalculateSerializationSize()).Sum();
+            return 4 /* Int32 client ID */
+                + NetData.Count7BitEncodedIntBytes(Devices.Count(d => d.HasData)) /* Device count */
+                + (from d in Devices where d.HasData select d.CalculateSerializationSize()).Sum() /* devices array */;
         }
     }
 
@@ -44,6 +45,18 @@ namespace Isbl
             return v;
         }
 
+        public static int Read7BitEncodedInt(Span<byte> data, out int value)
+        {
+            int offset = 0;
+            sbyte b;
+            value = 0;
+            int r = -7;
+            do
+                value |= ((b = (sbyte)data[offset++]) & 0x7F) << (r += 7);
+            while (b < 0);
+            return offset;
+        }
+
         public static void Write7BitEncodedInt(BinaryWriter writer, int i)
         {
             do
@@ -54,43 +67,28 @@ namespace Isbl
             } while (i != 0);
         }
 
-        static void Convert(ref int offset, ref System.Int32 parsed, byte[] binary, bool toBinary)
+        public static int Write7BitEncodedInt(Span<byte> target, int i)
         {
-            if (binary.Length < offset + 4) throw new Exception("Too smol");
-            if (toBinary) BinaryPrimitives.WriteInt32LittleEndian(binary[offset..], parsed);
-            else parsed = BinaryPrimitives.ReadInt32LittleEndian(binary[offset..]);
-            offset += 4;
+            int offset = 0;
+            do
+            {
+                var next = i >> 7;
+                target[offset++] = (byte)((next != 0 ? 0x80 : 0) | i);
+                i = next;
+            } while (i != 0);
+            return offset;
         }
 
-        static void Convert(ref int offset, IsblStaticXRDevice parsed, byte[] binary, bool toBinary)
+        public static int CountArrayEncodingBytes(int count, int perElement)
         {
-            int length = toBinary ? parsed.CalculateSerializationSize() : 0;
-            Convert(ref offset, ref length, binary, toBinary);
-            if (toBinary)
-            {
-                var parsedLength = parsed.SerializeData(binary, offset);
-                if (parsedLength != length) Debug.LogWarning($"Actual size does not match calculated size. Calculated size: {length}. Actual size: {parsedLength}");
-                offset += length;
-            }
-            else
-            {
-                var parsedLength = parsed.DeSerializeData(binary, offset);
-                if (parsedLength != length) Debug.LogWarning($"Parsed size does not match data-declared size. Declared size: {length}. Parsed size: {parsedLength}.\nThis might happen if some other client added more fields.");
-                offset += length;
-            }
+            return count * perElement + Count7BitEncodedIntBytes(count);
         }
 
-        public static void Convert(ref int offset, NetStateData parsed, byte[] binary, bool toBinary)
+        public static int Count7BitEncodedIntBytes(int count)
         {
-            Convert(ref offset, ref parsed.Id, binary, toBinary);
-            int length = parsed.Devices.Count;
-            Convert(ref offset, ref length, binary, toBinary);
-            if (!toBinary)
-                Debug.Log($"Deserializing {length} devices");
-            parsed.ResizeDevices(length);
-
-            for (int i = 0; i < length; ++i)
-                Convert(ref offset, parsed.Devices[i], binary, toBinary);
+            int r = 1;
+            while ((count >>= 7) != 0) r++;
+            return r;
         }
     }
 }

@@ -1,6 +1,6 @@
 import type { PWebSocket } from './utils.js'
 
-const sendToSelfAsDebug = false
+const sendToSelfAsDebug = true
 export class Peer {
   data: Uint8Array = new Uint8Array()
   info?: any
@@ -69,6 +69,7 @@ export class Peer {
   onBinary(data: ArrayBuffer, peers: readonly Peer[]) {
     this.data = new Uint8Array(data)
 
+    //console.log(Array.from(this.data.values()).join(' '))
     peers = Array.from(peers)
     for (const peer of peers) peer.binaryUnsent.set(this.id, this.data)
     if (sendToSelfAsDebug) this.binaryUnsent.set(this.id, this.data)

@@ -108,24 +108,43 @@ public sealed class IsblNet : IDisposable
             }
             catch (Exception e)
             {
-                Debug.LogError(e);
+                Debug.LogException(e);
             }
         };
         _socket.OnBinaryMessage += (data) =>
             {
-                int count = BinaryPrimitives.ReadInt32LittleEndian(data);
+                int clientCount = BinaryPrimitives.ReadInt32LittleEndian(data);
+                Debug.Log($"Recieved data of {clientCount} peers");
                 var offset = 4;
 
-                for (int i = 0; i < count; ++i)
+                for (int clientIndex = 0; clientIndex < clientCount; ++clientIndex)
                 {
-                    var id = BitConverter.ToInt32(data, offset);
-                    if (OtherStates.ContainsKey(id))
+                    var clientId = BinaryPrimitives.ReadInt32LittleEndian(data[offset..]);
+                    offset += 4;
+                    offset += Isbl.NetData.Read7BitEncodedInt(data[offset..], out var numberOfDevices);
+                    Debug.Log($"Got data of peer {clientId} with {numberOfDevices} devices");
+
+                    for (int deviceIndex = 0; deviceIndex < numberOfDevices; deviceIndex++)
                     {
-                        var state = OtherStates[id];
-                        Isbl.NetData.Convert(ref offset, state, data, toBinary: false);
+                        HandleDeviceData(clientId, data, offset);
+                        offset += Isbl.NetData.Read7BitEncodedInt(data[offset..], out var deviceBytes);
+                        offset += deviceBytes;
                     }
                 }
             };
+    }
+
+    void HandleDeviceData(int clientId, byte[] bytes, int offset)
+    {
+        var offsetCopy = offset + Isbl.NetData.Read7BitEncodedInt(bytes[offset..], out var deviceBytes);
+        offsetCopy += Isbl.NetData.Read7BitEncodedInt(bytes[offsetCopy..], out var deviceId);
+
+        var state = OtherStates.GetValueOrDefault(clientId, null);
+        if (state != null)
+        {
+            var device = state.Devices.Find(dev => dev.LocallyUniqueId == deviceId);
+            device?.DeSerializeData(bytes, offset);
+        }
     }
 
     void HandleDeviceInfo(JObject obj)
@@ -164,7 +183,7 @@ public sealed class IsblNet : IDisposable
         {
             action = "device info",
             deviceCount = NetState.Devices.Count, // TODO remove this line
-            info = NetState.Devices.ConvertAll(v => v.SerializeConfiguration()),
+            info = (from d in NetState.Devices where d.HasData select d.SerializeConfiguration()).ToArray(),
         });
         NetState.DeviceInfoChanged = false;
     }
@@ -185,8 +204,22 @@ public sealed class IsblNet : IDisposable
     {
         if (!NetState.Initialized || _socket == null) return;
         var bytes = new byte[NetState.CalculateSerializationSize()];
-        int offset = 0;
-        Isbl.NetData.Convert(ref offset, NetState, bytes, true);
+        var span = bytes.AsSpan();
+        BinaryPrimitives.WriteInt32LittleEndian(span[0..4], NetState.Id);
+        Debug.Log($"First four bytes {bytes[0]} {bytes[1]} {bytes[2]} {bytes[3]}");
+        int offset = 4;
+        Debug.Log($"Sending {NetState.Devices.Count(d => d.HasData)} devices");
+        offset += Isbl.NetData.Write7BitEncodedInt(span[offset..], NetState.Devices.Count(d => d.HasData));
+        foreach (var device in NetState.Devices)
+        {
+            if (!device.HasData) continue;
+            var len = device.CalculateSerializationSize();
+            var realLen = device.SerializeData(bytes, offset);
+            if (len != realLen) Debug.LogWarning($"Length mismatch: theoretical {len} vs real {realLen}");
+            offset += len;
+        }
+        if (offset != bytes.Length) Debug.LogWarning($"Wrong final offset: theoretical {bytes.Length} vs real {offset}");
+
         _ = _socket.SendAsync(bytes, System.Net.WebSockets.WebSocketMessageType.Binary);
         if (NetState.DeviceInfoChanged) SendDeviceInfo();
     }

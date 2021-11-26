@@ -1,4 +1,4 @@
-import { useState, useRef, useEffect } from 'react'
+import { useState, useRef, useEffect, memo } from 'react'
 import type { PWebSocket } from './utils'
 
 function cancellableAsyncIterable<Data>(
@@ -22,7 +22,7 @@ function cancellableAsyncIterable<Data>(
   }
 }
 
-export function useListenToSocket(
+function useListenToSocket(
   socket: PWebSocket,
   onMessage: (event: string | ArrayBuffer) => void,
 ) {
@@ -49,3 +49,14 @@ export function useListenToSocket(
   }, [socket])
   if (error) throw error
 }
+
+export const ListenToSocket = memo(function ListenToSocket({
+  socket,
+  onMessage,
+}: {
+  socket: PWebSocket
+  onMessage: (event: string | ArrayBuffer) => void
+}) {
+  useListenToSocket(socket, onMessage)
+  return null
+})

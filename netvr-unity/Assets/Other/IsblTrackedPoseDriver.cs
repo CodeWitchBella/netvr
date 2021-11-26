@@ -60,7 +60,7 @@ public class IsblTrackedPoseDriver : MonoBehaviour
         if (info == null)
         {
             if (controllerName != "none")
-                Debug.LogError(string.Format("Unknown controller \"{0}\"", controllerName));
+                Debug.LogWarning($"Unknown controller \"{controllerName}\"");
             return null;
         }
 
