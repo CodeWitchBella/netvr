@@ -78,35 +78,11 @@ public class IsblStaticXRDevice
     const int TypeCount = 6;
 
     #region (De)Serialization
-    /// <summary>
-    /// Count number of bytes required to 7bit encode the number
-    /// </summary>
     static int CountSizeBytes(int count, int perElement)
     {
         int r = perElement * count + 1;
         while ((count >>= 7) != 0) r++;
         return r;
-    }
-
-    static void Write7BitEncodedInt(BinaryWriter writer, int i)
-    {
-        do
-        {
-            var next = i >> 7;
-            writer.Write((byte)((next != 0 ? 0x80 : 0) | i));
-            i = next;
-        } while (i != 0);
-    }
-
-    // Copied from: https://github.com/dotnet/runtime/issues/24473#issuecomment-450755980
-    static int Read7BitEncodedInt(BinaryReader reader)
-    {
-        sbyte b;
-        int r = -7, v = 0;
-        do
-            v |= ((b = reader.ReadSByte()) & 0x7F) << (r += 7);
-        while (b < 0);
-        return v;
     }
 
     public int CalculateSerializationSize()
@@ -122,11 +98,16 @@ public class IsblStaticXRDevice
             + CountSizeBytes(_dataUint.Length, 4);
     }
 
+    /**
+     * This class makes sure that every serialization step uses declared amount
+     * of bytes. Captures location when constructed and when using block ends
+     * then makes sure that position at that moment is correct.
+     */
     class SerializationSection : IDisposable
     {
-        MemoryStream _stream;
-        int _initialPosition;
-        int _expectedSize;
+        readonly MemoryStream _stream;
+        readonly int _initialPosition;
+        readonly int _expectedSize;
         public SerializationSection(MemoryStream stream, int expectedSize)
         {
             _stream = stream;
@@ -150,7 +131,7 @@ public class IsblStaticXRDevice
 
         using (new SerializationSection(stream, CountSizeBytes(_dataQuaternion.Length, 4 * 3)))
         {
-            var len = Read7BitEncodedInt(reader);
+            var len = Isbl.NetData.Read7BitEncodedInt(reader);
             if (_dataQuaternion?.Length == len)
                 for (int i = 0; i < len; ++i) _dataQuaternion[i] = Quaternion.Euler(reader.ReadSingle(), reader.ReadSingle(), reader.ReadSingle());
             else
@@ -159,7 +140,7 @@ public class IsblStaticXRDevice
 
         using (new SerializationSection(stream, CountSizeBytes(_dataVector3.Length, 4 * 3)))
         {
-            var len = Read7BitEncodedInt(reader);
+            var len = Isbl.NetData.Read7BitEncodedInt(reader);
             if (_dataVector3?.Length == len)
                 for (int i = 0; i < len; ++i) _dataVector3[i] = new Vector3(reader.ReadSingle(), reader.ReadSingle(), reader.ReadSingle());
             else
@@ -168,7 +149,7 @@ public class IsblStaticXRDevice
 
         using (new SerializationSection(stream, CountSizeBytes(_dataVector2.Length, 4 * 3)))
         {
-            var len = Read7BitEncodedInt(reader);
+            var len = Isbl.NetData.Read7BitEncodedInt(reader);
             if (_dataVector2?.Length == len)
                 for (int i = 0; i < len; ++i) _dataVector2[i] = new Vector2(reader.ReadSingle(), reader.ReadSingle());
             else
@@ -177,7 +158,7 @@ public class IsblStaticXRDevice
 
         using (new SerializationSection(stream, CountSizeBytes(_dataFloat.Length, 4 * 3)))
         {
-            var len = Read7BitEncodedInt(reader);
+            var len = Isbl.NetData.Read7BitEncodedInt(reader);
             if (_dataFloat?.Length == len)
                 for (int i = 0; i < len; ++i) _dataFloat[i] = reader.ReadSingle();
             else
@@ -186,7 +167,7 @@ public class IsblStaticXRDevice
 
         using (new SerializationSection(stream, CountSizeBytes(_dataBool.Length, 4 * 3)))
         {
-            var len = Read7BitEncodedInt(reader);
+            var len = Isbl.NetData.Read7BitEncodedInt(reader);
             if (_dataBool?.Length == len)
                 for (int i = 0; i < len; ++i) _dataBool[i] = reader.ReadBoolean();
             else
@@ -195,7 +176,7 @@ public class IsblStaticXRDevice
 
         using (new SerializationSection(stream, CountSizeBytes(_dataUint.Length, 4 * 3)))
         {
-            var len = Read7BitEncodedInt(reader);
+            var len = Isbl.NetData.Read7BitEncodedInt(reader);
             if (_dataUint?.Length == len)
                 for (int i = 0; i < len; ++i) _dataUint[i] = reader.ReadUInt32();
             else
@@ -216,13 +197,13 @@ public class IsblStaticXRDevice
         if (_dataQuaternion == null)
         {
             for (int i = 0; i < TypeCount; ++i)
-                Write7BitEncodedInt(writer, 0);
+                Isbl.NetData.Write7BitEncodedInt(writer, 0);
             return TypeCount;
         }
 
         using (new SerializationSection(stream, CountSizeBytes(_dataQuaternion.Length, 4 * 3)))
         {
-            Write7BitEncodedInt(writer, _dataQuaternion.Length);
+            Isbl.NetData.Write7BitEncodedInt(writer, _dataQuaternion.Length);
             foreach (var el in _dataQuaternion)
             {
                 writer.Write(el.eulerAngles.x);
@@ -233,7 +214,7 @@ public class IsblStaticXRDevice
 
         using (new SerializationSection(stream, CountSizeBytes(_dataVector3.Length, 4 * 3)))
         {
-            Write7BitEncodedInt(writer, _dataVector3.Length);
+            Isbl.NetData.Write7BitEncodedInt(writer, _dataVector3.Length);
             foreach (var el in _dataVector3)
             {
                 writer.Write(el.x);
@@ -244,7 +225,7 @@ public class IsblStaticXRDevice
 
         using (new SerializationSection(stream, CountSizeBytes(_dataVector2.Length, 4 * 2)))
         {
-            Write7BitEncodedInt(writer, _dataVector2.Length);
+            Isbl.NetData.Write7BitEncodedInt(writer, _dataVector2.Length);
             foreach (var el in _dataVector2)
             {
                 writer.Write(el.x);
@@ -254,19 +235,19 @@ public class IsblStaticXRDevice
 
         using (new SerializationSection(stream, CountSizeBytes(_dataFloat.Length, 4)))
         {
-            Write7BitEncodedInt(writer, _dataFloat.Length);
+            Isbl.NetData.Write7BitEncodedInt(writer, _dataFloat.Length);
             foreach (var el in _dataFloat) writer.Write(el);
         }
 
         using (new SerializationSection(stream, CountSizeBytes(_dataBool.Length, 1)))
         {
-            Write7BitEncodedInt(writer, _dataBool.Length);
+            Isbl.NetData.Write7BitEncodedInt(writer, _dataBool.Length);
             foreach (var el in _dataBool) writer.Write(el);
         }
 
         using (new SerializationSection(stream, CountSizeBytes(_dataUint.Length, 4)))
         {
-            Write7BitEncodedInt(writer, _dataUint.Length);
+            Isbl.NetData.Write7BitEncodedInt(writer, _dataUint.Length);
             foreach (var el in _dataUint) writer.Write(el);
         }
 
@@ -298,8 +279,7 @@ public class IsblStaticXRDevice
 
         return JObject.FromObject(new
         {
-            locations = JObject.FromObject(_locations, new Newtonsoft.Json.JsonSerializer()
-            { ContractResolver = new CamelCasePropertyNamesContractResolver() }),
+            locations = _locations.ToJObject(),
             name = Name,
             characteristics,
             lengths = new
@@ -337,7 +317,8 @@ public class IsblStaticXRDevice
                 _ => 0,
             };
         }
-        _locations = message.Value<Locations>("locations");
+
+        _locations = Locations.FromJObject(message.Value<JObject>("locations"));
         Name = message.Value<string>("name");
         var lengths = message.Value<JObject>("lengths");
         _dataQuaternion = new Quaternion[lengths.Value<int>("quaternion")];
@@ -382,6 +363,18 @@ public class IsblStaticXRDevice
         public int SystemButton = -1;
         public int TriggerButton = -1;
         public int TriggerTouch = -1;
+
+        public static Locations FromJObject(JObject jobject)
+        {
+            return jobject.ToObject<Locations>(new Newtonsoft.Json.JsonSerializer()
+            { ContractResolver = new CamelCasePropertyNamesContractResolver() });
+        }
+
+        public JObject ToJObject()
+        {
+            return JObject.FromObject(this, new Newtonsoft.Json.JsonSerializer()
+            { ContractResolver = new CamelCasePropertyNamesContractResolver() });
+        }
     };
 
     // ADDING_NEW_USAGE:

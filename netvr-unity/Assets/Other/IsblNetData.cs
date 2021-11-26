@@ -1,6 +1,7 @@
 using System;
 using System.Buffers.Binary;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using UnityEngine;
 
@@ -32,6 +33,27 @@ namespace Isbl
 
     public static class NetData
     {
+        // Copied from: https://github.com/dotnet/runtime/issues/24473#issuecomment-450755980
+        public static int Read7BitEncodedInt(BinaryReader reader)
+        {
+            sbyte b;
+            int r = -7, v = 0;
+            do
+                v |= ((b = reader.ReadSByte()) & 0x7F) << (r += 7);
+            while (b < 0);
+            return v;
+        }
+
+        public static void Write7BitEncodedInt(BinaryWriter writer, int i)
+        {
+            do
+            {
+                var next = i >> 7;
+                writer.Write((byte)((next != 0 ? 0x80 : 0) | i));
+                i = next;
+            } while (i != 0);
+        }
+
         static void Convert(ref int offset, ref System.Int32 parsed, byte[] binary, bool toBinary)
         {
             if (binary.Length < offset + 4) throw new Exception("Too smol");
@@ -63,6 +85,8 @@ namespace Isbl
             Convert(ref offset, ref parsed.Id, binary, toBinary);
             int length = parsed.Devices.Count;
             Convert(ref offset, ref length, binary, toBinary);
+            if (!toBinary)
+                Debug.Log($"Deserializing {length} devices");
             parsed.ResizeDevices(length);
 
             for (int i = 0; i < length; ++i)
