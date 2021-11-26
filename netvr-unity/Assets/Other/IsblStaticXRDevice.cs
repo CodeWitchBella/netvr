@@ -20,33 +20,68 @@ using UnityEngine.XR;
 /// Position and velocity defaults to zero, rotation defaults to identity.
 /// Otherwise it throws an exception upon reading the value.
 ///
-/// | Usage                           | Vive|Quest2|
-/// |---------------------------------|-----|------|
-/// | DeviceAngularVelocity(Vector3)  | ✅ |  ✅  |
-/// | DevicePosition(Vector3)         | ✅ |  ✅  |
-/// | DeviceRotation(Quaternion)      | ✅ |  ✅  |
-/// | DeviceVelocity(Vector3)         | ✅ |  ✅  |
-/// | Grip(float)                     | ✅ |  ✅  |
-/// | GripButton(bool)                | ✅ |  ✅  |
-/// | IsTracked(bool)                 | ✅ |  ✅  |
-/// | Menu(bool)                      | ❌ |  ✅  |
-/// | MenuButton(bool)                | ✅ |  ❌  |
-/// | PointerAngularVelocity(Vector3) | ✅ |  ✅  |
-/// | PointerPosition(Vector3)        | ✅ |  ✅  |
-/// | PointerRotation(Quaternion)     | ✅ |  ✅  |
-/// | PointerVelocity(Vector3)        | ✅ |  ✅  |
-/// | Primary2DAxis(Vector2)          | ✅ |  ✅  |
-/// | Primary2DAxisClick(bool)        | ✅ |  ✅  |
-/// | Primary2DAxisTouch(bool)        | ✅ |  ✅  |
-/// | PrimaryButton(bool)             | ❌ |  ✅  |
-/// | PrimaryTouch(bool)              | ❌ |  ✅  |
-/// | SecondaryButton(bool)           | ❌ |  ✅  |
-/// | SecondaryTouch(bool)            | ❌ |  ✅  |
-/// | SystemButton(bool)              | ✅ |  ❌  |
-/// | TrackingState(uint)             | ✅ |  ✅  |
-/// | Trigger(float)                  | ✅ |  ✅  |
-/// | TriggerButton(bool)             | ✅ |  ✅  |
-/// | TriggerTouch(bool)              | ❌ |  ✅  |
+/// | Usage                                   |Vive |Quest2|Vive   |
+/// |                                         |Wand |Touch |HeadSet|
+/// |-----------------------------------------|-----|------|-------|
+/// | DeviceAngularVelocity(Vector3)          | ✅ |  ✅  |  ✅   |
+/// | DevicePosition(Vector3)                 | ✅ |  ✅  |  ✅   |
+/// | DeviceRotation(Quaternion)              | ✅ |  ✅  |  ✅   |
+/// | DeviceVelocity(Vector3)                 | ✅ |  ✅  |  ✅   |
+/// | Grip(float)                             | ✅ |  ✅  |  ❌   |
+/// | GripButton(bool)                        | ✅ |  ✅  |  ❌   |
+/// | IsTracked(bool)                         | ✅ |  ✅  |  ✅   |
+/// | Menu(bool)                              | ❌ |  ✅  |  ❌   |
+/// | MenuButton(bool)                        | ✅ |  ❌  |  ❌   |
+/// | PointerAngularVelocity(Vector3)         | ✅ |  ✅  |  ❌   |
+/// | PointerPosition(Vector3)                | ✅ |  ✅  |  ❌   |
+/// | PointerRotation(Quaternion)             | ✅ |  ✅  |  ❌   |
+/// | PointerVelocity(Vector3)                | ✅ |  ✅  |  ❌   |
+/// | Primary2DAxis(Vector2)                  | ✅ |  ✅  |  ❌   |
+/// | Primary2DAxisClick(bool)                | ✅ |  ✅  |  ❌   |
+/// | Primary2DAxisTouch(bool)                | ✅ |  ✅  |  ❌   |
+/// | PrimaryButton(bool)                     | ❌ |  ✅  |  ❌   |
+/// | PrimaryTouch(bool)                      | ❌ |  ✅  |  ❌   |
+/// | SecondaryButton(bool)                   | ❌ |  ✅  |  ❌   |
+/// | SecondaryTouch(bool)                    | ❌ |  ✅  |  ❌   |
+/// | SystemButton(bool)                      | ✅ |  ❌  |  ❌   |
+/// | TrackingState(uint)                     | ✅ |  ✅  |  ✅   |
+/// | Trigger(float)                          | ✅ |  ✅  |  ❌   |
+/// | TriggerButton(bool)                     | ✅ |  ✅  |  ❌   |
+/// | TriggerTouch(bool)                      | ❌ |  ✅  |  ❌   |
+/// | CenterEyeRotation(Quaternion)           | ❌ |  ❌  |  ✅   |
+/// | ColorCameraRotation(Quaternion)         | ❌ |  ❌  |  ❌   |
+/// | LeftEyeRotation(Quaternion)             | ❌ |  ❌  |  ✅   |
+/// | RightEyeRotation(Quaternion)            | ❌ |  ❌  |  ✅   |
+/// | CenterEyeAcceleration(Vector3)          | ❌ |  ❌  |  ❌   |
+/// | CenterEyeAngularAcceleration(Vector3)   | ❌ |  ❌  |  ❌   |
+/// | CenterEyeAngularVelocity(Vector3)       | ❌ |  ❌  |  ✅   |
+/// | CenterEyePosition(Vector3)              | ❌ |  ❌  |  ✅   |
+/// | CenterEyeVelocity(Vector3)              | ❌ |  ❌  |  ✅   |
+/// | ColorCameraAcceleration(Vector3)        | ❌ |  ❌  |  ❌   |
+/// | ColorCameraAngularAcceleration(Vector3) | ❌ |  ❌  |  ❌   |
+/// | ColorCameraAngularVelocity(Vector3)     | ❌ |  ❌  |  ❌   |
+/// | ColorCameraPosition(Vector3)            | ❌ |  ❌  |  ❌   |
+/// | ColorCameraVelocity(Vector3)            | ❌ |  ❌  |  ❌   |
+/// | DeviceAcceleration(Vector3)             | ❌ |  ❌  |  ❌   |
+/// | DeviceAngularAcceleration(Vector3)      | ❌ |  ❌  |  ❌   |
+/// | LeftEyeAcceleration(Vector3)            | ❌ |  ❌  |  ❌   |
+/// | LeftEyeAngularAcceleration(Vector3)     | ❌ |  ❌  |  ❌   |
+/// | LeftEyeAngularVelocity(Vector3)         | ❌ |  ❌  |  ✅   |
+/// | LeftEyePosition(Vector3)                | ❌ |  ❌  |  ✅   |
+/// | LeftEyeVelocity(Vector3)                | ❌ |  ❌  |  ✅   |
+/// | RightEyeAcceleration(Vector3)           | ❌ |  ❌  |  ❌   |
+/// | RightEyeAngularAcceleration(Vector3)    | ❌ |  ❌  |  ❌   |
+/// | RightEyeAngularVelocity(Vector3)        | ❌ |  ❌  |  ✅   |
+/// | RightEyePosition(Vector3)               | ❌ |  ❌  |  ✅   |
+/// | RightEyeVelocity(Vector3)               | ❌ |  ❌  |  ✅   |
+/// | Secondary2DAxis(Vector2)                | ❌ |  ❌  |  ❌   |
+/// | BatteryLevel(float)                     | ❌ |  ❌  |  ❌   |
+/// | Secondary2DAxisClick(bool)              | ❌ |  ❌  |  ❌   |
+/// | Secondary2DAxisTouch(bool)              | ❌ |  ❌  |  ❌   |
+/// | UserPresence(bool)                      | ❌ |  ❌  |  ✅   |
+/// | HandData(Hand)                          | ❌ |  ❌  |  ❌   |
+/// | EyesData(Eyes)                          | ❌ |  ❌  |  ❌   |
+// ADDING_NEW_USAGE: update this table
 public class IsblStaticXRDevice
 {
     #region members (outside this region go only getters and methods, ie. no data)
@@ -59,6 +94,13 @@ public class IsblStaticXRDevice
     float[] _dataFloat;
     bool[] _dataBool;
     uint[] _dataUint;
+    // TODO: Netcode is not implemented yet for this. Search for HAND_NETCODE
+    // when implementing.
+    Hand[] _dataHand;
+    // TODO: Since I do not have eye tracking device I could not test this type and
+    // therefore did not code netcode for this. Works only locally. Search for
+    // EYES_NETCODE when implementing.
+    Eyes[] _dataEyes;
 
     public string Name { get; private set; }
     public int LocallyUniqueId;
@@ -74,6 +116,8 @@ public class IsblStaticXRDevice
     public bool DeviceInfoChanged;
     #endregion
 
+    // HAND_NETCODE: increment by one
+    // EYES_NETCODE: increment by one
     // ADDING_NEW_TYPE:
     // Increment this by one
     const int TypeCount = 6;
@@ -90,6 +134,8 @@ public class IsblStaticXRDevice
             + Isbl.NetData.CountArrayEncodingBytes(_dataFloat.Length, 4)
             + Isbl.NetData.CountArrayEncodingBytes(_dataBool.Length, 1)
             + Isbl.NetData.CountArrayEncodingBytes(_dataUint.Length, 4)
+            // HAND_NETCODE: add size calculation
+            // EYES_NETCODE: add size calculation
             // ADDING_NEW_TYPE:
             // add line for calculating serialization size above this comment
             ;
@@ -145,6 +191,9 @@ public class IsblStaticXRDevice
             else reader.BaseStream.Seek(len * 4, SeekOrigin.Current);
         }
 
+        // HAND_NETCODE: add deserialization block
+        // EYES_NETCODE: add deserialization block
+
         // ADDING_NEW_TYPE:
         // Add deserialization code above this comment
 
@@ -195,6 +244,9 @@ public class IsblStaticXRDevice
         Isbl.NetData.Write7BitEncodedInt(writer, _dataUint.Length);
         foreach (var el in _dataUint) writer.Write(el);
 
+        // HAND_NETCODE: add serialization block
+        // EYES_NETCODE: add serialization block
+
         // ADDING_NEW_TYPE:
         // Add serialization code above this comment
 
@@ -235,6 +287,8 @@ public class IsblStaticXRDevice
                 @float = _dataFloat?.Length ?? 0,
                 @bool = _dataBool?.Length ?? 0,
                 @uint = _dataUint?.Length ?? 0,
+                hand = _dataHand?.Length ?? 0, // HAND_NETCODE: already done
+                eyes = _dataEyes?.Length ?? 0, // EYES_NETCODE: already done
                 // ADDING_NEW_TYPE:
                 // Add line here
             }
@@ -273,6 +327,8 @@ public class IsblStaticXRDevice
         _dataFloat = new float[lengths.Value<int>("float")];
         _dataBool = new bool[lengths.Value<int>("bool")];
         _dataUint = new uint[lengths.Value<int>("uint")];
+        _dataHand = new Hand[lengths.Value<int>("hand")]; // HAND_NETCODE: already implemented
+        _dataEyes = new Eyes[lengths.Value<int>("eyes")]; // EYES_NETCODE: already implemented
         // ADDING_NEW_TYPE:
         // Add line here
     }
@@ -287,15 +343,43 @@ public class IsblStaticXRDevice
         // add new member here
         public int DeviceRotation = -1;//Quaternion
         public int PointerRotation = -1;//Quaternion
+        public int CenterEyeRotation = -1;//Quaternion
+        public int ColorCameraRotation = -1;//Quaternion
+        public int LeftEyeRotation = -1;//Quaternion
+        public int RightEyeRotation = -1;//Quaternion
         public int DeviceAngularVelocity = -1;//Vector3
         public int DevicePosition = -1;//Vector3
         public int DeviceVelocity = -1;//Vector3
         public int PointerAngularVelocity = -1;//Vector3
         public int PointerPosition = -1;//Vector3
         public int PointerVelocity = -1;//Vector3
+        public int CenterEyeAcceleration = -1;//Vector3
+        public int CenterEyeAngularAcceleration = -1;//Vector3
+        public int CenterEyeAngularVelocity = -1;//Vector3
+        public int CenterEyePosition = -1;//Vector3
+        public int CenterEyeVelocity = -1;//Vector3
+        public int ColorCameraAcceleration = -1;//Vector3
+        public int ColorCameraAngularAcceleration = -1;//Vector3
+        public int ColorCameraAngularVelocity = -1;//Vector3
+        public int ColorCameraPosition = -1;//Vector3
+        public int ColorCameraVelocity = -1;//Vector3
+        public int DeviceAcceleration = -1;//Vector3
+        public int DeviceAngularAcceleration = -1;//Vector3
+        public int LeftEyeAcceleration = -1;//Vector3
+        public int LeftEyeAngularAcceleration = -1;//Vector3
+        public int LeftEyeAngularVelocity = -1;//Vector3
+        public int LeftEyePosition = -1;//Vector3
+        public int LeftEyeVelocity = -1;//Vector3
+        public int RightEyeAcceleration = -1;//Vector3
+        public int RightEyeAngularAcceleration = -1;//Vector3
+        public int RightEyeAngularVelocity = -1;//Vector3
+        public int RightEyePosition = -1;//Vector3
+        public int RightEyeVelocity = -1;//Vector3
         public int Primary2DAxis = -1;//Vector2
+        public int Secondary2DAxis = -1;//Vector2
         public int Grip = -1;//float
         public int Trigger = -1;//float
+        public int BatteryLevel = -1;//float
         public int TrackingState = -1;//uint
         public int GripButton = -1;//bool
         public int IsTracked = -1;//bool
@@ -309,6 +393,11 @@ public class IsblStaticXRDevice
         public int SystemButton = -1;//bool
         public int TriggerButton = -1;//bool
         public int TriggerTouch = -1;//bool
+        public int Secondary2DAxisClick = -1;//bool
+        public int Secondary2DAxisTouch = -1;//bool
+        public int UserPresence = -1;//bool
+        public int HandData = -1;//Hand
+        public int EyesData = -1;//Eyes
 
         public static Locations FromJObject(JObject jobject)
         {
@@ -337,6 +426,26 @@ public class IsblStaticXRDevice
     public Quaternion PointerRotation => _locations.PointerRotation >= 0 ? _dataQuaternion[_locations.PointerRotation] : Quaternion.identity;
     /// <summary>Returns whether the PointerRotation is available</summary>
     public bool PointerRotationAvailable => _locations.PointerRotation >= 0;
+
+    /// <summary>Rotation of center eye of this device</summary>
+    public Quaternion CenterEyeRotation => _locations.CenterEyeRotation >= 0 ? _dataQuaternion[_locations.CenterEyeRotation] : Quaternion.identity;
+    /// <summary>Returns whether the CenterEyeRotationAvailable is available</summary>
+    public bool CenterEyeRotationAvailable => _locations.CenterEyeRotation >= 0;
+
+    /// <summary>Rotation of color camera on this device</summary>
+    public Quaternion ColorCameraRotation => _locations.ColorCameraRotation >= 0 ? _dataQuaternion[_locations.ColorCameraRotation] : Quaternion.identity;
+    /// <summary>Returns whether the ColorCameraRotationAvailable is available</summary>
+    public bool ColorCameraRotationAvailable => _locations.ColorCameraRotation >= 0;
+
+    /// <summary>Rotation of left eye of this device</summary>
+    public Quaternion LeftEyeRotation => _locations.LeftEyeRotation >= 0 ? _dataQuaternion[_locations.LeftEyeRotation] : Quaternion.identity;
+    /// <summary>Returns whether the LeftEyeRotationAvailable is available</summary>
+    public bool LeftEyeRotationAvailable => _locations.LeftEyeRotation >= 0;
+
+    /// <summary>Rotation of right eye of this device</summary>
+    public Quaternion RightEyeRotation => _locations.RightEyeRotation >= 0 ? _dataQuaternion[_locations.RightEyeRotation] : Quaternion.identity;
+    /// <summary>Returns whether the RightEyeRotationAvailable is available</summary>
+    public bool RightEyeRotationAvailable => _locations.RightEyeRotation >= 0;
 
     /// <summary>Rate of change in DeviceRotation</summary>
     public Vector3 DeviceAngularVelocity => _locations.DeviceAngularVelocity >= 0 ? _dataVector3[_locations.DeviceAngularVelocity] : Vector3.zero;
@@ -373,6 +482,116 @@ public class IsblStaticXRDevice
     /// <summary>Returns whether the PointerVelocity is available</summary>
     public bool PointerVelocityAvailable => _locations.PointerVelocity >= 0;
 
+    /// <summary>Rate of change of CenterEyeVelocity</summary>
+    public Vector3 CenterEyeAcceleration => _locations.CenterEyeAcceleration >= 0 ? _dataVector3[_locations.CenterEyeAcceleration] : Vector3.zero;
+    /// <summary>Returns whether the CenterEyeAcceleration is available</summary>
+    public bool CenterEyeAccelerationAvailable => _locations.CenterEyeAcceleration >= 0;
+
+    /// <summary>Rate of change of CenterEyeAngularVelocity</summary>
+    public Vector3 CenterEyeAngularAcceleration => _locations.CenterEyeAngularAcceleration >= 0 ? _dataVector3[_locations.CenterEyeAngularAcceleration] : Vector3.zero;
+    /// <summary>Returns whether the CenterEyeAngularAcceleration is available</summary>
+    public bool CenterEyeAngularAccelerationAvailable => _locations.CenterEyeAngularAcceleration >= 0;
+
+    /// <summary>Rate of change of CenterEyeRotation</summary>
+    public Vector3 CenterEyeAngularVelocity => _locations.CenterEyeAngularVelocity >= 0 ? _dataVector3[_locations.CenterEyeAngularVelocity] : Vector3.zero;
+    /// <summary>Returns whether the CenterEyeAngularVelocity is available</summary>
+    public bool CenterEyeAngularVelocityAvailable => _locations.CenterEyeAngularVelocity >= 0;
+
+    /// <summary>Position of center eye of this device</summary>
+    public Vector3 CenterEyePosition => _locations.CenterEyePosition >= 0 ? _dataVector3[_locations.CenterEyePosition] : Vector3.zero;
+    /// <summary>Returns whether the CenterEyePosition is available</summary>
+    public bool CenterEyePositionAvailable => _locations.CenterEyePosition >= 0;
+
+    /// <summary>Rate of change of CenterEyePosition</summary>
+    public Vector3 CenterEyeVelocity => _locations.CenterEyeVelocity >= 0 ? _dataVector3[_locations.CenterEyeVelocity] : Vector3.zero;
+    /// <summary>Returns whether the CenterEyeVelocity is available</summary>
+    public bool CenterEyeVelocityAvailable => _locations.CenterEyeVelocity >= 0;
+
+    /// <summary>Rate of change of ColorCameraPosition</summary>
+    public Vector3 ColorCameraAcceleration => _locations.ColorCameraAcceleration >= 0 ? _dataVector3[_locations.ColorCameraAcceleration] : Vector3.zero;
+    /// <summary>Returns whether the ColorCameraAcceleration is available</summary>
+    public bool ColorCameraAccelerationAvailable => _locations.ColorCameraAcceleration >= 0;
+
+    /// <summary>Rate of change of ColorCameraAngularVelocity</summary>
+    public Vector3 ColorCameraAngularAcceleration => _locations.ColorCameraAngularAcceleration >= 0 ? _dataVector3[_locations.ColorCameraAngularAcceleration] : Vector3.zero;
+    /// <summary>Returns whether the ColorCameraAngularAcceleration is available</summary>
+    public bool ColorCameraAngularAccelerationAvailable => _locations.ColorCameraAngularAcceleration >= 0;
+
+    /// <summary>Rate of change of ColorCameraRotation</summary>
+    public Vector3 ColorCameraAngularVelocity => _locations.ColorCameraAngularVelocity >= 0 ? _dataVector3[_locations.ColorCameraAngularVelocity] : Vector3.zero;
+    /// <summary>Returns whether the ColorCameraAngularVelocity is available</summary>
+    public bool ColorCameraAngularVelocityAvailable => _locations.ColorCameraAngularVelocity >= 0;
+
+    /// <summary>Position of color camera attached to this device</summary>
+    public Vector3 ColorCameraPosition => _locations.ColorCameraPosition >= 0 ? _dataVector3[_locations.ColorCameraPosition] : Vector3.zero;
+    /// <summary>Returns whether the ColorCameraPosition is available</summary>
+    public bool ColorCameraPositionAvailable => _locations.ColorCameraPosition >= 0;
+
+    /// <summary>Rate of change of ColorCameraPosition</summary>
+    public Vector3 ColorCameraVelocity => _locations.ColorCameraVelocity >= 0 ? _dataVector3[_locations.ColorCameraVelocity] : Vector3.zero;
+    /// <summary>Returns whether the ColorCameraVelocity is available</summary>
+    public bool ColorCameraVelocityAvailable => _locations.ColorCameraVelocity >= 0;
+
+    /// <summary>Rate of change of DeviceVelocity</summary>
+    public Vector3 DeviceAcceleration => _locations.DeviceAcceleration >= 0 ? _dataVector3[_locations.DeviceAcceleration] : Vector3.zero;
+    /// <summary>Returns whether the DeviceAcceleration is available</summary>
+    public bool DeviceAccelerationAvailable => _locations.DeviceAcceleration >= 0;
+
+    /// <summary>Rate of change of DeviceAngularVelocity</summary>
+    public Vector3 DeviceAngularAcceleration => _locations.DeviceAngularAcceleration >= 0 ? _dataVector3[_locations.DeviceAngularAcceleration] : Vector3.zero;
+    /// <summary>Returns whether the DeviceAngularAcceleration is available</summary>
+    public bool DeviceAngularAccelerationAvailable => _locations.DeviceAngularAcceleration >= 0;
+
+    /// <summary>Rate of change of LeftEyeVelocity</summary>
+    public Vector3 LeftEyeAcceleration => _locations.LeftEyeAcceleration >= 0 ? _dataVector3[_locations.LeftEyeAcceleration] : Vector3.zero;
+    /// <summary>Returns whether the LeftEyeAcceleration is available</summary>
+    public bool LeftEyeAccelerationAvailable => _locations.LeftEyeAcceleration >= 0;
+
+    /// <summary>Rate of change of LeftEyeAngularVelocity</summary>
+    public Vector3 LeftEyeAngularAcceleration => _locations.LeftEyeAngularAcceleration >= 0 ? _dataVector3[_locations.LeftEyeAngularAcceleration] : Vector3.zero;
+    /// <summary>Returns whether the LeftEyeAngularAcceleration is available</summary>
+    public bool LeftEyeAngularAccelerationAvailable => _locations.LeftEyeAngularAcceleration >= 0;
+
+    /// <summary>Rate of change of LeftEyeRotation</summary>
+    public Vector3 LeftEyeAngularVelocity => _locations.LeftEyeAngularVelocity >= 0 ? _dataVector3[_locations.LeftEyeAngularVelocity] : Vector3.zero;
+    /// <summary>Returns whether the LeftEyeAngularVelocity is available</summary>
+    public bool LeftEyeAngularVelocityAvailable => _locations.LeftEyeAngularVelocity >= 0;
+
+    /// <summary>Position of left eye of this device</summary>
+    public Vector3 LeftEyePosition => _locations.LeftEyePosition >= 0 ? _dataVector3[_locations.LeftEyePosition] : Vector3.zero;
+    /// <summary>Returns whether the LeftEyePosition is available</summary>
+    public bool LeftEyePositionAvailable => _locations.LeftEyePosition >= 0;
+
+    /// <summary>Rate of change of LeftEyePosition</summary>
+    public Vector3 LeftEyeVelocity => _locations.LeftEyeVelocity >= 0 ? _dataVector3[_locations.LeftEyeVelocity] : Vector3.zero;
+    /// <summary>Returns whether the LeftEyeVelocity is available</summary>
+    public bool LeftEyeVelocityAvailable => _locations.LeftEyeVelocity >= 0;
+
+    /// <summary>Rate of change of RightEyeVelocity</summary>
+    public Vector3 RightEyeAcceleration => _locations.RightEyeAcceleration >= 0 ? _dataVector3[_locations.RightEyeAcceleration] : Vector3.zero;
+    /// <summary>Returns whether the RightEyeAcceleration is available</summary>
+    public bool RightEyeAccelerationAvailable => _locations.RightEyeAcceleration >= 0;
+
+    /// <summary>Rate of change of RightEyeAngularVelocity</summary>
+    public Vector3 RightEyeAngularAcceleration => _locations.RightEyeAngularAcceleration >= 0 ? _dataVector3[_locations.RightEyeAngularAcceleration] : Vector3.zero;
+    /// <summary>Returns whether the RightEyeAngularAcceleration is available</summary>
+    public bool RightEyeAngularAccelerationAvailable => _locations.RightEyeAngularAcceleration >= 0;
+
+    /// <summary>Rate of change of RightEyeRotation</summary>
+    public Vector3 RightEyeAngularVelocity => _locations.RightEyeAngularVelocity >= 0 ? _dataVector3[_locations.RightEyeAngularVelocity] : Vector3.zero;
+    /// <summary>Returns whether the RightEyeAngularVelocity is available</summary>
+    public bool RightEyeAngularVelocityAvailable => _locations.RightEyeAngularVelocity >= 0;
+
+    /// <summary>Position of right eye</summary>
+    public Vector3 RightEyePosition => _locations.RightEyePosition >= 0 ? _dataVector3[_locations.RightEyePosition] : Vector3.zero;
+    /// <summary>Returns whether the RightEyePosition is available</summary>
+    public bool RightEyePositionAvailable => _locations.RightEyePosition >= 0;
+
+    /// <summary>Rate of change of RightEyePosition</summary>
+    public Vector3 RightEyeVelocity => _locations.RightEyeVelocity >= 0 ? _dataVector3[_locations.RightEyeVelocity] : Vector3.zero;
+    /// <summary>Returns whether the RightEyeVelocity is available</summary>
+    public bool RightEyeVelocityAvailable => _locations.RightEyeVelocity >= 0;
+
     /// <summary>Represents direction of primary joystick or where on the
     /// touchpad in case of Vive Wands is user pressing.</summary>
     /// Range is `<-1;1>x<-1;1>`
@@ -381,6 +600,15 @@ public class IsblStaticXRDevice
         : Vector2.zero;
     /// <summary>Returns whether the Primary2DAxis is available</summary>
     public bool Primary2DAxisAvailable => _locations.Primary2DAxis >= 0;
+
+    /// <summary>Represents direction of secondary joystick or where on the
+    /// touchpad in case of Vive Wands is user pressing.</summary>
+    /// Range is `<-1;1>x<-1;1>`
+    public Vector2 Secondary2DAxis => _locations.Secondary2DAxis >= 0
+        ? _dataVector2[_locations.Secondary2DAxis]
+        : Vector2.zero;
+    /// <summary>Returns whether the Secondary2DAxis is available</summary>
+    public bool Secondary2DAxisAvailable => _locations.Secondary2DAxis >= 0;
 
     /// <summary>How much is the grip trigger pressed. If the grip is a button
     /// (like on Vive Wands) then this changes value between 0 and 1.</summary>
@@ -396,6 +624,12 @@ public class IsblStaticXRDevice
     public float Trigger => _locations.Trigger >= 0 ? _dataFloat[_locations.Trigger] : 0;
     /// <summary>Returns whether the Trigger is available</summary>
     public bool TriggerAvailable => _locations.Trigger >= 0;
+
+    /// <summary>Returns battery charge status</summary>
+    /// Fallback value is 0.5 (the least special charge status)
+    public float BatteryLevel => _locations.BatteryLevel >= 0 ? _dataFloat[_locations.BatteryLevel] : 0.5f;
+    /// <summary>Returns whether the Trigger is available</summary>
+    public bool BatteryLevelAvailable => _locations.BatteryLevel >= 0;
 
     /// <summary>Returns raw tracking state with more detail than IsTracked</summary>
     /// I did not research details of this field and therefore am unsure of how
@@ -481,6 +715,35 @@ public class IsblStaticXRDevice
     /// <summary>Returns whether TriggerTouch is available in hardware</summary>
     public bool TriggerTouchAvailable => _locations.TriggerTouch >= 0;
 
+    /// <summary>Whether or not is secondary joystick/touchpad pressed in</summary>
+    public bool Secondary2DAxisClick => _locations.Secondary2DAxisClick >= 0 && _dataBool[_locations.Secondary2DAxisClick];
+    /// <summary>Returns whether Secondary2DAxisClick is available in hardware</summary>
+    public bool Secondary2DAxisClickAvailable => _locations.Secondary2DAxisClick >= 0;
+
+    /// <summary>Whether or not is user's finger touching secondary joystick/touchpad</summary>
+    public bool Secondary2DAxisTouch => _locations.Secondary2DAxisTouch >= 0 ? _dataBool[_locations.Secondary2DAxisTouch] : Secondary2DAxisClick;
+    /// <summary>Returns whether Secondary2DAxisTouch is available in hardware</summary>
+    public bool Secondary2DAxisTouchAvailable => _locations.Secondary2DAxisTouch >= 0;
+
+    /// <summary>Whether user is wearing the headset</summary>
+    ///
+    /// Fallback (value if not available) for this is true.
+    public bool UserPresence => _locations.UserPresence < 0 || _dataBool[_locations.UserPresence];
+    /// <summary>Returns whether UserPresence is available in hardware</summary>
+    public bool UserPresenceAvailable => _locations.UserPresence >= 0;
+
+    // HAND_NETCODE: update summary
+    /// <summary>Local-only data about hand tracking</summary>
+    public Hand HandData => _locations.HandData >= 0 ? _dataHand[_locations.HandData] : new Hand();
+    /// <summary>Returns whether HandData is available in hardware</summary>
+    public bool HandDataAvailable => _locations.HandData >= 0;
+
+    // EYES_NETCODE: update summary
+    /// <summary>Local-only eye tracking data</summary>
+    public Eyes EyesData => _locations.EyesData >= 0 ? _dataEyes[_locations.EyesData] : new Eyes();
+    /// <summary>Returns whether EyesData is available in hardware</summary>
+    public bool EyesDataAvailable => _locations.EyesData >= 0;
+
     /// <summary>
     /// Reads data from device to update internal state
     /// </summary>
@@ -504,6 +767,8 @@ public class IsblStaticXRDevice
                 _dataFloat = null;
                 _dataBool = null;
                 _dataUint = null;
+                _dataHand = null; // HAND_NETCODE: already implemented
+                _dataEyes = null; // EYES_NETCODE: already implemented
 
                 _locations = new();
             }
@@ -525,6 +790,8 @@ public class IsblStaticXRDevice
             if (_dataFloat == null || _dataFloat.Length != device.Float.Length) _dataFloat = new float[device.Float.Length];
             if (_dataBool == null || _dataBool.Length != device.Bool.Length) _dataBool = new bool[device.Bool.Length];
             if (_dataUint == null || _dataUint.Length != device.Uint.Length) _dataUint = new uint[device.Uint.Length];
+            if (_dataHand == null || _dataHand.Length != device.Hand.Length) _dataHand = new Hand[device.Hand.Length]; // HAND_NETCODE: already implemented
+            if (_dataEyes == null || _dataEyes.Length != device.Eyes.Length) _dataEyes = new Eyes[device.Eyes.Length]; // EYES_NETCODE: already implemented
 
             // ADDING_NEW_USAGE:
             // add if branch to relevant for loop
@@ -533,6 +800,10 @@ public class IsblStaticXRDevice
                 var name = device.Quaternion[i].name;
                 if (name == "DeviceRotation") _locations.DeviceRotation = i;
                 else if (name == "PointerRotation") _locations.PointerRotation = i;
+                else if (name == "CenterEyeRotation") _locations.CenterEyeRotation = i;
+                else if (name == "ColorCameraRotation") _locations.ColorCameraRotation = i;
+                else if (name == "LeftEyeRotation") _locations.LeftEyeRotation = i;
+                else if (name == "RightEyeRotation") _locations.RightEyeRotation = i;
                 else Debug.Log($"Unknown usage device of type Quaternion with name {name} on device {device.Name}");
             }
 
@@ -545,6 +816,28 @@ public class IsblStaticXRDevice
                 else if (name == "PointerAngularVelocity") _locations.PointerAngularVelocity = i;
                 else if (name == "PointerPosition") _locations.PointerPosition = i;
                 else if (name == "PointerVelocity") _locations.PointerVelocity = i;
+                else if (name == "CenterEyeAcceleration") _locations.CenterEyeAcceleration = i;
+                else if (name == "CenterEyeAngularAcceleration") _locations.CenterEyeAngularAcceleration = i;
+                else if (name == "CenterEyeAngularVelocity") _locations.CenterEyeAngularVelocity = i;
+                else if (name == "CenterEyePosition") _locations.CenterEyePosition = i;
+                else if (name == "CenterEyeVelocity") _locations.CenterEyeVelocity = i;
+                else if (name == "ColorCameraAcceleration") _locations.ColorCameraAcceleration = i;
+                else if (name == "ColorCameraAngularAcceleration") _locations.ColorCameraAngularAcceleration = i;
+                else if (name == "ColorCameraAngularVelocity") _locations.ColorCameraAngularVelocity = i;
+                else if (name == "ColorCameraPosition") _locations.ColorCameraPosition = i;
+                else if (name == "ColorCameraVelocity") _locations.ColorCameraVelocity = i;
+                else if (name == "DeviceAcceleration") _locations.DeviceAcceleration = i;
+                else if (name == "DeviceAngularAcceleration") _locations.DeviceAngularAcceleration = i;
+                else if (name == "LeftEyeAcceleration") _locations.LeftEyeAcceleration = i;
+                else if (name == "LeftEyeAngularAcceleration") _locations.LeftEyeAngularAcceleration = i;
+                else if (name == "LeftEyeAngularVelocity") _locations.LeftEyeAngularVelocity = i;
+                else if (name == "LeftEyePosition") _locations.LeftEyePosition = i;
+                else if (name == "LeftEyeVelocity") _locations.LeftEyeVelocity = i;
+                else if (name == "RightEyeAcceleration") _locations.RightEyeAcceleration = i;
+                else if (name == "RightEyeAngularAcceleration") _locations.RightEyeAngularAcceleration = i;
+                else if (name == "RightEyeAngularVelocity") _locations.RightEyeAngularVelocity = i;
+                else if (name == "RightEyePosition") _locations.RightEyePosition = i;
+                else if (name == "RightEyeVelocity") _locations.RightEyeVelocity = i;
                 else Debug.Log($"Unknown usage device of type Vector3 with name {name} on device {device.Name}");
             }
 
@@ -552,6 +845,7 @@ public class IsblStaticXRDevice
             {
                 var name = device.Vector2[i].name;
                 if (name == "Primary2DAxis") _locations.Primary2DAxis = i;
+                else if (name == "Secondary2DAxis") _locations.Secondary2DAxis = i;
                 else Debug.Log($"Unknown usage device of type Vector2 with name {name} on device {device.Name}");
             }
             for (var i = 0; i < device.Float.Length; ++i)
@@ -559,6 +853,7 @@ public class IsblStaticXRDevice
                 var name = device.Float[i].name;
                 if (name == "Grip") _locations.Grip = i;
                 else if (name == "Trigger") _locations.Trigger = i;
+                else if (name == "BatteryLevel") _locations.BatteryLevel = i;
                 else Debug.Log($"Unknown usage device of type float with name {name} on device {device.Name}");
             }
             for (var i = 0; i < device.Bool.Length; ++i)
@@ -577,6 +872,9 @@ public class IsblStaticXRDevice
                 else if (name == "SystemButton") _locations.SystemButton = i;
                 else if (name == "TriggerButton") _locations.TriggerButton = i;
                 else if (name == "TriggerTouch") _locations.TriggerTouch = i;
+                else if (name == "Secondary2DAxisClick") _locations.Secondary2DAxisClick = i;
+                else if (name == "Secondary2DAxisTouch") _locations.Secondary2DAxisTouch = i;
+                else if (name == "UserPresence") _locations.UserPresence = i;
                 else Debug.Log($"Unknown usage device of type bool with name {name} on device {device.Name}");
             }
             for (var i = 0; i < device.Uint.Length; ++i)
@@ -595,6 +893,7 @@ public class IsblStaticXRDevice
             for (var i = 0; i < device.Hand.Length; ++i)
             {
                 var name = device.Hand[i].name;
+                if (name == "HandData") _locations.HandData = i;
                 Debug.Log($"Unknown usage device of type Hand with name {name} on device {device.Name}");
             }
 
@@ -604,9 +903,10 @@ public class IsblStaticXRDevice
                 Debug.Log($"Unknown usage device of type Byte with name {name} on device {device.Name}");
             }
 
-            for (var i = 0; i < device.Hand.Length; ++i)
+            for (var i = 0; i < device.Eyes.Length; ++i)
             {
                 var name = device.Eyes[i].name;
+                if (name == "EyesData") _locations.EyesData = i;
                 Debug.Log($"Unknown usage device of type Eyes with name {name} on device {device.Name}");
             }
         }
@@ -619,5 +919,7 @@ public class IsblStaticXRDevice
         for (var i = 0; i < _dataFloat.Length; ++i) device.Device.TryGetFeatureValue(device.Float[i], out _dataFloat[i]);
         for (var i = 0; i < _dataBool.Length; ++i) device.Device.TryGetFeatureValue(device.Bool[i], out _dataBool[i]);
         for (var i = 0; i < _dataUint.Length; ++i) device.Device.TryGetFeatureValue(device.Uint[i], out _dataUint[i]);
+        for (var i = 0; i < _dataHand.Length; ++i) device.Device.TryGetFeatureValue(device.Hand[i], out _dataHand[i]); // HAND_NETCODE: already implemented
+        for (var i = 0; i < _dataEyes.Length; ++i) device.Device.TryGetFeatureValue(device.Eyes[i], out _dataEyes[i]); // EYES_NETCODE: already implemented
     }
 }
