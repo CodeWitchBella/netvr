@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEditor;
 using UnityEngine.XR;
+using Newtonsoft.Json.Linq;
 
 [CustomPropertyDrawer(typeof(IsblTrackedPoseDriver.SelfPropertyAttribute))]
 public class IsblXRDeviceDrawer : PropertyDrawer
@@ -45,32 +46,14 @@ public class IsblXRDeviceDrawer : PropertyDrawer
             DrawField("Name", device.Name);
             DrawField("Characteristics", SerializeCharacteristics(device.Characteristics));
             DrawField("HasData", device.HasData);
-            DrawField("DeviceAngularVelocity", device.DeviceAngularVelocity, device.DeviceAngularVelocityAvailable);
-            DrawField("DevicePosition", device.DevicePosition, device.DevicePositionAvailable);
-            DrawField("DeviceRotation", device.DeviceRotation, device.DeviceRotationAvailable);
-            DrawField("DeviceVelocity", device.DeviceVelocity, device.DeviceVelocityAvailable);
-            DrawField("Grip", device.Grip, device.GripAvailable);
-            DrawField("GripButton", device.GripButton, device.GripButtonAvailable);
-            DrawField("IsTracked", device.IsTracked, device.IsTrackedAvailable);
-            DrawField("MenuButton", device.MenuButton, device.MenuButtonAvailable);
-            DrawField("PointerAngularVelocity", device.PointerAngularVelocity, device.PointerAngularVelocityAvailable);
-            DrawField("PointerPosition", device.PointerPosition, device.PointerPositionAvailable);
-            DrawField("PointerRotation", device.PointerRotation, device.PointerRotationAvailable);
-            DrawField("PointerVelocity", device.PointerVelocity, device.PointerVelocityAvailable);
-            DrawField("Primary2DAxis", device.Primary2DAxis, device.Primary2DAxisAvailable);
-            DrawField("Primary2DAxisClick", device.Primary2DAxisClick, device.Primary2DAxisClickAvailable);
-            DrawField("Primary2DAxisTouch", device.Primary2DAxisTouch, device.Primary2DAxisTouchAvailable);
-            DrawField("TrackingState", device.TrackingState, device.TrackingStateAvailable);
-            DrawField("Trigger", device.Trigger, device.TriggerAvailable);
-            DrawField("TriggerButton", device.TriggerButton, device.TriggerButtonAvailable);
-            // oculus touch
-            DrawField("PrimaryButton", device.PrimaryButton, device.PrimaryButtonAvailable);
-            DrawField("PrimaryTouch", device.PrimaryTouch, device.PrimaryTouchAvailable);
-            DrawField("SecondaryButton", device.SecondaryButton, device.SecondaryButtonAvailable);
-            DrawField("SecondaryTouch", device.SecondaryTouch, device.SecondaryTouchAvailable);
-            DrawField("TriggerTouch", device.TriggerTouch, device.TriggerTouchAvailable);
-            // vive
-            DrawField("SystemButton", device.SystemButton, device.SystemButtonAvailable);
+
+            var locations = device.SerializeConfiguration().Value<JObject>("locations");
+            foreach (var prop in locations.Properties())
+            {
+                var propName = char.ToUpper(prop.Name[0]) + prop.Name[1..];
+                if (prop.Value.Value<int>() >= 0)
+                    DrawField(propName, device.GetType().GetProperty(propName).GetValue(device).ToString());
+            }
         }
         EditorGUI.EndProperty();
     }
