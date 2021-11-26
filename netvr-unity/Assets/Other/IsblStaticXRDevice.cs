@@ -74,8 +74,6 @@ public class IsblStaticXRDevice
     public bool DeviceInfoChanged;
     #endregion
 
-
-
     // ADDING_NEW_TYPE:
     // Increment this by one
     const int TypeCount = 6;
@@ -402,7 +400,7 @@ public class IsblStaticXRDevice
     /// <summary>Returns raw tracking state with more detail than IsTracked</summary>
     /// I did not research details of this field and therefore am unsure of how
     /// exactly it represents its values.
-    public uint TrackingState => _locations.TrackingState >= 0 ? _dataUint[_locations.TrackingState] : 0;
+    public InputTrackingState TrackingState => _locations.TrackingState >= 0 ? (InputTrackingState)_dataUint[_locations.TrackingState] : 0;
     /// <summary>Returns whether the TrackingState is available</summary>
     public bool TrackingStateAvailable => _locations.TrackingState >= 0;
 
@@ -598,12 +596,6 @@ public class IsblStaticXRDevice
             {
                 var name = device.Hand[i].name;
                 Debug.Log($"Unknown usage device of type Hand with name {name} on device {device.Name}");
-            }
-
-            for (var i = 0; i < device.InputTrackingState.Length; ++i)
-            {
-                var name = device.InputTrackingState[i].name;
-                Debug.Log($"Unknown usage device of type InputTrackingState with name {name} on device {device.Name}");
             }
 
             for (var i = 0; i < device.ByteArray.Length; ++i)

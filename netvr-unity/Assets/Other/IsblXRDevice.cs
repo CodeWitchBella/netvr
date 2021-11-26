@@ -25,20 +25,18 @@ public class IsblXRDevice
     #region untested
     public InputFeatureUsage<Bone>[] Bone { get; }
     public InputFeatureUsage<Hand>[] Hand { get; }
-    public InputFeatureUsage<InputTrackingState>[] InputTrackingState { get; }
     public InputFeatureUsage<byte[]>[] ByteArray { get; }
     public InputFeatureUsage<Eyes>[] Eyes { get; }
     #endregion untested
 
-    InputFeatureUsage<uint> _trackingState = new("TrackingState");
     /// <summary>Returns raw tracking state</summary>
     ///
     /// Used to find correct controller in case multiple controllers are
     /// associated with the same XRNode.
-    public uint ReadTrackingState()
+    public InputTrackingState ReadTrackingState()
     {
-        uint value;
-        if (!Device.TryGetFeatureValue(_trackingState, out value)) throw new System.Exception("Failed to read TrackingState");
+        InputTrackingState value;
+        if (!Device.TryGetFeatureValue(CommonUsages.trackingState, out value)) throw new System.Exception("Failed to read TrackingState");
         return value;
     }
 
@@ -54,7 +52,7 @@ public class IsblXRDevice
         {
             Debug.Log($"{device.name}: {string.Join(" ", featureUsages.ConvertAll(usage => $"{usage.name}({usage.type})"))}");
             int quaternionCounter = 0, vector3Counter = 0, vector2Counter = 0, floatCounter = 0, boolCounter = 0, uintCounter = 0;
-            int boneCounter = 0, handCounter = 0, inputTrackingStateCounter = 0, byteArrayCounter = 0, eyesCounter = 0;
+            int boneCounter = 0, handCounter = 0, byteArrayCounter = 0, eyesCounter = 0;
             foreach (var usage in featureUsages)
             {
                 if (usage.type == typeof(Quaternion)) quaternionCounter++;
@@ -65,7 +63,6 @@ public class IsblXRDevice
                 else if (usage.type == typeof(uint)) uintCounter++;
                 else if (usage.type == typeof(Bone)) boneCounter++;
                 else if (usage.type == typeof(Hand)) handCounter++;
-                else if (usage.type == typeof(InputTrackingState)) inputTrackingStateCounter++;
                 else if (usage.type == typeof(byte[])) byteArrayCounter++;
                 else if (usage.type == typeof(Eyes)) eyesCounter++;
                 else Debug.Log($"Unknown usage type {usage.type} with name {usage.name} on {device.name}");
@@ -79,12 +76,11 @@ public class IsblXRDevice
             Uint = new InputFeatureUsage<uint>[uintCounter];
             Bone = new InputFeatureUsage<Bone>[boneCounter++];
             Hand = new InputFeatureUsage<Hand>[handCounter++];
-            InputTrackingState = new InputFeatureUsage<InputTrackingState>[inputTrackingStateCounter++];
             ByteArray = new InputFeatureUsage<byte[]>[byteArrayCounter++];
             Eyes = new InputFeatureUsage<Eyes>[eyesCounter++];
 
             quaternionCounter = 0; vector3Counter = 0; vector2Counter = 0; floatCounter = 0; boolCounter = 0; uintCounter = 0;
-            boneCounter = 0; handCounter = 0; inputTrackingStateCounter = 0; byteArrayCounter = 0; eyesCounter = 0;
+            boneCounter = 0; handCounter = 0; byteArrayCounter = 0; eyesCounter = 0;
             foreach (var usage in featureUsages)
             {
                 if (usage.type == typeof(Quaternion)) Quaternion[quaternionCounter++] = new(usage.name);
@@ -95,7 +91,6 @@ public class IsblXRDevice
                 else if (usage.type == typeof(uint)) Uint[uintCounter++] = new(usage.name);
                 else if (usage.type == typeof(Bone)) Bone[boneCounter++] = new(usage.name);
                 else if (usage.type == typeof(Hand)) Hand[handCounter++] = new(usage.name);
-                else if (usage.type == typeof(InputTrackingState)) InputTrackingState[inputTrackingStateCounter++] = new(usage.name);
                 else if (usage.type == typeof(byte[])) ByteArray[byteArrayCounter++] = new(usage.name);
                 else if (usage.type == typeof(Eyes)) Eyes[eyesCounter++] = new(usage.name);
             }
