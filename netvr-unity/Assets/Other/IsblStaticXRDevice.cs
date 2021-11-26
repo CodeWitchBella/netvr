@@ -285,30 +285,30 @@ public class IsblStaticXRDevice
         // ADDING_NEW_USAGE:
         // (search for ADDING_NEW_USAGE to see all relevant markers)
         // add new member here
-        public int DeviceRotation = -1;
-        public int PointerRotation = -1;
-        public int DeviceAngularVelocity = -1;
-        public int DevicePosition = -1;
-        public int DeviceVelocity = -1;
-        public int PointerAngularVelocity = -1;
-        public int PointerPosition = -1;
-        public int PointerVelocity = -1;
-        public int Primary2DAxis = -1;
-        public int Grip = -1;
-        public int Trigger = -1;
-        public int TrackingState = -1;
-        public int GripButton = -1;
-        public int IsTracked = -1;
-        public int MenuButton = -1;
-        public int Primary2DAxisClick = -1;
-        public int Primary2DAxisTouch = -1;
-        public int PrimaryButton = -1;
-        public int PrimaryTouch = -1;
-        public int SecondaryButton = -1;
-        public int SecondaryTouch = -1;
-        public int SystemButton = -1;
-        public int TriggerButton = -1;
-        public int TriggerTouch = -1;
+        public int DeviceRotation = -1;//Quaternion
+        public int PointerRotation = -1;//Quaternion
+        public int DeviceAngularVelocity = -1;//Vector3
+        public int DevicePosition = -1;//Vector3
+        public int DeviceVelocity = -1;//Vector3
+        public int PointerAngularVelocity = -1;//Vector3
+        public int PointerPosition = -1;//Vector3
+        public int PointerVelocity = -1;//Vector3
+        public int Primary2DAxis = -1;//Vector2
+        public int Grip = -1;//float
+        public int Trigger = -1;//float
+        public int TrackingState = -1;//uint
+        public int GripButton = -1;//bool
+        public int IsTracked = -1;//bool
+        public int MenuButton = -1;//bool
+        public int Primary2DAxisClick = -1;//bool
+        public int Primary2DAxisTouch = -1;//bool
+        public int PrimaryButton = -1;//bool
+        public int PrimaryTouch = -1;//bool
+        public int SecondaryButton = -1;//bool
+        public int SecondaryTouch = -1;//bool
+        public int SystemButton = -1;//bool
+        public int TriggerButton = -1;//bool
+        public int TriggerTouch = -1;//bool
 
         public static Locations FromJObject(JObject jobject)
         {
