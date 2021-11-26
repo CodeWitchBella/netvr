@@ -26,7 +26,30 @@ function deviceReducer(state: DeviceData[], action: any) {
         .filter((dev) => !incomingIds.has(dev.id))
         .concat(message.info)
     }
+  } else {
+    const binaryMessage = parseBinaryMessage(action)
+    state = state.map((stateClient) => {
+      const client = binaryMessage.clients.find(
+        (c) => c.clientId === stateClient.id,
+      )
+      if (!client) return stateClient
+      return {
+        ...stateClient,
+        info: stateClient.info?.map((stateInfo: any) => {
+          const clientData = client.devices.find(
+            (d) => d.deviceId === stateInfo.localId,
+          )
+          if (!clientData) return stateInfo
+          return {
+            ...stateInfo,
+            data: clientData,
+          }
+        }),
+      }
+    })
+    return state
   }
+
   return state
 }
 
@@ -81,7 +104,24 @@ export function Dashboard({ socket }: { socket: PWebSocket }) {
 function Device({ device }: { device: DeviceData }) {
   return (
     <code>
-      <pre>{JSON.stringify(device, null, 2)}</pre>
+      <pre style={{ whiteSpace: 'pre-wrap', width: 500 }}>
+        {JSON.stringify(
+          device,
+          (key, value) => {
+            if (
+              Array.isArray(value) &&
+              value.length >= 2 &&
+              value.length <= 3 &&
+              typeof value[0] === 'number' &&
+              !Number.isInteger(value[0])
+            ) {
+              return `(${value.map((v) => v.toFixed(2)).join(', ')})`
+            }
+            return value
+          },
+          2,
+        )}
+      </pre>
     </code>
   )
 }
@@ -132,7 +172,6 @@ function BinaryMessage({ data }: { data: ArrayBuffer }) {
 }
 
 function parseBinaryMessage(data: ArrayBuffer) {
-  console.log('parseBinaryMessage')
   const view = new DataView(data, 0, data.byteLength)
   var offset = { current: 0 }
   const clientCount = readUint32(view, offset)
@@ -140,11 +179,9 @@ function parseBinaryMessage(data: ArrayBuffer) {
   for (let clientIndex = 0; clientIndex < clientCount; ++clientIndex) {
     const clientId = readUint32(view, offset)
     const numberOfDevices = read7BitEncodedInt(view, offset)
-    console.log({ clientId, numberOfDevices })
     let devices = []
     for (let deviceId = 0; deviceId < numberOfDevices; ++deviceId) {
       const deviceByteCount = read7BitEncodedInt(view, offset)
-      console.log({ deviceByteCount })
       const deviceBytes = view.buffer.slice(
         offset.current,
         offset.current + deviceByteCount,
@@ -226,7 +263,6 @@ function read7BitEncodedInt(
   let val = 0
   let mul = 1
   let byte: number
-  console.log({ offset: offset.current })
   do {
     byte = readByte(view, offset)
     val += (byte & 0x7f) * mul
