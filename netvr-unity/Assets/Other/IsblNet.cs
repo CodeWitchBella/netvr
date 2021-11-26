@@ -114,7 +114,6 @@ public sealed class IsblNet : IDisposable
         _socket.OnBinaryMessage += (data) =>
             {
                 int clientCount = BinaryPrimitives.ReadInt32LittleEndian(data);
-                Debug.Log($"Recieved data of {clientCount} peers");
                 var offset = 4;
 
                 for (int clientIndex = 0; clientIndex < clientCount; ++clientIndex)
@@ -122,7 +121,6 @@ public sealed class IsblNet : IDisposable
                     var clientId = BinaryPrimitives.ReadInt32LittleEndian(data[offset..]);
                     offset += 4;
                     offset += Isbl.NetData.Read7BitEncodedInt(data[offset..], out var numberOfDevices);
-                    Debug.Log($"Got data of peer {clientId} with {numberOfDevices} devices");
 
                     for (int deviceIndex = 0; deviceIndex < numberOfDevices; deviceIndex++)
                     {
@@ -143,7 +141,7 @@ public sealed class IsblNet : IDisposable
         if (state != null)
         {
             var device = state.Devices.Find(dev => dev.LocallyUniqueId == deviceId);
-            device?.DeSerializeData(bytes, offset);
+            device?.DeSerializeData(bytes, offsetCopy);
         }
     }
 
@@ -206,9 +204,7 @@ public sealed class IsblNet : IDisposable
         var bytes = new byte[NetState.CalculateSerializationSize()];
         var span = bytes.AsSpan();
         BinaryPrimitives.WriteInt32LittleEndian(span[0..4], NetState.Id);
-        Debug.Log($"First four bytes {bytes[0]} {bytes[1]} {bytes[2]} {bytes[3]}");
         int offset = 4;
-        Debug.Log($"Sending {NetState.Devices.Count(d => d.HasData)} devices");
         offset += Isbl.NetData.Write7BitEncodedInt(span[offset..], NetState.Devices.Count(d => d.HasData));
         foreach (var device in NetState.Devices)
         {
