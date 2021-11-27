@@ -26,15 +26,15 @@ public sealed class IsblPersistentData
                 {
                     using var reader = new StreamReader(DataPath);
                     _instance = JsonConvert.DeserializeObject<IsblPersistentData>(reader.ReadToEnd());
-                    if (_instance._connections.Count < 1)
-                    {
-                        _instance._connections.Add(new Connection { SocketUrl = "wss://netvr.isbl.workers.dev/" });
-                        _instance._connections.Add(new Connection { SocketUrl = "ws://192.168.1.31:10000/" });
-                    }
                 }
                 catch
                 {
                     _instance = new();
+                }
+                if (_instance._connections.Count < 1)
+                {
+                    _instance._connections.Add(new Connection { SocketUrl = "wss://netvr.isbl.workers.dev/" });
+                    _instance._connections.Add(new Connection { SocketUrl = "ws://192.168.1.31:10000/" });
                 }
             }
             return _instance;
