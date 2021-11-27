@@ -50,7 +50,6 @@ public class IsblXRDevice
         var featureUsages = new List<InputFeatureUsage>();
         if (Device.TryGetFeatureUsages(featureUsages))
         {
-            Debug.Log($"{device.name}: {string.Join(" ", featureUsages.ConvertAll(usage => $"{usage.name}({usage.type})"))}");
             int quaternionCounter = 0, vector3Counter = 0, vector2Counter = 0, floatCounter = 0, boolCounter = 0, uintCounter = 0;
             int boneCounter = 0, handCounter = 0, byteArrayCounter = 0, eyesCounter = 0;
             foreach (var usage in featureUsages)
