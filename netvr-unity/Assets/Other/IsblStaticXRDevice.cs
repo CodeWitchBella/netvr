@@ -275,7 +275,7 @@ public class IsblStaticXRDevice
 
         return JObject.FromObject(new
         {
-            locations = _locations.ToJObject(),
+            locations = Isbl.NetData.ToJObjectCamelCase(_locations),
             name = Name,
             characteristics,
             localId = LocallyUniqueId,
@@ -317,7 +317,7 @@ public class IsblStaticXRDevice
             };
         }
 
-        _locations = Locations.FromJObject(message.Value<JObject>("locations"));
+        _locations = Isbl.NetData.FromJObjectCamelCase<Locations>(message.Value<JObject>("locations"));
         Name = message.Value<string>("name");
         LocallyUniqueId = message.Value<int>("localId");
         var lengths = message.Value<JObject>("lengths");
@@ -398,18 +398,6 @@ public class IsblStaticXRDevice
         public int UserPresence = -1;//bool
         public int HandData = -1;//Hand
         public int EyesData = -1;//Eyes
-
-        public static Locations FromJObject(JObject jobject)
-        {
-            return jobject.ToObject<Locations>(new Newtonsoft.Json.JsonSerializer()
-            { ContractResolver = new CamelCasePropertyNamesContractResolver() });
-        }
-
-        public JObject ToJObject()
-        {
-            return JObject.FromObject(this, new Newtonsoft.Json.JsonSerializer()
-            { ContractResolver = new CamelCasePropertyNamesContractResolver() });
-        }
     };
 
     // ADDING_NEW_USAGE:

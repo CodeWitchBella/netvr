@@ -3,6 +3,8 @@ using System.Buffers.Binary;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using Newtonsoft.Json.Linq;
+using Newtonsoft.Json.Serialization;
 using UnityEngine;
 
 namespace Isbl
@@ -89,6 +91,18 @@ namespace Isbl
             int r = 1;
             while ((count >>= 7) != 0) r++;
             return r;
+        }
+
+        public static T FromJObjectCamelCase<T>(JObject jobject)
+        {
+            return jobject.ToObject<T>(new Newtonsoft.Json.JsonSerializer()
+            { ContractResolver = new CamelCasePropertyNamesContractResolver() });
+        }
+
+        public static JObject ToJObjectCamelCase<T>(T value)
+        {
+            return JObject.FromObject(value, new Newtonsoft.Json.JsonSerializer()
+            { ContractResolver = new CamelCasePropertyNamesContractResolver() });
         }
     }
 }
