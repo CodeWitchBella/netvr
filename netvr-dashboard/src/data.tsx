@@ -22,7 +22,7 @@ export type DeviceData = {
 }
 export type ClientData = {
   id: number
-  info: readonly DeviceData[]
+  info?: readonly DeviceData[]
 }
 
 export function mapData(device: DeviceData): {

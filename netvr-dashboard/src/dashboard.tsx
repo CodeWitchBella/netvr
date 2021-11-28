@@ -4,6 +4,7 @@ import { ListenToSocket } from './listen-to-socket'
 import type { PWebSocket } from './utils'
 import { ErrorBoundary } from './error-boundary'
 import { ClientData, DeviceData, mapData, parseBinaryMessage } from './data'
+import { SyncDevicesButton } from './sync-devices'
 
 function useSendKeepAlive(socket: PWebSocket) {
   useEffect(() => {
@@ -59,10 +60,16 @@ function deviceReducer(state: ClientData[], action: any) {
 
 export function Dashboard({ socket }: { socket: PWebSocket }) {
   const [stopped, setStopped] = useState(false)
-  const [devices, dispatchDevices] = useReducer(deviceReducer, [])
+  const [clients, dispatchDevices] = useReducer(deviceReducer, [])
 
   const [log, dispatchLog] = useLog()
   useSendKeepAlive(socket)
+
+  function sendMessage(data: any) {
+    const message = JSON.stringify(data)
+    dispatchLog({ direction: 'up', message })
+    socket.send(message)
+  }
 
   return (
     <ErrorBoundary>
@@ -85,9 +92,12 @@ export function Dashboard({ socket }: { socket: PWebSocket }) {
           justifyContent: 'space-between',
         }}
       >
-        <div className="devices" style={{ width: 'auto' }}>
-          {devices.map((device) => (
-            <Client key={device.id} client={device} />
+        <div className="clients" style={{ width: 'auto' }}>
+          <ErrorBoundary>
+            <SyncDevicesButton sendMessage={sendMessage} clients={clients} />
+          </ErrorBoundary>
+          {clients.map((client) => (
+            <Client key={client.id} client={client} />
           ))}
         </div>
         <div className="events">
