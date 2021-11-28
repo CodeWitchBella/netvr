@@ -3,6 +3,7 @@ import { useLog } from './log'
 import { ListenToSocket } from './listen-to-socket'
 import type { PWebSocket } from './utils'
 import { locationMap } from './location-map'
+import { ErrorBoundary } from './error-boundary'
 
 function useSendKeepAlive(socket: PWebSocket) {
   useEffect(() => {
@@ -87,7 +88,7 @@ export function Dashboard({ socket }: { socket: PWebSocket }) {
   useSendKeepAlive(socket)
 
   return (
-    <>
+    <ErrorBoundary>
       <ListenToSocket
         socket={socket}
         onMessage={(message) => {
@@ -123,7 +124,7 @@ export function Dashboard({ socket }: { socket: PWebSocket }) {
           ))}
         </div>
       </div>
-    </>
+    </ErrorBoundary>
   )
 }
 
@@ -174,6 +175,10 @@ function Client({ client }: { client: ClientData }) {
 
 function Device({ device }: { device: DeviceData }) {
   const data = mapData(device)
+  const [showDetails, toggleShowDetails] = useReducer(
+    (prev: boolean) => !prev,
+    false,
+  )
   return (
     <div
       style={{
@@ -183,28 +188,35 @@ function Device({ device }: { device: DeviceData }) {
         borderRadius: 4,
       }}
     >
-      <div>Device: {device.localId}</div>
+      <div>Device: {device.localId} </div>
       <div>Characteristics: {device.characteristics.join(', ')}</div>
-      {Object.entries(data).map(([key, o]) => (
-        <div key={key}>
-          {key}:{' '}
-          {o.type === 'quaternion' ||
-          o.type === 'vector3' ||
-          o.type === 'vector2'
-            ? o.value.map((v) => v.toFixed(2)).join(', ')
-            : o.type === 'float'
-            ? o.value.toFixed(2)
-            : o.type === 'uint32'
-            ? o.value.toFixed(0)
-            : o.type === 'bool'
-            ? o.value === 'fail'
-              ? 'fail'
-              : o.value
-              ? '✅'
-              : '❌'
-            : null}
-        </div>
-      ))}
+      <button type="button" onClick={toggleShowDetails}>
+        {showDetails ? 'Hide details' : 'Show details'}
+      </button>
+      {showDetails ? (
+        <>
+          {Object.entries(data).map(([key, o]) => (
+            <div key={key}>
+              {key}:{' '}
+              {o.type === 'quaternion' ||
+              o.type === 'vector3' ||
+              o.type === 'vector2'
+                ? o.value.map((v) => v.toFixed(2)).join(', ')
+                : o.type === 'float'
+                ? o.value.toFixed(2)
+                : o.type === 'uint32'
+                ? o.value.toFixed(0)
+                : o.type === 'bool'
+                ? o.value === 'fail'
+                  ? 'fail'
+                  : o.value
+                  ? '✅'
+                  : '❌'
+                : null}
+            </div>
+          ))}
+        </>
+      ) : null}
     </div>
   )
 }
