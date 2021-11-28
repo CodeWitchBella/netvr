@@ -52,8 +52,11 @@ public class IsblXRDevice
         {
             int quaternionCounter = 0, vector3Counter = 0, vector2Counter = 0, floatCounter = 0, boolCounter = 0, uintCounter = 0;
             int boneCounter = 0, handCounter = 0, byteArrayCounter = 0, eyesCounter = 0;
+            HashSet<string> seen = new(); // ignore duplicate usages
             foreach (var usage in featureUsages)
             {
+                if (seen.Contains(usage.name)) continue;
+                seen.Add(usage.name);
                 if (usage.type == typeof(Quaternion)) quaternionCounter++;
                 else if (usage.type == typeof(Vector3)) vector3Counter++;
                 else if (usage.type == typeof(Vector2)) vector2Counter++;
@@ -66,6 +69,7 @@ public class IsblXRDevice
                 else if (usage.type == typeof(Eyes)) eyesCounter++;
                 else Debug.Log($"Unknown usage type {usage.type} with name {usage.name} on {device.name}");
             }
+            seen.Clear();
 
             Quaternion = new InputFeatureUsage<Quaternion>[quaternionCounter];
             Vector3 = new InputFeatureUsage<Vector3>[vector3Counter];
@@ -82,6 +86,8 @@ public class IsblXRDevice
             boneCounter = 0; handCounter = 0; byteArrayCounter = 0; eyesCounter = 0;
             foreach (var usage in featureUsages)
             {
+                if (seen.Contains(usage.name)) continue;
+                seen.Add(usage.name);
                 if (usage.type == typeof(Quaternion)) Quaternion[quaternionCounter++] = new(usage.name);
                 else if (usage.type == typeof(Vector3)) Vector3[vector3Counter++] = new(usage.name);
                 else if (usage.type == typeof(Vector2)) Vector2[vector2Counter++] = new(usage.name);
