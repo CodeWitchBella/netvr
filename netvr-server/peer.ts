@@ -1,10 +1,25 @@
 import type { PWebSocket } from './utils.js'
 
 const sendToSelfAsDebug = true
+type Calibration = {
+  id: number
+  translate: { x: 0; y: 0; z: 0 }
+  rotate: { x: 0; y: 0; z: 0 }
+  scale: { x: 1; y: 1; z: 1 }
+}
+
 export class Peer {
   data: Uint8Array = new Uint8Array()
-  info?: any
-  constructor(public readonly id: number, public readonly socket: PWebSocket) {}
+  deviceInfo?: any
+  calibration: Calibration = {
+    id: 0,
+    translate: { x: 0, y: 0, z: 0 },
+    rotate: { x: 0, y: 0, z: 0 },
+    scale: { x: 1, y: 1, z: 1 },
+  }
+  constructor(public readonly id: number, public readonly socket: PWebSocket) {
+    this.calibration.id = id
+  }
 
   onJson(message: any, peers: readonly Peer[]) {
     if (message.action !== 'keep alive') {
@@ -14,9 +29,15 @@ export class Peer {
     if (message.action === 'keep alive') {
       // noop
     } else if (message.action === 'device info') {
-      this.info = message.info
-      for (const peer of peers) peer.jsonSent.delete(this.id)
-      if (sendToSelfAsDebug) this.jsonSent.delete(this.id)
+      this.deviceInfo = message.info
+      for (const peer of peers) peer.deviceInfoSent.delete(this.id)
+      if (sendToSelfAsDebug) this.deviceInfoSent.delete(this.id)
+    } else if (message.action === 'set calibration') {
+      for (const cal of message.calibrations) {
+        if (cal.id === this.id) {
+          this.calibration = cal
+        }
+      }
     } else {
       console.log('message with unknown action', JSON.stringify(message.action))
     }
@@ -51,19 +72,33 @@ export class Peer {
     }
   }
 
-  jsonSent = new Set<number>()
+  deviceInfoSent = new Set<number>()
+  calibrationSent = new Set<number>()
 
   private sendJsonUnsent(peers: readonly Peer[]) {
-    const info = []
+    const deviceInfos = []
+    const calibrations: (Calibration & { id: number })[] = []
     for (const peer of sendToSelfAsDebug ? peers.concat([this]) : peers) {
-      if (!this.jsonSent.has(peer.id)) {
-        this.jsonSent.add(peer.id)
-        info.push({ id: peer.id, info: peer.info })
+      if (!this.deviceInfoSent.has(peer.id)) {
+        this.deviceInfoSent.add(peer.id)
+        deviceInfos.push({ id: peer.id, info: peer.deviceInfo })
+      }
+      if (!this.calibrationSent.has(peer.id)) {
+        this.calibrationSent.add(peer.id)
+        calibrations.push(peer.calibration)
       }
     }
-    if (info.length === 0) return
+    if (deviceInfos.length !== 0) {
+      this.socket.send(
+        JSON.stringify({ action: 'device info', info: deviceInfos }),
+      )
+    }
 
-    this.socket.send(JSON.stringify({ action: 'device info', info }))
+    if (calibrations.length !== 0) {
+      this.socket.send(
+        JSON.stringify({ action: 'set calibration', calibrations }),
+      )
+    }
   }
 
   onBinary(data: ArrayBuffer, peers: readonly Peer[]) {

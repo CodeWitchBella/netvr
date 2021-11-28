@@ -101,6 +101,10 @@ public sealed class IsblNet : IDisposable
                 {
                     HandleDeviceInfo(obj);
                 }
+                else if (action == "set calibration")
+                {
+                    HandleSetCalibration(obj);
+                }
                 else if (!string.IsNullOrEmpty(action))
                 {
                     Debug.Log($"Unknown action \"{action}\"");
@@ -172,6 +176,27 @@ public sealed class IsblNet : IDisposable
                 localDevice.DeSerializeConfiguration(device);
                 i++;
             }
+        }
+    }
+
+    /// <summary>
+    /// Handles incoming messages with action set to "set calibration"
+    /// </summary>
+    void HandleSetCalibration(JObject obj)
+    {
+        foreach (var peer in obj.GetValue("calibrations").Children<JObject>())
+        {
+            var id = peer.Value<int>("id");
+            Isbl.NetStateData localState = OtherStates.GetValueOrDefault(id, null);
+            if (localState == null)
+            {
+                Debug.LogWarning($"Recieved set calibration message for unknown device id {id}. Did it arive before device info?");
+                continue;
+            }
+
+            localState.CalibrationPosition = peer.Value<Vector3>("position");
+            localState.CalibrationRotation = Quaternion.Euler(peer.Value<Vector3>("rotation"));
+            localState.CalibrationScale = peer.Value<Vector3>("scale");
         }
     }
 

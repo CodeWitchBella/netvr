@@ -6,6 +6,7 @@ export async function run() {
   const events = document.querySelector('#events')!
   if (!events) throw new Error('Cant find #events')
   const socket = await promisifyWebsocket(createSocket())
+  ;(window as any).socket = socket
   socket.send(JSON.stringify({ action: 'gimme id' }))
 
   ReactDOM.render(<Dashboard socket={socket} />, events)

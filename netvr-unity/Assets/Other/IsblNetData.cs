@@ -14,6 +14,11 @@ namespace Isbl
         public bool Initialized;
         public int Id;
         public string IdToken;
+
+        public Vector3 CalibrationPosition = Vector3.zero;
+        public Quaternion CalibrationRotation = Quaternion.identity;
+        public Vector3 CalibrationScale = Vector3.one;
+
         public List<IsblStaticXRDevice> Devices = new();
         public void ResizeDevices(int length)
         {
