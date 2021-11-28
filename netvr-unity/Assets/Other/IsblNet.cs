@@ -105,6 +105,14 @@ public sealed class IsblNet : IDisposable
                 {
                     HandleSetCalibration(obj);
                 }
+                else if (action == "disconnect")
+                {
+                    foreach (var idToken in obj.GetValue("ids").Children<JToken>())
+                    {
+                        int id = (int)idToken;
+                        if (OtherStates.ContainsKey(id)) OtherStates.Remove(id);
+                    }
+                }
                 else if (!string.IsNullOrEmpty(action))
                 {
                     Debug.Log($"Unknown action \"{action}\"");

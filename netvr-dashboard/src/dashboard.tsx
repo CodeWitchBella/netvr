@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useReducer, useRef, useState } from 'react'
 import { useLog } from './log'
-import { ListenToSocket } from './use-listen-to-socket'
+import { ListenToSocket } from './listen-to-socket'
 import type { PWebSocket } from './utils'
 
 function useSendKeepAlive(socket: PWebSocket) {
@@ -25,6 +25,9 @@ function deviceReducer(state: DeviceData[], action: any) {
       return state
         .filter((dev) => !incomingIds.has(dev.id))
         .concat(message.info)
+    } else if (message.action === 'disconnect') {
+      const incomingIds = new Set(message.ids)
+      return state.filter((dev) => !incomingIds.has(dev.id))
     }
   } else {
     const binaryMessage = parseBinaryMessage(action)

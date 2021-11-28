@@ -31,6 +31,7 @@ export function createRoom() {
         }
         const message = JSON.parse(event.data)
         if (message.action === 'gimme id') {
+          thisPeer?.onDisconnect(other(peersById.values(), thisPeer.id))
           thisPeer = createPeer(++idgen, socket)
           socket.send(
             JSON.stringify({
@@ -43,10 +44,12 @@ export function createRoom() {
           const requestedId = message.id
           const token = peerTokens.get(requestedId)
           if (token && token === message.token) {
+            thisPeer?.onDisconnect(other(peersById.values(), thisPeer.id))
             thisPeer = createPeer(requestedId, socket)
             console.log(peersById)
             socket.send(JSON.stringify({ action: 'id ack' }))
           } else {
+            thisPeer?.onDisconnect(other(peersById.values(), thisPeer.id))
             thisPeer = createPeer(++idgen, socket)
             console.log(peersById)
             socket.send(
@@ -74,7 +77,7 @@ export function createRoom() {
         peersById.delete(thisPeer.id)
         console.log(peersById)
       }
-      console.log('Socket finished')
+      thisPeer?.onDisconnect(other(peersById.values(), thisPeer.id))
     }
   }
 

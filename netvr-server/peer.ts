@@ -21,6 +21,14 @@ export class Peer {
     this.calibration.id = id
   }
 
+  // called right after constructor
+  onConnect(peers: readonly Peer[]) {
+    // managed to reconnect before disconnect event was propagated
+    for (const peer of peers) {
+      peer.disconnectUnsent.delete(this.id)
+    }
+  }
+
   onJson(message: any, peers: readonly Peer[]) {
     if (message.action !== 'keep alive') {
       console.log('event.data:', message)
@@ -74,6 +82,7 @@ export class Peer {
 
   deviceInfoSent = new Set<number>()
   calibrationSent = new Set<number>()
+  disconnectUnsent = new Set<number>()
 
   private sendJsonUnsent(peers: readonly Peer[]) {
     const deviceInfos = []
@@ -99,6 +108,16 @@ export class Peer {
         JSON.stringify({ action: 'set calibration', calibrations }),
       )
     }
+
+    if (this.disconnectUnsent.size > 0) {
+      this.socket.send(
+        JSON.stringify({
+          action: 'disconnect',
+          ids: Array.from(this.disconnectUnsent),
+        }),
+      )
+      this.disconnectUnsent.clear()
+    }
   }
 
   onBinary(data: ArrayBuffer, peers: readonly Peer[]) {
@@ -111,5 +130,12 @@ export class Peer {
 
     this.sendBinaryUnsent()
     this.sendJsonUnsent(peers)
+  }
+
+  onDisconnect(peers: readonly Peer[]) {
+    console.log('onDisconnect', this.id)
+    for (const peer of peers) {
+      peer.disconnectUnsent.add(this.id)
+    }
   }
 }
