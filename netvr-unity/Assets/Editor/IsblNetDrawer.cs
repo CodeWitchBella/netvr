@@ -52,10 +52,10 @@ public class IsblNetDrawer : PropertyDrawer
             y += LineHeight;
 
             DrawLine("Socket.State", net.UnityEditorOnlyDebug.State.ToString());
-            DrawLine("PeerId", net.NetState.Id.ToString());
-            DrawLine("Initialized", net.NetState.Initialized.ToString());
+            DrawLine("PeerId", net.LocalState.Id.ToString());
+            DrawLine("Initialized", net.LocalState.Initialized.ToString());
             DrawLine("Last Successful Message", net.UnityEditorOnlyDebug.LastSuccessfulMessage.ToLongTimeString());
-            DrawLine("NetState ByteLength", net.NetState.CalculateSerializationSize().ToString());
+            DrawLine("NetState ByteLength", net.LocalState.CalculateSerializationSize().ToString());
             DrawLine("Peer count", net.OtherStates.Count.ToString());
         }
         EditorGUI.EndProperty();

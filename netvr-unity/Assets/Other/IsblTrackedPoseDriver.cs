@@ -41,7 +41,7 @@ public class IsblTrackedPoseDriver : MonoBehaviour
         {
             Debug.Log("Adding to IsblNet");
             var net = IsblNet.Instance;
-            net?.NetState.Devices.Add(NetDevice);
+            net?.LocalState.Devices.Add(NetDevice);
             if (net == null) Debug.LogWarning("IsblNet is null");
         }
     }
@@ -52,7 +52,7 @@ public class IsblTrackedPoseDriver : MonoBehaviour
         Devices.Remove(this);
         OnDeviceDisconnected?.Invoke(this);
 
-        if (_localDriver != null) IsblNet.Instance?.NetState.Devices.Remove(NetDevice);
+        if (_localDriver != null) IsblNet.Instance?.LocalState.Devices.Remove(NetDevice);
     }
 
     static async Task<GltfImport> LoadModel(IsblDeviceModel info, string controllerName)
