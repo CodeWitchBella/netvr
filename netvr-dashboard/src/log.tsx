@@ -5,6 +5,7 @@ type MessageData<T extends 'binary' | 'json'> = {
   key: number
   message: T extends 'binary' ? ArrayBuffer : any
   timestamp: string
+  direction: 'down' | 'up'
 }
 
 type State = {
@@ -13,16 +14,20 @@ type State = {
   keyGen: number
 }
 
-function logReducer(state: State, action: any) {
+function logReducer(
+  state: State,
+  { direction, message }: { direction: 'down' | 'up'; message: any },
+) {
   const timestamp = new Date().toISOString()
-  if (typeof action === 'string') {
+  if (typeof message === 'string') {
     return {
       ...state,
       events: state.events.concat({
         type: 'json',
-        message: JSON.parse(action),
+        message: JSON.parse(message),
         key: state.keyGen,
         timestamp,
+        direction,
       }),
       keyGen: state.keyGen + 1,
     }
@@ -33,9 +38,10 @@ function logReducer(state: State, action: any) {
     binaryEvents: state.binaryEvents
       .concat({
         type: 'binary',
-        message: action,
+        message,
         key: state.keyGen,
         timestamp,
+        direction,
       })
       .slice(-10),
   }

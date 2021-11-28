@@ -4,6 +4,7 @@ import { ListenToSocket } from './listen-to-socket'
 import type { PWebSocket } from './utils'
 import { locationMap } from './location-map'
 import { ErrorBoundary } from './error-boundary'
+import { notNull } from '@isbl/ts-utils'
 
 function useSendKeepAlive(socket: PWebSocket) {
   useEffect(() => {
@@ -93,7 +94,7 @@ export function Dashboard({ socket }: { socket: PWebSocket }) {
         socket={socket}
         onMessage={(message) => {
           if (stopped) return
-          dispatchLog(message)
+          dispatchLog({ direction: 'down', message })
           dispatchDevices(message)
         }}
       />
@@ -174,7 +175,7 @@ function Client({ client }: { client: ClientData }) {
 }
 
 function Device({ device }: { device: DeviceData }) {
-  const data = mapData(device)
+  const { data, unknown } = mapData(device)
   const [showDetails, toggleShowDetails] = useReducer(
     (prev: boolean) => !prev,
     false,
@@ -189,6 +190,7 @@ function Device({ device }: { device: DeviceData }) {
       }}
     >
       <div>Device: {device.localId} </div>
+      <div>Name: {device.name}</div>
       <div>Characteristics: {device.characteristics.join(', ')}</div>
       <button type="button" onClick={toggleShowDetails}>
         {showDetails ? 'Hide details' : 'Show details'}
@@ -215,6 +217,10 @@ function Device({ device }: { device: DeviceData }) {
                 : null}
             </div>
           ))}
+          <div>
+            <b>Unkown:</b>
+            {unknown ? <pre>{JSON.stringify(unknown, null, 2)}</pre> : ' none'}
+          </div>
         </>
       ) : null}
     </div>
@@ -222,30 +228,60 @@ function Device({ device }: { device: DeviceData }) {
 }
 
 function mapData(device: DeviceData): {
-  [key in keyof typeof locationMap]?: typeof locationMap[key] extends 'bool'
-    ? { type: typeof locationMap[key]; value: boolean | 'fail' }
-    : typeof locationMap[key] extends 'float' | 'uint32'
-    ? { type: typeof locationMap[key]; value: number }
-    : typeof locationMap[key] extends 'quaternion' | 'vector3'
-    ? {
-        type: typeof locationMap[key]
-        value: readonly [number, number, number]
-      }
-    : typeof locationMap[key] extends 'vector2'
-    ? { type: typeof locationMap[key]; value: readonly [number, number] }
-    : never
+  unknown: any
+  data: {
+    [key in keyof typeof locationMap]?: typeof locationMap[key] extends 'bool'
+      ? { type: typeof locationMap[key]; value: boolean | 'fail' }
+      : typeof locationMap[key] extends 'float' | 'uint32'
+      ? { type: typeof locationMap[key]; value: number }
+      : typeof locationMap[key] extends 'quaternion' | 'vector3'
+      ? {
+          type: typeof locationMap[key]
+          value: readonly [number, number, number]
+        }
+      : typeof locationMap[key] extends 'vector2'
+      ? { type: typeof locationMap[key]; value: readonly [number, number] }
+      : never
+  }
 } {
-  if (!device.data) return {}
-  return Object.fromEntries(
+  if (!device.data) return { unknown: [], data: {} }
+  const visited = {
+    quaternion: new Set<number>(),
+    vector3: new Set<number>(),
+    vector2: new Set<number>(),
+    float: new Set<number>(),
+    bool: new Set<number>(),
+    uint32: new Set<number>(),
+  } as const
+
+  const data = Object.fromEntries(
     Object.entries(locationMap)
       .map(([key, type]) => {
         const loc = device.locations[key]
         const value = device.data?.[type][loc]
         if (loc < 0 || value === undefined) return null
+        visited[type]?.add(loc)
         return [key, { type, value }]
       })
       .filter(Boolean) as any,
   )
+  const unkownEntries = (
+    Object.entries(visited) as [keyof typeof visited, Set<number>][]
+  )
+    .map(([key, set]) => {
+      if (!device.data || !(key in device.data)) return null
+      const items = (device.data[key] as any[])
+        .filter((data, i) => !set.has(i))
+        .map((data, index) => ({ data, index }))
+      if (items.length < 1) return null
+      return [key, items]
+    })
+    .filter(notNull)
+  return {
+    data,
+    unknown:
+      unkownEntries.length > 0 ? Object.fromEntries(unkownEntries) : null,
+  }
 }
 
 function Message({
