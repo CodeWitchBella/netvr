@@ -2,6 +2,7 @@ import { useEffect, useMemo, useReducer, useRef, useState } from 'react'
 import { useLog } from './log'
 import { ListenToSocket } from './listen-to-socket'
 import type { PWebSocket } from './utils'
+import { locationMap } from './location-map'
 
 function useSendKeepAlive(socket: PWebSocket) {
   useEffect(() => {
@@ -14,8 +15,30 @@ function useSendKeepAlive(socket: PWebSocket) {
   }, [socket])
 }
 
-type DeviceData = { id: number; [key: string]: any }
-function deviceReducer(state: DeviceData[], action: any) {
+type DeviceBinaryData = {
+  readonly deviceId: number
+  readonly deviceByteCount: number
+  readonly bytes: string
+  readonly quaternion: readonly (readonly [number, number, number])[]
+  readonly vector3: readonly (readonly [number, number, number])[]
+  readonly vector2: readonly (readonly [number, number])[]
+  readonly float: readonly number[]
+  readonly bool: readonly (boolean | 'fail')[]
+  readonly uint32: readonly number[]
+}
+type DeviceData = {
+  locations: { [key: string]: number }
+  name: string
+  characteristics: string[]
+  localId: number
+  lengths: { [key: string]: number }
+  data?: DeviceBinaryData
+}
+type ClientData = {
+  id: number
+  info: readonly DeviceData[]
+}
+function deviceReducer(state: ClientData[], action: any) {
   if (typeof action === 'string') {
     const message = JSON.parse(action)
     if (message.action === 'device info') {
@@ -86,7 +109,7 @@ export function Dashboard({ socket }: { socket: PWebSocket }) {
       >
         <div className="devices" style={{ width: 'auto' }}>
           {devices.map((device) => (
-            <Device key={device.id} device={device} />
+            <Client key={device.id} client={device} />
           ))}
         </div>
         <div className="events">
@@ -104,28 +127,112 @@ export function Dashboard({ socket }: { socket: PWebSocket }) {
   )
 }
 
-function Device({ device }: { device: DeviceData }) {
+function Client({ client }: { client: ClientData }) {
+  const [showJson, toggleShowJson] = useReducer((prev: boolean) => !prev, false)
   return (
-    <code>
-      <pre style={{ whiteSpace: 'pre-wrap', width: 500 }}>
-        {JSON.stringify(
-          device,
-          (key, value) => {
-            if (
-              Array.isArray(value) &&
-              value.length >= 2 &&
-              value.length <= 3 &&
-              typeof value[0] === 'number' &&
-              !Number.isInteger(value[0])
-            ) {
-              return `(${value.map((v) => v.toFixed(2)).join(', ')})`
-            }
-            return value
-          },
-          2,
-        )}
-      </pre>
-    </code>
+    <div
+      className="device"
+      style={{
+        border: '1px solid gray',
+        margin: 8,
+        padding: 8,
+        borderRadius: 4,
+      }}
+    >
+      <div>id: {client.id}</div>
+      <button type="button" onClick={toggleShowJson}>
+        {showJson ? 'Hide JSON' : 'Show JSON'}
+      </button>
+      {client.info?.map((data) => (
+        <Device device={data} key={data.localId} />
+      )) ?? null}
+      {showJson ? (
+        <code>
+          <pre style={{ whiteSpace: 'pre-wrap', width: 500 }}>
+            {JSON.stringify(
+              client,
+              (key, value) => {
+                if (
+                  Array.isArray(value) &&
+                  value.length >= 2 &&
+                  value.length <= 3 &&
+                  typeof value[0] === 'number' &&
+                  !Number.isInteger(value[0])
+                ) {
+                  return `(${value.map((v) => v.toFixed(2)).join(', ')})`
+                }
+                return value
+              },
+              2,
+            )}
+          </pre>
+        </code>
+      ) : null}
+    </div>
+  )
+}
+
+function Device({ device }: { device: DeviceData }) {
+  const data = mapData(device)
+  return (
+    <div
+      style={{
+        border: '1px solid gray',
+        margin: 8,
+        padding: 8,
+        borderRadius: 4,
+      }}
+    >
+      <div>Device: {device.localId}</div>
+      <div>Characteristics: {device.characteristics.join(', ')}</div>
+      {Object.entries(data).map(([key, o]) => (
+        <div key={key}>
+          {key}:{' '}
+          {o.type === 'quaternion' ||
+          o.type === 'vector3' ||
+          o.type === 'vector2'
+            ? o.value.map((v) => v.toFixed(2)).join(', ')
+            : o.type === 'float'
+            ? o.value.toFixed(2)
+            : o.type === 'uint32'
+            ? o.value.toFixed(0)
+            : o.type === 'bool'
+            ? o.value === 'fail'
+              ? 'fail'
+              : o.value
+              ? '✅'
+              : '❌'
+            : null}
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function mapData(device: DeviceData): {
+  [key in keyof typeof locationMap]?: typeof locationMap[key] extends 'bool'
+    ? { type: typeof locationMap[key]; value: boolean | 'fail' }
+    : typeof locationMap[key] extends 'float' | 'uint32'
+    ? { type: typeof locationMap[key]; value: number }
+    : typeof locationMap[key] extends 'quaternion' | 'vector3'
+    ? {
+        type: typeof locationMap[key]
+        value: readonly [number, number, number]
+      }
+    : typeof locationMap[key] extends 'vector2'
+    ? { type: typeof locationMap[key]; value: readonly [number, number] }
+    : never
+} {
+  if (!device.data) return {}
+  return Object.fromEntries(
+    Object.entries(locationMap)
+      .map(([key, type]) => {
+        const loc = device.locations[key]
+        const value = device.data?.[type][loc]
+        if (loc < 0 || value === undefined) return null
+        return [key, { type, value }]
+      })
+      .filter(Boolean) as any,
   )
 }
 
@@ -182,7 +289,7 @@ function parseBinaryMessage(data: ArrayBuffer) {
   for (let clientIndex = 0; clientIndex < clientCount; ++clientIndex) {
     const clientId = readUint32(view, offset)
     const numberOfDevices = read7BitEncodedInt(view, offset)
-    let devices = []
+    let devices: DeviceBinaryData[] = []
     for (let deviceId = 0; deviceId < numberOfDevices; ++deviceId) {
       const deviceByteCount = read7BitEncodedInt(view, offset)
       const deviceBytes = view.buffer.slice(
@@ -197,9 +304,9 @@ function parseBinaryMessage(data: ArrayBuffer) {
         deviceId,
         deviceByteCount,
         bytes: new Uint8Array(deviceBytes).join(' '),
-        quat: readArray(view, offsetCopy, readVec3),
-        vec3: readArray(view, offsetCopy, readVec3),
-        vec2: readArray(view, offsetCopy, readVec2),
+        quaternion: readArray(view, offsetCopy, readVec3),
+        vector3: readArray(view, offsetCopy, readVec3),
+        vector2: readArray(view, offsetCopy, readVec2),
         float: readArray(view, offsetCopy, readFloat),
         bool: readArray(view, offsetCopy, readBool),
         uint32: readArray(view, offsetCopy, readUint32),
