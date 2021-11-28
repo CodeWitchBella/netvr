@@ -228,8 +228,8 @@ public sealed class IsblNet : IDisposable
     }
 
     /// <summary>
-    /// Periodically called from IsblNetComponent to upload current NetState to
-    /// server via UDP
+    /// Periodically called from IsblNetComponent to upload current LocalState
+    /// to server
     /// </summary>
     public void Tick()
     {
