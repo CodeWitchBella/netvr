@@ -41,9 +41,13 @@ export class Peer {
       for (const peer of peers) peer.deviceInfoSent.delete(this.id)
       if (sendToSelfAsDebug) this.deviceInfoSent.delete(this.id)
     } else if (message.action === 'set calibration') {
-      for (const cal of message.calibrations) {
-        if (cal.id === this.id) {
-          this.calibration = cal
+      for (const peer of peers.concat(this)) {
+        for (const cal of message.calibrations) {
+          peer.calibrationSent.delete(cal.id) // schedule send
+          if (cal.id == peer.id) {
+            // set calibration
+            peer.calibration = cal
+          }
         }
       }
     } else {

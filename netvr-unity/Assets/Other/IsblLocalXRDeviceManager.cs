@@ -38,4 +38,13 @@ public class IsblLocalXRDeviceManager : MonoBehaviour
 
         _devices.Add(new(obj));
     }
+
+    void Update()
+    {
+        var net = IsblNet.Instance;
+        if (net == null) return;
+        transform.localPosition = net.LocalState.CalibrationPosition;
+        transform.localRotation = net.LocalState.CalibrationRotation;
+        transform.localScale = net.LocalState.CalibrationScale;
+    }
 }

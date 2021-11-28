@@ -1,49 +1,83 @@
 using System.Collections.Generic;
 using UnityEngine;
+using System.Linq;
 
 public class IsblNetRemoteDeviceManager : MonoBehaviour
 {
-    readonly Dictionary<int, IsblNetRemoteDevice> _remoteDevices = new();
+    readonly Dictionary<int, IsblNetRemoteClient> _remoteClients = new();
 
     void Update()
     {
         var net = IsblNet.Instance;
         if (net == null) return;
-        foreach (var peer in _remoteDevices)
-            peer.Value.Visited = false;
 
-        foreach (var peer in net.OtherStates)
+        var toRemove = _remoteClients.Where(client =>
         {
-            for (int i = 0; i < peer.Value.Devices.Count; ++i)
-                SyncDevice(peer.Value.Id * 1000 + i, peer.Value.Devices[i]);
-        }
+            if (!net.OtherStates.ContainsKey(client.Key))
+            {
+                Destroy(client.Value.gameObject);
+                return true;
+            }
+            return false;
+        }).Select(c => c.Key).ToArray();
 
-        // remove untracked
-        List<int> toBeRemoved = new();
-        foreach (var peer in _remoteDevices)
+        foreach (var key in toRemove) _remoteClients.Remove(key);
+
+        foreach (var iter in net.OtherStates)
         {
-            if (peer.Value.Visited) continue;
-            Destroy(peer.Value.gameObject);
-            toBeRemoved.Add(peer.Key);
+            IsblNetRemoteClient client;
+            if (_remoteClients.ContainsKey(iter.Key))
+            {
+                client = _remoteClients[iter.Key];
+            }
+            else
+            {
+                var go = new GameObject($"Client {iter.Key}");
+                go.transform.parent = transform;
+                client = go.AddComponent<IsblNetRemoteClient>();
+                _remoteClients.Add(iter.Key, client);
+            }
+
+            SyncClient(iter.Value, client);
         }
-        foreach (var id in toBeRemoved) _remoteDevices.Remove(id);
     }
 
-    void SyncDevice(int id, IsblStaticXRDevice deviceData)
+    static void SyncClient(Isbl.NetStateData netState, IsblNetRemoteClient remoteClient)
     {
-        var device = _remoteDevices.GetValueOrDefault(id, null);
-        if (device == null)
+        var toRemove = remoteClient.Devices.Where(device =>
         {
-            var go = new GameObject($"Synced {id / 3}:{id % 3}");
-            go.transform.parent = transform;
-            device = go.AddComponent<IsblNetRemoteDevice>();
-            device.Id = id;
-            go.AddComponent<IsblTrackedPoseDriver>();
-            _remoteDevices.Add(id, device);
+            if (!netState.Devices.Any(d => d.LocallyUniqueId == device.Key))
+            {
+                Destroy(device.Value.gameObject);
+                return true;
+            }
+            return false;
+        }).Select(c => c.Key).ToArray();
+        foreach (var key in toRemove) remoteClient.Devices.Remove(key);
+
+        foreach (var iter in netState.Devices)
+        {
+            IsblNetRemoteDevice device;
+            if (remoteClient.Devices.ContainsKey(iter.LocallyUniqueId))
+                device = remoteClient.Devices[iter.LocallyUniqueId];
+            else
+                device = CreateDevice(remoteClient, iter);
         }
-        device.Visited = true;
-        var driver = device.GetComponent<IsblTrackedPoseDriver>();
-        if (deviceData != null)
-            driver.NetDevice = deviceData;
+
+        remoteClient.transform.localPosition = netState.CalibrationPosition;
+        remoteClient.transform.localRotation = netState.CalibrationRotation;
+        remoteClient.transform.localScale = netState.CalibrationScale;
+    }
+
+    static IsblNetRemoteDevice CreateDevice(IsblNetRemoteClient remoteClient, IsblStaticXRDevice iter)
+    {
+        var go = new GameObject($"Device {iter.LocallyUniqueId}");
+        go.transform.parent = remoteClient.transform;
+        var device = go.AddComponent<IsblNetRemoteDevice>();
+        remoteClient.Devices.Add(iter.LocallyUniqueId, device);
+
+        var driver = go.AddComponent<IsblTrackedPoseDriver>();
+        driver.NetDevice = iter;
+        return device;
     }
 }

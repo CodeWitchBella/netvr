@@ -60,9 +60,13 @@ function deviceReducer(state: ClientData[], action: any) {
 
 export function Dashboard({ socket }: { socket: PWebSocket }) {
   const [stopped, setStopped] = useState(false)
+  const [showBinary, toggleShowBinary] = useReducer(
+    (state: boolean) => !state,
+    true,
+  )
   const [clients, dispatchDevices] = useReducer(deviceReducer, [])
 
-  const [log, dispatchLog] = useLog()
+  const [log, dispatchLog] = useLog({ showBinary })
   useSendKeepAlive(socket)
 
   function sendMessage(data: any) {
@@ -101,6 +105,9 @@ export function Dashboard({ socket }: { socket: PWebSocket }) {
           ))}
         </div>
         <div className="events">
+          <button type="button" onClick={toggleShowBinary}>
+            {showBinary ? 'Hide binary' : 'Show binary'}
+          </button>
           {log.map((event) => (
             <Message
               message={event.message}

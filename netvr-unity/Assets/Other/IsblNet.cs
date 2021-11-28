@@ -196,16 +196,36 @@ public sealed class IsblNet : IDisposable
         {
             var id = peer.Value<int>("id");
             Isbl.NetStateData localState = OtherStates.GetValueOrDefault(id, null);
+            if (id == LocalState.Id)
+            {
+                LocalState.CalibrationPosition = Vector3Value(peer.Value<JObject>("translate"));
+                LocalState.CalibrationRotation = Quaternion.Euler(Vector3Value(peer.Value<JObject>("rotate")));
+                LocalState.CalibrationScale = Vector3Value(peer.Value<JObject>("scale"));
+            }
+
             if (localState == null)
             {
-                Debug.LogWarning($"Recieved set calibration message for unknown device id {id}. Did it arive before device info?");
+                if (id != LocalState.Id)
+                {
+                    Debug.LogWarning($"Recieved set calibration message for unknown device id {id}. Did it arive before device info?");
+                }
                 continue;
             }
 
-            localState.CalibrationPosition = peer.Value<Vector3>("position");
-            localState.CalibrationRotation = Quaternion.Euler(peer.Value<Vector3>("rotation"));
-            localState.CalibrationScale = peer.Value<Vector3>("scale");
+            localState.CalibrationPosition = Vector3Value(peer.Value<JObject>("translate"));
+            localState.CalibrationRotation = Quaternion.Euler(Vector3Value(peer.Value<JObject>("rotate")));
+            localState.CalibrationScale = Vector3Value(peer.Value<JObject>("scale"));
+
         }
+    }
+
+    /// <summary>
+    /// Utility function used to deserialize Unity Vector3 from JSON in format
+    /// {"x":1, "y":2, "z":3}
+    /// </summary>
+    Vector3 Vector3Value(JObject o)
+    {
+        return new Vector3(o.Value<float>("x"), o.Value<float>("y"), o.Value<float>("z"));
     }
 
     void SendDeviceInfo()

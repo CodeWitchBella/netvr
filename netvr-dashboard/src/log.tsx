@@ -52,12 +52,12 @@ const defaultState: State = {
   keyGen: 1,
 }
 
-export function useLog() {
+export function useLog({ showBinary }: { showBinary: boolean }) {
   const [log, dispatch] = useReducer(logReducer, defaultState)
   return [
     ([] as readonly (MessageData<'binary'> | MessageData<'json'>)[])
       .concat(log.events)
-      .concat(log.binaryEvents)
+      .concat(showBinary ? log.binaryEvents : [])
       .sort((a, b) => -a.timestamp.localeCompare(b.timestamp)),
     dispatch,
   ] as const
