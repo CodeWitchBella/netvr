@@ -4,6 +4,8 @@ using System.Linq;
 using System.Collections.Generic;
 using Newtonsoft.Json.Linq;
 using System.Buffers.Binary;
+using System.IO;
+using System.IO.Compression;
 
 /// <summary>
 /// Main implementation of network interface
@@ -246,6 +248,33 @@ public sealed class IsblNet : IDisposable
         _socket?.Dispose();
     }
 
+#if UNITY_EDITOR
+    public StatsData Stats;
+    public struct StatsData
+    {
+        public int MessageSize;
+        public int MessageSizeGzip;
+        public int MessageSizeBrotli;
+        public int MessageSizeBrotliMax;
+    };
+
+    static byte[] CompressGzip(byte[] data)
+    {
+        using var compressedStream = new MemoryStream();
+        using (var zipStream = new GZipStream(compressedStream, System.IO.Compression.CompressionLevel.Optimal))
+        { zipStream.Write(data, 0, data.Length); }
+        return compressedStream.ToArray();
+    }
+
+    static byte[] CompressBrotli(byte[] data)
+    {
+        using var compressedStream = new MemoryStream();
+        using (var zipStream = new BrotliStream(compressedStream, System.IO.Compression.CompressionLevel.Optimal))
+        { zipStream.Write(data, 0, data.Length); }
+        return compressedStream.ToArray();
+    }
+#endif
+
     /// <summary>
     /// Periodically called from IsblNetComponent to upload current LocalState
     /// to server
@@ -267,6 +296,12 @@ public sealed class IsblNet : IDisposable
             offset += len;
         }
         if (offset != bytes.Length) Debug.LogWarning($"Wrong final offset: theoretical {bytes.Length} vs real {offset}");
+#if UNITY_EDITOR
+        Stats.MessageSize = bytes.Length;
+        Stats.MessageSizeGzip = CompressGzip(bytes).Length;
+        Stats.MessageSizeBrotli = CompressBrotli(bytes).Length;
+        Stats.MessageSizeBrotliMax = Math.Max(Stats.MessageSizeBrotliMax, Stats.MessageSizeBrotli);
+#endif
 
         _ = _socket.SendAsync(bytes, System.Net.WebSockets.WebSocketMessageType.Binary);
         if (LocalState.DeviceInfoChanged) SendDeviceInfo();

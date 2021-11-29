@@ -22,6 +22,11 @@ public class IsblNetDrawer : PropertyDrawer
             EditorGUI.LabelField(new Rect(position.x, y, position.width, 20), text, text2);
             y += LineHeight;
         }
+
+        void DrawLineI(string text, int text2)
+        {
+            DrawLine(text, text2.ToString());
+        }
         bool Button(string text)
         {
             var ret = GUI.Button(new Rect(position.x, y, position.width, 20), text);
@@ -55,7 +60,10 @@ public class IsblNetDrawer : PropertyDrawer
             DrawLine("PeerId", net.LocalState.Id.ToString());
             DrawLine("Initialized", net.LocalState.Initialized.ToString());
             DrawLine("Last Successful Message", net.UnityEditorOnlyDebug.LastSuccessfulMessage.ToLongTimeString());
-            DrawLine("NetState ByteLength", net.LocalState.CalculateSerializationSize().ToString());
+            DrawLineI("Data Message Size", net.Stats.MessageSize);
+            DrawLineI("    Gzip Size", net.Stats.MessageSizeGzip);
+            DrawLineI("    Brotli Size", net.Stats.MessageSizeBrotli);
+            DrawLineI("    Max Brotli", net.Stats.MessageSizeBrotliMax);
             DrawLine("Peer count", net.OtherStates.Count.ToString());
         }
         EditorGUI.EndProperty();
