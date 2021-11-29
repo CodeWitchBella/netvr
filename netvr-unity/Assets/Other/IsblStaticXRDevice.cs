@@ -152,7 +152,7 @@ public class IsblStaticXRDevice
         {
             var len = Isbl.NetData.Read7BitEncodedInt(reader);
             if (_dataQuaternion?.Length == len)
-                for (int i = 0; i < len; ++i) _dataQuaternion[i] = Quaternion.Euler(reader.ReadSingle(), reader.ReadSingle(), reader.ReadSingle());
+                for (int i = 0; i < len; ++i) _dataQuaternion[i] = Quaternion.Euler((float)(reader.ReadSingle() / Math.PI * 180f), (float)(reader.ReadSingle() / Math.PI * 180f), (float)(reader.ReadSingle() / Math.PI * 180f));
             else reader.BaseStream.Seek(len * 4 * 3, SeekOrigin.Current);
         }
 
@@ -215,9 +215,9 @@ public class IsblStaticXRDevice
         Isbl.NetData.Write7BitEncodedInt(writer, _dataQuaternion.Length);
         foreach (var el in _dataQuaternion)
         {
-            writer.Write(el.eulerAngles.x);
-            writer.Write(el.eulerAngles.y);
-            writer.Write(el.eulerAngles.z);
+            writer.Write((float)(el.eulerAngles.x / 180.0 * Math.PI));
+            writer.Write((float)(el.eulerAngles.y / 180.0 * Math.PI));
+            writer.Write((float)(el.eulerAngles.z / 180.0 * Math.PI));
         }
 
         Isbl.NetData.Write7BitEncodedInt(writer, _dataVector3.Length);

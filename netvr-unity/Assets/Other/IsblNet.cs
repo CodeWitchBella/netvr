@@ -199,7 +199,7 @@ public sealed class IsblNet : IDisposable
             if (id == LocalState.Id)
             {
                 LocalState.CalibrationPosition = Vector3Value(peer.Value<JObject>("translate"));
-                LocalState.CalibrationRotation = Quaternion.Euler(Vector3Value(peer.Value<JObject>("rotate")));
+                LocalState.CalibrationRotation = Quaternion.Euler(Vector3Value(peer.Value<JObject>("rotate")) * 180f / (float)Math.PI);
                 LocalState.CalibrationScale = Vector3Value(peer.Value<JObject>("scale"));
             }
 
@@ -213,9 +213,8 @@ public sealed class IsblNet : IDisposable
             }
 
             localState.CalibrationPosition = Vector3Value(peer.Value<JObject>("translate"));
-            localState.CalibrationRotation = Quaternion.Euler(Vector3Value(peer.Value<JObject>("rotate")));
+            localState.CalibrationRotation = Quaternion.Euler(Vector3Value(peer.Value<JObject>("rotate")) * 180f / (float)Math.PI);
             localState.CalibrationScale = Vector3Value(peer.Value<JObject>("scale"));
-
         }
     }
 
