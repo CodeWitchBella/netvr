@@ -60,23 +60,27 @@ export function SyncDevicesButton({
             })
             .filter(notNull)
 
-          if (headsets.length < 2) {
+          if (headsets.length < 1) {
             setMessage('Not enough tracked headsets')
             return
           }
           sendMessage({
             action: 'set calibration',
             calibrations: headsets.map((headset) => {
+              const x = -headset.position[0]
+              const z = -headset.position[2]
+              const angleDeg = headset.rotation[1]
+              const angleRad = (angleDeg / 180) * Math.PI
               return {
                 id: headset.clientId,
                 translate: {
-                  x: -headset.position[0],
+                  x: Math.cos(angleRad) * x - Math.sin(angleRad) * z,
                   y: 0,
-                  z: -headset.position[2],
+                  z: Math.sin(angleRad) * x + Math.cos(angleRad) * z,
                 },
                 rotate: {
                   x: 0,
-                  y: 0, // -headset.rotation[1],
+                  y: -angleDeg,
                   z: 0,
                 },
                 scale: { x: 1, y: 1, z: 1 },
