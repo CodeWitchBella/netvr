@@ -166,7 +166,7 @@ public class ReconnectingClientWebSocket : IDisposable
                 if (result.EndOfMessage)
                 {
                     if (result.MessageType == WebSocketMessageType.Text)
-                        OnTextMessage?.Invoke(Encoding.UTF8.GetString(buffer[..idx]));
+                        OnTextMessage?.Invoke(Encoding.UTF8.GetString(buffer.AsSpan()[..idx]));
                     else
                         OnBinaryMessage?.Invoke(buffer[..idx]);
                     idx = 0;
