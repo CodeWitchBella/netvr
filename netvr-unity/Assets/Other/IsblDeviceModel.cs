@@ -52,9 +52,9 @@ sealed class IsblDeviceModel
                     rootNode: "root"),
                 new IsblDeviceModel("Head Tracking - OpenXR", "htc-vive", "headset.glb",
                     requiredCharacteristics: InputDeviceCharacteristics.HeadMounted,
-                    position: new Vector3(0.1239f,-0.0987f,0.0502f),
-                    rotation: new Vector3(85.907f,-139.883f,-328.594f),
-                    scale: 0.03f,
+                    position:new Vector3(0.109399997f,-0.0703999996f,0.0799999982f),
+                    rotation:new Vector3(273.49295f,8.64589024f,350.596466f),
+                    scale: 0.0254f,
                     rootNode: "RootNode (gltf orientation matrix)/RootNode (model correction matrix)/V3.obj.cleaner.gles",
                     folder: "Headsets"),
             };
