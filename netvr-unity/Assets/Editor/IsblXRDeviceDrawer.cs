@@ -16,8 +16,6 @@ public class IsblXRDeviceDrawer : PropertyDrawer
     {
         var go = property.objectReferenceValue as IsblTrackedPoseDriver;
         IsblStaticXRDevice device = go?.GetComponent<IsblTrackedPoseDriver>()?.NetDevice;
-        var localDeviceComponent = go?.GetComponent<IsblXRDeviceComponent>();
-        var localDevice = localDeviceComponent?.Device;
 
         var y = position.y;
         void DrawLine(string text, string text2 = "")
@@ -41,7 +39,7 @@ public class IsblXRDeviceDrawer : PropertyDrawer
         }
         else
         {
-            DrawField("Device", localDeviceComponent == null ? "Networked" : localDevice == null ? "Local (disconnected)" : "Local");
+            DrawField("Device", !device.IsLocal ? "Networked" : device.TrackingState == 0 ? "Local (disconnected)" : "Local");
             DrawField("LocallyUniqueId", device.LocallyUniqueId);
             DrawField("Name", device.Name);
             DrawField("Characteristics", SerializeCharacteristics(device.Characteristics));

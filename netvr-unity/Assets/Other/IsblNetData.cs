@@ -19,23 +19,18 @@ namespace Isbl
         public Quaternion CalibrationRotation = Quaternion.identity;
         public Vector3 CalibrationScale = Vector3.one;
 
-        public List<IsblStaticXRDevice> Devices = new();
-        public void ResizeDevices(int length)
-        {
-            while (Devices.Count > length) Devices.RemoveAt(Devices.Count - 1);
-            while (Devices.Count < length) Devices.Add(new());
-        }
+        public Dictionary<int, IsblStaticXRDevice> Devices = new();
         public bool DeviceInfoChanged
         {
-            get => Devices.Exists(d => d.DeviceInfoChanged && d.HasData);
-            set { foreach (var d in Devices) if (d.HasData) d.DeviceInfoChanged = value; }
+            get => Devices.Values.Any(d => d.DeviceInfoChanged && d.HasData);
+            set { foreach (var d in Devices) if (d.Value.HasData) d.Value.DeviceInfoChanged = value; }
         }
 
         public int CalculateSerializationSize()
         {
             return 4 /* Int32 client ID */
-                + NetData.Count7BitEncodedIntBytes(Devices.Count(d => d.HasData)) /* Device count */
-                + (from d in Devices where d.HasData select d.CalculateSerializationSize()).Sum() /* devices array */;
+                + NetData.Count7BitEncodedIntBytes(Devices.Count(d => d.Value.HasData)) /* Device count */
+                + (from d in Devices where d.Value.HasData select d.Value.CalculateSerializationSize()).Sum() /* devices array */;
         }
     }
 

@@ -7,15 +7,15 @@ using System;
 
 public class IsblTrackedPoseDriver : MonoBehaviour
 {
+    public IsblXRDevice LocalDevice = null;
+
     public IsblStaticXRDevice NetDevice = new();
 
     public static List<IsblTrackedPoseDriver> Devices = new();
     public static Action<IsblTrackedPoseDriver> OnDeviceDisconnected;
 
     bool _isLocalHMD;
-    IsblXRDeviceComponent _localDriver;
     GameObject _modelWrapper;
-
 
 #if UNITY_EDITOR
     public class SelfPropertyAttribute : PropertyAttribute { };
@@ -26,24 +26,16 @@ public class IsblTrackedPoseDriver : MonoBehaviour
 
     void OnEnable()
     {
-        _localDriver = GetComponent<IsblXRDeviceComponent>();
         _isLocalHMD = GetComponent<Camera>() == Camera.main;
 
 #if UNITY_EDITOR
         EditorOnly = this;
 #endif
         Cleanup();
-        InitializeIfNeeded();
+        InitializeModelIfNeeded();
         Devices.Add(this);
 
         NetDevice.DeviceInfoChanged = true; // it's a new device
-        if (_localDriver != null)
-        {
-            Debug.Log("Adding to IsblNet");
-            var net = IsblNet.Instance;
-            net?.LocalState.Devices.Add(NetDevice);
-            if (net == null) Debug.LogWarning("IsblNet is null");
-        }
     }
 
     void OnDisable()
@@ -51,8 +43,6 @@ public class IsblTrackedPoseDriver : MonoBehaviour
         Cleanup();
         Devices.Remove(this);
         OnDeviceDisconnected?.Invoke(this);
-
-        if (_localDriver != null) IsblNet.Instance?.LocalState.Devices.Remove(NetDevice);
     }
 
     static async Task<GltfImport> LoadModel(IsblDeviceModel info, string controllerName)
@@ -83,9 +73,9 @@ public class IsblTrackedPoseDriver : MonoBehaviour
 
     string _loadedDevice;
     int _loadId;
-    async void InitializeIfNeeded()
+    async void InitializeModelIfNeeded()
     {
-        if (_loadedDevice == NetDevice.Name) return;
+        if (_loadedDevice == NetDevice.Name || _isLocalHMD) return;
 
         Cleanup();
         _loadedDevice = NetDevice.Name;
@@ -168,13 +158,12 @@ public class IsblTrackedPoseDriver : MonoBehaviour
 
     void Update()
     {
-        // Called here so that I do not have to rely on Script Execution Order
-        if (_localDriver != null) NetDevice.UpdateFromDevice(_localDriver.Device);
+        if (LocalDevice != null) NetDevice.UpdateFromDevice(LocalDevice);
 
         // Do not track local HMD, leave that to unity so that it's setup correctly
         if (!_isLocalHMD)
         {
-            InitializeIfNeeded();
+            InitializeModelIfNeeded();
             gameObject.transform.localPosition = NetDevice.DevicePosition;
             gameObject.transform.localRotation = NetDevice.DeviceRotation;
         }

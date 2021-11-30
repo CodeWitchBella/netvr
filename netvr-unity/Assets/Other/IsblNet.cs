@@ -154,7 +154,7 @@ public sealed class IsblNet : IDisposable
         var state = OtherStates.GetValueOrDefault(clientId, null);
         if (state != null)
         {
-            var device = state.Devices.Find(dev => dev.LocallyUniqueId == deviceId);
+            var device = state.Devices.GetValueOrDefault(deviceId, null);
             device?.DeSerializeData(bytes, offsetCopy);
         }
     }
@@ -164,27 +164,31 @@ public sealed class IsblNet : IDisposable
         foreach (var peer in obj.GetValue("info").Children<JObject>())
         {
             var id = peer.Value<int>("id");
-            Isbl.NetStateData localState = OtherStates.GetValueOrDefault(id, null);
-            if (localState == null)
+            Isbl.NetStateData localOtherState = OtherStates.GetValueOrDefault(id, null);
+            if (localOtherState == null)
             {
-                localState = new()
+                localOtherState = new()
                 {
                     Id = id,
                     Initialized = true,
                 };
-                OtherStates.Add(id, localState);
+                OtherStates.Add(id, localOtherState);
             }
             if (!peer.ContainsKey("info")) continue;
 
             var children = peer.GetValue("info").Children<JObject>();
-            localState.ResizeDevices(children.Count());
-            var i = 0;
+            HashSet<int> unvisited = new(localOtherState.Devices.Keys);
             foreach (var device in children)
             {
-                var node = device.Value<string>("node");
-                var localDevice = localState.Devices[i];
+                var localId = device.Value<int>("localId");
+                unvisited.Remove(localId);
+                var localDevice = localOtherState.Devices.GetValueOrDefault(localId, null);
+                if (localDevice == null)
+                {
+                    localDevice = new();
+                    localOtherState.Devices.Add(localId, localDevice);
+                }
                 localDevice.DeSerializeConfiguration(device);
-                i++;
             }
         }
     }
@@ -235,7 +239,7 @@ public sealed class IsblNet : IDisposable
         {
             action = "device info",
             deviceCount = LocalState.Devices.Count, // TODO remove this line
-            info = (from d in LocalState.Devices where d.HasData select d.SerializeConfiguration()).ToArray(),
+            info = (from d in LocalState.Devices where d.Value.HasData select d.Value.SerializeConfiguration()).ToArray(),
         });
         LocalState.DeviceInfoChanged = false;
     }
@@ -286,9 +290,10 @@ public sealed class IsblNet : IDisposable
         var span = bytes.AsSpan();
         BinaryPrimitives.WriteInt32LittleEndian(span[0..4], LocalState.Id);
         int offset = 4;
-        offset += Isbl.NetData.Write7BitEncodedInt(span[offset..], LocalState.Devices.Count(d => d.HasData));
-        foreach (var device in LocalState.Devices)
+        offset += Isbl.NetData.Write7BitEncodedInt(span[offset..], LocalState.Devices.Count(d => d.Value.HasData));
+        foreach (var devicePair in LocalState.Devices)
         {
+            var device = devicePair.Value;
             if (!device.HasData) continue;
             var len = device.CalculateSerializationSize();
             var realLen = device.SerializeData(bytes, offset);

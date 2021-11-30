@@ -46,7 +46,7 @@ public class IsblNetRemoteDeviceManager : MonoBehaviour
     {
         var toRemove = remoteClient.Devices.Where(device =>
         {
-            if (!netState.Devices.Any(d => d.LocallyUniqueId == device.Key))
+            if (!netState.Devices.ContainsKey(device.Key))
             {
                 Destroy(device.Value.gameObject);
                 return true;
@@ -58,10 +58,10 @@ public class IsblNetRemoteDeviceManager : MonoBehaviour
         foreach (var iter in netState.Devices)
         {
             IsblNetRemoteDevice device;
-            if (remoteClient.Devices.ContainsKey(iter.LocallyUniqueId))
-                device = remoteClient.Devices[iter.LocallyUniqueId];
+            if (remoteClient.Devices.ContainsKey(iter.Value.LocallyUniqueId))
+                device = remoteClient.Devices[iter.Value.LocallyUniqueId];
             else
-                device = CreateDevice(remoteClient, iter);
+                device = CreateDevice(remoteClient, iter.Value);
         }
 
         remoteClient.transform.localPosition = netState.CalibrationPosition;
