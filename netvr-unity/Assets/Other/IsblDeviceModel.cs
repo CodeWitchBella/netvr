@@ -9,20 +9,22 @@ sealed class IsblDeviceModel
         LEFT, RIGHT, BOTH
     }
 
-    IsblDeviceModel(string name, string dir, string file, ControllerHand hand = ControllerHand.BOTH, Vector3? position = null, Vector3? rotation = null, string rootNode = "")
+    IsblDeviceModel(string name, string dir, string file, InputDeviceCharacteristics requiredCharacteristics = InputDeviceCharacteristics.None, Vector3? position = null, Vector3? rotation = null, float scale = 1f, string rootNode = "", string folder = "Controllers")
     {
         Name = name;
-        Hand = hand;
-        ModelPath = Path.Combine(Application.streamingAssetsPath, "Controllers", dir, file);
+        RequiredCharacteristics = requiredCharacteristics;
+        ModelPath = Path.Combine(Application.streamingAssetsPath, folder, dir, file);
         Position = position ?? Vector3.zero;
         Rotation = rotation ?? new Vector3(0, 180, 0);
+        Scale = scale;
         RootNode = rootNode;
     }
     public Vector3 Position { get; }
     public Vector3 Rotation { get; }
+    public float Scale { get; }
     public string Name { get; }
     public string ModelPath { get; }
-    public ControllerHand Hand { get; }
+    public InputDeviceCharacteristics RequiredCharacteristics { get; }
     public string RootNode { get; }
 
     static IsblDeviceModel[] _database;
@@ -39,40 +41,34 @@ sealed class IsblDeviceModel
                     rootNode: "htc_vive_none"
                 ),
                 new IsblDeviceModel("Oculus Touch Controller OpenXR", "oculus-touch-v3", "left.glb",
-                    hand: ControllerHand.LEFT,
+                    requiredCharacteristics: InputDeviceCharacteristics.Left,
                     position: new Vector3(0.00630000001f,-0.00419999985f,0.0223999992f),
                     rotation: new Vector3(346.88382f, 360f - 173.581345f, 360f - 359.492523f),
                     rootNode: "root"),
                 new IsblDeviceModel("Oculus Touch Controller OpenXR", "oculus-touch-v3", "right.glb",
-                    hand: ControllerHand.RIGHT,
+                    requiredCharacteristics: InputDeviceCharacteristics.Right,
                     position: new Vector3(-0.0055999998f,-0.00499999989f,0.0187999997f),
                     rotation: new Vector3(346.88382f,173.581345f,359.492523f),
-                    rootNode: "root")
+                    rootNode: "root"),
+                new IsblDeviceModel("Head Tracking - OpenXR", "htc-vive", "headset.glb",
+                    requiredCharacteristics: InputDeviceCharacteristics.HeadMounted,
+                    position: new Vector3(0.1239f,-0.0987f,0.0502f),
+                    rotation: new Vector3(85.907f,-139.883f,-328.594f),
+                    scale: 0.03f,
+                    rootNode: "RootNode (gltf orientation matrix)/RootNode (model correction matrix)/V3.obj.cleaner.gles",
+                    folder: "Headsets"),
             };
         }
-    }
-
-    public static IsblDeviceModel GetInfo(byte id)
-    {
-        InitDatabase();
-        return _database[0];
     }
 
     public static IsblDeviceModel GetInfo(string deviceName, InputDeviceCharacteristics characteristics)
     {
         InitDatabase();
 
-        bool isHand = (characteristics & InputDeviceCharacteristics.HeldInHand) != 0;
-        bool isLeft = (characteristics & InputDeviceCharacteristics.Left) != 0;
-        bool isLeftHand = isHand && isLeft;
-        bool isRightHand = isHand && !isLeft;
-
         foreach (var info in _database)
         {
-            var correctHand = (info.Hand == ControllerHand.BOTH && (isLeftHand || isRightHand))
-                || (isLeftHand && info.Hand == ControllerHand.LEFT)
-                || (isRightHand && info.Hand == ControllerHand.RIGHT);
-            if (correctHand && deviceName == info.Name)
+            var correctChars = (info.RequiredCharacteristics & characteristics) == info.RequiredCharacteristics;
+            if (correctChars && deviceName == info.Name)
             {
                 return info;
             }

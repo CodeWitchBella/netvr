@@ -113,6 +113,7 @@ public class IsblTrackedPoseDriver : MonoBehaviour
 
             root.localPosition = builder.Position;
             root.localEulerAngles = builder.Rotation;
+            root.localScale = Vector3.one * builder.Scale;
 
             ConnectAxes(_modelWrapper.transform);
         }
