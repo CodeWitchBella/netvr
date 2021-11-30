@@ -9,13 +9,15 @@ public class IsblXRDeviceDrawer : PropertyDrawer
     const float LineHeight = 20;
     public override float GetPropertyHeight(SerializedProperty property, GUIContent label)
     {
-        return LineHeight * 29;
+        return LineHeight * 31;
     }
 
     public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
     {
         var go = property.objectReferenceValue as IsblTrackedPoseDriver;
-        IsblStaticXRDevice device = go?.GetComponent<IsblTrackedPoseDriver>()?.NetDevice;
+        var driver = go?.GetComponent<IsblTrackedPoseDriver>();
+        IsblStaticXRDevice device = driver?.NetDevice;
+        var localDevice = driver?.LocalDevice;
 
         var y = position.y;
         void DrawLine(string text, string text2 = "")
@@ -51,6 +53,22 @@ public class IsblXRDeviceDrawer : PropertyDrawer
                 var propName = char.ToUpper(prop.Name[0]) + prop.Name[1..];
                 if (prop.Value.Value<int>() >= 0)
                     DrawField(propName, device.GetType().GetProperty(propName).GetValue(device).ToString());
+            }
+
+            var haptics = device.Haptics;
+            if (haptics != null)
+            {
+                DrawLine("Haptics");
+                DrawLine("    NumChannels", haptics.NumChannels.ToString());
+                DrawLine("    SupportsImpulse", haptics.SupportsImpulse.ToString());
+                DrawLine("    SupportsBuffer", haptics.SupportsBuffer.ToString());
+                DrawLine("    BufferFrequencyHz", haptics.BufferFrequencyHz.ToString());
+                DrawLine("    BufferMaxSize", haptics.BufferMaxSize.ToString());
+                DrawLine("    BufferOptimalSize", haptics.BufferOptimalSize.ToString());
+            }
+            else
+            {
+                DrawLine("Haptics", "none");
             }
         }
         EditorGUI.EndProperty();

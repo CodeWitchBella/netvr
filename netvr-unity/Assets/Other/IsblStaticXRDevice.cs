@@ -106,6 +106,7 @@ public class IsblStaticXRDevice
     public int LocallyUniqueId;
     public bool IsLocal;
     public InputDeviceCharacteristics Characteristics { get; private set; }
+    public StaticHaptics Haptics;
     Locations _locations = new();
 
     /// <summary>
@@ -279,6 +280,7 @@ public class IsblStaticXRDevice
             name = Name,
             characteristics,
             localId = LocallyUniqueId,
+            haptics = Haptics != null ? Isbl.NetData.ToJObjectCamelCase(Haptics) : null,
             lengths = new
             {
                 quaternion = _dataQuaternion?.Length ?? 0,
@@ -317,6 +319,9 @@ public class IsblStaticXRDevice
             };
         }
 
+        var haptics = message.Value<JObject>("haptics");
+        Haptics = haptics != null ? new StaticHaptics(haptics) : null;
+
         _locations = Isbl.NetData.FromJObjectCamelCase<Locations>(message.Value<JObject>("locations"));
         Name = message.Value<string>("name");
         LocallyUniqueId = message.Value<int>("localId");
@@ -335,6 +340,39 @@ public class IsblStaticXRDevice
     #endregion
 
     public bool HasData => _dataQuaternion != null;
+    /// <summary>
+    /// Copy-paste of HapticCapabilities because that does not allow setting
+    /// values. Not even in constructor. All fields are the same as those of
+    /// HapticCapabilities.
+    /// </summary>
+    /// <seealso cref="UnityEngine.XR.HapticCapabilities"/>
+    public class StaticHaptics
+    {
+        public uint NumChannels;
+        public bool SupportsImpulse;
+        public bool SupportsBuffer;
+        public uint BufferFrequencyHz;
+        public uint BufferMaxSize;
+        public uint BufferOptimalSize;
+        public StaticHaptics(HapticCapabilities caps)
+        {
+            NumChannels = caps.numChannels;
+            SupportsImpulse = caps.supportsImpulse;
+            SupportsBuffer = caps.supportsBuffer;
+            BufferFrequencyHz = caps.bufferFrequencyHz;
+            BufferMaxSize = caps.bufferMaxSize;
+            BufferOptimalSize = caps.bufferOptimalSize;
+        }
+        public StaticHaptics(JObject caps)
+        {
+            NumChannels = caps.Value<uint>("numChannels");
+            SupportsImpulse = caps.Value<bool>("supportsImpulse");
+            SupportsBuffer = caps.Value<bool>("supportsBuffer");
+            BufferFrequencyHz = caps.Value<uint>("bufferFrequencyHz");
+            BufferMaxSize = caps.Value<uint>("bufferMaxSize");
+            BufferOptimalSize = caps.Value<uint>("bufferOptimalSize");
+        }
+    };
 
     class Locations
     {
@@ -745,6 +783,7 @@ public class IsblStaticXRDevice
                 Name = "";
                 Characteristics = 0;
                 LocallyUniqueId = 0;
+                Haptics = null;
                 DeviceInfoChanged = true;
 
                 // ADDING_NEW_TYPE:
@@ -768,6 +807,7 @@ public class IsblStaticXRDevice
             LocallyUniqueId = device.LocallyUniqueId;
             Characteristics = device.Characteristics;
             Name = device.Name;
+            Haptics = device.Haptics.HasValue ? new(device.Haptics.Value) : null;
             DeviceInfoChanged = true;
 
             // ADDING_NEW_TYPE:

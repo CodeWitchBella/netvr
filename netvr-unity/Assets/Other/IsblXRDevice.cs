@@ -28,6 +28,7 @@ public class IsblXRDevice
     public InputFeatureUsage<byte[]>[] ByteArray { get; }
     public InputFeatureUsage<Eyes>[] Eyes { get; }
     #endregion untested
+    public HapticCapabilities? Haptics;
 
     /// <summary>Returns raw tracking state</summary>
     ///
@@ -100,6 +101,8 @@ public class IsblXRDevice
                 else if (usage.type == typeof(Eyes)) Eyes[eyesCounter++] = new(usage.name);
             }
         }
+        HapticCapabilities capabilities;
+        Haptics = device.TryGetHapticCapabilities(out capabilities) ? capabilities : null;
     }
 }
 
