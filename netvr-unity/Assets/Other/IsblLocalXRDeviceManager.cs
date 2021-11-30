@@ -2,6 +2,7 @@ using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.XR;
 using System.Linq;
+using UnityEngine.XR.OpenXR;
 
 public class IsblLocalXRDeviceManager : MonoBehaviour
 {
@@ -15,6 +16,16 @@ public class IsblLocalXRDeviceManager : MonoBehaviour
         var currentDevices = new List<InputDevice>();
         InputDevices.GetDevices(currentDevices);
         _devices.AddRange(currentDevices.Select(d => CreateDriver(d)).Where(d => d != null));
+
+        Debug.Log("OpenXRRuntime.name: " + OpenXRRuntime.name);
+        Debug.Log("OpenXRRuntime.apiVersion: " + OpenXRRuntime.apiVersion);
+        Debug.Log("OpenXRRuntime.pluginVersion: " + OpenXRRuntime.pluginVersion);
+        Debug.Log("OpenXRRuntime.version: " + OpenXRRuntime.version);
+        Debug.Log("Available extensions: " + string.Join(",", OpenXRRuntime.GetAvailableExtensions()));
+
+        List<SubsystemDescriptor> subsystemDescriptors = new();
+        SubsystemManager.GetSubsystemDescriptors(subsystemDescriptors);
+        Debug.Log($"Subsystems: {(subsystemDescriptors.Count < 1 ? "none" : string.Join(", ", subsystemDescriptors.ConvertAll(s => s.id)))}");
     }
 
     IsblTrackedPoseDriver CreateDriver(InputDevice device)
