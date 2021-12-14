@@ -81,6 +81,26 @@ MonoBehaviour:
   company: Unity
   priority: 0
   required: 0
+--- !u!114 &-4295933516180172870
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 75fe097147b1d3f4ebb571a20504de65, type: 3}
+  m_Name: IsblXRFeature Standalone
+  m_EditorClassIdentifier: 
+  m_enabled: 1
+  nameUi: Isbl Test XR Feature
+  version: 0.0.1
+  featureIdInternal: cz.isbl.test
+  openxrExtensionStrings: XR_EXT_hand_tracking
+  company: Isbl
+  priority: 0
+  required: 0
 --- !u!114 &-3913617698517783533
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -119,6 +139,26 @@ MonoBehaviour:
   featureIdInternal: com.unity.openxr.feature.input.oculustouch
   openxrExtensionStrings: 
   company: Unity
+  priority: 0
+  required: 0
+--- !u!114 &-2339375261965693577
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 75fe097147b1d3f4ebb571a20504de65, type: 3}
+  m_Name: IsblXRFeature Android
+  m_EditorClassIdentifier: 
+  m_enabled: 1
+  nameUi: Isbl Test XR Feature
+  version: 0.0.1
+  featureIdInternal: cz.isbl.test
+  openxrExtensionStrings: XR_EXT_hand_tracking
+  company: Isbl
   priority: 0
   required: 0
 --- !u!114 &-1920399770845522042
@@ -252,6 +292,7 @@ MonoBehaviour:
   features:
   - {fileID: 7720092602780165281}
   - {fileID: -3913617698517783533}
+  - {fileID: -2339375261965693577}
   - {fileID: -6948651536590334617}
   - {fileID: 3447582771640548276}
   - {fileID: -7179675269632839200}
@@ -343,6 +384,26 @@ MonoBehaviour:
   company: Unity
   priority: 0
   required: 0
+--- !u!114 &7586363631986359862
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 75fe097147b1d3f4ebb571a20504de65, type: 3}
+  m_Name: IsblXRFeature Android
+  m_EditorClassIdentifier: 
+  m_enabled: 0
+  nameUi: Isbl Test XR Feature
+  version: 0.0.1
+  featureIdInternal: cz.isbl.test
+  openxrExtensionStrings: XR_EXT_hand_tracking
+  company: Isbl
+  priority: 0
+  required: 0
 --- !u!114 &7720092602780165281
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -379,6 +440,7 @@ MonoBehaviour:
   - {fileID: 3740895273010186305}
   - {fileID: -1920399770845522042}
   - {fileID: -8090210824752771119}
+  - {fileID: -4295933516180172870}
   - {fileID: 8659670685832646134}
   - {fileID: 148644341140927224}
   - {fileID: 9032261568709070916}
