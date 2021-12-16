@@ -1,0 +1,20 @@
+name: NetVR-cpp create dll
+on: [push]
+jobs:
+    build_dll:
+        runs-on: windows-latest
+        steps:
+            - uses: actions/checkout@v2
+            - uses: ilammy/msvc-dev-cmd@v1
+              with:
+                  arch: amd64
+            - name: Build the .dll
+              run: |
+                  cd netvr-cpp
+                  cmake . -A x64 -B Win64
+                  cmake --build Win64 --config Release
+            - name: Upload the .dll
+              uses: actions/upload-artifact@v2
+              with:
+                  name: isbl_netvr.dll
+                  path: netvr-cpp/Win64/Release/*
