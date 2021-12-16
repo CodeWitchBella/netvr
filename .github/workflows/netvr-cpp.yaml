@@ -1,0 +1,41 @@
+name: NetVR-cpp build
+on: [push]
+jobs:
+    build_dll:
+        runs-on: windows-2019
+        steps:
+            - uses: actions/checkout@v2
+            - uses: ilammy/msvc-dev-cmd@v1
+              with:
+                  arch: amd64
+            - name: Build the .dll
+              run: |
+                  cd netvr-cpp
+                  cmake . -A x64 -B Win64 -DCI=1
+                  cmake --build Win64 --config Release
+            - name: Upload the .dll
+              uses: actions/upload-artifact@v2
+              with:
+                  name: isbl_netvr.dll
+                  path: netvr-cpp/Win64/Release/isbl_netvr.dll
+    build_so:
+        runs-on: ubuntu-20.04
+        steps:
+            - uses: actions/checkout@v2
+            - uses: nttld/setup-ndk@v1
+              id: setup-ndk
+              with:
+                  ndk-version: r23b
+            - name: Build the android .so
+              run: |
+                  cd netvr-cpp
+                  echo $ANDROID_NDK
+                  cmake . "-DCMAKE_TOOLCHAIN_FILE=$ANDROID_NDK/build/cmake/android.toolchain.cmake" -DCMAKE_SYSTEM_NAME="Android" "-DANDROID_NDK=$ANDROID_NDK" -DANDROID_PLATFORM=android-29 -DANDROID_ABI="arm64-v8a" -B Android
+                  cmake --build Android
+              env:
+                  ANDROID_NDK: ${{ steps.setup-ndk.outputs.ndk-path }}
+            - name: Upload the .so
+              uses: actions/upload-artifact@v2
+              with:
+                  name: libisbl_netvr.so
+                  path: netvr-cpp/Android/libisbl_netvr.so
