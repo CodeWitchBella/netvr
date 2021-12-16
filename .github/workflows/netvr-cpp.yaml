@@ -16,7 +16,7 @@ jobs:
             - name: Upload the .dll
               uses: actions/upload-artifact@v2
               with:
-                  name: isbl_netvr.dll
+                  name: windows
                   path: netvr-cpp/Win64/Release/isbl_netvr.dll
     build_so:
         runs-on: ubuntu-20.04
@@ -37,5 +37,23 @@ jobs:
             - name: Upload the .so
               uses: actions/upload-artifact@v2
               with:
-                  name: libisbl_netvr.so
+                  name: android
                   path: netvr-cpp/Android/libisbl_netvr.so
+    create_zip:
+        needs: [build_so, build_dll]
+        runs-on: ubuntu-20.04
+        steps:
+            - uses: actions/checkout@v2
+            - uses: actions/download-artifact@v2
+              with:
+                  name: android
+                  path: netvr-unity/Assets/Plugins/Android/arm64-v8a
+            - uses: actions/download-artifact@v2
+              with:
+                  name: windows
+                  path: netvr-unity/Assets/Plugins/Windows/x64
+            - name: Upload the plugins directory
+              uses: actions/upload-artifact@v2
+              with:
+                  name: Plugins
+                  path: netvr-unity/Assets/Plugins
