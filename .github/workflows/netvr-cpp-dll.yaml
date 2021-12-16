@@ -17,4 +17,9 @@ jobs:
               uses: actions/upload-artifact@v2
               with:
                   name: isbl_netvr.dll
+                  path: netvr-unity/Assets/Plugins/Windows/x64/isbl_netvr.dll
+            - name: Upload the dll debug files
+              uses: actions/upload-artifact@v2
+              with:
+                  name: isbl_netvr_dll_debug
                   path: netvr-cpp/Win64/Release/*
