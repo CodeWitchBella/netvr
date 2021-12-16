@@ -20,9 +20,10 @@ extern "C"
 {
 #endif
 
-// ABI begin
-ISBL_NETVR_EXPORT int isbl_netvr_on_system_change(uint64_t xrSystem, uint64_t xrInstance, void *xrGetInstanceProcAddrPtr);
-// ABI end
+    // ABI begin
+    ISBL_NETVR_EXPORT int isbl_netvr_on_system_change(uint64_t xrSystem, uint64_t xrInstance, void *xrGetInstanceProcAddrPtr);
+    ISBL_NETVR_EXPORT uint64_t isbl_netvr_get_time(uint64_t xrSystem, uint64_t xrInstance, void *xrGetInstanceProcAddrPtr);
+    // ABI end
 
 // clean up defines
 #ifndef ISBL_NETVR_EXPORT_NO_UNDEF

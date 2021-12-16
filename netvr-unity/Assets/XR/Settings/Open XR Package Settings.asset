@@ -94,9 +94,9 @@ MonoBehaviour:
   m_Name: IsblXRFeature Standalone
   m_EditorClassIdentifier: 
   m_enabled: 1
-  nameUi: Isbl Test XR Feature
+  nameUi: Isbl NetVR XR Feature
   version: 0.0.1
-  featureIdInternal: cz.isbl.test
+  featureIdInternal: cz.isbl.netvr
   openxrExtensionStrings: XR_EXT_hand_tracking
   company: Isbl
   priority: 0
@@ -154,9 +154,9 @@ MonoBehaviour:
   m_Name: IsblXRFeature Android
   m_EditorClassIdentifier: 
   m_enabled: 1
-  nameUi: Isbl Test XR Feature
+  nameUi: Isbl NetVR XR Feature
   version: 0.0.1
-  featureIdInternal: cz.isbl.test
+  featureIdInternal: cz.isbl.netvr
   openxrExtensionStrings: XR_EXT_hand_tracking
   company: Isbl
   priority: 0
@@ -397,9 +397,9 @@ MonoBehaviour:
   m_Name: IsblXRFeature Android
   m_EditorClassIdentifier: 
   m_enabled: 0
-  nameUi: Isbl Test XR Feature
+  nameUi: Isbl NetVR XR Feature
   version: 0.0.1
-  featureIdInternal: cz.isbl.test
+  featureIdInternal: cz.isbl.netvr
   openxrExtensionStrings: XR_EXT_hand_tracking
   company: Isbl
   priority: 0
