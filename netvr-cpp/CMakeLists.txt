@@ -7,10 +7,13 @@ add_library(${PROJECT_NAME} SHARED src/main.cpp)
 
 if(WIN32)
     target_compile_definitions(${PROJECT_NAME} PRIVATE WIN_EXPORT)
-    configure_file(
-        ${CMAKE_CURRENT_BINARY_DIR}/Release/isbl_netvr.dll
-        ${CMAKE_CURRENT_SOURCE_DIR}/../netvr-unity/Assets/Plugins/Windows/x64/isbl_netvr.dll
-        COPYONLY)
+endif()
+
+if(WIN32)
+    add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
+        COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:${PROJECT_NAME}>
+        ${CMAKE_CURRENT_SOURCE_DIR}/../netvr-unity/Assets/Plugins/Windows/${CMAKE_GENERATOR_PLATFORM}/$<TARGET_FILE_NAME:${PROJECT_NAME}>
+    )
 elseif(ANDROID)
     add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:${PROJECT_NAME}>

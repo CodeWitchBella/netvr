@@ -11,7 +11,7 @@ jobs:
             - name: Build the .dll
               run: |
                   cd netvr-cpp
-                  cmake . -A x64 -B Win64
+                  cmake . -A x64 -B Win64 -DCI=1
                   cmake --build Win64 --config Release
             - name: Upload the .dll
               uses: actions/upload-artifact@v2
