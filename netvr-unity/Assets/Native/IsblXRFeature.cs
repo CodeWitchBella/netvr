@@ -28,12 +28,15 @@ public class IsblXRFeature : OpenXRFeature
     ulong _xrInstance;
     IsblDynamicLibrary _lib;
 
+    static readonly IsblDynamicLibrary.Logger_Delegate _logger = (string value) => Debug.Log($"From C++: {value}");
+
     protected override bool OnInstanceCreate(ulong xrInstance)
     {
         Debug.Log("OnInstanceCreate");
         _xrInstance = xrInstance;
         _lib?.Dispose();
         _lib = new();
+        _lib.SetLogger(_logger);
         return true;
     }
 
@@ -41,6 +44,7 @@ public class IsblXRFeature : OpenXRFeature
     {
         Debug.Log("OnInstanceDestroy");
         _lib?.Dispose();
+        _lib = null;
         _xrInstance = 0;
     }
 
@@ -66,7 +70,7 @@ public class IsblXRFeature : OpenXRFeature
     readonly XrGetInstanceProcAddr _logGetInstanceProcAddr = (ulong instance, string name, ref IntPtr fn) =>
     {
         var result = _xrGetInstanceProcAddrOriginal(instance, name, ref fn);
-        Debug.Log($"xrGetInstanceProcAddr({instance}, {name}, ref fn) -> {result}");
+        //Debug.Log($"xrGetInstanceProcAddr({instance}, {name}, ref fn) -> {result}");
         return result;
     };
 

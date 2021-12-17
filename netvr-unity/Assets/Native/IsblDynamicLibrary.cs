@@ -15,6 +15,7 @@ class IsblDynamicLibrary : IDisposable
 {
     const string LibraryName = "isbl_netvr";
 
+
 #if UNITY_EDITOR_WIN
     /// <summary>
     /// Windows-specific functions for dll loading and unloading so that I dont
@@ -22,45 +23,64 @@ class IsblDynamicLibrary : IDisposable
     /// </summary>
     static class SystemLibrary
     {
-        [DllImport("kernel32", SetLastError = true, CharSet = CharSet.Unicode)]
+        [DllImport("kernel32", SetLastError = true, CharSet = CharSet.Ansi)]
         static public extern IntPtr LoadLibrary(string lpFileName);
 
         [DllImport("kernel32", SetLastError = true)]
         [return: MarshalAs(UnmanagedType.Bool)]
         static public extern bool FreeLibrary(IntPtr hModule);
 
-        [DllImport("kernel32")]
+        [DllImport("kernel32", CharSet = CharSet.Ansi, ExactSpelling = true, SetLastError = true)]
         static public extern IntPtr GetProcAddress(IntPtr hModule, string procedureName);
 
         static public void GetDelegate<TDelegate>(IntPtr lib, string name, out TDelegate val)
         {
-            val = Marshal.GetDelegateForFunctionPointer<TDelegate>(GetProcAddress(lib, name));
+            var addr = GetProcAddress(lib, name);
+            if (addr == default)
+            {
+                Debug.LogWarning($"Can't retrieve address of {name}");
+                val = default;
+            }
+            else
+            {
+                val = Marshal.GetDelegateForFunctionPointer<TDelegate>(addr);
+            }
         }
     }
     IntPtr _library;
+    const string Prefix = "Assets/Plugins/Windows/x64/";
+    const string FullPath = Prefix + LibraryName + "0.dll";
 #endif // UNITY_EDITOR_WIN
 
-    public delegate int Isbl_OnSystemChange_Delegate(ulong xrSystem, ulong xrInstance, IntPtr xrGetInstanceProcAddr);
-    public readonly Isbl_OnSystemChange_Delegate OnSystemChange;
+    public delegate int OnSystemChange_Delegate(ulong xrSystem, ulong xrInstance, IntPtr xrGetInstanceProcAddr);
+    public readonly OnSystemChange_Delegate OnSystemChange;
+
+    public delegate void Logger_Delegate([MarshalAs(UnmanagedType.LPStr)] string message);
+    public delegate void SetLogger_Delegate(Logger_Delegate logger);
+    public readonly SetLogger_Delegate SetLogger;
 
 #if !UNITY_EDITOR_WIN
     [DllImport(LibraryName, EntryPoint = "isbl_netvr_on_system_change")]
-    static extern int Isbl_OnSystemChange_Native(ulong xrSystem, ulong xrInstance, IntPtr xrGetInstanceProcAddr);
+    static extern int OnSystemChange_Native(ulong xrSystem, ulong xrInstance, IntPtr xrGetInstanceProcAddr);
+    [DllImport(LibraryName, EntryPoint = "isbl_netvr_set_logger")]
+    static extern void SetLogger_Native(Logger_Delegate logger);
 #endif // !UNITY_EDITOR_WIN
 
     public IsblDynamicLibrary()
     {
 #if UNITY_EDITOR_WIN
         // copy to new file so that original is still writeable
-        const string Prefix = "Assets/Plugins/Windows/x64/";
-        File.Copy(Prefix + LibraryName + ".dll", Prefix + LibraryName + "0.dll", true);
+        File.Copy(Prefix + LibraryName + ".dll", FullPath, true);
         // load
-        _library = SystemLibrary.LoadLibrary(Prefix + LibraryName + "0.dll");
+        _library = SystemLibrary.LoadLibrary(FullPath);
+        if (_library == default) Debug.LogWarning($"Failed to load {FullPath}");
         // get function pointers converted to delegates
         SystemLibrary.GetDelegate(_library, "isbl_netvr_on_system_change", out OnSystemChange);
+        SystemLibrary.GetDelegate(_library, "isbl_netvr_set_logger", out SetLogger);
 #else
-        _onSystemChange = Isbl_OnSystemChange_Native;
-#endif
+        OnSystemChange = OnSystemChange_Native;
+        SetLogger = SetLogger_Native;
+#endif 
     }
 
     public void Dispose()
@@ -68,8 +88,10 @@ class IsblDynamicLibrary : IDisposable
 #if UNITY_EDITOR_WIN
         if (_library != default)
         {
+            Debug.Log("IsblDynamicLibrary.Dispose()");
             SystemLibrary.FreeLibrary(_library);
             _library = default;
+            File.Delete(FullPath);
         }
 #endif
     }
