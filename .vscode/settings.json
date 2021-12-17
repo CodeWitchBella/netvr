@@ -1,5 +1,9 @@
 {
   "deno.enable": false,
   "deno.lint": false,
-  "deno.unstable": false
+  "deno.unstable": false,
+  "cmake.configureOnOpen": true,
+  "cmake.sourceDirectory": "${workspaceFolder}/netvr-cpp",
+  "cmake.buildDirectory": "${workspaceFolder}/netvr-cpp/build",
+  "cmake.buildArgs": ["--config Release"]
 }

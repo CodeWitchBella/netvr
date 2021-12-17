@@ -22,7 +22,7 @@ To build netvr-cpp .dll for windows you'll need
 [Visual Studio 2022](https://visualstudio.microsoft.com/downloads/) compiler
 along with cmake provided by it. I recommend using the Visual Studio installer
 application to install this. I would provide more detailed instructions, but
-microsoft changes the download instructions constantly.
+microsoft changes the download page constantly.
 
 Older or newer version should work too, but 2022 version is what I tested with.
 
@@ -33,6 +33,20 @@ cd C:\Source\netvr\netvr-cpp
 cmake . -G "Visual Studio 17 2022" -A x64 -B Win64
 cmake --build Win64 --config Release
 ```
+
+<details>
+    <summary>Building from VSCode</summary>
+
+Alternatively if you are using [vscode](https://code.visualstudio.com/) you can
+use CMake Tools to build the project. If you do not have this extension it
+should be recommended to you upon opening the project. The you can run
+`CMake: Configure` from command palette `Ctrl+Shift+P` (it might ask a few
+questions about your preferred compiler) followed by `CMake: Build`, also from
+command palette.
+
+To do this you will need to have up to date compiler installed (see above).
+
+</details>
 
 ## Android (for Quest 2)
 
