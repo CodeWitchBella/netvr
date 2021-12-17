@@ -59,11 +59,16 @@ class IsblDynamicLibrary : IDisposable
     public delegate void SetLogger_Delegate(Logger_Delegate logger);
     public readonly SetLogger_Delegate SetLogger;
 
+    public delegate IntPtr HookGetInstanceProcAddr_Delegate(IntPtr func);
+    public readonly HookGetInstanceProcAddr_Delegate HookGetInstanceProcAddr;
+
 #if !UNITY_EDITOR_WIN
     [DllImport(LibraryName, EntryPoint = "isbl_netvr_on_system_change")]
     static extern int OnSystemChange_Native(ulong xrSystem, ulong xrInstance, IntPtr xrGetInstanceProcAddr);
     [DllImport(LibraryName, EntryPoint = "isbl_netvr_set_logger")]
     static extern void SetLogger_Native(Logger_Delegate logger);
+    [DllImport(LibraryName, EntryPoint = "isbl_netvr_hook_get_instance_proc_addr")]
+    static extern IntPtr HookGetInstanceProcAddr_Native(IntPtr func);
 #endif // !UNITY_EDITOR_WIN
 
     public IsblDynamicLibrary()
@@ -77,9 +82,11 @@ class IsblDynamicLibrary : IDisposable
         // get function pointers converted to delegates
         SystemLibrary.GetDelegate(_library, "isbl_netvr_on_system_change", out OnSystemChange);
         SystemLibrary.GetDelegate(_library, "isbl_netvr_set_logger", out SetLogger);
+        SystemLibrary.GetDelegate(_library, "isbl_netvr_hook_get_instance_proc_addr", out HookGetInstanceProcAddr);
 #else
         OnSystemChange = OnSystemChange_Native;
         SetLogger = SetLogger_Native;
+        HookGetInstanceProcAddr = HookGetInstanceProcAddr_Native;
 #endif 
     }
 

@@ -23,6 +23,7 @@ extern "C"
     // ABI begin
     ISBL_NETVR_EXPORT int isbl_netvr_on_system_change(uint64_t xrSystem, uint64_t xrInstance, void *xrGetInstanceProcAddrPtr);
     ISBL_NETVR_EXPORT void isbl_netvr_set_logger(void (*callback)(const char *));
+    ISBL_NETVR_EXPORT void *isbl_netvr_hook_get_instance_proc_addr(void *func);
     // ABI end
 
 // clean up defines

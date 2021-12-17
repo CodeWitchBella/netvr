@@ -3,6 +3,9 @@ using System.Collections;
 using System.Collections.Generic;
 using System.IO;
 using System.Runtime.InteropServices;
+#if UNITY_EDITOR
+using UnityEditor;
+#endif
 using UnityEngine;
 using UnityEngine.XR.OpenXR;
 using UnityEngine.XR.OpenXR.Features;
@@ -28,15 +31,18 @@ public class IsblXRFeature : OpenXRFeature
     ulong _xrInstance;
     IsblDynamicLibrary _lib;
 
-    static readonly IsblDynamicLibrary.Logger_Delegate _logger = (string value) => Debug.Log($"From C++: {value}");
+    [AOT.MonoPInvokeCallback(typeof(IsblDynamicLibrary.Logger_Delegate))]
+    static void Logger(string value) => Debug.Log($"From C++: {value}");
 
     protected override bool OnInstanceCreate(ulong xrInstance)
     {
         Debug.Log("OnInstanceCreate");
         _xrInstance = xrInstance;
-        _lib?.Dispose();
-        _lib = new();
-        _lib.SetLogger(_logger);
+        if (_lib == null)
+        {
+            _lib = new();
+            _lib.SetLogger(Logger);
+        }
         return true;
     }
 
@@ -64,24 +70,28 @@ public class IsblXRFeature : OpenXRFeature
         }
     }
 
-    delegate int XrGetInstanceProcAddr(ulong instance, [MarshalAs(UnmanagedType.LPStr)] string name, ref IntPtr function);
-
-    static XrGetInstanceProcAddr _xrGetInstanceProcAddrOriginal;
-    readonly XrGetInstanceProcAddr _logGetInstanceProcAddr = (ulong instance, string name, ref IntPtr fn) =>
-    {
-        var result = _xrGetInstanceProcAddrOriginal(instance, name, ref fn);
-        //Debug.Log($"xrGetInstanceProcAddr({instance}, {name}, ref fn) -> {result}");
-        return result;
-    };
-
     protected override IntPtr HookGetInstanceProcAddr(IntPtr func)
     {
-        _xrGetInstanceProcAddrOriginal = Marshal.GetDelegateForFunctionPointer<XrGetInstanceProcAddr>(func);
-
-        return Marshal.GetFunctionPointerForDelegate(_logGetInstanceProcAddr);
+        _lib?.Dispose();
+        _lib = new();
+        _lib.SetLogger(Logger);
+        return _lib.HookGetInstanceProcAddr(func);
     }
 
     protected override void OnSessionCreate(ulong xrSession)
     {
     }
+
+#if UNITY_EDITOR
+    protected override void GetValidationChecks(List<ValidationRule> results, BuildTargetGroup targetGroup)
+    {
+        results.Add(new ValidationRule(this)
+        {
+            message = "IsblNet requires internet permission",
+            error = false,
+            checkPredicate = () => PlayerSettings.Android.forceInternetPermission,
+            fixIt = () => PlayerSettings.Android.forceInternetPermission = true
+        });
+    }
+#endif
 }
