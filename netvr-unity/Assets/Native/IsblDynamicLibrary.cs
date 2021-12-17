@@ -92,6 +92,7 @@ class IsblDynamicLibrary : IDisposable
             SystemLibrary.FreeLibrary(_library);
             _library = default;
             File.Delete(FullPath);
+            try { File.Delete(FullPath + ".meta"); } catch (FileNotFoundException) { }
         }
 #endif
     }
