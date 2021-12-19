@@ -36,8 +36,7 @@
         env: {
           NODE_ENV: import.meta.env.PROD ? 'production' : 'development',
         },
-        nextTick: (cb, ...args) =>
-          requestAnimationFrame(() => void cb(...args)),
+        nextTick: (cb, ...args) => queueMicrotask(() => void cb(...args)),
       }
       window.Buffer = Buffer
     </script>
