@@ -1,8 +1,7 @@
-type Await<T extends Promise<unknown>> = T extends Promise<infer V> ? V : never
-export type PWebSocket = Await<ReturnType<typeof promisifyWebsocket>>
+export type PWebSocket = ReturnType<typeof promisifyWebsocket>
 type Message = ArrayBuffer | string
 
-export async function promisifyWebsocket(socket: WebSocket) {
+export function promisifyWebsocket(socket: WebSocket) {
   const messageQueue: (
     | { type: 'message'; value: MessageEvent<Message> }
     | { type: 'error'; value: unknown }
@@ -11,33 +10,43 @@ export async function promisifyWebsocket(socket: WebSocket) {
   let finished = false
 
   let onQueueHasMessage: (() => void) | null = null
+  let onQueueHasMessageForOpened: (() => void) | null = null
 
   socket.addEventListener('message', (e) => {
     messageQueue.push({ type: 'message', value: e })
     onQueueHasMessage?.()
+    onQueueHasMessageForOpened?.()
   })
   socket.onerror = (e) => {
     messageQueue.push({ type: 'error', value: e })
     onQueueHasMessage?.()
+    onQueueHasMessageForOpened?.()
     finished = true
   }
   socket.addEventListener('close', () => {
     messageQueue.push({ type: 'close' })
     onQueueHasMessage?.()
+    onQueueHasMessageForOpened?.()
     finished = true
   })
 
-  await new Promise<void>((resolve) => {
+  const opened = new Promise<void>((resolve, reject) => {
     socket.onopen = () => resolve()
-    onQueueHasMessage = resolve
+    onQueueHasMessageForOpened = () => {
+      if (socket.readyState === 1 /* OPEN */) resolve()
+      else reject(new Error('Failed to open websocket'))
+    }
+  }).then(() => {
+    onQueueHasMessageForOpened = null
   })
-  onQueueHasMessage = null
 
   return {
+    url: socket.url,
     get bufferedAmount() {
       const amount = socket.bufferedAmount
       return !Number.isInteger(amount) ? 0 : amount
     },
+    opened,
     send(data: string | ArrayBufferLike | Blob | ArrayBufferView): void {
       socket.send(data)
     },

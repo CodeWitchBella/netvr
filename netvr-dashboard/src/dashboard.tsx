@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useReducer, useRef, useState } from 'react'
 import { useLog } from './log'
-import { ListenToSocket } from './listen-to-socket'
+import { ListenToSocket, useSocket } from './listen-to-socket'
 import type { PWebSocket } from './utils'
 import { ErrorBoundary } from './error-boundary'
 import { ClientData, DeviceData, mapData, parseBinaryMessage } from './data'
@@ -58,7 +58,22 @@ function deviceReducer(state: ClientData[], action: any) {
   return state
 }
 
-export function Dashboard({ socket }: { socket: PWebSocket }) {
+export function Dashboard({ socketUrl }: { socketUrl: string }) {
+  const state = useSocket(socketUrl)
+  useEffect(() => {
+    if (state.status === 'disconnected') window.location.reload()
+  })
+  if (state.status === 'connected')
+    return <DashboardInner socket={state.socket} />
+  if (state.status === 'connecting') return <div>Connecting...</div>
+  return null
+}
+
+function DashboardInner({ socket }: { socket: PWebSocket }) {
+  useEffect(() => {
+    socket.send(JSON.stringify({ action: 'gimme id' }))
+  }, [socket])
+
   const [stopped, setStopped] = useState(false)
   const [showBinary, toggleShowBinary] = useReducer(
     (state: boolean) => !state,
