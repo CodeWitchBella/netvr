@@ -48,6 +48,7 @@ export function Thesis() {
     </PDFViewer>
   )
 }
+export default Thesis
 
 const styles = StyleSheet.create({
   page: {

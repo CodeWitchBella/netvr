@@ -2,9 +2,10 @@ import ReactDOM from 'react-dom'
 import { Dashboard } from './dashboard'
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
 import { NotFound } from './not-found'
-import { Thesis } from './thesis/thesis'
 import { Menu } from './menu'
+import { lazy, Suspense } from 'react'
 
+const Thesis = lazy(() => import('./thesis/thesis'))
 export async function run() {
   const events = document.querySelector('#events')!
   if (!events) throw new Error('Cant find #events')
@@ -14,7 +15,14 @@ export async function run() {
       <Menu />
       <Routes>
         <Route index element={<Dashboard socketUrl={getSocketUrl()} />} />
-        <Route path="/thesis" element={<Thesis />} />
+        <Route
+          path="/thesis"
+          element={
+            <Suspense fallback={null}>
+              <Thesis />
+            </Suspense>
+          }
+        />
         <Route element={<NotFound />} />
       </Routes>
     </BrowserRouter>,
