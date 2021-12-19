@@ -1,5 +1,8 @@
 /** @jsxRuntime classic */
 import pdf from '@react-pdf/renderer'
+import { PDFContextProvider, usePDFContext } from './base'
+import { registerFonts } from './font'
+import { TitlePage } from './title-page'
 const {
   PDFViewer,
   Document: PDFDocument,
@@ -11,8 +14,17 @@ const {
 } = pdf
 
 function Document() {
+  registerFonts()
+  const { lang } = usePDFContext()
   return (
     <PDFDocument>
+      <TitlePage
+        title={
+          lang === 'en'
+            ? 'Tracking multiple VR users in a shared physical space'
+            : 'Sledování více uživatelů VR světa ve sdíleném fyzickém prostoru'
+        }
+      />
       <Page size="A4">
         <View style={styles.section}>
           <Text>Section #1</Text>
@@ -30,7 +42,9 @@ export function Thesis() {
     <PDFViewer
       style={{ display: 'flex', width: '100%', border: 0, flexGrow: 1 }}
     >
-      <Document />
+      <PDFContextProvider value={{ lang: 'en' }}>
+        <Document />
+      </PDFContextProvider>
     </PDFViewer>
   )
 }
