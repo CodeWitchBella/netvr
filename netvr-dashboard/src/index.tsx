@@ -1,12 +1,25 @@
-import { promisifyWebsocket, PWebSocket } from './utils'
 import ReactDOM from 'react-dom'
 import { Dashboard } from './dashboard'
+import { BrowserRouter, Route, Routes } from 'react-router-dom'
+import { NotFound } from './not-found'
+import { Thesis } from './thesis/thesis'
+import { Menu } from './menu'
 
 export async function run() {
   const events = document.querySelector('#events')!
   if (!events) throw new Error('Cant find #events')
 
-  ReactDOM.render(<Dashboard socketUrl={getSocketUrl()} />, events)
+  ReactDOM.render(
+    <BrowserRouter>
+      <Menu />
+      <Routes>
+        <Route index element={<Dashboard socketUrl={getSocketUrl()} />} />
+        <Route path="/thesis" element={<Thesis />} />
+        <Route element={<NotFound />} />
+      </Routes>
+    </BrowserRouter>,
+    events,
+  )
 }
 
 function getSocketUrl() {

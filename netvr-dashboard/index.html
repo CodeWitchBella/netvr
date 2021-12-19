@@ -14,11 +14,33 @@
       .device {
         margin-left: 8px;
       }
+      #events {
+        min-height: 100vh;
+        min-width: 100vw;
+        display: flex;
+        flex-direction: column;
+      }
+      html,
+      body {
+        margin: 0;
+        padding: 0;
+      }
     </style>
   </head>
   <body>
-    <div>Hello world!</div>
     <div id="events"></div>
+    <script type="module">
+      import { Buffer } from 'buffer'
+      window.global = window
+      window.process = {
+        env: {
+          NODE_ENV: import.meta.env.PROD ? 'production' : 'development',
+        },
+        nextTick: (cb, ...args) =>
+          requestAnimationFrame(() => void cb(...args)),
+      }
+      window.Buffer = Buffer
+    </script>
     <script type="module">
       import { run } from '/src/index.tsx'
       run()
