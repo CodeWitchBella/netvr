@@ -81,7 +81,7 @@ jobs:
               env:
                   UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
               with:
-                  targetPlatform: StandaloneWindows
+                  targetPlatform: StandaloneWindows64
                   projectPath: netvr-unity
                   versioning: Semantic
 
