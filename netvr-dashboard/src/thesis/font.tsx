@@ -1,11 +1,5 @@
 import pdf from '@react-pdf/renderer'
 const { Font } = pdf
-import TechnikaBold from './Technika-Bold.otf'
-import TechnikaBoldItalic from './Technika-BoldItalic.otf'
-import TechnikaBook from './Technika-Book.otf'
-import TechnikaBookItalic from './Technika-BookItalic.otf'
-import TechnikaItalic from './Technika-Italic.otf'
-import TechnikaRegular from './Technika-Regular.otf'
 
 let registered = false
 export function registerFonts() {
@@ -13,33 +7,33 @@ export function registerFonts() {
   registered = true
   Font.register({
     family: 'Technika',
-    src: TechnikaBold,
+    src: new URL('./Technika-Bold.otf', import.meta.url).toString(),
     fontWeight: 'bold',
   })
   Font.register({
     family: 'Technika',
-    src: TechnikaBoldItalic,
+    src: new URL('./Technika-BoldItalic.otf', import.meta.url).toString(),
     fontWeight: 'bold',
     fontStyle: 'italic',
   })
   Font.register({
     family: 'Technika',
-    src: TechnikaBook,
+    src: new URL('./Technika-Book.otf', import.meta.url).toString(),
     fontWeight: 'light',
   })
   Font.register({
     family: 'Technika',
-    src: TechnikaBookItalic,
+    src: new URL('./Technika-BookItalic.otf', import.meta.url).toString(),
     fontWeight: 'light',
     fontStyle: 'italic',
   })
   Font.register({
     family: 'Technika',
-    src: TechnikaItalic,
+    src: new URL('./Technika-Italic.otf', import.meta.url).toString(),
     fontStyle: 'italic',
   })
   Font.register({
     family: 'Technika',
-    src: TechnikaRegular,
+    src: new URL('./Technika-Regular.otf', import.meta.url).toString(),
   })
 }
