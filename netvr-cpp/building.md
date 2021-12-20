@@ -8,7 +8,7 @@ generated final files from [GitHub Actions](#download-from-github-actions).
 
 To get built files from Github Actions do the following:
 
-- open [the build workflow](https://github.com/CodeWitchBella/netvr/actions/workflows/netvr-cpp.yaml?query=branch%3Amain)
+- open [the build workflow](https://github.com/CodeWitchBella/netvr/actions/workflows/netvr.yaml?query=branch%3Amain)
 - click on latest successful build (first in the list with green checkmark)
 - click on Plugins under Artifacts, Plugins.zip will be downloaded
 - replace contents of `netvr-unity/Assets/Plugins` folder in this repository

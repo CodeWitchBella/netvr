@@ -1,4 +1,4 @@
-name: NetVR-cpp build
+name: netvr client build
 on: [push]
 jobs:
     build_dll:
@@ -57,3 +57,35 @@ jobs:
               with:
                   name: Plugins
                   path: netvr-unity/Assets/Plugins
+    unity_build:
+        needs: [build_dll]
+        name: Build netvr-unity ✨
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v2
+              with:
+                  lfs: true
+            - uses: actions/cache@v2
+              with:
+                  path: netvr-unity/Library
+                  key: Library-${{ hashFiles('netvr-unity/Assets/**', 'netvr-unity/Packages/**', 'netvr-unity/ProjectSettings/**') }}
+                  restore-keys: |
+                      Library-
+            - uses: actions/download-artifact@v2
+              with:
+                  name: windows
+                  path: netvr-unity/Assets/Plugins/Windows/x64
+
+            - name: Build project
+              uses: game-ci/unity-builder@v2
+              env:
+                  UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+              with:
+                  targetPlatform: StandaloneWindows
+                  projectPath: netvr-unity
+                  versioning: Semantic
+
+            - uses: actions/upload-artifact@v2
+              with:
+                  name: Build
+                  path: build
