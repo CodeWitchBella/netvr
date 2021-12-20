@@ -57,9 +57,9 @@ jobs:
               with:
                   name: Plugins
                   path: netvr-unity/Assets/Plugins
-    unity_build:
+    unity_build_windows:
         needs: [build_dll]
-        name: Build netvr-unity ✨
+        name: 🪟 Windows Unity build
         runs-on: ubuntu-latest
         steps:
             - uses: actions/checkout@v2
@@ -68,8 +68,9 @@ jobs:
             - uses: actions/cache@v2
               with:
                   path: netvr-unity/Library
-                  key: Library-${{ hashFiles('netvr-unity/Assets/**', 'netvr-unity/Packages/**', 'netvr-unity/ProjectSettings/**') }}
+                  key: Library-Windows-${{ hashFiles('netvr-unity/Assets/**', 'netvr-unity/Packages/**', 'netvr-unity/ProjectSettings/**') }}
                   restore-keys: |
+                      Library-Windows-
                       Library-
             - uses: actions/download-artifact@v2
               with:
@@ -84,8 +85,43 @@ jobs:
                   targetPlatform: StandaloneWindows64
                   projectPath: netvr-unity
                   versioning: Semantic
+                  buildName: netvr-windows
 
             - uses: actions/upload-artifact@v2
               with:
-                  name: Build
+                  name: netvr-windows
+                  path: build
+    unity_build_android:
+        needs: [build_so]
+        name: 🤖 Unity Android build
+        runs-on: ubuntu-latest
+        steps:
+            - uses: actions/checkout@v2
+              with:
+                  lfs: true
+            - uses: actions/cache@v2
+              with:
+                  path: netvr-unity/Library
+                  key: Library-Android-${{ hashFiles('netvr-unity/Assets/**', 'netvr-unity/Packages/**', 'netvr-unity/ProjectSettings/**') }}
+                  restore-keys: |
+                      Library-Android-
+                      Library-
+            - uses: actions/download-artifact@v2
+              with:
+                  name: android
+                  path: netvr-unity/Assets/Plugins/Android/arm64-v8a
+
+            - name: Build project
+              uses: game-ci/unity-builder@v2
+              env:
+                  UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+              with:
+                  targetPlatform: Android
+                  projectPath: netvr-unity
+                  versioning: Semantic
+                  buildName: netvr-android
+
+            - uses: actions/upload-artifact@v2
+              with:
+                  name: netvr-android
                   path: build
