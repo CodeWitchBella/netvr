@@ -2,6 +2,7 @@
   "imports": {
     "./room.js": "./room.ts",
     "./utils.js": "./utils.ts",
-    "./peer.js": "./peer.ts"
+    "./peer.js": "./peer.ts",
+    "./paths.js": "./paths.ts"
   }
 }

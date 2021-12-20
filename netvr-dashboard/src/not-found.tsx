@@ -1,3 +1,3 @@
 export function NotFound() {
-  return <h3>Not found</h3>
+  return <h3 style={{ margin: 8 }}>404: Not found</h3>
 }

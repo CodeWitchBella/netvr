@@ -16,14 +16,14 @@ export async function run() {
       <Routes>
         <Route index element={<Dashboard socketUrl={getSocketUrl()} />} />
         <Route
-          path="/thesis"
+          path="thesis"
           element={
             <Suspense fallback={null}>
               <Thesis />
             </Suspense>
           }
         />
-        <Route element={<NotFound />} />
+        <Route path="*" element={<NotFound />} />
       </Routes>
     </BrowserRouter>,
     events,

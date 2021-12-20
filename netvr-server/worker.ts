@@ -8,6 +8,7 @@
 
 import { getAssetFromKV } from '@cloudflare/kv-asset-handler'
 import manifestJSON from '__STATIC_CONTENT_MANIFEST'
+import { index } from './paths.js'
 import { createRoom } from './room.js'
 const manifest = JSON.parse(manifestJSON)
 
@@ -19,14 +20,21 @@ export default {
       const object = env.WEBSOCKET.get(id)
       return object.fetch(request.url, request)
     }
+    const originalUrl = new URL(request.url)
+    const url = new URL(request.url)
+    if (!url.pathname.startsWith('/assets')) url.pathname = '/'
     try {
-      return await getAssetFromKV(
+      const response = await getAssetFromKV(
         {
-          request,
+          request: new Request(url.toString(), request),
           waitUntil: (promise: any) => ctx.waitUntil(promise),
-        } as any,
+        },
         { ASSET_NAMESPACE: env.__STATIC_CONTENT, ASSET_MANIFEST: manifest },
       )
+      if (url.pathname === '/' && !index.includes(originalUrl.pathname)) {
+        return new Response(response.body, { ...response, status: 404 })
+      }
+      return response
     } catch (e: any) {
       if (e.status === 404) return new Response('Not found', { status: 404 })
       return new Response(e.message, { status: e.status })

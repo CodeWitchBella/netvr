@@ -8,6 +8,7 @@
  * See compile.ts for instructions on how to produce executable from this file.
  */
 
+import { index } from './paths.js'
 import { createRoom } from './room.js'
 
 await Deno.permissions.request({ name: 'net' })
@@ -37,10 +38,14 @@ async function handleConnection(tcpConn: Deno.Conn) {
       await serveSocket(event)
     } else {
       const { pathname } = new URL(event.request.url)
-      if (pathname === '/') {
-        await serveFile('/index.html', event)
-      } else {
+      if (pathname.startsWith('/assets')) {
         await serveFile(pathname, event)
+      } else {
+        await serveFile(
+          '/index.html',
+          event,
+          index.includes(pathname) ? 200 : 404,
+        )
       }
     }
   }
@@ -80,7 +85,11 @@ async function serveSocket(event: Deno.RequestEvent) {
   event.respondWith(response)
 }
 
-async function serveFile(pathname: string, event: Deno.RequestEvent) {
+async function serveFile(
+  pathname: string,
+  event: Deno.RequestEvent,
+  successStatus = 200,
+) {
   try {
     const filepath = '../netvr-dashboard/dist' + pathname
     const fileContents = await Deno.readFile(filepath)
@@ -90,7 +99,7 @@ async function serveFile(pathname: string, event: Deno.RequestEvent) {
 
     await event.respondWith(
       new Response(fileContents, {
-        status: 200,
+        status: successStatus,
         headers: { 'Content-type': mime },
       }),
     )
