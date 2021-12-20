@@ -12,7 +12,7 @@ import { Leaf } from './vendor/leaf.ts'
 await Leaf.compile({
   modulePath: './server.ts',
   contentFolders: ['../netvr-dashboard/dist'],
-  flags: ['--allow-net'],
+  flags: ['--allow-net', ...Deno.args],
   emitOptions: {
     importMapPath: './import_map.json',
   },

@@ -1,8 +1,5 @@
 name: netvr-server
-on:
-    push:
-        branches:
-            - main
+on: [push]
 jobs:
     build_and_deploy:
         runs-on: ubuntu-20.04
@@ -15,15 +12,32 @@ jobs:
                   cache-dependency-path: |
                       netvr-server/yarn.lock
                       netvr-dashboard/yarn.lock
-            - run: |
+            - uses: denoland/setup-deno@v1
+              with:
+                  deno-version: v1.x
+            - name: Build
+              run: |
                   cd netvr-dashboard
                   yarn
                   yarn build
                   cd ../netvr-server
                   yarn
+                  yarn deno:compile --target x86_64-pc-windows-msvc
+                  yarn deno:compile --target x86_64-unknown-linux-gnu
                   cd ..
+            - name: Upload server.exe
+              uses: actions/upload-artifact@v2
+              with:
+                  name: server-windows
+                  path: netvr-server/server.exe
+            - name: Upload linux server
+              uses: actions/upload-artifact@v2
+              with:
+                  name: server-linux
+                  path: netvr-server/server
             - name: Publish
               uses: cloudflare/wrangler-action@1.3.0
+              if: github.ref_name == 'main'
               with:
                   workingDirectory: netvr-server
                   apiToken: ${{ secrets.CF_API_TOKEN }}

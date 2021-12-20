@@ -6,6 +6,7 @@ node_modules
 dist
 deno-dist
 *.exe
+/netvr-server/server
 
 # This .gitignore file should be placed at the root of your Unity project directory
 #
