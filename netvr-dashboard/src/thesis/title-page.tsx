@@ -19,7 +19,7 @@ export function TitlePage({ title }: { title: string }) {
   const { lang } = usePDFContext()
   const date = useRef(new Date()).current
   return (
-    <Page>
+    <Page style={{ paddingHorizontal: '32mm', paddingVertical: '30mm' }}>
       <HStack>
         <View style={style.line} />
         <View style={{ flexDirection: 'column' }}>

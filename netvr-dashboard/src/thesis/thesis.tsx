@@ -1,17 +1,9 @@
 /** @jsxRuntime classic */
 import pdf from '@react-pdf/renderer'
-import { PDFContextProvider, usePDFContext } from './base'
+import { Page, PDFContextProvider, usePDFContext, Text } from './base'
 import { registerFonts } from './font'
 import { TitlePage } from './title-page'
-const {
-  PDFViewer,
-  Document: PDFDocument,
-  PDFRenderer,
-  StyleSheet,
-  Page,
-  View,
-  Text,
-} = pdf
+const { PDFViewer, Document: PDFDocument, PDFRenderer, StyleSheet, View } = pdf
 
 function Document() {
   registerFonts()
@@ -25,7 +17,13 @@ function Document() {
             : 'Sledování více uživatelů VR světa ve sdíleném fyzickém prostoru'
         }
       />
-      <Page size="A4">
+      <Page style={{ alignItems: 'center', justifyContent: 'flex-end' }}>
+        <Text style={{ fontSize: 10.5, fontWeight: 'light' }}>
+          Page intentionally left blank
+        </Text>
+      </Page>
+
+      <Page>
         <View style={styles.section}>
           <Text>Section #1</Text>
         </View>
