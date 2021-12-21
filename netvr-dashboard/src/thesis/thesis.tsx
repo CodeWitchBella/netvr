@@ -1,5 +1,4 @@
-/** @jsxRuntime classic */
-import { usePDF } from '@react-pdf/renderer'
+import pdf from '@react-pdf/renderer'
 import { useEffect, useReducer, useRef } from 'react'
 import { PDFContextProvider } from './base'
 import { Document as DocumentI } from './document'
@@ -20,7 +19,7 @@ export function Thesis() {
     (_: typeof DocumentI, doc: typeof DocumentI) => doc,
     DocumentI,
   )
-  const [instance, updateInstance] = usePDF({
+  const [instance, updateInstance] = pdf.usePDF({
     document: (
       <PDFContextProvider value={{ lang: 'en' }}>
         <Document />
@@ -52,18 +51,19 @@ export function Thesis() {
 
   useEffect(() => {
     let ended = false
-    if (src) {
+    const instance = ref.current
+    if (src && instance) {
       const task = pdfjsLib.getDocument(src)
-      const scroll = document.querySelector('html')!.scrollTop
+      const scroll = instance.div.scrollTop
       task.promise.then((pdf: any) => {
         if (!ended) {
-          ref.current?.viewer.setDocument(pdf)
-          ref.current?.linkService.setDocument(pdf)
-          ref.current?.eventBus.on('pagesinit', pagesinit)
-          function pagesinit() {
-            ref.current?.eventBus.off('pagesinit', pagesinit)
-            document.querySelector('html')!.scrollTop = scroll
+          instance.viewer.setDocument(pdf)
+          instance.linkService.setDocument(pdf, null)
+          const pagesinit = () => {
+            instance.eventBus.off('pagesinit', pagesinit)
+            instance.div.scrollTop = scroll
           }
+          instance.eventBus.on('pagesinit', pagesinit)
         }
       })
       return () => {
@@ -82,6 +82,7 @@ export function Thesis() {
           left: 0,
           right: 0,
           bottom: 0,
+          overflow: 'auto',
         }}
         ref={
           useRef((container: HTMLDivElement | null) => {
@@ -99,7 +100,7 @@ export function Thesis() {
                 viewer: new pdfjsViewer.PDFViewer({
                   container,
                   eventBus,
-                  linkService: linkService,
+                  linkService,
                 } as any),
               }
             }

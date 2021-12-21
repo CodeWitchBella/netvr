@@ -180,6 +180,11 @@ const lmdb = {
 export function registerFonts() {
   if (registered) return
   registered = true
+
+  Font.registerEmojiSource({
+    format: 'png',
+    url: 'https://twemoji.maxcdn.com/2/72x72/',
+  })
   Font.register({
     family: 'Technika',
     fonts: [
