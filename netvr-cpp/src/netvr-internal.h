@@ -1,3 +1,4 @@
+#pragma once
 // includes/netvr.h is meant to be as useable in programs outside of netvr-cpp
 // (for example future unreal engine integration)
 // that means that it tries to not polute global namespace and also that it

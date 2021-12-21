@@ -24,3 +24,14 @@ endif()
 message(STATUS ${CMAKE_CURRENT_BINARY_DIR})
 message(STATUS ${ANDROID_ARCH})
 message(STATUS ${CMAKE_ANDROID_ARCH_ABI})
+
+## Eigen
+include(FetchContent)
+
+FetchContent_Declare(
+  eigen
+  URL https://gitlab.com/libeigen/eigen/-/archive/3.4.0/eigen-3.4.0.tar.bz2)
+FetchContent_MakeAvailable(eigen)
+message(STATUS "eigen is available in " ${Eigen3_SOURCE_DIR})
+target_link_libraries (${PROJECT_NAME} Eigen3::Eigen)
+## Eigen END

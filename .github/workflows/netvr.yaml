@@ -8,6 +8,10 @@ jobs:
             - uses: ilammy/msvc-dev-cmd@v1
               with:
                   arch: amd64
+            - uses: actions/cache@v2
+              with:
+                  path: netvr-cpp/Win64/_deps
+                  key: cpp-win-deps-${{ hashFiles('netvr-cpp/CMakeLists.txt') }}
             - name: Build the .dll
               run: |
                   cd netvr-cpp
@@ -26,6 +30,10 @@ jobs:
               id: setup-ndk
               with:
                   ndk-version: r23b
+            - uses: actions/cache@v2
+              with:
+                  path: netvr-cpp/Android/_deps
+                  key: cpp-android-deps-${{ hashFiles('netvr-cpp/CMakeLists.txt') }}
             - name: Build the android .so
               run: |
                   cd netvr-cpp
