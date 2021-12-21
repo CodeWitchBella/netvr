@@ -152,7 +152,7 @@ jobs:
                   rm license.ulf
                   "$UNITY_PATH" -batchmode -nographics -quit -executeMethod BuildNetVR.BuildAndroid -logFile "-" -projectPath netvr-unity
               env:
-                  UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+                  UNITY_LICENSE: ${{ secrets.UNITY_LICENSE_WIN }}
             - uses: actions/upload-artifact@v2
               with:
                   name: netvr-android2
