@@ -17,15 +17,24 @@ public class IsblLocalXRDeviceManager : MonoBehaviour
         InputDevices.GetDevices(currentDevices);
         _devices.AddRange(currentDevices.Select(d => CreateDriver(d)).Where(d => d != null));
 
-        Debug.Log("OpenXRRuntime.name: " + OpenXRRuntime.name);
-        Debug.Log("OpenXRRuntime.apiVersion: " + OpenXRRuntime.apiVersion);
-        Debug.Log("OpenXRRuntime.pluginVersion: " + OpenXRRuntime.pluginVersion);
-        Debug.Log("OpenXRRuntime.version: " + OpenXRRuntime.version);
-        Debug.Log("Available extensions: " + string.Join(",", OpenXRRuntime.GetAvailableExtensions()));
-
         List<SubsystemDescriptor> subsystemDescriptors = new();
         SubsystemManager.GetSubsystemDescriptors(subsystemDescriptors);
-        Debug.Log($"Subsystems: {(subsystemDescriptors.Count < 1 ? "none" : string.Join(", ", subsystemDescriptors.ConvertAll(s => s.id)))}");
+
+        static string SelectVersion(string ext)
+        {
+            var version = OpenXRRuntime.GetExtensionVersion(ext);
+            return version == 1 ? ext : $"{ext} v{version}";
+        }
+
+        Debug.Log($@"OpenXR info
+        OpenXRRuntime.name: {OpenXRRuntime.name}
+        OpenXRRuntime.apiVersion: {OpenXRRuntime.apiVersion}
+        OpenXRRuntime.pluginVersion: {OpenXRRuntime.pluginVersion}
+        OpenXRRuntime.version: {OpenXRRuntime.version}
+        Available extensions: {string.Join(", ", OpenXRRuntime.GetAvailableExtensions().Select(SelectVersion))}
+        Enabled extensions: {string.Join(", ", OpenXRRuntime.GetEnabledExtensions().Select(SelectVersion))}
+        Subsystems: {(subsystemDescriptors.Count < 1 ? "none" : string.Join(", ", subsystemDescriptors.ConvertAll(s => s.id)))}
+        ");
     }
 
     IsblTrackedPoseDriver CreateDriver(InputDevice device)
