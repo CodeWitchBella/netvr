@@ -128,9 +128,9 @@ jobs:
                   targetPlatform: Android
                   projectPath: netvr-unity
                   versioning: Semantic
-                  buildName: netvr-android
+                  buildMethod: BuildNetVR.BuildAndroid
 
             - uses: actions/upload-artifact@v2
               with:
                   name: netvr-android
-                  path: build/Android/netvr-android.apk
+                  path: netvr-unity-builds/android/netvr.apk
