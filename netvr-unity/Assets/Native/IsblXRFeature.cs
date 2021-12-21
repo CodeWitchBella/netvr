@@ -1,8 +1,6 @@
 using System;
-using System.Collections;
 using System.Collections.Generic;
-using System.IO;
-using System.Runtime.InteropServices;
+using System.Timers;
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
@@ -31,8 +29,26 @@ public class IsblXRFeature : OpenXRFeature
     ulong _xrInstance;
     IsblDynamicLibrary _lib;
 
+    static string _log = "";
+    static Timer _timer;
+
     [AOT.MonoPInvokeCallback(typeof(IsblDynamicLibrary.Logger_Delegate))]
-    static void Logger(string value) => Debug.Log($"From C++: {value}");
+    static void Logger(string value)
+    {
+        _log += "\n" + value;
+        if (_timer == null)
+        {
+            _timer = new Timer(1000);
+            _timer.Elapsed += (source, evt) =>
+            {
+                Debug.LogFormat(LogType.Log, LogOption.NoStacktrace, null, "From C++:{0}\nEND", _log.Replace("\n", "\n  "));
+                _log = "";
+                _timer.Dispose();
+                _timer = null;
+            };
+            _timer.Enabled = true;
+        }
+    }
 
     protected override bool OnInstanceCreate(ulong xrInstance)
     {
