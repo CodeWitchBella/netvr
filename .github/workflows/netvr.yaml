@@ -66,6 +66,11 @@ jobs:
               with:
                   name: Plugins
                   path: netvr-unity/Assets/Plugins
+            - uses: geekyeggo/delete-artifact@v1
+              with:
+                  name: |
+                      windows
+                      android
     unity_build_windows:
         needs: [build_dll]
         name: 🪟 Windows Unity build
@@ -100,6 +105,44 @@ jobs:
               with:
                   name: netvr-windows
                   path: build
+    unity_build_android2:
+        needs: [build_so]
+        name: 🤖 Unity Android build 2
+        runs-on: windows-2019
+        steps:
+            - uses: actions/checkout@v2
+              with:
+                  lfs: true
+            - uses: actions/cache@v2
+              with:
+                  path: netvr-unity/Library
+                  key: Library-Android-2-${{ hashFiles('netvr-unity/Assets/**', 'netvr-unity/Packages/**', 'netvr-unity/ProjectSettings/**') }}
+                  restore-keys: |
+                      Library-Android-2-
+                      Library-Android-
+                      Library-
+            - uses: actions/download-artifact@v2
+              with:
+                  name: android
+                  path: netvr-unity/Assets/Plugins/Android/arm64-v8a
+            - name: Setup Unity
+              uses: kuler90/setup-unity@v1
+              with:
+                  unity-modules: android
+                  project-path: netvr-unity
+            - name: Build the App
+              shell: bash
+              run: |
+                  echo "$UNITY_LICENSE" | tr -d '\r' > license.ulf
+                  $UNITY_PATH -batchmode -nographics -quit -logFile "-" -manualLicenseFile license.ulf
+                  rm license.ulf
+                  $UNITY_PATH -batchmode -nographics -quit -executeMethod BuildNetVR.BuildAndroid -logFile "-" -projectPath netvr-unity
+              env:
+                  UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
+            - uses: actions/upload-artifact@v2
+              with:
+                  name: netvr-android2
+                  path: netvr-unity-builds/android/netvr.apk
     unity_build_android:
         needs: [build_so]
         name: 🤖 Unity Android build
