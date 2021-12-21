@@ -1,6 +1,6 @@
 import pdf from '@react-pdf/renderer'
 import { colors } from './colors'
-import { Page, Text, usePDFContext } from './base'
+import { Page, TechnikaText, usePDFContext } from './base'
 import { PropsWithChildren, useRef } from 'react'
 const { View, StyleSheet, Svg, Path } = pdf
 
@@ -41,7 +41,7 @@ export function TitlePage({ title }: { title: string }) {
               >
                 {lang === 'cs' ? 'ČVUT' : 'CTU'}
               </Text>*/}
-              <Text
+              <TechnikaText
                 style={{
                   fontWeight: 'bold',
                   color: colors.blue,
@@ -52,42 +52,44 @@ export function TitlePage({ title }: { title: string }) {
                 {lang === 'cs'
                   ? 'ČESKÉ VYSOKÉ\nUČENÍ TECHNICKÉ\nV PRAZE'
                   : 'CZECH TECHNICAL\nUNIVERSITY\nIN PRAGUE'}
-              </Text>
+              </TechnikaText>
             </View>
           </HStack>
           <View style={{ height: '8mm' }} />
           <HStack style={{ alignItems: 'flex-end' }}>
             <View style={{ width: '34.213mm' }}>
-              <Text
+              <TechnikaText
                 style={{ fontSize: 32, fontWeight: 'bold', color: colors.blue }}
               >
                 F3
-              </Text>
+              </TechnikaText>
             </View>
-            <Text style={{ fontSize: 11.5, marginBottom: '1.5mm' }}>
+            <TechnikaText style={{ fontSize: 11.5, marginBottom: '1.5mm' }}>
               {lang === 'cs'
                 ? 'Fakulta Elektrotechnická\nKatedra počítačové grafiky a interakce'
                 : 'Faculty of Electrical Engineering\nDepartment of Computer Graphics and Interaction'}
-            </Text>
+            </TechnikaText>
           </HStack>
           <View style={{ height: '40mm' }} />
-          <Text style={{ fontSize: 25 }}>{title}</Text>
-          <Text style={{ fontSize: 15, marginTop: '5mm' }}>
+          <TechnikaText style={{ fontSize: 25 }}>{title}</TechnikaText>
+          <TechnikaText style={{ fontSize: 15, marginTop: '5mm' }}>
             {lang === 'en'
               ? 'Software or Research Project'
               : 'Softwarový nebo výzkumný projekt'}
-          </Text>
+          </TechnikaText>
           <View style={{ height: '15mm' }} />
-          <Text style={{ fontSize: 15 }}>Bc. Isabella Skořepová</Text>
+          <TechnikaText style={{ fontSize: 15 }}>
+            Bc. Isabella Skořepová
+          </TechnikaText>
           <View style={{ flexGrow: 1 }} />
 
-          <Text style={style.foot}>
+          <TechnikaText style={style.foot}>
             {lang === 'en' ? 'Supervisor' : 'Vedoucí'}: Ing. David Sedláček,
             Ph.D.
-          </Text>
-          <Text style={style.foot}>
+          </TechnikaText>
+          <TechnikaText style={style.foot}>
             {month(date.getMonth(), lang)} {date.getFullYear()}
-          </Text>
+          </TechnikaText>
           <pdf.Link
             src="https://isbl.cz/netvr"
             style={[style.foot, { fontWeight: 'light' }]}

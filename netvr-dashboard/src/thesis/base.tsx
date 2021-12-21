@@ -12,7 +12,11 @@ export function Page({
       {...rest}
       size="A4"
       style={[
-        { paddingHorizontal: '32mm', paddingVertical: '30mm' },
+        {
+          paddingHorizontal: '32mm',
+          paddingBottom: '30mm',
+          paddingTop: '35mm',
+        },
         ...[style ?? []],
       ].flat()}
     >
@@ -21,11 +25,13 @@ export function Page({
   )
 }
 
-export function Text({ children, style, ...rest }: pdf.TextProps) {
+export function TechnikaText({ children, style, ...rest }: pdf.TextProps) {
   return (
     <pdf.Text
       {...rest}
-      style={[{ fontFamily: 'Technika' } as Style].concat(style ?? []).flat()}
+      style={[{ fontFamily: 'Technika', fontSize: 11 } as Style]
+        .concat(style ?? [])
+        .flat()}
     >
       {children}
     </pdf.Text>

@@ -1,61 +1,122 @@
 /** @jsxRuntime classic */
-import pdf from '@react-pdf/renderer'
-import { Page, PDFContextProvider, usePDFContext, Text } from './base'
-import { registerFonts } from './font'
-import { TitlePage } from './title-page'
-const { PDFViewer, Document: PDFDocument, PDFRenderer, StyleSheet, View } = pdf
+import { usePDF } from '@react-pdf/renderer'
+import { useEffect, useReducer, useRef } from 'react'
+import { PDFContextProvider } from './base'
+import { Document as DocumentI } from './document'
+// @ts-ignore
+import * as pdfjsLib from 'pdfjs-dist/build/pdf.js'
+import * as pdfjsViewer from 'pdfjs-dist/web/pdf_viewer'
+import 'pdfjs-dist/web/pdf_viewer.css'
 
-function Document() {
-  registerFonts()
-  const { lang } = usePDFContext()
-  return (
-    <PDFDocument>
-      <TitlePage
-        title={
-          lang === 'en'
-            ? 'Tracking multiple VR users in a shared physical space'
-            : 'Sledování více uživatelů VR světa ve sdíleném fyzickém prostoru'
-        }
-      />
-      <Page style={{ alignItems: 'center', justifyContent: 'flex-end' }}>
-        <Text style={{ fontSize: 10.5, fontWeight: 'light' }}>
-          Page intentionally left blank
-        </Text>
-      </Page>
+pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
+  '../../node_modules/pdfjs-dist/build/pdf.worker.min.js',
+  import.meta.url,
+).toString()
 
-      <Page>
-        <View style={styles.section}>
-          <Text>Section #1</Text>
-        </View>
-        <View style={styles.section}>
-          <Text>Section #2</Text>
-        </View>
-      </Page>
-    </PDFDocument>
-  )
-}
+let updateInstanceSet = new Set<(doc: typeof DocumentI) => void>()
 
 export function Thesis() {
-  return (
-    <PDFViewer
-      style={{ display: 'flex', width: '100%', border: 0, flexGrow: 1 }}
-    >
+  const [Document, setDocument] = useReducer(
+    (_: typeof DocumentI, doc: typeof DocumentI) => doc,
+    DocumentI,
+  )
+  const [instance, updateInstance] = usePDF({
+    document: (
       <PDFContextProvider value={{ lang: 'en' }}>
         <Document />
       </PDFContextProvider>
-    </PDFViewer>
+    ),
+  })
+
+  if (import.meta.hot) {
+    useEffect(() => {
+      updateInstanceSet.add(setDocument)
+      return () => {
+        updateInstanceSet.delete(setDocument)
+      }
+    }, [setDocument])
+
+    useEffect(() => {
+      if (Document !== DocumentI) updateInstance()
+    }, [Document])
+  }
+
+  const src = instance.url ? `${instance.url}#toolbar=1` : ''
+
+  const ref = useRef<{
+    div: HTMLDivElement
+    viewer: pdfjsViewer.PDFViewer
+    linkService: pdfjsViewer.PDFLinkService
+    eventBus: pdfjsViewer.EventBus
+  }>()
+
+  useEffect(() => {
+    let ended = false
+    if (src) {
+      const task = pdfjsLib.getDocument(src)
+      const scroll = document.querySelector('html')!.scrollTop
+      task.promise.then((pdf: any) => {
+        if (!ended) {
+          ref.current?.viewer.setDocument(pdf)
+          ref.current?.linkService.setDocument(pdf)
+          ref.current?.eventBus.on('pagesinit', pagesinit)
+          function pagesinit() {
+            ref.current?.eventBus.off('pagesinit', pagesinit)
+            document.querySelector('html')!.scrollTop = scroll
+          }
+        }
+      })
+      return () => {
+        ended = true
+        task.destroy()
+      }
+    }
+  }, [src])
+
+  return (
+    <div style={{ position: 'relative', flexGrow: 1 }}>
+      <div
+        style={{
+          position: 'absolute',
+          top: 0,
+          left: 0,
+          right: 0,
+          bottom: 0,
+        }}
+        ref={
+          useRef((container: HTMLDivElement | null) => {
+            ref.current?.viewer.cleanup()
+            ref.current = undefined
+            if (container) {
+              const eventBus = new pdfjsViewer.EventBus()
+              const linkService = new pdfjsViewer.PDFLinkService({
+                eventBus,
+              })
+              ref.current = {
+                div: container,
+                eventBus,
+                linkService: linkService,
+                viewer: new pdfjsViewer.PDFViewer({
+                  container,
+                  eventBus,
+                  linkService: linkService,
+                } as any),
+              }
+            }
+          }).current
+        }
+      >
+        <div id="viewer" className="pdfViewer"></div>
+      </div>
+    </div>
   )
 }
 export default Thesis
 
-const styles = StyleSheet.create({
-  page: {
-    flexDirection: 'row',
-    backgroundColor: '#E4E4E4',
-  },
-  section: {
-    margin: 10,
-    padding: 10,
-    flexGrow: 1,
-  },
-})
+if (import.meta.hot) {
+  import.meta.hot.accept('./document', (dep: any) => {
+    for (const update of updateInstanceSet.values()) {
+      update(dep.Document)
+    }
+  })
+}
