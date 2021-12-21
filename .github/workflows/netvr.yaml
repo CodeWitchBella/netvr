@@ -123,6 +123,17 @@ jobs:
                   lfs: true
             - uses: actions/cache@v2
               with:
+                  path: |
+                      C:/Program Files/Unity Hub
+                      C:/Program Files/Unity
+                  key: Unity-Android-${{ hashFiles('netvr-unity/ProjectSettings/ProjectVersion.txt') }}
+            - name: Setup Unity
+              uses: kuler90/setup-unity@v1
+              with:
+                  unity-modules: android
+                  project-path: netvr-unity
+            - uses: actions/cache@v2
+              with:
                   path: netvr-unity/Library
                   key: Library-Android-2-${{ hashFiles('netvr-unity/Assets/**', 'netvr-unity/Packages/**', 'netvr-unity/ProjectSettings/**') }}
                   restore-keys: |
@@ -133,11 +144,6 @@ jobs:
               with:
                   name: android
                   path: netvr-unity/Assets/Plugins/Android/arm64-v8a
-            - name: Setup Unity
-              uses: kuler90/setup-unity@v1
-              with:
-                  unity-modules: android
-                  project-path: netvr-unity
             - name: Build the App
               shell: bash
               run: |
