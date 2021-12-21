@@ -10,8 +10,8 @@ jobs:
                   arch: amd64
             - uses: actions/cache@v2
               with:
-                  path: netvr-cpp/Win64/_deps
-                  key: cpp-win-deps-${{ hashFiles('netvr-cpp/CMakeLists.txt') }}
+                  path: netvr-cpp/Win64
+                  key: cpp-win-${{ hashFiles('netvr-cpp/CMakeLists.txt') }}
             - name: Build the .dll
               run: |
                   cd netvr-cpp
