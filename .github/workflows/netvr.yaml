@@ -148,9 +148,9 @@ jobs:
               shell: bash
               run: |
                   echo "$UNITY_LICENSE" | tr -d '\r' > license.ulf
-                  $UNITY_PATH -batchmode -nographics -quit -logFile "-" -manualLicenseFile license.ulf
+                  "$UNITY_PATH" -batchmode -nographics -quit -logFile "-" -manualLicenseFile license.ulf
                   rm license.ulf
-                  $UNITY_PATH -batchmode -nographics -quit -executeMethod BuildNetVR.BuildAndroid -logFile "-" -projectPath netvr-unity
+                  "$UNITY_PATH" -batchmode -nographics -quit -executeMethod BuildNetVR.BuildAndroid -logFile "-" -projectPath netvr-unity
               env:
                   UNITY_LICENSE: ${{ secrets.UNITY_LICENSE }}
             - uses: actions/upload-artifact@v2
