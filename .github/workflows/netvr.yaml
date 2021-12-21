@@ -38,6 +38,7 @@ jobs:
               run: |
                   cd netvr-cpp
                   echo $ANDROID_NDK
+                  sudo rm /usr/bin/f95 /usr/bin/gfortran
                   cmake . "-DCMAKE_TOOLCHAIN_FILE=$ANDROID_NDK/build/cmake/android.toolchain.cmake" -DCMAKE_SYSTEM_NAME="Android" "-DANDROID_NDK=$ANDROID_NDK" -DANDROID_PLATFORM=android-29 -DANDROID_ABI="arm64-v8a" -B Android
                   cmake --build Android
               env:
