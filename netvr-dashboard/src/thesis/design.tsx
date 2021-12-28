@@ -7,18 +7,15 @@ import { LMText } from './font'
 export function Paragraph({
   children,
   first,
-  title,
-}: PropsWithChildren<{ first?: boolean; title?: string }>) {
+}: PropsWithChildren<{ first?: boolean }>) {
   return (
     <LMText
       fontFamily="lmroman10-regular"
       style={{
         fontSize: 11,
         textIndent: first ? 0 : '4.338mm',
-        marginTop: title ? '2mm' : 0,
       }}
     >
-      {title ? <ParagraphTitle>{title}</ParagraphTitle> : null}
       {children}
     </LMText>
   )
@@ -27,30 +24,51 @@ export function Paragraph({
 export function TODO({ children }: PropsWithChildren<{}>) {
   return (
     <LMText fontFamily="lmromanslant10-regular" style={{ fontSize: 11 }}>
-      <ParagraphTitle>TODO:</ParagraphTitle>
+      <Strong>TODO:</Strong>
       {children}
     </LMText>
   )
 }
 
-export function ParagraphTitle({ children }: PropsWithChildren<{}>) {
+export function Em({ children }: PropsWithChildren<{}>) {
+  return (
+    <LMText fontFamily="lmroman10-italic" style={{ fontSize: 11 }}>
+      {children}
+    </LMText>
+  )
+}
+
+export function Strong({ children }: PropsWithChildren<{}>) {
   return (
     <LMText fontFamily="lmroman10-bold" style={{ fontSize: 11 }}>
-      {children}{' '}
+      {children}
     </LMText>
   )
 }
 
 const chapterContext = createContext(0)
 
+export function ChapterProvider({
+  index,
+  children,
+}: PropsWithChildren<{ index: number }>) {
+  return (
+    <chapterContext.Provider value={index}>{children}</chapterContext.Provider>
+  )
+}
+
 export function Chapter({
   children,
   title,
-  no = 0,
+  no,
 }: PropsWithChildren<{ title: string; no?: number }>) {
+  const chapterNoFromContext = useContext(chapterContext)
+  no = no ?? chapterNoFromContext
   return (
-    <Page>
+    <>
       <pdf.View
+        break={true}
+        wrap={false}
         style={{
           flexDirection: 'row',
           alignItems: 'flex-end',
@@ -82,7 +100,7 @@ export function Chapter({
         </TechnikaText>
       </pdf.View>
       <chapterContext.Provider value={no}>{children}</chapterContext.Provider>
-    </Page>
+    </>
   )
 }
 
@@ -94,20 +112,18 @@ export function Section({
   return (
     <pdf.View style={{ marginTop: '7.8mm' }}>
       <pdf.View
+        wrap={false}
+        minPresenceAhead={10}
         style={{
           flexDirection: 'row',
           alignItems: 'flex-end',
           marginBottom: '3mm',
+          borderColor: colors.blue,
+          borderLeftWidth: '4mm',
+          height: '7mm',
+          paddingLeft: '4.5mm',
         }}
       >
-        <pdf.View
-          style={{
-            width: '4mm',
-            height: '7mm',
-            marginRight: '4.5mm',
-            backgroundColor: colors.blue,
-          }}
-        />
         <TechnikaText
           style={{
             fontWeight: 'bold',

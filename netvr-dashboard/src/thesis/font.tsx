@@ -7,6 +7,7 @@ let registered = false
 
 // https://www.ctan.org/tex-archive/fonts/lm/
 const lmdb = {
+  'latinmodern-math': new URL('./lm/latinmodern-math.otf', import.meta.url),
   'lmmono10-italic': new URL('./lm/lmmono10-italic.otf', import.meta.url),
   'lmmono10-regular': new URL('./lm/lmmono10-regular.otf', import.meta.url),
   'lmmono12-regular': new URL('./lm/lmmono12-regular.otf', import.meta.url),
@@ -245,7 +246,8 @@ export function LMText({
       style={[
         {
           fontFamily: fontFamily,
-          fontSize: parseInt(fontFamily.replace(/[^0-9]/g, ''), 10),
+          fontSize:
+            parseInt(fontFamily.replace(/[^0-9]/g, ''), 10) || undefined,
         } as Style,
       ]
         .concat(style ?? [])

@@ -19,13 +19,15 @@ export function Thesis() {
     (_: typeof DocumentI, doc: typeof DocumentI) => doc,
     DocumentI,
   )
-  const [instance, updateInstance] = pdf.usePDF({
-    document: (
-      <PDFContextProvider value={{ lang: 'en' }}>
-        <Document />
-      </PDFContextProvider>
-    ),
-  })
+  const document = (
+    <PDFContextProvider value={{ lang: 'en' }}>
+      <Document />
+    </PDFContextProvider>
+  )
+
+  //return (<pdf.PDFViewer style={{ flexGrow: 1, border: 0 }}>{document}</pdf.PDFViewer>)
+
+  const [instance, updateInstance] = pdf.usePDF({ document })
 
   if (import.meta.hot) {
     useEffect(() => {

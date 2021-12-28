@@ -44,3 +44,5 @@ export function usePDFContext() {
 }
 
 export const PDFContextProvider = context.Provider
+
+export const View = pdf.View
