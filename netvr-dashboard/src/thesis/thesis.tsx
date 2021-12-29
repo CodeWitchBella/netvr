@@ -147,15 +147,17 @@ function ThesisCustom({ Document }: { Document: any }) {
               const linkService = new pdfjsViewer.PDFLinkService({
                 eventBus,
               })
+              const viewer = new pdfjsViewer.PDFViewer({
+                container,
+                eventBus,
+                linkService,
+              } as any)
+              linkService.setViewer(viewer)
               ref.current = {
                 div: container,
                 eventBus,
                 linkService: linkService,
-                viewer: new pdfjsViewer.PDFViewer({
-                  container,
-                  eventBus,
-                  linkService,
-                } as any),
+                viewer,
               }
             }
           }).current

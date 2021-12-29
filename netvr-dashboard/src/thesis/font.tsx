@@ -239,16 +239,18 @@ export function LMText({
   children,
   style,
   fontFamily,
+  noFontSize,
   ...rest
-}: pdf.TextProps & { fontFamily: keyof typeof lmdb }) {
+}: pdf.TextProps & { fontFamily: keyof typeof lmdb; noFontSize?: true }) {
   return (
     <pdf.Text
       {...rest}
       style={[
         {
           fontFamily: fontFamily,
-          fontSize:
-            parseInt(fontFamily.replace(/[^0-9]/g, ''), 10) || undefined,
+          fontSize: noFontSize
+            ? undefined
+            : parseInt(fontFamily.replace(/[^0-9]/g, ''), 10) || undefined,
         } as Style,
       ]
         .concat(style ?? [])

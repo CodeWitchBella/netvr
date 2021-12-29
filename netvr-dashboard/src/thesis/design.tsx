@@ -3,6 +3,7 @@ import { createContext, PropsWithChildren, useContext } from 'react'
 import { Page, TechnikaText } from './base'
 import { colors } from './colors'
 import { LMText } from './font'
+import type { Style } from '@react-pdf/types/style'
 
 export function Paragraph({
   children,
@@ -18,6 +19,25 @@ export function Paragraph({
     >
       {children}
     </LMText>
+  )
+}
+
+export function Link({ children, style, ...rest }: pdf.LinkProps) {
+  return (
+    <pdf.Link
+      {...rest}
+      style={[
+        {
+          textDecoration: 'none',
+          color: 'black',
+          fontFamily: 'lmmono10-regular',
+        } as Style,
+      ]
+        .concat(style ?? [])
+        .flat()}
+    >
+      {children}
+    </pdf.Link>
   )
 }
 

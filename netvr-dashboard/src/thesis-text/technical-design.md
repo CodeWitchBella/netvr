@@ -24,7 +24,8 @@ prodávaného zástupce.
 
 Jako zástupce inside-out jsem zvolila Oculus Quest 2 používající sledovací
 systém Insight. Toto je nejčastější headset používaný i v desktop módu podle
-Steam Hardware Survey[4]. Aplikace je na tomto headsetu možné spouštět dvěmi
+Steam Hardware Survey:cite[steam-hardware-survey]. Aplikace je na tomto
+headsetu možné spouštět dvěmi
 způsoby - přímo na headsetu nebo na připojeném počítači. Chtěla bych podporovat
 obě možnosti. Na připojení počítače je možné použít několik různých kombinací
 software. Jedna možnost je připojení přes USB a použití Oculus Link s nebo bez
