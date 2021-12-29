@@ -229,7 +229,7 @@ export function normalize(pathSegList) {
 		lastCommandIsQuadraticBezier = thisCommandIsQuadraticBezier;
 	}
 	
-	return newPathSegList;
+	return path;
 }
 
 function getReflectionPoint(lastControlX, lastControlY, curX, curY) {

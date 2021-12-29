@@ -74,60 +74,7 @@ function rehypeLigature() {
 function normalizePath(d: string) {
   const path = document.createElementNS('http://www.w3.org/2000/svg', 'path')
   path.setAttribute('d', d)
-  return normalize(path.pathSegList)._pathElement.getAttribute('d')
-}
-
-function drawSvg(node: any, painter: any, matIn = [1, 0, 0, 1, 0, 0]) {
-  window.normalize = normalize
-  let mat = [...matIn]
-  function applyMatrix(m11, m12, m21, m22, dx, dy) {
-    const [m0, m1, m2, m3, m4, m5] = mat
-    mat[0] = m0 * m11 + m2 * m12
-    mat[1] = m1 * m11 + m3 * m12
-    mat[2] = m0 * m21 + m2 * m22
-    mat[3] = m1 * m21 + m3 * m22
-    mat[4] = m0 * dx + m2 * dy + m4
-    mat[5] = m1 * dx + m3 * dy + m5
-  }
-
-  if (node.tagName === 'g') {
-    for (const cssTransform of node.properties.transform?.split(' ') ?? []) {
-      const args = cssTransform
-        .split(',')
-        .map((v) => Number.parseFloat(v.replace(/[^-0-9.]/g, '')))
-      if (cssTransform.startsWith('translate')) {
-        applyMatrix(1, 0, 0, 1, args[0], args[1])
-      } else if (cssTransform.startsWith('scale')) {
-        applyMatrix(args[0], 0, 0, args[1] ?? args[0], 0, 0)
-      } else {
-        console.log(cssTransform)
-      }
-    }
-  } else {
-    painter.save()
-    painter.translate(mat[4], mat[5]).scale(mat[0], mat[3])
-
-    if (node.tagName === 'path') {
-      painter.path(normalizePath(node.properties.d))
-    } else if (node.tagName === 'rect') {
-      painter.rect(
-        ...['x', 'y', 'width', 'height'].map((v) =>
-          parseFloat(node.properties[v]),
-        ),
-      )
-    } else {
-      //console.log(node)
-    }
-    painter.lineWidth(1).fillAndStroke('black', 'black').restore()
-  }
-  const children = node.children.map((n) => drawSvg(n, painter, mat)).join('\n')
-  const properties = Object.entries(node.properties)
-    .map(([k, v]) => `${k}=${JSON.stringify(v)}`)
-    .join(' ')
-
-  if (!children) return `<${node.tagName} ${properties}/>`
-
-  return `<${node.tagName} ${properties}>\n${children}\n</${node.tagName}>`
+  return normalize(path.pathSegList).getAttribute('d')
 }
 
 const components: Options['components'] = {
@@ -161,19 +108,6 @@ const components: Options['components'] = {
     }
     return (
       <pdf.View style={{ position: 'relative', alignItems: 'center' }}>
-        {/*<pdf.Canvas
-          style={style}
-          paint={(painter, w, h) => {
-            //painter.rect(0, 0, w, h).fill('gray')
-
-            const viewBox = props.viewBox.split(' ').map(parseFloat)
-
-            painter.scale(w / viewBox[2], h / viewBox[3])
-            painter.translate(-viewBox[0], -viewBox[1])
-
-            drawSvg(props.node, painter)
-          }}
-        />*/}
         <pdf.Svg {...props} style={style}>
           {children}
         </pdf.Svg>
