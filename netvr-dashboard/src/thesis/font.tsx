@@ -218,7 +218,7 @@ export function registerFonts() {
   })
 
   for (const [longName, src] of Object.entries(lmdb)) {
-    Font.register({ family: longName, src: src.toString() })
+    Font.register({ family: longName, src: src.toString(), format: 'otf' })
 
     const [family, mod] = longName.split('-')
     Font.register({
@@ -229,6 +229,7 @@ export function registerFonts() {
         : mod.includes('italic')
         ? 'italic'
         : 'regular',
+      format: 'otf',
       fontWeight: mod.includes('bold') ? 'bold' : 'normal',
     })
   }
