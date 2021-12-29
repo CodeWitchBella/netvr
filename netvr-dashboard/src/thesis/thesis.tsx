@@ -14,21 +14,29 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
 
 let updateInstanceSet = new Set<(doc: typeof DocumentI) => void>()
 
+type Config = { useBuiltIn: boolean }
+const defaultConfig: Config = {
+  useBuiltIn: false,
+}
+
 export function Thesis() {
+  const [config, setConfig] = useReducer(
+    (state: Config, partial: Partial<Config>): Config => {
+      const nextState = { ...state, ...partial }
+      localStorage.setItem('thesis-config', JSON.stringify(nextState))
+      return nextState
+    },
+    null,
+    (): Config => ({
+      ...defaultConfig,
+      ...JSON.parse(localStorage.getItem('thesis-config') || '{}'),
+    }),
+  )
+
   const [Document, setDocument] = useReducer(
     (_: typeof DocumentI, doc: typeof DocumentI) => doc,
     DocumentI,
   )
-  const document = (
-    <PDFContextProvider value={{ lang: 'en' }}>
-      <Document />
-    </PDFContextProvider>
-  )
-
-  //return (<pdf.PDFViewer style={{ flexGrow: 1, border: 0 }}>{document}</pdf.PDFViewer>)
-
-  const [instance, updateInstance] = pdf.usePDF({ document })
-
   if (import.meta.hot) {
     useEffect(() => {
       updateInstanceSet.add(setDocument)
@@ -36,7 +44,51 @@ export function Thesis() {
         updateInstanceSet.delete(setDocument)
       }
     }, [setDocument])
+  }
 
+  if (config.useBuiltIn) {
+    return (
+      <>
+        <ThesisConfig config={config} setConfig={setConfig} />
+        <pdf.PDFViewer style={{ flexGrow: 1, border: 0 }}>
+          <Document />
+        </pdf.PDFViewer>
+      </>
+    )
+  }
+  return (
+    <>
+      <ThesisConfig config={config} setConfig={setConfig} />
+      <ThesisCustom Document={Document} />
+    </>
+  )
+}
+
+function ThesisConfig({
+  config,
+  setConfig,
+}: {
+  config: Config
+  setConfig: (cfg: Partial<Config>) => void
+}) {
+  return (
+    <div>
+      <label>
+        <input
+          type="checkbox"
+          checked={config.useBuiltIn}
+          onChange={(event) => setConfig({ useBuiltIn: event.target.checked })}
+        />{' '}
+        use built-in viewer
+      </label>
+    </div>
+  )
+}
+
+function ThesisCustom({ Document }: { Document: any }) {
+  const [instance, updateInstance] = pdf.usePDF({ document: <Document /> })
+
+  if (import.meta.hot) {
     useEffect(() => {
       if (Document !== DocumentI) updateInstance()
     }, [Document])

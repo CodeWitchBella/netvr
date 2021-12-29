@@ -20,7 +20,9 @@ import rehypeMathjaxSvg from 'rehype-mathjax/svg.js'
 import type * as HAST from 'hast'
 import { chapters } from '../thesis-text/chapters'
 import { visit, SKIP } from 'unist-util-visit'
+// @ts-ignore
 import { normalize } from '../vendor/svgpathnormalizer.js'
+import { Literature } from './literature'
 
 function getText(el: HAST.ElementContent): string {
   if (el.type === 'text') return el.value
@@ -29,7 +31,7 @@ function getText(el: HAST.ElementContent): string {
 }
 
 function remarkRemoveBreaks() {
-  return (tree) => {
+  return (tree: import('mdast').Root) => {
     visit(tree, 'text', (node, index, parent) => {
       if (node.type === 'text') {
         node.value = node.value.replace(/\n/g, ' ')
@@ -39,16 +41,16 @@ function remarkRemoveBreaks() {
 }
 
 function rehypeLigature() {
-  const table = {
+  const table: { [key: string]: string } = {
     '>=': '≥',
     '<=': '≤',
   }
   const regex = new RegExp(`(${Object.keys(table).join('|')})`)
-  return (tree) => {
+  return (tree: import('hast').Root) => {
     visit(tree, 'text', (node, index, parent) => {
       if (node.type === 'text') {
         const match = regex.exec(node.value)
-        if (match) {
+        if (match && parent && index !== null) {
           parent.children.splice(
             index,
             1,
@@ -74,16 +76,36 @@ function rehypeLigature() {
 function normalizePath(d: string) {
   const path = document.createElementNS('http://www.w3.org/2000/svg', 'path')
   path.setAttribute('d', d)
-  return normalize(path.pathSegList).getAttribute('d')
+  return normalize((path as any).pathSegList).getAttribute('d')
 }
 
-const components: Options['components'] = {
-  h1: (props) => <Text>{props.children}</Text>,
-  h2: (props) => <Text>{props.children}</Text>,
+function serializeSvg(node: HAST.Element | HAST.ElementContent): string {
+  const children = ('children' in node ? node.children : [])
+    .map((n) => serializeSvg(n))
+    .join('\n')
+  let properties = Object.entries(
+    'properties' in node ? node.properties ?? {} : {},
+  )
+    .filter(([k]) => !['dataMmlNode', 'dataC'].includes(k))
+    .map(([k, v]) => `${k}=${JSON.stringify(v)}`)
+    .join(' ')
+  if (properties) properties = ' ' + properties
+  if (!children && !properties) return ''
+  if (!('tagName' in node)) return ''
+  if (!children) return `<${node.tagName}${properties}/>`
+  if (!properties && node.tagName === 'g') return children
+
+  return `<${node.tagName}${properties}>\n${children}\n</${node.tagName}>`
+}
+
+type NotUndefined<T> = T extends undefined ? never : T
+const components: NotUndefined<Options['components']> = {
+  h1: (props) => <pdf.Text>{props.children}</pdf.Text>,
+  h2: (props) => <pdf.Text>{props.children}</pdf.Text>,
   p: (props) => {
     if (
       props.node.children.length === 1 &&
-      props.node.children[0].tagName === 'mjx-container'
+      (props.node.children[0] as any).tagName === 'mjx-container'
     ) {
       return <>{props.children}</>
     }
@@ -99,27 +121,52 @@ const components: Options['components'] = {
   // MathJax
   svg: ({ children, width, height, ...props }) => {
     const size = {
-      width: parseFloat(width.replace(/[^0-9.]/g, '')) * 11,
-      height: parseFloat(height.replace(/[^0-9.]/g, '')) * 11,
+      width: parseFloat((width + '').replace(/[^0-9.]/g, '')) * 11,
+      height: parseFloat((height + '').replace(/[^0-9.]/g, '')) * 11,
     }
     const style = {
       width: size.width + 'pt',
       height: size.height + 'pt',
     }
+    if (false) {
+      return (
+        <pdf.Text
+          style={{
+            letterSpacing: style.width,
+            lineHeight: size.height / 11,
+            textDecorationStyle: 'solid',
+            textDecorationColor: 'black',
+            textDecoration: 'underline',
+            position: 'relative',
+            backgroundColor: 'green',
+          }}
+        >
+          <pdf.View
+            style={{ position: 'absolute', backgroundColor: 'green', ...style }}
+            debug
+          ></pdf.View>
+          {'\u200B\u200B' /* two zero-width spaces */}
+        </pdf.Text>
+      )
+    }
+    //console.log()
+
     return (
-      <pdf.View style={{ position: 'relative', alignItems: 'center' }}>
-        <pdf.Svg {...props} style={style}>
+      <pdf.View style={{ alignSelf: 'center', ...style }}>
+        <pdf.Svg {...(props as any)} style={style}>
           {children}
         </pdf.Svg>
       </pdf.View>
     )
   },
-  g: pdf.G,
-  defs: pdf.Defs,
-  path: ({ d, ...props }) => <pdf.Path d={normalizePath(d)} {...props} />,
-  rect: pdf.Rect,
+  g: pdf.G as any,
+  defs: pdf.Defs as any,
+  path: ({ d, ...props }) => (
+    <pdf.Path d={d ? normalizePath(d) : d} {...(props as any)} />
+  ),
+  rect: pdf.Rect as any,
   //span: (props) => console.log(props) || <>{props.children}</>,
-  'mjx-container': (props) => <>{props.children}</>,
+  ...({ 'mjx-container': (props: any) => <>{props.children}</> } as any),
 
   // Numbered sections
   section: (props) => {
@@ -207,6 +254,7 @@ export function Document() {
             {text}
           </MarkdownChapter>
         ))}
+        <Literature />
       </Page>
     </PDFDocument>
   )
