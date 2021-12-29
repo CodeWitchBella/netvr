@@ -19,8 +19,8 @@ import remarkMath from 'remark-math'
 import rehypeMathjaxSvg from 'rehype-mathjax/svg.js'
 import type * as HAST from 'hast'
 import { chapters } from '../thesis-text/chapters'
-
 import { visit, SKIP } from 'unist-util-visit'
+import { normalize } from '../vendor/svgpathnormalizer.js'
 
 function getText(el: HAST.ElementContent): string {
   if (el.type === 'text') return el.value
@@ -71,7 +71,14 @@ function rehypeLigature() {
   }
 }
 
+function normalizePath(d: string) {
+  const path = document.createElementNS('http://www.w3.org/2000/svg', 'path')
+  path.setAttribute('d', d)
+  return normalize(path.pathSegList)._pathElement.getAttribute('d')
+}
+
 function drawSvg(node: any, painter: any, matIn = [1, 0, 0, 1, 0, 0]) {
+  window.normalize = normalize
   let mat = [...matIn]
   function applyMatrix(m11, m12, m21, m22, dx, dy) {
     const [m0, m1, m2, m3, m4, m5] = mat
@@ -96,32 +103,31 @@ function drawSvg(node: any, painter: any, matIn = [1, 0, 0, 1, 0, 0]) {
         console.log(cssTransform)
       }
     }
-  } else if (node.tagName === 'path') {
+  } else {
     painter.save()
-    painter
-      .translate(mat[4], mat[5])
-      .scale(mat[0], mat[3])
-      .path(node.properties.d)
-      .fillAndStroke('black', 'black')
-    painter.restore()
-  } else if (node.tagName === 'rect') {
-    painter.save()
-    painter
-      .translate(mat[4], mat[5])
-      .scale(mat[0], mat[3])
-      .rect(
+    painter.translate(mat[4], mat[5]).scale(mat[0], mat[3])
+
+    if (node.tagName === 'path') {
+      painter.path(normalizePath(node.properties.d))
+    } else if (node.tagName === 'rect') {
+      painter.rect(
         ...['x', 'y', 'width', 'height'].map((v) =>
           parseFloat(node.properties[v]),
         ),
       )
-      .fillAndStroke('black', 'black')
-    painter.restore()
-  } else {
-    //console.log(node)
+    } else {
+      //console.log(node)
+    }
+    painter.lineWidth(1).fillAndStroke('black', 'black').restore()
   }
   const children = node.children.map((n) => drawSvg(n, painter, mat)).join('\n')
+  const properties = Object.entries(node.properties)
+    .map(([k, v]) => `${k}=${JSON.stringify(v)}`)
+    .join(' ')
 
-  return `<${node.tagName}>${children}\n</${node.tagName}>`
+  if (!children) return `<${node.tagName} ${properties}/>`
+
+  return `<${node.tagName} ${properties}>\n${children}\n</${node.tagName}>`
 }
 
 const components: Options['components'] = {
@@ -146,30 +152,29 @@ const components: Options['components'] = {
   // MathJax
   svg: ({ children, width, height, ...props }) => {
     const size = {
-      width: parseFloat(width.replace(/[^0-9.]/g, '')) * 22,
-      height: parseFloat(height.replace(/[^0-9.]/g, '')) * 22,
+      width: parseFloat(width.replace(/[^0-9.]/g, '')) * 11,
+      height: parseFloat(height.replace(/[^0-9.]/g, '')) * 11,
     }
     const style = {
       width: size.width + 'pt',
       height: size.height + 'pt',
     }
     return (
-      <pdf.View style={{ position: 'relative' }}>
-        <pdf.Canvas
+      <pdf.View style={{ position: 'relative', alignItems: 'center' }}>
+        {/*<pdf.Canvas
           style={style}
           paint={(painter, w, h) => {
-            painter.rect(0, 0, w, h).fill('gray')
+            //painter.rect(0, 0, w, h).fill('gray')
 
             const viewBox = props.viewBox.split(' ').map(parseFloat)
-            console.log(viewBox)
 
             painter.scale(w / viewBox[2], h / viewBox[3])
             painter.translate(-viewBox[0], -viewBox[1])
 
-            console.log(drawSvg(props.node, painter))
+            drawSvg(props.node, painter)
           }}
-        />
-        <pdf.Svg {...props} style={[props.style, style]}>
+        />*/}
+        <pdf.Svg {...props} style={style}>
           {children}
         </pdf.Svg>
       </pdf.View>
@@ -177,7 +182,7 @@ const components: Options['components'] = {
   },
   g: pdf.G,
   defs: pdf.Defs,
-  path: pdf.Path,
+  path: ({ d, ...props }) => <pdf.Path d={normalizePath(d)} {...props} />,
   rect: pdf.Rect,
   //span: (props) => console.log(props) || <>{props.children}</>,
   'mjx-container': (props) => <>{props.children}</>,

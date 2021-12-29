@@ -1,15 +1,16 @@
 /**
  * SVGPathNormalizer
  * https://github.com/motooka/SVGPathNormalizer
- * 
+ *
  * Copyright (c) Tadahisa Motooka
  * Licensed under the MIT license
  * See the file "LICENSE" for more detail.
- * 
+ *
  */
-var SVGPathNormalizer = {};
+import './pathseg.js'
 
-SVGPathNormalizer.normalize = function(pathSegList) {
+// prettier-ignore
+export function normalize(pathSegList) {
 	var path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
 	var newPathSegList = path.pathSegList;
 	var seg = null;
@@ -146,7 +147,7 @@ SVGPathNormalizer.normalize = function(pathSegList) {
 				var firstControlX = curX;
 				var firstControlY = curY;
 				if(lastCommandIsCubicBezier) {
-					var refl = SVGPathNormalizer.getReflectionPoint(lastControlX, lastControlY, curX, curY);
+					var refl = getReflectionPoint(lastControlX, lastControlY, curX, curY);
 					firstControlX = refl.x;
 					firstControlY = refl.y;
 				}
@@ -162,7 +163,7 @@ SVGPathNormalizer.normalize = function(pathSegList) {
 				var firstControlX = curX;
 				var firstControlY = curY;
 				if(lastCommandIsCubicBezier) {
-					var refl = SVGPathNormalizer.getReflectionPoint(lastControlX, lastControlY, curX, curY);
+					var refl = getReflectionPoint(lastControlX, lastControlY, curX, curY);
 					firstControlX = refl.x;
 					firstControlY = refl.y;
 				}
@@ -178,7 +179,7 @@ SVGPathNormalizer.normalize = function(pathSegList) {
 				var firstControlX = curX;
 				var firstControlY = curY;
 				if(lastCommandIsQuadraticBezier) {
-					var refl = SVGPathNormalizer.getReflectionPoint(lastControlX, lastControlY, curX, curY);
+					var refl = getReflectionPoint(lastControlX, lastControlY, curX, curY);
 					firstControlX = refl.x;
 					firstControlY = refl.y;
 				}
@@ -194,7 +195,7 @@ SVGPathNormalizer.normalize = function(pathSegList) {
 				var firstControlX = curX;
 				var firstControlY = curY;
 				if(lastCommandIsQuadraticBezier) {
-					var refl = SVGPathNormalizer.getReflectionPoint(lastControlX, lastControlY, curX, curY);
+					var refl = getReflectionPoint(lastControlX, lastControlY, curX, curY);
 					firstControlX = refl.x;
 					firstControlY = refl.y;
 				}
@@ -229,11 +230,11 @@ SVGPathNormalizer.normalize = function(pathSegList) {
 	}
 	
 	return newPathSegList;
-};
+}
 
-SVGPathNormalizer.getReflectionPoint = function(lastControlX, lastControlY, curX, curY) {
-	return {
-		x: curX + (curX - lastControlX),
-		y: curY + (curY - lastControlY)
-	};
-};
+function getReflectionPoint(lastControlX, lastControlY, curX, curY) {
+  return {
+    x: curX + (curX - lastControlX),
+    y: curY + (curY - lastControlY),
+  }
+}
