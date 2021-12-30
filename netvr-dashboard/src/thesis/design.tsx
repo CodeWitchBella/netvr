@@ -15,6 +15,7 @@ export function Paragraph({
       style={{
         fontSize: 11,
         textIndent: first ? 0 : '4.338mm',
+        textAlign: 'justify',
       }}
     >
       {children}
@@ -144,16 +145,20 @@ export function Section({
           paddingLeft: '4.5mm',
         }}
       >
-        <TechnikaText
-          style={{
-            fontWeight: 'bold',
-            fontSize: 14.52,
-            marginBottom: '0.5mm',
-          }}
-        >
-          {useContext(chapterContext)}.{no}
-        </TechnikaText>
-        <pdf.View style={{ width: '5.4mm' }} />
+        {no ? (
+          <>
+            <TechnikaText
+              style={{
+                fontWeight: 'bold',
+                fontSize: 14.52,
+                marginBottom: '0.5mm',
+              }}
+            >
+              {useContext(chapterContext)}.{no}
+            </TechnikaText>
+            <pdf.View style={{ width: '5.4mm' }} />
+          </>
+        ) : null}
         <TechnikaText
           style={{
             fontWeight: 'bold',

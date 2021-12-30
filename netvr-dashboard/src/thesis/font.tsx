@@ -239,18 +239,21 @@ export function LMText({
   children,
   style,
   fontFamily,
-  noFontSize,
+  automaticFontSize = true,
   ...rest
-}: pdf.TextProps & { fontFamily: keyof typeof lmdb; noFontSize?: true }) {
+}: pdf.TextProps & {
+  fontFamily: keyof typeof lmdb
+  automaticFontSize?: boolean
+}) {
   return (
     <pdf.Text
       {...rest}
       style={[
         {
           fontFamily: fontFamily,
-          fontSize: noFontSize
-            ? undefined
-            : parseInt(fontFamily.replace(/[^0-9]/g, ''), 10) || undefined,
+          fontSize: automaticFontSize
+            ? parseInt(fontFamily.replace(/[^0-9]/g, ''), 10) || undefined
+            : undefined,
         } as Style,
       ]
         .concat(style ?? [])

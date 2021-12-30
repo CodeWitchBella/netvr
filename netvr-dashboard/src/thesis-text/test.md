@@ -1,6 +1,6 @@
 # test
 
-_Hello_ world >= :cite[smith04]
+_Hello_ world >=
 
 ## Another
 

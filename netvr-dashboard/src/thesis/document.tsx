@@ -28,7 +28,9 @@ export function Document() {
   const { lang } = usePDFContext()
   const parsed = markdownListToAst(chapters.map(([key, text]) => text))
 
-  console.log(parsed.citeMap)
+  const unused = Object.entries(citations)
+    .filter(([key]) => !(key in parsed.citeMap))
+    .map(([id, value]) => ({ ...value, id }))
 
   return (
     <PDFDocument>
@@ -52,13 +54,12 @@ export function Document() {
           </MarkdownChapter>
         ))}
         <Literature
-          citations={Object.entries(citations)
-            .map(([id, value]) => {
-              const index = parsed.citeMap[id]
-              if (!index) return null
-              return { ...value, id, index }
-            })
-            .filter(notNull)}
+          citations={Object.entries(parsed.citeMap)
+            .sort(([_1, a], [_2, b]) => a - b)
+            .map(([id, index]) => {
+              return { data: citations[id], id, index }
+            })}
+          unused={unused}
         />
       </Page>
     </PDFDocument>

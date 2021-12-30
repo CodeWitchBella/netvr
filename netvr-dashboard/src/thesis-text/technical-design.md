@@ -24,33 +24,33 @@ prodávaného zástupce.
 
 Jako zástupce inside-out jsem zvolila Oculus Quest 2 používající sledovací
 systém Insight. Toto je nejčastější headset používaný i v desktop módu podle
-Steam Hardware Survey:cite[steam-hardware-survey]. Aplikace je na tomto
-headsetu možné spouštět dvěmi
-způsoby - přímo na headsetu nebo na připojeném počítači. Chtěla bych podporovat
-obě možnosti. Na připojení počítače je možné použít několik různých kombinací
-software. Jedna možnost je připojení přes USB a použití Oculus Link s nebo bez
-SteamVR. Další je použití WiFi a Oculus AirLink, opět s použitím SteamVR, nebo
-bez použití SteamVR. Existuje i několik dalších možností jako je AMD
-ReliveVR[6], Virtual Desktop (ten jsem nezkoušela, neboť je placený a vypadá to,
-že mám problém s enkódování videostreamu na počítači s čímž by VD nepomohl) nebo
-ALVR[5], které všechny fungují přes SteamVR a WiFi. Zde mi na mém počítači bez
-znatelné latence fungoval pouze Oculus Link přes USB, takže jsem se rozhodla
-použít ten v kombinaci se SteamVR pro snadnější přepínání mezi headsety při
-testování. (holy mother of condensed text, tohle asi pro výslednou práci smažu,
-ale mám to tady, abych věděla co jsem zkoušela)
+Steam Hardware Survey:cite[steam-hardware-survey]. Aplikace je na tomto headsetu
+možné spouštět dvěmi způsoby - přímo na headsetu nebo na připojeném počítači.
+Chtěla bych podporovat obě možnosti. Na připojení počítače je možné použít
+několik různých kombinací software. Jedna možnost je připojení přes USB a
+použití Oculus Link s nebo bez SteamVR. Další je použití WiFi a Oculus AirLink,
+opět s použitím SteamVR, nebo bez použití SteamVR. Existuje i několik dalších
+možností jako je AMD ReliveVR:cite[relive-vr], Virtual Desktop (ten jsem
+nezkoušela, neboť je placený a vypadá to, že mám problém s enkódování
+videostreamu na počítači s čímž by VD nepomohl) nebo ALVR:cite[alvr], které
+všechny fungují přes SteamVR a WiFi. Zde mi na mém počítači bez znatelné latence
+fungoval pouze Oculus Link přes USB, takže jsem se rozhodla použít ten v
+kombinaci se SteamVR pro snadnější přepínání mezi headsety při testování. (holy
+mother of condensed text, tohle asi pro výslednou práci smažu, ale mám to tady,
+abych věděla co jsem zkoušela)
 
 ## Offline část
 
-Pro implementaci jsem se rozhodla použít engine Unity[2] a to hlavně z toho
+Pro implementaci jsem se rozhodla použít engine Unity:cite[unity] a to hlavně z toho
 důvodu, že s ním umím a také protože při pokusu o použití Unreal Engine 5
-preview 2[3] mi Unreal vykresloval špatný obraz do pravého oka a mě se to
+preview 2:cite[unreal5] mi Unreal vykresloval špatný obraz do pravého oka a mě se to
 nechtělo řešit.
 
 Unity poskytuje dvě metody vykreslování VR obsahu. Platform specific API (OpenVR
 při použití SteamVR, VRAPI na Oculus platformách), nebo Khronos OpenXR. Platform
 specific API jsou starší a v některých případech poskytují víc funkcionality.
 Oproti tomu OpenXR je technologie, která v budoucnu má všude staré API nahradit
-(například na platformě Meta Quest je VRAPI deprecated). Hlavní nevýhoda OpenXR
+(například na platformě Meta Quest je VRAPI deprecated:cite[oculus-openxr]). Hlavní nevýhoda OpenXR
 je, že mimo Microsoft-only rozšíření neobsahuje způsob jak získat modely
 ovladačů a nedostupnost plně funkčního hand trackingu na Meta Questu. Zde jsem
 se rozhodla použít OpenXR, protože s jeho použitím není třeba nijak upravovat
@@ -62,9 +62,9 @@ musím být schopná načíst modely ovladačů ostatních headsetů. Jedna cest
 se ubírá mnoho VR titulů je nepoužít realistické modely reálných headsetů, ale
 jiné zástupné modely. Já jsem se z důvodu lepší uživatelské přívětivosti a
 snazšího vysvětlování novým uživatelům rozhodla ovladače načítat. Jako zdroj
-modelů jsem použila WebXR Input Profiles projektu Immersive Web[7]. Ovladače
-načítám pomocí knihovny glTFast[9] z OpenUPM[10]. Zde se ukázalo, že modely jsou
-chybně umístěné relativně vůči realitě[8]. Toto znamená, že mohu podporovat
+modelů jsem použila WebXR Input Profiles projektu Immersive Web:cite[controller-models]. Ovladače
+načítám pomocí knihovny glTFast:cite[gltfast] z OpenUPM:cite[openupm]. Zde se ukázalo, že modely jsou
+chybně umístěné relativně vůči realitě:cite[unaligned-controller-issue]. Toto znamená, že mohu podporovat
 pouze headsety ve kterých mojí aplikaci můžu vyzkoušet, což je trochu
 nepříjemné. Uvažuji nad vytvoření modelů z .obj souborů dostupných v instalaci
 SteamVR, které se zdají být přesnější. Prozatím to však stačí a modely pro
@@ -73,7 +73,7 @@ Oculus Touch controllery a Vive Wands mám zarovnané správně.
 Pro načítání dalších modelů headsetů bude potřeba obejít unity, protože
 neposkytuje dostatečně detailní popis zařízení - pouze nespecifický Head
 Tracking - OpenXR. Pro nalezení informací, které OpenXR poskytuje, ale unity ne
-lze použít OpenXR Explorer[14]
+lze použít OpenXR Explorer:cite[openxr-explorer]
 
 Pro umístění modelů ve virtuálním světě a reakci na stisknutí jejich tlačítek je
 ještě nutné vybrat input systém - unity legacy, nebo nový input systém. Zde jsem
@@ -129,7 +129,7 @@ Everything is little-endian (C# implementation note: use System.Buffers.Binary
 correct).
 
 Some integers are written as 7BitEncodedInt which is same as in C#’s binary
-writer[12]. It makes sure that smaller integers are encoded as fewer bytes with
+writer:cite[7bit-int]. It makes sure that smaller integers are encoded as fewer bytes with
 the tradeoff that large integers (>= 2^28) take five bytes.
 
 Int32 Client ID. It is associated with the connection which means that it does

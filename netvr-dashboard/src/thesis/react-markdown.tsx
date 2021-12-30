@@ -162,13 +162,12 @@ const components: NotUndefined<ReactMarkdownOptions['components']> = {
     ) {
       return <>{props.children}</>
     }
-    if (citeBack.length) console.log(citeBack)
     return (
       <>
         {citeBack.map((cite) => (
           <pdf.Text key={cite} id={'cite-back-' + cite}></pdf.Text>
         ))}
-        <Paragraph>{props.children}</Paragraph>
+        <Paragraph first={props.index === 1}>{props.children}</Paragraph>
       </>
     )
   },
