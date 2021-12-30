@@ -12,12 +12,14 @@ import { notNull } from '@isbl/ts-utils'
 function MarkdownChapter({
   children,
   index,
+  id,
 }: {
   children: any
   index: number
+  id: string
 }) {
   return (
-    <ChapterProvider index={index}>
+    <ChapterProvider index={index} id={id}>
       <ReactMarkdown hast={children} />
     </ChapterProvider>
   )
@@ -80,16 +82,21 @@ export function Document() {
           </LMText>
         </pdf.View>
         <pdf.View break={true}>
-          <pdf.Text>Backside of zadání</pdf.Text>
+          <LMText fontFamily="lmroman10-regular">
+            Page intentionally left blank
+          </LMText>
         </pdf.View>
       </Page>
 
       <Page>
-        {parsed.asts.map((ast, index) => (
-          <MarkdownChapter index={index + 1} key={chapters[index][0]}>
-            {ast}
-          </MarkdownChapter>
-        ))}
+        {parsed.asts.map((ast, index) => {
+          const id = chapters[index][0]
+          return (
+            <MarkdownChapter index={index + 1} key={id} id={id}>
+              {ast}
+            </MarkdownChapter>
+          )
+        })}
         <References
           citations={Object.entries(parsed.citeMap)
             .sort(([_1, a], [_2, b]) => a - b)

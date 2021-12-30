@@ -16,9 +16,12 @@
     "react-router-dom": "^6.2.1",
     "rehype-mathjax": "^4.0.2",
     "remark-directive": "^2.0.1",
+    "remark-gfm": "^3.0.1",
     "remark-math": "^5.1.1",
     "remark-remove-comments": "^0.2.0",
     "remark-sectionize": "^1.1.1",
+    "remark-truncate-links": "^1.0.3",
+    "remark-unwrap-images": "^3.0.1",
     "unist-util-visit": "^4.1.0"
   },
   "devDependencies": {

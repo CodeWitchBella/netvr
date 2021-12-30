@@ -3,7 +3,7 @@ import technicalDesign from './technical-design.md?raw'
 
 export const chapters: readonly (readonly [string, string])[] = Object.entries({
   test,
-  technicalDesign,
+  'technical-design': technicalDesign,
 })
 
 export type Citation = {

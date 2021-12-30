@@ -1,0 +1,91 @@
+import { visit, SKIP } from 'unist-util-visit'
+import unimath from './unimath-table.opm?raw'
+
+let table: Map<string, string>
+let escapes: Map<string, string>
+let escapesRegex = /\\([a-z]+)/
+let regex: RegExp
+function initTable() {
+  if (!table) {
+    table = new Map(
+      Object.entries({
+        '>=': '≥',
+        '<=': '≤',
+        '<-': '\\leftarrow',
+      }),
+    )
+    let regStr = ''
+    for (const key of table.keys()) {
+      if (regStr) regStr += '|'
+      regStr += key
+    }
+    regex = new RegExp(`(${regStr})`)
+
+    escapes = new Map()
+
+    for (const line of unimath.split('\n')) {
+      const match =
+        /^\\UnicodeMathSymbol{"0([0-9A-F]+)}{\\([a-z]+) *}{\\[a-z]+}{([^}]+)}%$/.exec(
+          line,
+        )
+      if (!match) continue
+      const sym = String.fromCodePoint(Number.parseInt(match[1], 16))
+      escapes.set(match[2], sym)
+    }
+  }
+}
+export function rehypeLigature() {
+  initTable()
+  return (tree: import('hast').Root) => {
+    visit(tree, (node, index, parent) => {
+      if (
+        node.type === 'element' &&
+        node.properties?.className?.includes('math')
+      ) {
+        return [SKIP]
+      }
+
+      if (node.type === 'text' && parent && index !== null) {
+        const match = regex.exec(node.value)
+        const match2 = escapesRegex.exec(node.value)
+
+        if (match || match2) console.log(match, match2)
+
+        if (match && match2 && match2.index < match.index) {
+          return replace(node, parent, match2, index)
+        }
+
+        if (match) {
+          return replace(node, parent, match, index)
+        }
+
+        if (match2) {
+          return replace(node, parent, match2, index)
+        }
+      }
+    })
+  }
+}
+
+function replace(node: any, parent: any, match: any, index: number) {
+  let replacement = table.get(match[1]) ?? match[0]
+  if (replacement.startsWith('\\'))
+    replacement = escapes.get(replacement.slice(1))
+
+  parent.children.splice(
+    index,
+    1,
+    { type: 'text', value: node.value.substring(0, match.index) },
+    {
+      type: 'element',
+      tagName: 'em',
+      properties: { math: true },
+      children: [{ type: 'text', value: replacement }],
+    },
+    {
+      type: 'text',
+      value: node.value.substring(match.index + match[0].length),
+    },
+  )
+  return [SKIP, index + 2]
+}

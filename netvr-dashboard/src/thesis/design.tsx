@@ -1,5 +1,5 @@
 import pdf from '@react-pdf/renderer'
-import { createContext, PropsWithChildren, useContext } from 'react'
+import { createContext, PropsWithChildren, useContext, useMemo } from 'react'
 import { Page, TechnikaText } from './base'
 import { colors } from './colors'
 import { LMText } from './font'
@@ -67,14 +67,19 @@ export function Strong({ children }: PropsWithChildren<{}>) {
   )
 }
 
-const chapterContext = createContext(0)
+const chapterContext = createContext({ no: 0, id: '' })
 
 export function ChapterProvider({
   index,
+  id,
   children,
-}: PropsWithChildren<{ index: number }>) {
+}: PropsWithChildren<{ index: number; id: string }>) {
   return (
-    <chapterContext.Provider value={index}>{children}</chapterContext.Provider>
+    <chapterContext.Provider
+      value={useMemo(() => ({ no: index, id }), [index, id])}
+    >
+      {children}
+    </chapterContext.Provider>
   )
 }
 
@@ -82,12 +87,15 @@ export function Chapter({
   children,
   title,
   no,
-}: PropsWithChildren<{ title: string; no?: number }>) {
-  const chapterNoFromContext = useContext(chapterContext)
-  no = no ?? chapterNoFromContext
+  id,
+}: PropsWithChildren<{ title: string; no?: number; id?: string }>) {
+  const ctx = useContext(chapterContext)
+  no = no ?? ctx.no
+  id = id ?? ctx.id
   return (
     <>
       <pdf.View
+        id={'chapter-' + id}
         break={no !== 1}
         wrap={false}
         style={{

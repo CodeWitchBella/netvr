@@ -1,6 +1,5 @@
 import pdf from '@react-pdf/renderer'
-import { Page, usePDFContext, View, TechnikaText } from './base'
-import { Chapter, Paragraph, Section, Strong, Em } from './design'
+import { Chapter, Paragraph, Section, Strong, Em, TODO, Link } from './design'
 import { LMText } from './font'
 import sectionPlugin from 'remark-sectionize'
 import commentPlugin from 'remark-remove-comments'
@@ -9,6 +8,10 @@ import rehypeMathjaxSvg from 'rehype-mathjax/svg.js'
 import type * as HAST from 'hast'
 import { visit, SKIP } from 'unist-util-visit'
 import remarkDirective from 'remark-directive'
+import remarkUnwrapImages from 'remark-unwrap-images'
+import remarkGfm from 'remark-gfm'
+import { rehypeLigature } from './ligatures'
+import { remarkTruncateLinks } from 'remark-truncate-links'
 // @ts-ignore
 import { normalize } from '../vendor/svgpathnormalizer.js'
 import { Fragment } from 'react'
@@ -86,33 +89,20 @@ function remarkCiteCounter() {
   }
 }
 
-function rehypeLigature() {
-  const table: { [key: string]: string } = {
-    '>=': '≥',
-    '<=': '≤',
-  }
-  const regex = new RegExp(`(${Object.keys(table).join('|')})`)
-  return (tree: import('hast').Root) => {
-    visit(tree, 'text', (node, index, parent) => {
-      if (node.type === 'text') {
-        const match = regex.exec(node.value)
-        if (match && parent && index !== null) {
-          parent.children.splice(
-            index,
-            1,
-            { type: 'text', value: node.value.substring(0, match.index) },
-            {
-              type: 'element',
-              tagName: 'em',
-              properties: { math: true },
-              children: [{ type: 'text', value: table[match[0]] }],
-            },
-            {
-              type: 'text',
-              value: node.value.substring(match.index + match[0].length),
-            },
-          )
-          return [SKIP, index + 2]
+function remarkGenericDirective() {
+  return (tree: import('mdast').Root) => {
+    visit(tree, (node) => {
+      const isDirective =
+        node.type === 'textDirective' ||
+        node.type === 'leafDirective' ||
+        node.type === 'containerDirective'
+      if (isDirective && !node.data) {
+        node.data = {
+          hName: 'isbl-directive',
+          hProperties: {
+            ...node.attributes,
+            directive: node.name.toLowerCase(),
+          },
         }
       }
     })
@@ -177,6 +167,8 @@ const components: NotUndefined<ReactMarkdownOptions['components']> = {
       return <LMText fontFamily="latinmodern-math">{props.children}</LMText>
     return <Em>{props.children}</Em>
   },
+  a: (props) => <Link src={props.href}>{props.children}</Link>,
+  img: (props) => <pdf.Image src={props.src} style={{ maxWidth: '100%' }} />,
 
   // MathJax
   svg: ({ children, width, height, ...props }) => {
@@ -228,8 +220,8 @@ const components: NotUndefined<ReactMarkdownOptions['components']> = {
   ...({ 'mjx-container': (props: any) => <>{props.children}</> } as any),
   style: () => null,
 
-  // cite
   ...{
+    // cite
     'isbl-cite': (props: any) => (
       <pdf.Text>
         <pdf.Link
@@ -240,6 +232,15 @@ const components: NotUndefined<ReactMarkdownOptions['components']> = {
         </pdf.Link>
       </pdf.Text>
     ),
+
+    'isbl-directive': (props: any) => {
+      if (props.directive === 'todo') return <TODO>{props.children}</TODO>
+      if (props.directive === 'pagebreak') return <pdf.View break={true} />
+      if (props.directive === 'nowrap')
+        return <pdf.View wrap={false}>{props.children}</pdf.View>
+      console.warn('Unknown directive', props)
+      return null
+    },
   },
 
   // Numbered sections
@@ -262,7 +263,7 @@ const components: NotUndefined<ReactMarkdownOptions['components']> = {
         )
       }
     }
-    return <View>{props.children}</View>
+    return <pdf.View>{props.children}</pdf.View>
   },
 }
 
@@ -274,7 +275,7 @@ const allowElement: ReactMarkdownOptions['allowElement'] = (
   const allow = element.tagName in components
   if (
     element.tagName === 'span' &&
-    (element.properties.className as any)?.includes('math')
+    (element.properties?.className as any)?.includes('math')
   ) {
     return false
   }
@@ -294,6 +295,10 @@ const options: Omit<ReactMarkdownOptions, 'children'> = {
     sectionPlugin,
     commentPlugin,
     remarkMath,
+    remarkGenericDirective,
+    remarkUnwrapImages,
+    remarkGfm,
+    [remarkTruncateLinks, { style: 'smart', length: 40 }],
   ],
   rehypePlugins: [
     rehypeLigature,

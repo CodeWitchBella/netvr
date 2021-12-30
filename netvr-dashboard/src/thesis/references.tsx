@@ -11,7 +11,7 @@ export function References({
   unused?: readonly (Data & { id: string })[]
 }) {
   return (
-    <Chapter title="References">
+    <Chapter title="References" id="references">
       {citations.map((cite) => (
         <pdf.View
           key={cite.id}
