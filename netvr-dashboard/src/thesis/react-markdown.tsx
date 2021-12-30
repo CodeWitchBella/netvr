@@ -167,8 +167,14 @@ const components: NotUndefined<ReactMarkdownOptions['components']> = {
       return <LMText fontFamily="latinmodern-math">{props.children}</LMText>
     return <Em>{props.children}</Em>
   },
-  a: (props) => <Link src={props.href}>{props.children}</Link>,
+  a: (props) =>
+    props.href ? (
+      <Link src={props.href}>{props.children}</Link>
+    ) : (
+      <>{props.children}</>
+    ),
   img: (props) => <pdf.Image src={props.src} style={{ maxWidth: '100%' }} />,
+  code: (props) => <pdf.Text>{props.children}</pdf.Text>,
 
   // MathJax
   svg: ({ children, width, height, ...props }) => {

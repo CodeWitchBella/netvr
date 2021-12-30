@@ -175,7 +175,7 @@ export function Section({
                 marginBottom: '0.5mm',
               }}
             >
-              {useContext(chapterContext)}.{no}
+              {useContext(chapterContext).no}.{no}
             </TechnikaText>
             <View style={{ width: '5.4mm' }} />
           </>
@@ -196,4 +196,49 @@ export function Section({
   )
 }
 
-export function SplitPage() {}
+export function SplitView({
+  leftTitle,
+  rightTitle,
+  left,
+  right,
+}: {
+  leftTitle: string
+  rightTitle: string
+  left: JSX.Element
+  right: JSX.Element
+}) {
+  const headerStyle = {
+    fontSize: 19,
+    color: colors.blue,
+    fontWeight: 'bold' as const,
+    marginBottom: '6.5mm',
+  }
+  return (
+    <View style={{ flexDirection: 'row', height: '100%', width: '100%' }}>
+      <View style={{ flexGrow: 1, flexBasis: 1 }}>
+        <TechnikaText style={[headerStyle, { alignSelf: 'flex-end' }]}>
+          {leftTitle}
+        </TechnikaText>
+        {left}
+      </View>
+      <View
+        style={{
+          width: '11mm',
+          flexGrow: 0,
+          flexShrink: 0,
+          paddingHorizontal: '3.5mm',
+          alignItems: 'center',
+        }}
+      >
+        <TechnikaText style={headerStyle}>/</TechnikaText>
+        <View
+          style={{ flexGrow: 1, width: '4mm', backgroundColor: colors.blue }}
+        />
+      </View>
+      <View style={{ flexGrow: 1, flexBasis: 1 }}>
+        <TechnikaText style={headerStyle}>{rightTitle}</TechnikaText>
+        {right}
+      </View>
+    </View>
+  )
+}

@@ -88,14 +88,14 @@ export function TitlePage({ title }: { title: string }) {
             Ph.D.
           </TechnikaText>
           <TechnikaText style={style.foot}>
+            Field of study: Open Informatics
+          </TechnikaText>
+          <TechnikaText style={style.foot}>
+            Subfield: Computer Graphics
+          </TechnikaText>
+          <TechnikaText style={style.foot}>
             {month(date.getMonth(), lang)} {date.getFullYear()}
           </TechnikaText>
-          <pdf.Link
-            src="https://isbl.cz/netvr"
-            style={[style.foot, { fontWeight: 'light' }]}
-          >
-            isbl.cz/netvr
-          </pdf.Link>
         </View>
       </HStack>
     </Page>

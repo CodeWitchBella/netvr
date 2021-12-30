@@ -38,18 +38,18 @@ export function rehypeLigature() {
   initTable()
   return (tree: import('hast').Root) => {
     visit(tree, (node, index, parent) => {
-      if (
-        node.type === 'element' &&
-        node.properties?.className?.includes('math')
-      ) {
-        return [SKIP]
+      if (node.type === 'element') {
+        const cn = node.properties?.className
+        if (
+          (Array.isArray(cn) || typeof cn === 'string') &&
+          cn.includes('math')
+        )
+          return [SKIP]
       }
 
       if (node.type === 'text' && parent && index !== null) {
         const match = regex.exec(node.value)
         const match2 = escapesRegex.exec(node.value)
-
-        if (match || match2) console.log(match, match2)
 
         if (match && match2 && match2.index < match.index) {
           return replace(node, parent, match2, index)
@@ -67,7 +67,12 @@ export function rehypeLigature() {
   }
 }
 
-function replace(node: any, parent: any, match: any, index: number) {
+function replace(
+  node: any,
+  parent: any,
+  match: any,
+  index: number,
+): ['skip', number] {
   let replacement = table.get(match[1]) ?? match[0]
   if (replacement.startsWith('\\'))
     replacement = escapes.get(replacement.slice(1))
