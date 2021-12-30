@@ -1,7 +1,8 @@
 # Technický design
 
 <!-- Split out as "requirement analysis" and "technical design" -->
-<!-- Translate to english -->
+
+:todo[Translate to english]
 
 Technický design má mnoho moving parts - interakce s HW, vykreslování a načítání
 modelů, protokol v síťové komunikaci, síťová architektura, architektura serveru.
@@ -99,8 +100,10 @@ TODO, WebSockets (works everywhere, possible to encrypt, well defined, but TCP
 with head-of-line blocking), deno (because compile), miniflare, cloudflare
 workers (because edge). UDP/TCP possible future, but seems to work.
 Velocity/angular velocity delta time extrapolation. Same frame updates. Where to
-transform? Server or client-side. Need to transform position, rotation, but also
-velocity and angular velocity.
+transform? Server or client-side.
+
+The system has to transform not only the position and rotation of all connected
+devices but also their velocity and angular velocity.
 -->
 
 ## Communication protocol

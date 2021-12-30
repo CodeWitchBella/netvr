@@ -1,4 +1,4 @@
-import type { Citation as Data } from '../thesis-text/chapters'
+import type { Reference as Data } from '../thesis-text/chapters'
 import { Chapter, Link, Section } from './design'
 import pdf from '@react-pdf/renderer'
 import { LMText } from './font'

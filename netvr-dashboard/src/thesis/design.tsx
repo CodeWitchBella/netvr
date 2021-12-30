@@ -1,6 +1,6 @@
 import pdf from '@react-pdf/renderer'
 import { createContext, PropsWithChildren, useContext, useMemo } from 'react'
-import { Page, TechnikaText } from './base'
+import { TechnikaText, usePDFContext, View } from './base'
 import { colors } from './colors'
 import { LMText } from './font'
 import type { Style } from '@react-pdf/types/style'
@@ -43,6 +43,8 @@ export function Link({ children, style, ...rest }: pdf.LinkProps) {
 }
 
 export function TODO({ children }: PropsWithChildren<{}>) {
+  const ctx = usePDFContext()
+  if (ctx.production) return null
   return (
     <LMText fontFamily="lmromanslant10-regular" style={{ fontSize: 11 }}>
       <Strong>TODO: </Strong>
@@ -86,25 +88,27 @@ export function ChapterProvider({
 export function Chapter({
   children,
   title,
-  no,
-  id,
+  ...rest
 }: PropsWithChildren<{ title: string; no?: number; id?: string }>) {
   const ctx = useContext(chapterContext)
-  no = no ?? ctx.no
-  id = id ?? ctx.id
+  const pdfContext = usePDFContext()
+  const no = rest.no ?? ctx.no
+  const id = rest.id ?? ctx.id
+  const childContext = useMemo(() => ({ id, no }), [id, no])
   return (
     <>
-      <pdf.View
+      <View
         id={'chapter-' + id}
         break={no !== 1}
         wrap={false}
         style={{
+          position: 'relative',
           flexDirection: 'row',
           alignItems: 'flex-end',
           marginBottom: '5mm',
         }}
       >
-        <pdf.View
+        <View
           style={{
             width: '4mm',
             height: '21mm',
@@ -112,6 +116,13 @@ export function Chapter({
             backgroundColor: colors.blue,
           }}
         />
+        {pdfContext.production ? null : (
+          <View style={{ position: 'absolute', top: 0, left: 0, right: 0 }}>
+            <TechnikaText style={{ textAlign: 'right' }}>
+              #chapter-{id}
+            </TechnikaText>
+          </View>
+        )}
         <TechnikaText
           style={{
             fontWeight: 'bold',
@@ -127,8 +138,10 @@ export function Chapter({
           {'\n'}
           <pdf.Text style={{ color: colors.blue }}>{title}</pdf.Text>
         </TechnikaText>
-      </pdf.View>
-      <chapterContext.Provider value={no}>{children}</chapterContext.Provider>
+      </View>
+      <chapterContext.Provider value={childContext}>
+        {children}
+      </chapterContext.Provider>
     </>
   )
 }
@@ -139,8 +152,8 @@ export function Section({
   no = 0,
 }: PropsWithChildren<{ title: string; no?: number }>) {
   return (
-    <pdf.View style={{ marginTop: '7.8mm' }}>
-      <pdf.View
+    <View style={{ marginTop: '7.8mm' }}>
+      <View
         wrap={false}
         minPresenceAhead={10}
         style={{
@@ -164,7 +177,7 @@ export function Section({
             >
               {useContext(chapterContext)}.{no}
             </TechnikaText>
-            <pdf.View style={{ width: '5.4mm' }} />
+            <View style={{ width: '5.4mm' }} />
           </>
         ) : null}
         <TechnikaText
@@ -177,9 +190,9 @@ export function Section({
         >
           {title}
         </TechnikaText>
-      </pdf.View>
+      </View>
       {children}
-    </pdf.View>
+    </View>
   )
 }
 

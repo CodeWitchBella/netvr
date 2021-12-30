@@ -5,7 +5,7 @@ import { LMText, registerFonts } from './font'
 import { TitlePage } from './title-page'
 const { Document: PDFDocument } = pdf
 import { ReactMarkdown, markdownListToAst } from './react-markdown'
-import { chapters, citations } from '../thesis-text/chapters'
+import { chapters, bibliography } from '../thesis-text/chapters'
 import { References } from './references'
 import { notNull } from '@isbl/ts-utils'
 
@@ -27,10 +27,15 @@ function MarkdownChapter({
 
 export function Document() {
   registerFonts()
-  const { lang } = usePDFContext()
-  const parsed = markdownListToAst(chapters.map(([key, text]) => text))
+  const { lang, production } = usePDFContext()
 
-  const unused = Object.entries(citations)
+  const usedChapters = chapters.filter(
+    (c) => !production || !c[2]?.removeInProduction,
+  )
+
+  const parsed = markdownListToAst(usedChapters.map(([key, text]) => text))
+
+  const unused = Object.entries(bibliography)
     .filter(([key]) => !(key in parsed.citeMap))
     .map(([id, value]) => ({ ...value, id }))
 
@@ -90,7 +95,7 @@ export function Document() {
 
       <Page>
         {parsed.asts.map((ast, index) => {
-          const id = chapters[index][0]
+          const id = usedChapters[index][0]
           return (
             <MarkdownChapter index={index + 1} key={id} id={id}>
               {ast}
@@ -101,7 +106,7 @@ export function Document() {
           citations={Object.entries(parsed.citeMap)
             .sort(([_1, a], [_2, b]) => a - b)
             .map(([id, index]) => {
-              return { data: citations[id], id, index }
+              return { data: bibliography[id], id, index }
             })}
           unused={unused}
         />

@@ -6,5 +6,10 @@
   "cmake.sourceDirectory": "${workspaceFolder}/netvr-cpp",
   "cmake.buildDirectory": "${workspaceFolder}/netvr-cpp/build",
   "typescript.tsdk": "./netvr-dashboard/node_modules/typescript/lib",
-  "cmake.buildArgs": ["--config Release"]
+  "cmake.buildArgs": ["--config Release"],
+  "grammarly.audience": "expert",
+  "grammarly.emotions": ["neutral"],
+  "grammarly.hideUnavailablePremiumAlerts": true,
+  "grammarly.domain": "academic",
+  "grammarly.userWords": [":todo"]
 }

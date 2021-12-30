@@ -1,0 +1,57 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema",
+  "type": "object",
+  "properties": {
+    "references": {
+      "$ref": "#/definitions/references"
+    },
+    "$schema": { "type": "string" }
+  },
+  "additionalProperties": false,
+  "required": ["references"],
+
+  "definitions": {
+    "references": {
+      "type": "object",
+      "additionalProperties": {
+        "$ref": "#/definitions/reference"
+      }
+    },
+    "reference": {
+      "type": "object",
+      "additionalProperties": false,
+      "properties": {
+        "authors": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/author" }
+        },
+        "title": { "type": "string" },
+        "url": { "type": "string" },
+        "date": { "$ref": "#/definitions/date" },
+        "accessed": { "$ref": "#/definitions/date" },
+        "publisher": { "type": "string" },
+        "in": { "type": "string" }
+      }
+    },
+    "author": {
+      "oneOf": [
+        {
+          "type": "object",
+          "properties": { "group": { "type": "string" } },
+          "additionalProperties": false
+        },
+        {
+          "type": "object",
+          "properties": {
+            "firstname": { "type": "string" },
+            "surname": { "type": "string" }
+          },
+          "additionalProperties": false
+        }
+      ]
+    },
+    "date": {
+      "oneOf": [{ "type": "integer" }, { "type": "string", "format": "date" }]
+    }
+  }
+}

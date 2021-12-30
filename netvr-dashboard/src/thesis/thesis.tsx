@@ -1,6 +1,6 @@
 import pdf from '@react-pdf/renderer'
-import { useEffect, useReducer, useRef } from 'react'
-import { PDFContextProvider } from './base'
+import { useEffect, useMemo, useReducer, useRef } from 'react'
+import { PDFContext, PDFContextProvider } from './base'
 import { Document as DocumentI } from './document'
 // @ts-ignore
 import * as pdfjsLib from 'pdfjs-dist/build/pdf.js'
@@ -14,9 +14,10 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
 
 let updateInstanceSet = new Set<(doc: typeof DocumentI) => void>()
 
-type Config = { useBuiltIn: boolean }
+type Config = { useBuiltIn: boolean; production: boolean }
 const defaultConfig: Config = {
   useBuiltIn: false,
+  production: true,
 }
 
 export function Thesis() {
@@ -46,12 +47,22 @@ export function Thesis() {
     }, [setDocument])
   }
 
+  const context = useMemo(
+    (): PDFContext => ({
+      lang: 'en',
+      production: config.production,
+    }),
+    [config],
+  )
+
   if (config.useBuiltIn) {
     return (
       <>
         <ThesisConfig config={config} setConfig={setConfig} />
         <pdf.PDFViewer style={{ flexGrow: 1, border: 0 }}>
-          <Document />
+          <PDFContextProvider value={context}>
+            <Document />
+          </PDFContextProvider>
         </pdf.PDFViewer>
       </>
     )
@@ -59,7 +70,7 @@ export function Thesis() {
   return (
     <>
       <ThesisConfig config={config} setConfig={setConfig} />
-      <ThesisCustom Document={Document} />
+      <ThesisCustom Document={Document} context={context} />
     </>
   )
 }
@@ -72,7 +83,15 @@ function ThesisConfig({
   setConfig: (cfg: Partial<Config>) => void
 }) {
   return (
-    <div>
+    <div
+      style={{
+        gap: 8,
+        display: 'flex',
+        padding: 4,
+        borderBottom: '1px solid gray',
+      }}
+    >
+      <div>Config:</div>
       <label>
         <input
           type="checkbox"
@@ -81,17 +100,37 @@ function ThesisConfig({
         />{' '}
         use built-in viewer
       </label>
+      <label>
+        <input
+          type="checkbox"
+          checked={config.production}
+          onChange={(event) => setConfig({ production: event.target.checked })}
+        />{' '}
+        only final-ready
+      </label>
     </div>
   )
 }
 
-function ThesisCustom({ Document }: { Document: any }) {
-  const [instance, updateInstance] = pdf.usePDF({ document: <Document /> })
+function ThesisCustom({
+  Document,
+  context,
+}: {
+  Document: any
+  context: PDFContext
+}) {
+  const [instance, updateInstance] = pdf.usePDF({
+    document: (
+      <PDFContextProvider value={context}>
+        <Document />
+      </PDFContextProvider>
+    ),
+  })
 
   if (import.meta.hot) {
     useEffect(() => {
       if (Document !== DocumentI) updateInstance()
-    }, [Document])
+    }, [Document, context])
   }
 
   const src = instance.url ? `${instance.url}#toolbar=1` : ''
