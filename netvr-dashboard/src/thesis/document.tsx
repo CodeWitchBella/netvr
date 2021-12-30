@@ -1,12 +1,12 @@
 import pdf from '@react-pdf/renderer'
 import { Page, usePDFContext } from './base'
-import { ChapterProvider } from './design'
+import { ChapterProvider, TODO } from './design'
 import { LMText, registerFonts } from './font'
 import { TitlePage } from './title-page'
 const { Document: PDFDocument } = pdf
 import { ReactMarkdown, markdownListToAst } from './react-markdown'
 import { chapters, citations } from '../thesis-text/chapters'
-import { Literature } from './literature'
+import { References } from './references'
 import { notNull } from '@isbl/ts-utils'
 
 function MarkdownChapter({
@@ -45,6 +45,43 @@ export function Document() {
         <LMText fontFamily="lmroman10-regular">
           Page intentionally left blank
         </LMText>
+        <pdf.View
+          fixed
+          style={{
+            position: 'absolute',
+            bottom: '2cm',
+            left: '32mm',
+            right: '32mm',
+            alignItems: 'center',
+          }}
+          render={({ pageNumber }) => (
+            <pdf.Text style={{ fontFamily: 'lmroman10-regular', fontSize: 11 }}>
+              {
+                ['i', 'ii', 'iii', 'iv', 'v', 'vi', 'vii', 'viii', 'ix', 'x'][
+                  pageNumber - 1
+                ]
+              }
+            </pdf.Text>
+          )}
+        />
+        <pdf.View break={true}>
+          <TODO>Insert official zadání</TODO>
+          <LMText fontFamily="lmroman10-regular" style={{ fontSize: 11 }}>
+            1) Proveďte rešerši technik a postupů umožňujících sledování více
+            uživatelů virtuální reality (VR) ve sdíleném fyzickém prostředí.
+            {'\n'}2) Vyberte vhodné metody s ohledem na dostupné zařízení a
+            náročnost nastavení systému.{'\n'}3) Vybrané metody implementujte a
+            porovnejte s referenčním stabilním systémem (např. optické sledování
+            systémem Vicon / Optitrack či podobnými).{'\n'}4) Důraz bude kladen
+            na bezpečnost uživatelů VR světa. {'\n\n'}-- rozsireni pro DP{'\n'}
+            nejlepe - najit diru v resenich a vyresit ji :){'\n'}pri nejhorsim -
+            vymyslet UseCase a aplikovat to na nej pro TEMVR pripravit tutorial
+            na jedno cviceni (side efect DP)
+          </LMText>
+        </pdf.View>
+        <pdf.View break={true}>
+          <pdf.Text>Backside of zadání</pdf.Text>
+        </pdf.View>
       </Page>
 
       <Page>
@@ -53,13 +90,28 @@ export function Document() {
             {ast}
           </MarkdownChapter>
         ))}
-        <Literature
+        <References
           citations={Object.entries(parsed.citeMap)
             .sort(([_1, a], [_2, b]) => a - b)
             .map(([id, index]) => {
               return { data: citations[id], id, index }
             })}
           unused={unused}
+        />
+        <pdf.View
+          fixed
+          style={{
+            position: 'absolute',
+            bottom: '2cm',
+            left: '32mm',
+            right: '32mm',
+            alignItems: 'center',
+          }}
+          render={({ pageNumber }) => (
+            <pdf.Text style={{ fontFamily: 'lmroman10-regular', fontSize: 11 }}>
+              {pageNumber}
+            </pdf.Text>
+          )}
         />
       </Page>
     </PDFDocument>

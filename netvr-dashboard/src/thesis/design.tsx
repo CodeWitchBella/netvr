@@ -45,7 +45,7 @@ export function Link({ children, style, ...rest }: pdf.LinkProps) {
 export function TODO({ children }: PropsWithChildren<{}>) {
   return (
     <LMText fontFamily="lmromanslant10-regular" style={{ fontSize: 11 }}>
-      <Strong>TODO:</Strong>
+      <Strong>TODO: </Strong>
       {children}
     </LMText>
   )
@@ -88,7 +88,7 @@ export function Chapter({
   return (
     <>
       <pdf.View
-        break={true}
+        break={no !== 1}
         wrap={false}
         style={{
           flexDirection: 'row',

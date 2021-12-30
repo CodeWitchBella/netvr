@@ -274,7 +274,7 @@ const allowElement: ReactMarkdownOptions['allowElement'] = (
   const allow = element.tagName in components
   if (
     element.tagName === 'span' &&
-    element.properties.className.includes('math')
+    (element.properties.className as any)?.includes('math')
   ) {
     return false
   }

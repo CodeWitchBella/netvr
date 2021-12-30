@@ -3,7 +3,7 @@ import { Chapter, Link, Section } from './design'
 import pdf from '@react-pdf/renderer'
 import { LMText } from './font'
 
-export function Literature({
+export function References({
   citations,
   unused,
 }: {
@@ -44,13 +44,17 @@ export function Literature({
       ))}
       <Section title="Unused references">
         {unused?.map((u) => (
-          <LMText
-            fontFamily="lmroman10-regular"
-            style={{ fontSize: 10 }}
-            key={u.id}
-          >
-            [{u.id}]: <Citation data={u} />
-          </LMText>
+          <pdf.View key={u.id}>
+            <LMText
+              fontFamily="lmroman10-regular"
+              style={{ fontSize: 10, marginRight: '3mm' }}
+            >
+              [{u.id}]
+            </LMText>
+            <pdf.View style={{ flexDirection: 'row', paddingLeft: '0.875cm' }}>
+              <Citation data={u} />
+            </pdf.View>
+          </pdf.View>
         )) ?? null}
       </Section>
     </Chapter>
@@ -71,7 +75,7 @@ function Citation({ data }: { data: Data }) {
     <LMText fontFamily="lmroman10-italic">{data.subtitle}. </LMText>
   ) : null
   return (
-    <pdf.View>
+    <pdf.View style={{ flexGrow: 1 }}>
       <LMText fontFamily="lmroman10-regular">
         {data.authors ? (
           <>
@@ -130,6 +134,7 @@ function Citation({ data }: { data: Data }) {
 
 function date(v: string) {
   const [year, month, day] = v.split('-')
+  const narrowNbsp = '\u202F'
   return `${day ?? ''} ${
     [
       '',
@@ -146,5 +151,7 @@ function date(v: string) {
       'Nov',
       'Dec',
     ][parseInt(month, 10) as any] ?? ''
-  } ${year}`.trim()
+  } ${year}`
+    .trim()
+    .replace(/ /g, narrowNbsp)
 }

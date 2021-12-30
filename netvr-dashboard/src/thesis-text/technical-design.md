@@ -64,7 +64,7 @@ jiné zástupné modely. Já jsem se z důvodu lepší uživatelské přívětiv
 snazšího vysvětlování novým uživatelům rozhodla ovladače načítat. Jako zdroj
 modelů jsem použila WebXR Input Profiles projektu Immersive Web:cite[controller-models]. Ovladače
 načítám pomocí knihovny glTFast:cite[gltfast] z OpenUPM:cite[openupm]. Zde se ukázalo, že modely jsou
-chybně umístěné relativně vůči realitě:cite[unaligned-controller-issue]. Toto znamená, že mohu podporovat
+chybně umístěné relativně vůči realitě. Toto znamená, že mohu podporovat
 pouze headsety ve kterých mojí aplikaci můžu vyzkoušet, což je trochu
 nepříjemné. Uvažuji nad vytvoření modelů z .obj souborů dostupných v instalaci
 SteamVR, které se zdají být přesnější. Prozatím to však stačí a modely pro
