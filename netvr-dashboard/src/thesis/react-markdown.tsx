@@ -225,10 +225,8 @@ const components: NotUndefined<ReactMarkdownOptions['components']> = {
     <pdf.Path d={d ? normalizePath(d) : d} {...(props as any)} />
   ),
   rect: pdf.Rect as any,
-  //span: (props) => console.log(props) || <>{props.children}</>,
   ...({ 'mjx-container': (props: any) => <>{props.children}</> } as any),
   style: () => null,
-  span: ({ children }) => <>{children}</>,
 
   // cite
   ...{
@@ -274,6 +272,12 @@ const allowElement: ReactMarkdownOptions['allowElement'] = (
   parent,
 ) => {
   const allow = element.tagName in components
+  if (
+    element.tagName === 'span' &&
+    element.properties.className.includes('math')
+  ) {
+    return false
+  }
   if (!allow) console.warn('Disallowed element:', element)
   return allow
 }
