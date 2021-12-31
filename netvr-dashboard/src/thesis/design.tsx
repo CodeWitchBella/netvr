@@ -23,7 +23,12 @@ export function Paragraph({
   )
 }
 
-export function Link({ children, style, ...rest }: pdf.LinkProps) {
+export function Link({
+  children,
+  style,
+  setFont = false,
+  ...rest
+}: pdf.LinkProps & { setFont?: boolean }) {
   return (
     <pdf.Link
       {...rest}
@@ -31,7 +36,7 @@ export function Link({ children, style, ...rest }: pdf.LinkProps) {
         {
           textDecoration: 'none',
           color: 'black',
-          fontFamily: 'lmmono10-regular',
+          fontFamily: setFont ? 'lmmono10-regular' : undefined,
         } as Style,
       ]
         .concat(style ?? [])
@@ -193,6 +198,44 @@ export function Section({
       </View>
       {children}
     </View>
+  )
+}
+
+export function Image({
+  src,
+  description,
+  index,
+  title,
+}: {
+  src: string
+  description: string
+  index: number
+  title: string
+}) {
+  const ctx = usePDFContext()
+  const chapter = useContext(chapterContext)
+  return (
+    <View id={'figure-' + title}>
+      <pdf.Image src={src} />
+      <LMText
+        fontFamily="lmroman10-regular"
+        style={{ fontSize: 11, textAlign: 'justify' }}
+      >
+        <TechnikaText>
+          {ctx.lang === 'en' ? 'Figure' : 'Obrázek'} {chapter.no}.{index}:{' '}
+        </TechnikaText>
+        {description}
+      </LMText>
+    </View>
+  )
+}
+
+export function ImageRef({ number, title }: { number: number; title: string }) {
+  const chapter = useContext(chapterContext)
+  return (
+    <Link href={'#figure-' + title} setFont={false}>
+      {chapter.no + '.' + number}
+    </Link>
   )
 }
 

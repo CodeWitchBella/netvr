@@ -41,7 +41,9 @@ Just manually set the same boundaries and shared origin.
 
 Link: https://exertiongameslab.org/wp-content/uploads/2018/02/virtualspace_chi2018.pdf
 
-![](https://lh3.googleusercontent.com/TTGjfyIVu-CYkUozi8z6Fk7hhNLZr13ysMpHXZZluQI4LDtsCDFwHvyH9Fzj_7cEzvKdydRzFAP7FD_bjhR9NKlsdW56K1SMPqk3cHUgas3dFx3t1SNZx0p8f1aAzOoCTwJuNFuN)
+See figure :ref[virtual-space]
+
+![VirtualSpace illustration](https://lh3.googleusercontent.com/TTGjfyIVu-CYkUozi8z6Fk7hhNLZr13ysMpHXZZluQI4LDtsCDFwHvyH9Fzj_7cEzvKdydRzFAP7FD_bjhR9NKlsdW56K1SMPqk3cHUgas3dFx3t1SNZx0p8f1aAzOoCTwJuNFuN 'virtual-space')
 :::
 
 ` `

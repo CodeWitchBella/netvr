@@ -1,20 +1,22 @@
 import pdf from '@react-pdf/renderer'
-import { Chapter, Paragraph, Section, Strong, Em, TODO, Link } from './design'
+import {
+  Chapter,
+  Paragraph,
+  Section,
+  Strong,
+  Em,
+  TODO,
+  Link,
+  ImageRef,
+  Image,
+} from './design'
 import { LMText } from './font'
-import sectionPlugin from 'remark-sectionize'
-import commentPlugin from 'remark-remove-comments'
-import remarkMath from 'remark-math'
+import { remarkPlugins } from './remark-plugins'
 import rehypeMathjaxSvg from 'rehype-mathjax/svg.js'
 import type * as HAST from 'hast'
-import { visit, SKIP } from 'unist-util-visit'
-import remarkDirective from 'remark-directive'
-import remarkUnwrapImages from 'remark-unwrap-images'
-import remarkGfm from 'remark-gfm'
-import { rehypeLigature } from './ligatures'
-import { remarkTruncateLinks } from 'remark-truncate-links'
+import { rehypeLigature } from './rehype-ligatures'
 // @ts-ignore
 import { normalize } from '../vendor/svgpathnormalizer.js'
-import { Fragment } from 'react'
 import { VFile } from 'vfile'
 import { unified } from 'unified'
 import remarkParse from 'remark-parse'
@@ -29,84 +31,6 @@ function getText(el: HAST.ElementContent): string {
   if (el.type === 'text') return el.value
   if (el.type === 'comment') return ''
   return ('children' in el ? el.children : []).map(getText).join('')
-}
-
-function remarkRemoveBreaks() {
-  return (tree: import('mdast').Root) => {
-    visit(tree, 'text', (node, index, parent) => {
-      if (node.type === 'text') {
-        node.value = node.value.replace(/\n/g, ' ')
-      }
-    })
-  }
-}
-
-function reduce<V, Res>(
-  iterable: Iterable<V>,
-  def: Res,
-  reducer: (prev: Res, cur: V) => Res,
-): Res {
-  let value = def
-  for (const v of iterable) value = reducer(value, v)
-  return value
-}
-
-function remarkCiteCounter() {
-  return (tree: import('mdast').Root, file: VFile) => {
-    let map: Map<string, number> = file.data.citeMap as any
-    if (!map) {
-      map = new Map<string, number>()
-      file.data.citeMap = map
-    }
-    let counter = reduce(map.values(), 0, (a, b) => Math.max(a, b))
-
-    visit(tree, 'textDirective', (node, index, parent) => {
-      if (
-        node.name === 'cite' &&
-        node.children.length > 0 &&
-        node.children[0].type === 'text'
-      ) {
-        const ref = node.children[0].value
-        let index = map.get(ref)
-        let firstOccurence = false
-        if (!index) {
-          firstOccurence = true
-          index = ++counter
-          map.set(ref, index)
-        }
-
-        const data = node.data || (node.data = {})
-
-        data.hName = 'isbl-cite'
-        data.hProperties = {
-          ...node.attributes,
-          index,
-          target: ref,
-          firstOccurence,
-        }
-      }
-    })
-  }
-}
-
-function remarkGenericDirective() {
-  return (tree: import('mdast').Root) => {
-    visit(tree, (node) => {
-      const isDirective =
-        node.type === 'textDirective' ||
-        node.type === 'leafDirective' ||
-        node.type === 'containerDirective'
-      if (isDirective && !node.data) {
-        node.data = {
-          hName: 'isbl-directive',
-          hProperties: {
-            ...node.attributes,
-            directive: node.name.toLowerCase(),
-          },
-        }
-      }
-    })
-  }
 }
 
 function normalizePath(d: string) {
@@ -173,7 +97,14 @@ const components: NotUndefined<ReactMarkdownOptions['components']> = {
     ) : (
       <>{props.children}</>
     ),
-  img: (props) => <pdf.Image src={props.src} style={{ maxWidth: '100%' }} />,
+  img: (props) => (
+    <Image
+      title={props.title ?? ''}
+      src={props.src ?? ''}
+      description={props.alt ?? ''}
+      index={(props as any).imageIndex}
+    />
+  ),
   code: (props) => <pdf.Text>{props.children}</pdf.Text>,
 
   // MathJax
@@ -244,6 +175,8 @@ const components: NotUndefined<ReactMarkdownOptions['components']> = {
       if (props.directive === 'pagebreak') return <pdf.View break={true} />
       if (props.directive === 'nowrap')
         return <pdf.View wrap={false}>{props.children}</pdf.View>
+      if (props.directive === 'ref')
+        return <ImageRef number={props.number} title={props.title} />
       console.warn('Unknown directive', props)
       return null
     },
@@ -294,18 +227,7 @@ const options: Omit<ReactMarkdownOptions, 'children'> = {
   includeElementIndex: true,
   allowElement,
   unwrapDisallowed: true,
-  remarkPlugins: [
-    remarkDirective,
-    remarkCiteCounter,
-    remarkRemoveBreaks,
-    sectionPlugin,
-    commentPlugin,
-    remarkMath,
-    remarkGenericDirective,
-    remarkUnwrapImages,
-    remarkGfm,
-    [remarkTruncateLinks, { style: 'smart', length: 40 }],
-  ],
+  remarkPlugins,
   rehypePlugins: [
     rehypeLigature,
     [rehypeMathjaxSvg, { svg: { fontCache: 'none' } }],
