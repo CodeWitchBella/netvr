@@ -95,16 +95,26 @@ function ThesisConfig({
       <label>
         <input
           type="checkbox"
-          checked={config.useBuiltIn}
-          onChange={(event) => setConfig({ useBuiltIn: event.target.checked })}
+          defaultChecked={config.useBuiltIn}
+          onChange={(event) => {
+            setTimeout(
+              () => void setConfig({ useBuiltIn: event.target.checked }),
+              0,
+            )
+          }}
         />{' '}
         use built-in viewer
       </label>
       <label>
         <input
           type="checkbox"
-          checked={config.production}
-          onChange={(event) => setConfig({ production: event.target.checked })}
+          defaultChecked={config.production}
+          onChange={(event) => {
+            setTimeout(
+              () => void setConfig({ production: event.target.checked }),
+              0,
+            )
+          }}
         />{' '}
         only final-ready
       </label>
