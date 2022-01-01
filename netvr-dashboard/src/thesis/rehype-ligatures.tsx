@@ -34,6 +34,12 @@ function initTable() {
     }
   }
 }
+
+export function replaceEscapes(text: string) {
+  if (text.startsWith('\\')) return escapes.get(text.slice(1)) ?? text
+  return text
+}
+
 export function rehypeLigature() {
   initTable()
   return (tree: import('hast').Root) => {

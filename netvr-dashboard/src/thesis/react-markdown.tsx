@@ -27,6 +27,7 @@ import { html } from 'property-information'
 import rehypeFilter from 'react-markdown/lib/rehype-filter.js'
 import { uriTransformer } from 'react-markdown'
 import { childrenToReact } from 'react-markdown/lib/ast-to-react.js'
+import { FootnoteRef } from './footnotes'
 
 function getText(el: HAST.ElementContent): string {
   if (el.type === 'text') return el.value
@@ -179,6 +180,20 @@ const components: NotUndefined<ReactMarkdownOptions['components']> = {
         return <pdf.View wrap={false}>{props.children}</pdf.View>
       if (props.directive === 'ref')
         return <ImageRef number={props.number} title={props.title} />
+      if (props.directive === 'footnote') {
+        return (
+          <FootnoteRef
+            sign={props.sign}
+            content={
+              props.node?.children
+                ?.map((child: any) =>
+                  child?.type === 'text' ? child.value : '',
+                )
+                .join('') ?? ''
+            }
+          />
+        )
+      }
       console.warn('Unknown directive', props)
       return null
     },

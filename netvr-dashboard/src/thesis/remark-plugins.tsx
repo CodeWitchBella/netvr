@@ -1,7 +1,6 @@
 import sectionPlugin from 'remark-sectionize'
 import commentPlugin from 'remark-remove-comments'
 import remarkMath from 'remark-math'
-import type * as HAST from 'hast'
 import { visit, SKIP } from 'unist-util-visit'
 import remarkDirective from 'remark-directive'
 import remarkUnwrapImages from 'remark-unwrap-images'

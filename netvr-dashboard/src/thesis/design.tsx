@@ -202,6 +202,10 @@ export function Section({
   )
 }
 
+export function Footnote() {
+  return <View style={{ position: 'absolute' }}></View>
+}
+
 export function SubSection({
   children,
   title,

@@ -1,8 +1,8 @@
 # Typography test
 
-This chapter will be removed from the final version. Feel free to [skip it](#chapter-technical-design) <- \looparrowleft this is a link
+This chapter will be removed from the final version. Feel free to [skip it](#chapter-technical-design) <- \looparrowleft this is a link:footnote[footnote 1]{sign=\dagger}
 
-_Hello_ **bold** world >=
+_Hello_ **bold**:footnote[footnote 2]{} world >=
 
 :todo[TODO Test]
 

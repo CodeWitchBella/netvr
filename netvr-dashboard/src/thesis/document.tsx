@@ -8,6 +8,7 @@ import { ReactMarkdown, markdownListToAst } from './react-markdown'
 import { chapters, bibliography } from '../thesis-text/chapters'
 import { References } from './references'
 import { notNull } from '@isbl/ts-utils'
+import { FootnoteRenderer } from './footnotes'
 
 function MarkdownChapter({
   children,
@@ -201,37 +202,41 @@ export function Document() {
       </Page>
 
       <Page>
-        {parsed.asts.map((ast, index) => {
-          const id = usedChapters[index][0]
-          return (
-            <MarkdownChapter index={index + 1} key={id} id={id}>
-              {ast}
-            </MarkdownChapter>
-          )
-        })}
-        <References
-          citations={Object.entries(parsed.citeMap)
-            .sort(([_1, a], [_2, b]) => a - b)
-            .map(([id, index]) => {
-              return { data: bibliography[id], id, index }
-            })}
-          unused={unused}
-        />
-        <pdf.View
-          fixed
-          style={{
-            position: 'absolute',
-            bottom: '2cm',
-            left: '32mm',
-            right: '32mm',
-            alignItems: 'center',
-          }}
-          render={({ pageNumber }) => (
-            <pdf.Text style={{ fontFamily: 'lmroman10-regular', fontSize: 11 }}>
-              {pageNumber}
-            </pdf.Text>
-          )}
-        />
+        <FootnoteRenderer>
+          {parsed.asts.map((ast, index) => {
+            const id = usedChapters[index][0]
+            return (
+              <MarkdownChapter index={index + 1} key={id} id={id}>
+                {ast}
+              </MarkdownChapter>
+            )
+          })}
+          <References
+            citations={Object.entries(parsed.citeMap)
+              .sort(([_1, a], [_2, b]) => a - b)
+              .map(([id, index]) => {
+                return { data: bibliography[id], id, index }
+              })}
+            unused={unused}
+          />
+          <pdf.View
+            fixed
+            style={{
+              position: 'absolute',
+              bottom: '2cm',
+              left: '32mm',
+              right: '32mm',
+              alignItems: 'center',
+            }}
+            render={({ pageNumber }) => (
+              <pdf.Text
+                style={{ fontFamily: 'lmroman10-regular', fontSize: 11 }}
+              >
+                {pageNumber}
+              </pdf.Text>
+            )}
+          />
+        </FootnoteRenderer>
       </Page>
     </PDFDocument>
   )
