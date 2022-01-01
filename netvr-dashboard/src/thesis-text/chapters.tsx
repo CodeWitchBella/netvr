@@ -29,6 +29,7 @@ export type Reference = {
   publisher?: string
   in?: string
   accessed?: string
+  doi?: string
 }
 
 export const bibliography: { [key: string]: Reference } =

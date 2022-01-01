@@ -2,6 +2,7 @@ import type { Reference as Data } from '../thesis-text/chapters'
 import { Chapter, Link, Section } from './design'
 import pdf from '@react-pdf/renderer'
 import { LMText } from './font'
+import { usePDFContext } from './base'
 
 export function References({
   citations,
@@ -63,6 +64,7 @@ export function References({
 
 // https://security.fd.cvut.cz/wp-content/uploads/2016/02/jakpsatdp_1.pdf
 function Citation({ data }: { data: Data }) {
+  const { production } = usePDFContext()
   const titleAndSubtitle = data.title ? (
     <LMText fontFamily="lmroman10-italic">
       {data.title}
@@ -74,28 +76,29 @@ function Citation({ data }: { data: Data }) {
   ) : data.subtitle ? (
     <LMText fontFamily="lmroman10-italic">{data.subtitle}. </LMText>
   ) : null
+
+  const authorsText = data.authors
+    ?.map((cur, i) => {
+      if ('group' in cur) return cur.group.toLocaleUpperCase()
+      if (i === 0) return cur.surname.toLocaleUpperCase() + ', ' + cur.firstname
+      return cur.firstname + ' ' + cur.surname.toLocaleUpperCase()
+    })
+    .reduce(
+      (prev, cur, i, list) =>
+        i === 0
+          ? cur
+          : i === list.length - 1
+          ? prev + ', and ' + cur
+          : prev + ', ' + cur,
+      '',
+    )
   return (
     <pdf.View style={{ flexGrow: 1 }}>
       <LMText fontFamily="lmroman10-regular">
-        {data.authors ? (
+        {authorsText ? (
           <>
-            {data.authors
-              .map((cur, i) => {
-                if ('group' in cur) return cur.group.toLocaleUpperCase()
-                if (i === 0)
-                  return cur.surname.toLocaleUpperCase() + ', ' + cur.firstname
-                return cur.firstname + ' ' + cur.surname.toLocaleUpperCase()
-              })
-              .reduce(
-                (prev, cur, i, list) =>
-                  i === 0
-                    ? cur
-                    : i === list.length - 1
-                    ? prev + ', and ' + cur
-                    : prev + ', ' + cur,
-                '',
-              )}
-            .{' '}
+            {authorsText}
+            {authorsText.endsWith('.') ? '' : '.'}{' '}
           </>
         ) : null}
         {data.in ? (
@@ -127,6 +130,16 @@ function Citation({ data }: { data: Data }) {
         <LMText fontFamily="lmroman10-regular">
           <Link src={data.url}>{data.url}</Link>
         </LMText>
+      ) : data.doi ? (
+        production ? (
+          <LMText fontFamily="lmroman10-regular">DOI:{data.doi}</LMText>
+        ) : (
+          <LMText fontFamily="lmroman10-regular">
+            <Link src={'https://sci-hub.se/' + data.doi}>
+              {'DOI:' + data.doi}
+            </Link>
+          </LMText>
+        )
       ) : null}
     </pdf.View>
   )

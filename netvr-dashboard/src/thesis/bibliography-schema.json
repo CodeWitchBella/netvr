@@ -30,7 +30,11 @@
         "date": { "$ref": "#/definitions/date" },
         "accessed": { "$ref": "#/definitions/date" },
         "publisher": { "type": "string" },
-        "in": { "type": "string" }
+        "in": { "type": "string" },
+        "doi": {
+          "type": "string",
+          "pattern": "^[0-9]+\\.[^/]+/.*$"
+        }
       }
     },
     "author": {

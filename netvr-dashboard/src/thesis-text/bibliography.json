@@ -83,6 +83,18 @@
       "title": "Oculus All In on OpenXR: Deprecates Proprietary APIs",
       "authors": [{ "group": "Oculus VR" }],
       "date": "2021-07-23"
+    },
+    "sword-of-damocles": {
+      "title": "A head-mounted three dimensional display",
+      "in": "Fall Joint Computer Conference",
+      "doi": "10.1145/1476589.1476686",
+      "date": 1968,
+      "authors": [
+        {
+          "firstname": "Ivan E.",
+          "surname": "Sutherland"
+        }
+      ]
     }
   }
 }
