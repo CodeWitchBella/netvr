@@ -95,6 +95,14 @@
           "surname": "Sutherland"
         }
       ]
+    },
+    "quest-mapsharing": {
+      "url": "https://www.oculus.com/blog/playing-with-the-future-oculus-insight-powers-beyond-room-scale-vr-gaming/",
+      "title": "Playing with the Future: Oculus Insight Powers Beyond Room-Scale VR Gaming",
+      "authors": [{ "group": "Oculus VR" }],
+      "date": "2018-09-26",
+      "accessed": "2022-01-01",
+      "in": "Oculus Blog"
     }
   }
 }

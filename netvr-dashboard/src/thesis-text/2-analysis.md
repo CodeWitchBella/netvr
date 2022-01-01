@@ -16,7 +16,7 @@ Currently most popular consumer VR headset is Quest 2, which means that I defini
 
 There are multiple moving parts are required to make a collocated VR experience. First is implementing the offline version of the experience - getting data from the headset. This is thankfully mostly handled by game engines.
 
-Second part is to send the information between headsets. All recent headsets:footnote[By recent I mean headsets from this century. First VR systems likely did not have network connectivity]:cite[sword-of-damocles] which support 6DOF
+Second part is to send the information between headsets. All recent headsets which support 6DOF
 
 ## Takeouts
 
