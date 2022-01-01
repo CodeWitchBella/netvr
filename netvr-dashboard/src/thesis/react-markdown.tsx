@@ -9,6 +9,7 @@ import {
   Link,
   ImageRef,
   Image,
+  SubSection,
 } from './design'
 import { LMText } from './font'
 import { remarkPlugins } from './remark-plugins'
@@ -62,6 +63,7 @@ type NotUndefined<T> = T extends undefined ? never : T
 const components: NotUndefined<ReactMarkdownOptions['components']> = {
   h1: (props) => <pdf.Text>{props.children}</pdf.Text>,
   h2: (props) => <pdf.Text>{props.children}</pdf.Text>,
+  h3: (props) => <pdf.Text>{props.children}</pdf.Text>,
   p: (props) => {
     const citeBack: string[] = []
     function traverse(node: any) {
@@ -196,9 +198,16 @@ const components: NotUndefined<ReactMarkdownOptions['components']> = {
       }
       if (firstChild.tagName === 'h2') {
         return (
-          <Section title={getText(firstChild)} no={(props.index ?? -1) + 1}>
+          <Section title={getText(firstChild)} no={(props as any).number}>
             {props.children.slice(1)}
           </Section>
+        )
+      }
+      if (firstChild.tagName === 'h3') {
+        return (
+          <SubSection title={getText(firstChild)} no={(props as any).number}>
+            {props.children.slice(1)}
+          </SubSection>
         )
       }
     }

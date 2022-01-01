@@ -151,6 +151,8 @@ export function Chapter({
   )
 }
 
+const sectionContext = createContext(0)
+
 export function Section({
   children,
   title,
@@ -169,6 +171,7 @@ export function Section({
           borderLeftWidth: '4mm',
           height: '7mm',
           paddingLeft: '4.5mm',
+          paddingBottom: '0.5mm',
         }}
       >
         {no ? (
@@ -177,7 +180,6 @@ export function Section({
               style={{
                 fontWeight: 'bold',
                 fontSize: 14.52,
-                marginBottom: '0.5mm',
               }}
             >
               {useContext(chapterContext).no}.{no}
@@ -189,7 +191,52 @@ export function Section({
           style={{
             fontWeight: 'bold',
             fontSize: 14.52,
-            marginBottom: '0.5mm',
+            color: colors.blue,
+          }}
+        >
+          {title}
+        </TechnikaText>
+      </View>
+      <sectionContext.Provider value={no}>{children}</sectionContext.Provider>
+    </View>
+  )
+}
+
+export function SubSection({
+  children,
+  title,
+  no = 0,
+}: PropsWithChildren<{ title: string; no: number }>) {
+  const chapter = useContext(chapterContext)
+  const section = useContext(sectionContext)
+
+  return (
+    <View style={{ marginTop: '7.8mm' }}>
+      <View
+        wrap={false}
+        minPresenceAhead={10}
+        style={{
+          flexDirection: 'row',
+          alignItems: 'flex-end',
+          marginBottom: '1.7mm',
+          borderColor: colors.blue,
+          borderLeftWidth: '4mm',
+          minHeight: '3.8mm',
+          paddingLeft: '4.5mm',
+        }}
+      >
+        {no ? (
+          <>
+            <TechnikaText style={{ fontWeight: 'bold', fontSize: 12 }}>
+              {chapter.no}.{section}.{no}
+            </TechnikaText>
+            <View style={{ width: '5.4mm' }} />
+          </>
+        ) : null}
+        <TechnikaText
+          style={{
+            fontWeight: 'bold',
+            fontSize: 12,
             color: colors.blue,
           }}
         >

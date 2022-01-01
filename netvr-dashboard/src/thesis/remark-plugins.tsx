@@ -51,6 +51,24 @@ function remarkImageNumbering() {
   }
 }
 
+function remarkSectionNumbering() {
+  return (tree: import('mdast').Root) => {
+    let counter: number[] = []
+    visit(tree, 'section', (node, index, parent) => {
+      const depth = node.depth
+      if (node.type === 'section' && typeof depth === 'number') {
+        while (counter.length < depth) counter.push(1)
+        while (counter.length > depth) counter.pop()
+        const number = counter[depth - 1]
+        counter[depth - 1]++
+
+        const data = node.data || (node.data = {})
+        data.hProperties = { number }
+      }
+    })
+  }
+}
+
 function reduce<V, Res>(
   iterable: Iterable<V>,
   def: Res,
@@ -124,6 +142,7 @@ export const remarkPlugins = [
   remarkCiteCounter,
   remarkRemoveBreaks,
   sectionPlugin,
+  remarkSectionNumbering,
   commentPlugin,
   remarkMath,
   remarkImageNumbering,
