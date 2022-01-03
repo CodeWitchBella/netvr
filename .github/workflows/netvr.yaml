@@ -70,7 +70,6 @@ jobs:
         needs:
             - create_zip
             - unity_build_windows
-            - unity_build_android2
             - unity_build_android
         runs-on: ubuntu-20.04
         steps:
