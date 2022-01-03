@@ -30,7 +30,22 @@
         "date": { "$ref": "#/definitions/date" },
         "accessed": { "$ref": "#/definitions/date" },
         "publisher": { "type": "string" },
-        "in": { "type": "string" },
+        "in": {
+          "oneOf": [
+            { "type": "string" },
+            {
+              "type": "object",
+              "required": ["journal"],
+              "properties": {
+                "journal": { "type": "string" },
+                "volume": { "type": "integer" },
+                "page": { "type": "integer" },
+                "number": { "type": "integer" }
+              },
+              "additionalProperties": false
+            }
+          ]
+        },
         "doi": {
           "type": "string",
           "pattern": "^[0-9]+\\.[^/]+/.*$"

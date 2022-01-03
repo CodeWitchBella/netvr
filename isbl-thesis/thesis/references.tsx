@@ -12,10 +12,11 @@ export type BibReference = {
   title?: string
   subtitle?: string
   date?: number | string
-  edition?: string
   location?: string
   publisher?: string
-  in?: string
+  in?:
+    | string
+    | { journal: string; page?: string; volume?: string; number?: string }
   accessed?: string
   doi?: string
 }
@@ -117,16 +118,24 @@ function Citation({ data }: { data: BibReference }) {
             {authorsText.endsWith('.') ? '' : '.'}{' '}
           </>
         ) : null}
-        {data.in ? (
+        {titleAndSubtitle}
+        {!data.in ? null : typeof data.in === 'string' ? (
           <>
-            {titleAndSubtitle}In:{' '}
-            <LMText fontFamily="lmroman10-italic">{data.in}</LMText>{' '}
+            In: <LMText fontFamily="lmroman10-italic">{data.in}</LMText>{' '}
           </>
         ) : (
-          titleAndSubtitle
+          <>
+            In:{' '}
+            <LMText fontFamily="lmroman10-italic">
+              {data.in.journal}
+              {data.in.volume ? ', ' + data.in.volume : null}
+            </LMText>
+            {data.in.number ? `(${data.in.number})` : null}
+            {data.in.page ? `, ${data.in.page}` : null}
+            {', '}
+          </>
         )}
-        {data.url ? <>[online] </> : null}
-        {data.edition ? <>{data.edition} </> : null}
+        {data.url && !data.doi ? <>[online] </> : null}
         {data.location ? (
           <>
             {data.location}
@@ -146,7 +155,8 @@ function Citation({ data }: { data: BibReference }) {
         <LMText fontFamily="lmroman10-regular">
           <Link src={data.url}>{data.url}</Link>
         </LMText>
-      ) : data.doi ? (
+      ) : null}
+      {data.doi ? (
         production ? (
           <LMText fontFamily="lmroman10-regular">DOI:{data.doi}</LMText>
         ) : (

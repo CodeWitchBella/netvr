@@ -1,5 +1,5 @@
 {
-  "$schema": "../thesis/bibliography-schema.json",
+  "$schema": "../../../isbl-thesis/thesis/bibliography-schema.json",
   "references": {
     "steam-hardware-survey": {
       "authors": [{ "firstname": "Ben", "surname": "Lang" }],
@@ -114,6 +114,24 @@
       "url": "https://www.oculus.com/quest-2/?locale=en_GB",
       "title": "Oculus Quest 2",
       "accessed": "2022-01-03"
+    },
+    "slam-hands": {
+      "title": "Colocation for SLAM-Tracked VR Headsets with Hand Tracking",
+      "authors": [
+        { "firstname": "Dennis", "surname": "Reimer" },
+        { "firstname": "Iana", "surname": "Podkosova" },
+        { "firstname": "Daniel", "surname": "Scherzer" },
+        { "firstname": "Hannes", "surname": "Kaufmann" }
+      ],
+      "doi": "10.3390/computers10050058",
+      "date": 2021,
+      "in": {
+        "journal": "Computers",
+        "page": 58,
+        "volume": 10,
+        "number": 5
+      },
+      "url": "https://www.mdpi.com/2073-431X/10/5/58"
     }
   }
 }
