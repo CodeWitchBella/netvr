@@ -1,3 +1,6 @@
 {
-  "recommendations": ["ms-vscode.cmake-tools"]
+  "recommendations": [
+    "ms-vscode.cmake-tools",
+    "streetsidesoftware.code-spell-checker"
+  ]
 }

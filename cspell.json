@@ -1,0 +1,10 @@
+{
+  "language": "en-GB",
+  "dictionaryDefinitions": [
+    {
+      "name": "xrTerms",
+      "path": "./.vscode/dictionary.txt"
+    }
+  ],
+  "dictionaries": ["xrTerms"]
+}

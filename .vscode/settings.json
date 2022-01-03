@@ -17,5 +17,12 @@
     "editor.wordWrap": "bounded",
     "editor.wordWrapColumn": 80
   },
-  "zenMode.hideLineNumbers": false
+  "zenMode.hideLineNumbers": false,
+  "ltex.language": "en-GB",
+  "ltex.disabledRules": {
+    "en-GB": ["UNLIKELY_OPENING_PUNCTUATION"]
+  },
+  "ltex.dictionary": {
+    "en-GB": [":./dictionary.txt"]
+  }
 }
