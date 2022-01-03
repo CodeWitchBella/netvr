@@ -5,7 +5,7 @@ import { NotFound } from './not-found'
 import { Menu } from './menu'
 import { lazy, Suspense } from 'react'
 
-const Thesis = lazy(() => import('./thesis/thesis'))
+const Thesis = lazy(() => import('./thesis'))
 export async function run() {
   const events = document.querySelector('#events')!
   if (!events) throw new Error('Cant find #events')

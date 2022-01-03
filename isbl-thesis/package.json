@@ -3,12 +3,9 @@
   "version": "0.0.0",
   "private": false,
   "type": "module",
-  "imports": {
-    "#assets": "./assets.js"
-  },
+  "exports": "./dist/thesis.es.js",
   "dependencies": {
     "@isbl/ts-utils": "^1.0.1",
-    "@react-pdf/renderer": "^2.0.21",
     "history": "^5.2.0",
     "pdfjs-dist": "^2.12.313",
     "react": "^17.0.2",
@@ -25,7 +22,11 @@
     "remark-unwrap-images": "^3.0.1",
     "unist-util-visit": "^4.1.0"
   },
+  "peerDependencies": {
+    "@react-pdf/renderer": "^2.0.21"
+  },
   "devDependencies": {
+    "@react-pdf/renderer": "^2.0.21",
     "@types/react": "^17.0.36",
     "@types/react-dom": "^17.0.11",
     "@vitejs/plugin-react": "^1.1.3",

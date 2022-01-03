@@ -1,7 +1,7 @@
 import pdf from '@react-pdf/renderer'
 import type { Style } from '@react-pdf/types/style'
-import { TechnikaText } from './base'
-import { lmdb, technika } from '#assets'
+// @ts-ignore
+import { lmdb, technika } from '../assets.js'
 const { Font } = pdf
 
 let registered = false
@@ -20,12 +20,12 @@ export function registerFonts() {
   })
 
   for (const [longName, src] of Object.entries(lmdb)) {
-    Font.register({ family: longName, src: src.toString(), format: 'otf' })
+    Font.register({ family: longName, src, format: 'otf' })
 
     const [family, mod] = longName.split('-')
     Font.register({
       family,
-      src: src.toString(),
+      src,
       fontStyle: mod.includes('oblique')
         ? 'oblique'
         : mod.includes('italic')
@@ -44,7 +44,7 @@ export function LMText({
   automaticFontSize = true,
   ...rest
 }: pdf.TextProps & {
-  fontFamily: keyof typeof lmdb
+  fontFamily: keyof typeof assets['lmdb']
   automaticFontSize?: boolean
 }) {
   return (

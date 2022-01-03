@@ -2,24 +2,21 @@ import { defineConfig } from 'vite'
 import react from '@vitejs/plugin-react'
 import shimReactPdf from 'vite-plugin-shim-react-pdf'
 import path from 'path'
-import { fileURLToPath } from 'url'
 import packageJson from './package.json'
+const external = [
+  ...Object.keys(packageJson.dependencies || {}),
+  ...Object.keys(packageJson.peerDependencies || {}),
+  '../assets.js',
+]
 
 export default defineConfig({
-  plugins: [
-    react({
-      exclude: /thesis\/[^/]+.tsx?$/,
-    }),
-    shimReactPdf(),
-  ],
+  plugins: [react({}), shimReactPdf()],
   build: {
     target: 'esnext',
     rollupOptions: {
-      external: [
-        ...Object.keys(packageJson.dependencies || {}),
-        ...Object.keys(packageJson.peerDependencies || {}),
-        ...Object.keys(packageJson.imports || {}),
-      ],
+      external: (im) =>
+        im !== 'react/jsx-runtime' &&
+        external.some((dep) => im.startsWith(dep)),
     },
     polyfillModulePreload: false,
     lib: {

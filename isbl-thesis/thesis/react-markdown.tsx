@@ -90,8 +90,6 @@ const components: NotUndefined<ReactMarkdownOptions['components']> = {
   },
   strong: (props) => <Strong>{props.children}</Strong>,
   em: (props) => {
-    if (props.math)
-      return <LMText fontFamily="latinmodern-math">{props.children}</LMText>
     return <Em>{props.children}</Em>
   },
   a: (props) =>
@@ -196,6 +194,14 @@ const components: NotUndefined<ReactMarkdownOptions['components']> = {
       }
       console.warn('Unknown directive', props)
       return null
+    },
+
+    'isbl-math': (props: any) => {
+      return (
+        <LMText fontFamily="latinmodern-math" automaticFontSize={false}>
+          {props.children}
+        </LMText>
+      )
     },
   },
 

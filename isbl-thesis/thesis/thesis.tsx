@@ -1,5 +1,5 @@
 import pdf from '@react-pdf/renderer'
-import { useEffect, useMemo, useReducer, useRef } from 'react'
+import { memo, useEffect, useMemo, useReducer, useRef } from 'react'
 import { PDFContext, PDFContextProvider } from './base'
 import { Document, DocumentProps } from './document'
 // @ts-ignore
@@ -12,98 +12,44 @@ pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
   import.meta.url,
 ).toString()
 
-type Config = { useBuiltIn: boolean; production: boolean }
-const defaultConfig: Config = {
-  useBuiltIn: false,
-  production: true,
-}
-
-export function Thesis(props: DocumentProps) {
-  const [config, setConfig] = useReducer(
-    (state: Config, partial: Partial<Config>): Config => {
-      const nextState = { ...state, ...partial }
-      localStorage.setItem('thesis-config', JSON.stringify(nextState))
-      return nextState
-    },
-    null,
-    (): Config => ({
-      ...defaultConfig,
-      ...JSON.parse(localStorage.getItem('thesis-config') || '{}'),
-    }),
+export function Thesis({
+  bibliography,
+  chapters,
+  language = 'en',
+  production,
+  useBuiltIn,
+}: DocumentProps & {
+  production: boolean
+  language?: 'en' | 'cs'
+  useBuiltIn: boolean
+}) {
+  const documentProps = useMemo(
+    () => ({ bibliography, chapters }),
+    [bibliography, chapters],
   )
 
   const context = useMemo(
-    (): PDFContext => ({
-      lang: 'en',
-      production: config.production,
-    }),
-    [config],
+    (): PDFContext => ({ lang: language, production }),
+    [production, language],
   )
 
-  if (config.useBuiltIn) {
+  if (useBuiltIn) {
     return (
       <>
-        <ThesisConfig config={config} setConfig={setConfig} />
         <pdf.PDFViewer style={{ flexGrow: 1, border: 0 }}>
           <PDFContextProvider value={context}>
-            <Document {...props} />
+            <Document {...documentProps} />
           </PDFContextProvider>
         </pdf.PDFViewer>
       </>
     )
   }
   return (
-    <>
-      <ThesisConfig config={config} setConfig={setConfig} />
-      <ThesisCustom Document={Document} context={context} />
-    </>
-  )
-}
-
-function ThesisConfig({
-  config,
-  setConfig,
-}: {
-  config: Config
-  setConfig: (cfg: Partial<Config>) => void
-}) {
-  return (
-    <div
-      style={{
-        gap: 8,
-        display: 'flex',
-        padding: 4,
-        borderBottom: '1px solid gray',
-      }}
-    >
-      <div>Config:</div>
-      <label>
-        <input
-          type="checkbox"
-          defaultChecked={config.useBuiltIn}
-          onChange={(event) => {
-            setTimeout(
-              () => void setConfig({ useBuiltIn: event.target.checked }),
-              0,
-            )
-          }}
-        />{' '}
-        use built-in viewer
-      </label>
-      <label>
-        <input
-          type="checkbox"
-          defaultChecked={config.production}
-          onChange={(event) => {
-            setTimeout(
-              () => void setConfig({ production: event.target.checked }),
-              0,
-            )
-          }}
-        />{' '}
-        only final-ready
-      </label>
-    </div>
+    <ThesisCustom
+      Document={Document}
+      context={context}
+      documentProps={documentProps}
+    />
   )
 }
 
@@ -123,6 +69,18 @@ function ThesisCustom({
       </PDFContextProvider>
     ),
   })
+
+  const prev = useRef({ documentProps, Document })
+
+  useEffect(() => {
+    if (
+      prev.current.documentProps !== documentProps ||
+      prev.current.Document !== Document
+    ) {
+      updateInstance()
+      prev.current = { documentProps, Document }
+    }
+  }, [documentProps])
 
   const src = instance.url ? `${instance.url}#toolbar=1` : ''
 

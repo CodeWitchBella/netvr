@@ -9,8 +9,11 @@ export default defineConfig({
     }),
     shimReactPdf(),
   ],
-  esbuild: {
-    jsxInject: `import React from 'react'`,
+  server: {
+    fs: { allow: ['..'] },
+  },
+  optimizeDeps: {
+    exclude: ['@isbl/thesis'],
   },
   build: {
     polyfillModulePreload: false,

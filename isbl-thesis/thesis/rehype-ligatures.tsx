@@ -89,8 +89,7 @@ function replace(
     { type: 'text', value: node.value.substring(0, match.index) },
     {
       type: 'element',
-      tagName: 'em',
-      properties: { math: true },
+      tagName: 'isbl-math',
       children: [{ type: 'text', value: replacement }],
     },
     {
