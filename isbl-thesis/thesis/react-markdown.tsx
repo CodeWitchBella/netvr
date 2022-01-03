@@ -28,6 +28,7 @@ import rehypeFilter from 'react-markdown/lib/rehype-filter.js'
 import { uriTransformer } from 'react-markdown'
 import { childrenToReact } from 'react-markdown/lib/ast-to-react.js'
 import { FootnoteRef } from './footnotes'
+import { usePDFContext } from './base'
 
 function getText(el: HAST.ElementContent): string {
   if (el.type === 'text') return el.value
@@ -98,14 +99,17 @@ const components: NotUndefined<ReactMarkdownOptions['components']> = {
     ) : (
       <>{props.children}</>
     ),
-  img: (props) => (
-    <Image
-      title={props.title ?? ''}
-      src={props.src ?? ''}
-      description={props.alt ?? ''}
-      index={(props as any).imageIndex}
-    />
-  ),
+  img: (props) => {
+    const ctx = usePDFContext()
+    return (
+      <Image
+        title={props.title ?? ''}
+        src={ctx.files[props.src ?? ''] ?? props.src ?? ''}
+        description={props.alt ?? ''}
+        index={(props as any).imageIndex}
+      />
+    )
+  },
   code: (props) => <pdf.Text>{props.children}</pdf.Text>,
 
   // MathJax

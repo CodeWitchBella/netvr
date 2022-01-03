@@ -4,6 +4,9 @@
 
 :todo[Translate to english]
 
+:todo[This chapter will get major overhaul, some parts are already incorporated
+elsewhere, some parts will be moved to appendix]
+
 Technický design má mnoho moving parts - interakce s HW, vykreslování a načítání
 modelů, protokol v síťové komunikaci, síťová architektura, architektura serveru.
 Jdou rozdělit na dvě části - offline a online.

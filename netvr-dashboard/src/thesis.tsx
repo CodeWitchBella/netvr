@@ -1,6 +1,6 @@
 import Thesis from '@isbl/thesis'
 import { useReducer } from 'react'
-import { bibliography, chapters } from './thesis-text/chapters'
+import { bibliography, chapters, files } from './thesis-text/chapters'
 
 export default function ThesisRenderer() {
   const [config, setConfig] = useReducer(
@@ -24,6 +24,7 @@ export default function ThesisRenderer() {
         chapters={chapters}
         production={config.production}
         useBuiltIn={config.useBuiltIn}
+        files={files}
       />
     </>
   )

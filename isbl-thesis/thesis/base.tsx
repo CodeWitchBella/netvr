@@ -38,8 +38,16 @@ export function TechnikaText({ children, style, ...rest }: pdf.TextProps) {
   )
 }
 
-export type PDFContext = { lang: 'cs' | 'en'; production: boolean }
-const context = createContext<PDFContext>({ lang: 'en', production: false })
+export type PDFContext = {
+  lang: 'cs' | 'en'
+  production: boolean
+  files: { [key: string]: string }
+}
+const context = createContext<PDFContext>({
+  lang: 'en',
+  production: false,
+  files: {},
+})
 export function usePDFContext() {
   return useContext(context)
 }

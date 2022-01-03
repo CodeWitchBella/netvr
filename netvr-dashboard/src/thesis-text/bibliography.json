@@ -104,9 +104,9 @@
       "accessed": "2022-01-01",
       "in": "Oculus Blog"
     },
-    "space-callibrator": {
+    "space-calibrator": {
       "url": "https://github.com/pushrax/OpenVR-SpaceCalibrator",
-      "title": "OpenVR Space Callibrator",
+      "title": "OpenVR Space Calibrator",
       "accessed": "2022-01-03",
       "authors": [{ "surname": "Li", "firstname": "Justin" }]
     },
@@ -132,6 +132,17 @@
         "number": 5
       },
       "url": "https://www.mdpi.com/2073-431X/10/5/58"
+    },
+    "optitrack-vr": {
+      "title": "OptiTrack for VR",
+      "url": "https://optitrack.com/applications/virtual-reality/",
+      "accessed": "2022-01-03"
+    },
+    "golem-vr": {
+      "url": "https://www.divrlabs.com/cs/golem-vr",
+      "title": "Golem",
+      "authors": [{ "group": "DIVR Labs" }],
+      "accessed": "2022-01-03"
     }
   }
 }

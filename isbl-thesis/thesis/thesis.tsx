@@ -19,10 +19,12 @@ export function Thesis({
   language = 'en',
   production,
   useBuiltIn,
+  files = {},
 }: DocumentProps & {
   production: boolean
   language?: 'en' | 'cs'
   useBuiltIn: boolean
+  files?: { [key: string]: string }
 }) {
   const documentProps = useMemo(
     () => ({ bibliography, chapters }),
@@ -30,8 +32,8 @@ export function Thesis({
   )
 
   const context = useMemo(
-    (): PDFContext => ({ lang: language, production }),
-    [production, language],
+    (): PDFContext => ({ lang: language, production, files }),
+    [production, language, files],
   )
 
   if (useBuiltIn) {
