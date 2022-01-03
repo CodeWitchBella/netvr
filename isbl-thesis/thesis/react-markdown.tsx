@@ -28,7 +28,7 @@ import rehypeFilter from 'react-markdown/lib/rehype-filter.js'
 import { uriTransformer } from 'react-markdown'
 import { childrenToReact } from 'react-markdown/lib/ast-to-react.js'
 import { FootnoteRef } from './footnotes'
-import { usePDFContext } from './base'
+import { usePDFContext, View } from './base'
 
 function getText(el: HAST.ElementContent): string {
   if (el.type === 'text') return el.value
@@ -111,6 +111,11 @@ const components: NotUndefined<ReactMarkdownOptions['components']> = {
     )
   },
   code: (props) => <pdf.Text>{props.children}</pdf.Text>,
+  pre: (props) => (
+    <LMText fontFamily="lmmono10-regular" style={{ fontSize: 11 }}>
+      {props.children}
+    </LMText>
+  ),
 
   // MathJax
   svg: ({ children, width, height, ...props }) => {
@@ -158,9 +163,21 @@ const components: NotUndefined<ReactMarkdownOptions['components']> = {
   path: ({ d, ...props }) => (
     <pdf.Path d={d ? normalizePath(d) : d} {...(props as any)} />
   ),
+  text: pdf.Text as any,
   rect: pdf.Rect as any,
   ...({ 'mjx-container': (props: any) => <>{props.children}</> } as any),
   style: () => null,
+  ol: (props) => (
+    <View>{props.children.filter((v) => typeof v !== 'string')}</View>
+  ),
+  li: (props) => (
+    <View>
+      <LMText fontFamily="lmroman10-regular" style={{ fontSize: 11 }}>
+        - {props.children}
+      </LMText>
+    </View>
+  ),
+  title: (props) => null,
 
   ...{
     // cite
