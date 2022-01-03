@@ -284,7 +284,7 @@ export function Image({
 export function ImageRef({ number, title }: { number: number; title: string }) {
   const chapter = useContext(chapterContext)
   return (
-    <Link href={'#figure-' + title} setFont={false}>
+    <Link src={'#figure-' + title} setFont={false}>
       {chapter.no + '.' + number}
     </Link>
   )

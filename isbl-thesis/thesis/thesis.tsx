@@ -6,6 +6,7 @@ import { Document, DocumentProps } from './document'
 import * as pdfjsLib from 'pdfjs-dist/build/pdf.js'
 import * as pdfjsViewer from 'pdfjs-dist/web/pdf_viewer'
 import 'pdfjs-dist/web/pdf_viewer.css'
+import { usePDF } from './use-pdf'
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
   '../node_modules/pdfjs-dist/build/pdf.worker.min.js',
@@ -62,25 +63,16 @@ function ThesisCustom({
   context: PDFContext
   documentProps: DocumentProps
 }) {
-  const [instance, updateInstance] = pdf.usePDF({
-    document: (
-      <PDFContextProvider value={context}>
-        <Document {...documentProps} />
-      </PDFContextProvider>
+  const instance = usePDF({
+    document: useMemo(
+      () => (
+        <PDFContextProvider value={context}>
+          <Document {...documentProps} />
+        </PDFContextProvider>
+      ),
+      [context, documentProps, Document],
     ),
   })
-
-  const prev = useRef({ documentProps, Document })
-
-  useEffect(() => {
-    if (
-      prev.current.documentProps !== documentProps ||
-      prev.current.Document !== Document
-    ) {
-      updateInstance()
-      prev.current = { documentProps, Document }
-    }
-  }, [documentProps])
 
   const src = instance.url ? `${instance.url}#toolbar=1` : ''
 
