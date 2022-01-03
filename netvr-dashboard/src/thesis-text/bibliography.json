@@ -103,6 +103,17 @@
       "date": "2018-09-26",
       "accessed": "2022-01-01",
       "in": "Oculus Blog"
+    },
+    "space-callibrator": {
+      "url": "https://github.com/pushrax/OpenVR-SpaceCalibrator",
+      "title": "OpenVR Space Callibrator",
+      "accessed": "2022-01-03",
+      "authors": [{ "surname": "Li", "firstname": "Justin" }]
+    },
+    "quest2": {
+      "url": "https://www.oculus.com/quest-2/?locale=en_GB",
+      "title": "Oculus Quest 2",
+      "accessed": "2022-01-03"
     }
   }
 }

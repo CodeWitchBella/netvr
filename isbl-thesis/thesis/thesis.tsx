@@ -1,18 +1,16 @@
 import pdf from '@react-pdf/renderer'
 import { useEffect, useMemo, useReducer, useRef } from 'react'
 import { PDFContext, PDFContextProvider } from './base'
-import { Document as DocumentI } from './document'
+import { Document, DocumentProps } from './document'
 // @ts-ignore
 import * as pdfjsLib from 'pdfjs-dist/build/pdf.js'
 import * as pdfjsViewer from 'pdfjs-dist/web/pdf_viewer'
 import 'pdfjs-dist/web/pdf_viewer.css'
 
 pdfjsLib.GlobalWorkerOptions.workerSrc = new URL(
-  '../../node_modules/pdfjs-dist/build/pdf.worker.min.js',
+  '../node_modules/pdfjs-dist/build/pdf.worker.min.js',
   import.meta.url,
 ).toString()
-
-let updateInstanceSet = new Set<(doc: typeof DocumentI) => void>()
 
 type Config = { useBuiltIn: boolean; production: boolean }
 const defaultConfig: Config = {
@@ -20,7 +18,7 @@ const defaultConfig: Config = {
   production: true,
 }
 
-export function Thesis() {
+export function Thesis(props: DocumentProps) {
   const [config, setConfig] = useReducer(
     (state: Config, partial: Partial<Config>): Config => {
       const nextState = { ...state, ...partial }
@@ -33,19 +31,6 @@ export function Thesis() {
       ...JSON.parse(localStorage.getItem('thesis-config') || '{}'),
     }),
   )
-
-  const [Document, setDocument] = useReducer(
-    (_: typeof DocumentI, doc: typeof DocumentI) => doc,
-    DocumentI,
-  )
-  if (import.meta.hot) {
-    useEffect(() => {
-      updateInstanceSet.add(setDocument)
-      return () => {
-        updateInstanceSet.delete(setDocument)
-      }
-    }, [setDocument])
-  }
 
   const context = useMemo(
     (): PDFContext => ({
@@ -61,7 +46,7 @@ export function Thesis() {
         <ThesisConfig config={config} setConfig={setConfig} />
         <pdf.PDFViewer style={{ flexGrow: 1, border: 0 }}>
           <PDFContextProvider value={context}>
-            <Document />
+            <Document {...props} />
           </PDFContextProvider>
         </pdf.PDFViewer>
       </>
@@ -125,23 +110,19 @@ function ThesisConfig({
 function ThesisCustom({
   Document,
   context,
+  documentProps,
 }: {
   Document: any
   context: PDFContext
+  documentProps: DocumentProps
 }) {
   const [instance, updateInstance] = pdf.usePDF({
     document: (
       <PDFContextProvider value={context}>
-        <Document />
+        <Document {...documentProps} />
       </PDFContextProvider>
     ),
   })
-
-  if (import.meta.hot) {
-    useEffect(() => {
-      if (Document !== DocumentI) updateInstance()
-    }, [Document, context])
-  }
 
   const src = instance.url ? `${instance.url}#toolbar=1` : ''
 
@@ -218,11 +199,3 @@ function ThesisCustom({
   )
 }
 export default Thesis
-
-if (import.meta.hot) {
-  import.meta.hot.accept('./document', (dep: any) => {
-    for (const update of updateInstanceSet.values()) {
-      update(dep.Document)
-    }
-  })
-}

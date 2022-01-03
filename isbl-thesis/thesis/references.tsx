@@ -1,15 +1,31 @@
-import type { Reference as Data } from '../thesis-text/chapters'
 import { Chapter, Link, Section } from './design'
 import pdf from '@react-pdf/renderer'
 import { LMText } from './font'
 import { usePDFContext } from './base'
 
+export type BibReference = {
+  url: string
+  authors?: readonly (
+    | { firstname: string; surname: string }
+    | { group: string }
+  )[]
+  title?: string
+  subtitle?: string
+  date?: number | string
+  edition?: string
+  location?: string
+  publisher?: string
+  in?: string
+  accessed?: string
+  doi?: string
+}
+
 export function References({
   citations,
   unused,
 }: {
-  citations: readonly { id: string; index: number; data: Data | null }[]
-  unused?: readonly (Data & { id: string })[]
+  citations: readonly { id: string; index: number; data: BibReference | null }[]
+  unused?: readonly (BibReference & { id: string })[]
 }) {
   return (
     <Chapter title="References" id="references">
@@ -63,7 +79,7 @@ export function References({
 }
 
 // https://security.fd.cvut.cz/wp-content/uploads/2016/02/jakpsatdp_1.pdf
-function Citation({ data }: { data: Data }) {
+function Citation({ data }: { data: BibReference }) {
   const { production } = usePDFContext()
   const titleAndSubtitle = data.title ? (
     <LMText fontFamily="lmroman10-italic">

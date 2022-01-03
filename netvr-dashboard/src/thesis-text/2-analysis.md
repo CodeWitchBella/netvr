@@ -6,9 +6,11 @@ This chapter will describe various constraints and requirements that I operate u
 
 First major consideration is a choice of target device. This will affect most other technical decisions, because different devices have different capabilities and tracking systems. In this thesis I want to target most devices which have 6DOF tracking, meaning that they provide application running on it with information about its position and rotation in real world. Many popular devices in this cathegory also have two 6DOF-tracked controllers, so I'll assume that as well.
 
-Currently most popular consumer VR headset is Quest 2, which means that I definitelly want to support it. It features 6DOF tracking using four cameras, which it uses to reconstruct surrounding world. This makes it a good representation of inside-out tracking system with use of SLAM (Simultaneous Localization And Mapping).
+Currently most popular:cite[steam-hardware-survey] consumer VR headset is Quest 2:cite[quest2], which means that I definitelly want to support it. It features 6DOF tracking using four cameras, which it uses to reconstruct surrounding world. This makes it a good representation of inside-out tracking system with use of SLAM (Simultaneous Localization And Mapping).
 
-:todo[write about Vive]
+:todo[write about VIVE]
+
+:todo[list other headsets in vrlab, because I want to try them all (except the lighthouse ones, one of lighthouse 2 gen should be enough)]
 
 ## What needs to be done
 
@@ -16,7 +18,15 @@ Currently most popular consumer VR headset is Quest 2, which means that I defini
 
 There are multiple moving parts are required to make a collocated VR experience. First is implementing the offline version of the experience - getting data from the headset. This is thankfully mostly handled by game engines.
 
-Second part is to send the information between headsets. All recent headsets which support 6DOF
+Second part is to send the information between headsets. All recent headsets which support 6DOF :todo[finish this paragraph]
+
+Last and perhaps the most interesting part is to callibrate tracking spaces of various headsets. All headsets I encountered have tracking defined as one unit being one meter, which means that we only have to determine translation and rotation.
+
+:todo[maybe move this to some limitations section, or just reference this paragraph there]
+
+There are some headsets which have slighly wrong scale of about 0.8% according to [issue 23][1] on OpenVR Space Callibrator:cite[space-callibrator], which means that my design should be able to accomodate this. But given that none of the headsets I have available exhibit this issue I won't be handling this in the implementation.
+
+[1]: https://github.com/pushrax/openvr-spacecalibrator/issues/23
 
 ## Takeouts
 

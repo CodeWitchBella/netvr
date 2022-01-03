@@ -15,22 +15,5 @@ export const chapters: readonly (readonly [
   ['test', test, { removeInProduction: true }],
 ]
 
-export type Reference = {
-  url: string
-  authors?: readonly (
-    | { firstname: string; surname: string }
-    | { group: string }
-  )[]
-  title?: string
-  subtitle?: string
-  date?: number | string
-  edition?: string
-  location?: string
-  publisher?: string
-  in?: string
-  accessed?: string
-  doi?: string
-}
-
 export const bibliography: { [key: string]: Reference } =
   JSON.parse(bib).references

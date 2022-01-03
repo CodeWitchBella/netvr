@@ -17,7 +17,7 @@ import rehypeMathjaxSvg from 'rehype-mathjax/svg.js'
 import type * as HAST from 'hast'
 import { rehypeLigature } from './rehype-ligatures'
 // @ts-ignore
-import { normalize } from '../vendor/svgpathnormalizer.js'
+import { normalize } from './vendor/svgpathnormalizer.js'
 import { VFile } from 'vfile'
 import { unified } from 'unified'
 import remarkParse from 'remark-parse'

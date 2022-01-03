@@ -5,9 +5,7 @@ import { LMText, registerFonts } from './font'
 import { TitlePage } from './title-page'
 const { Document: PDFDocument } = pdf
 import { ReactMarkdown, markdownListToAst } from './react-markdown'
-import { chapters, bibliography } from '../thesis-text/chapters'
-import { References } from './references'
-import { notNull } from '@isbl/ts-utils'
+import { BibReference, References } from './references'
 import { FootnoteRenderer } from './footnotes'
 
 function MarkdownChapter({
@@ -26,7 +24,16 @@ function MarkdownChapter({
   )
 }
 
-export function Document() {
+export type DocumentProps = {
+  bibliography: { [key: string]: BibReference }
+  chapters: readonly (readonly [
+    id: string,
+    data: string,
+    extra?: { removeInProduction: boolean },
+  ])[]
+}
+
+export function Document({ bibliography, chapters }: DocumentProps) {
   registerFonts()
   const { lang, production } = usePDFContext()
 
