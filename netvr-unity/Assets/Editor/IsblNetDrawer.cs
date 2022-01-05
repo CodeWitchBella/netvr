@@ -41,6 +41,7 @@ public class IsblNetDrawer : PropertyDrawer
             DrawLine("");
             DrawLine("IsblPersistentData");
             DrawLine(".DataDirectory", IsblPersistentData.DataDirectory);
+            DrawLine(".LogLocalData", IsblPersistentData.Instance.LogLocalData.ToString());
             DrawLine(".GetLatestConnection()");
             var data = IsblPersistentData.Instance.GetLatestConnection();
             DrawLine("    PeerId", data.PeerId.ToString());

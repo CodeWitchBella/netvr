@@ -23,11 +23,13 @@ public sealed class IsblPersistentData
         {
             if (_instance == null)
             {
+                var fileData = "";
                 try
                 {
                     Debug.Log($"Application.persistentDataPath: {Application.persistentDataPath}, Current Directory: {Directory.GetCurrentDirectory()}");
                     using var reader = new StreamReader(DataPath);
-                    _instance = JsonConvert.DeserializeObject<IsblPersistentData>(reader.ReadToEnd());
+                    fileData = reader.ReadToEnd();
+                    _instance = JsonConvert.DeserializeObject<IsblPersistentData>(fileData);
                 }
                 catch
                 {
@@ -37,8 +39,9 @@ public sealed class IsblPersistentData
                 {
                     _instance._connections.Add(new Connection { SocketUrl = "wss://netvr.isbl.workers.dev/" });
                     _instance._connections.Add(new Connection { SocketUrl = "ws://192.168.1.31:10000/" });
-                    _instance.Save();
                 }
+
+                if (JsonConvert.SerializeObject(_instance) != fileData) _instance.Save();
             }
             return _instance;
         }
@@ -56,6 +59,19 @@ public sealed class IsblPersistentData
 
     [JsonProperty(propertyName: "connections")]
     readonly List<Connection> _connections = new();
+
+    bool _logLocalData;
+
+    [JsonProperty(propertyName: "logLocalData")]
+    public bool LogLocalData
+    {
+        get => _logLocalData;
+        set
+        {
+            _logLocalData = value;
+            Save();
+        }
+    }
 
     public Connection GetLatestConnection()
     {

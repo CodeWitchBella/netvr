@@ -4,6 +4,8 @@ using System.Threading.Tasks;
 using UnityEngine.XR;
 using System.Collections.Generic;
 using System;
+using System.IO;
+using System.IO.Compression;
 
 public class IsblTrackedPoseDriver : MonoBehaviour
 {
@@ -31,16 +33,30 @@ public class IsblTrackedPoseDriver : MonoBehaviour
 #if UNITY_EDITOR
         EditorOnly = this;
 #endif
-        Cleanup();
+        CleanUp();
         InitializeModelIfNeeded();
         Devices.Add(this);
 
         NetDevice.DeviceInfoChanged = true; // it's a new device
     }
 
+    void CleanUpFile()
+    {
+        if (_file != null)
+        {
+            _gzip.Close();
+            _file.Close();
+            _gzip.Dispose();
+            _file.Dispose();
+            _file = null;
+            _gzip = null;
+        }
+    }
+
     void OnDisable()
     {
-        Cleanup();
+        CleanUpFile();
+        CleanUp();
         Devices.Remove(this);
         OnDeviceDisconnected?.Invoke(this);
     }
@@ -65,7 +81,7 @@ public class IsblTrackedPoseDriver : MonoBehaviour
         return gltf;
     }
 
-    void Cleanup()
+    void CleanUp()
     {
         Destroy(_modelWrapper);
         _modelWrapper = null;
@@ -77,13 +93,13 @@ public class IsblTrackedPoseDriver : MonoBehaviour
     {
         if (_loadedDevice == NetDevice.Name || _isLocalHMD) return;
 
-        Cleanup();
+        CleanUp();
         _loadedDevice = NetDevice.Name;
         var thisLoadId = ++_loadId;
 
         if (NetDevice.Name.Length == 0)
         {
-            Cleanup();
+            CleanUp();
             return;
         }
 
@@ -121,8 +137,8 @@ public class IsblTrackedPoseDriver : MonoBehaviour
 
     void ConnectAxisSync(Transform child, System.Func<float> getter)
     {
-        var syncer = child.gameObject.AddComponent<AxisSynchronizer>();
-        syncer.ValueGetter = getter;
+        var synchronizer = child.gameObject.AddComponent<AxisSynchronizer>();
+        synchronizer.ValueGetter = getter;
     }
 
     void ConnectTouchpoint(Transform child)
@@ -132,8 +148,8 @@ public class IsblTrackedPoseDriver : MonoBehaviour
         primitive.transform.localRotation = Quaternion.identity;
         primitive.transform.localPosition = Vector3.zero;
         primitive.transform.localScale = Vector3.one * 0.005f; // 5mm
-        var syncer = child.gameObject.AddComponent<AxisSynchronizer>();
-        syncer.VisibilityGetter = () => NetDevice.Primary2DAxisTouch;
+        var synchronizer = child.gameObject.AddComponent<AxisSynchronizer>();
+        synchronizer.VisibilityGetter = () => NetDevice.Primary2DAxisTouch;
     }
 
     void ConnectAxes(Transform parent)
@@ -145,6 +161,7 @@ public class IsblTrackedPoseDriver : MonoBehaviour
             ConnectAxisSync(parent, () => NetDevice.Primary2DAxisClick ? 1 : 0);
         else if (parent.name == "menu_pressed_value") ConnectAxisSync(parent, () => NetDevice.MenuButton ? 1 : 0);
         else if (parent.name == "xr_standard_touchpad_axes_touched_value") ConnectTouchpoint(parent);
+        // cSpell:ignore xaxis, yaxis
         else if (parent.name == "xr_standard_touchpad_xaxis_touched_value" || parent.name == "xr_standard_thumbstick_xaxis_pressed_value")
             ConnectAxisSync(parent, () => (NetDevice.Primary2DAxis.x + 1) * .5f);
         else if (parent.name == "xr_standard_touchpad_yaxis_touched_value" || parent.name == "xr_standard_thumbstick_yaxis_pressed_value")
@@ -157,9 +174,28 @@ public class IsblTrackedPoseDriver : MonoBehaviour
         foreach (Transform child in parent) ConnectAxes(child);
     }
 
+    FileStream _file;
+    GZipStream _gzip;
     void Update()
     {
-        if (LocalDevice != null) NetDevice.UpdateFromDevice(LocalDevice);
+        if (LocalDevice != null)
+        {
+            NetDevice.UpdateFromDevice(LocalDevice);
+            if (IsblPersistentData.Instance.LogLocalData)
+            {
+                if (_file == null)
+                {
+                    _file = File.OpenWrite(Path.Combine(IsblPersistentData.DataDirectory, $"controller-{NetDevice.LocallyUniqueId}-{DateTime.UtcNow:o}.csv.gz".Replace(":", "-")));
+                    _gzip = new(_file, System.IO.Compression.CompressionLevel.Optimal);
+                    _gzip.Write(System.Text.Encoding.UTF8.GetBytes("iso time;timestamp;" + NetDevice.CSVHeader + "\n"));
+                }
+                var now = DateTime.UtcNow;
+                _gzip.Write(System.Text.Encoding.UTF8.GetBytes(
+                    $"{now:o};{new DateTimeOffset(now).ToUnixTimeMilliseconds()};{NetDevice.SerializeDataAsCsv()}\n"
+                    ));
+            }
+            else { CleanUpFile(); }
+        }
 
         // Do not track local HMD, leave that to unity so that it's setup correctly
         if (!_isLocalHMD)
