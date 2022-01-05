@@ -40,7 +40,7 @@ public class IsblNetDrawer : PropertyDrawer
             DrawLine("IsblNet is not active.");
             DrawLine("");
             DrawLine("IsblPersistentData");
-            DrawLine(".DataPath", IsblPersistentData.DataPath);
+            DrawLine(".DataDirectory", IsblPersistentData.DataDirectory);
             DrawLine(".GetLatestConnection()");
             var data = IsblPersistentData.Instance.GetLatestConnection();
             DrawLine("    PeerId", data.PeerId.ToString());

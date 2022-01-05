@@ -7,14 +7,15 @@ using UnityEngine;
 public sealed class IsblPersistentData
 {
     static IsblPersistentData _instance;
-    public static string DataPath
+    public static string DataDirectory
     {
         get
         {
-            if (Application.platform == RuntimePlatform.Android) Path.Combine(Application.persistentDataPath, "isbl-persistent-data.json");
-            return Path.Combine(Directory.GetCurrentDirectory(), "isbl-persistent-data.json");
+            if (Application.platform == RuntimePlatform.Android) return Path.Combine(Application.persistentDataPath, "user-data");
+            return Path.Combine(Directory.GetCurrentDirectory(), "user-data");
         }
     }
+    static string DataPath => Path.Combine(DataDirectory, "config.json");
 
     public static IsblPersistentData Instance
     {
@@ -24,6 +25,7 @@ public sealed class IsblPersistentData
             {
                 try
                 {
+                    Debug.Log($"Application.persistentDataPath: {Application.persistentDataPath}, Current Directory: {Directory.GetCurrentDirectory()}");
                     using var reader = new StreamReader(DataPath);
                     _instance = JsonConvert.DeserializeObject<IsblPersistentData>(reader.ReadToEnd());
                 }
@@ -35,6 +37,7 @@ public sealed class IsblPersistentData
                 {
                     _instance._connections.Add(new Connection { SocketUrl = "wss://netvr.isbl.workers.dev/" });
                     _instance._connections.Add(new Connection { SocketUrl = "ws://192.168.1.31:10000/" });
+                    _instance.Save();
                 }
             }
             return _instance;
@@ -110,8 +113,12 @@ public sealed class IsblPersistentData
         await Task.Delay(10);
         _shouldResave = false;
 
-        using var writer = new StreamWriter(DataPath);
-        await writer.WriteAsync(JsonConvert.SerializeObject(this));
+        Debug.Log($"Writing PersistentData to {DataPath}");
+        Directory.CreateDirectory(DataDirectory);
+        {
+            using var writer = new StreamWriter(DataPath);
+            await writer.WriteAsync(JsonConvert.SerializeObject(this));
+        }
         _saving = false;
 
         if (_shouldResave) Save();
