@@ -3,7 +3,7 @@ project(isbl_netvr LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 
-add_library(${PROJECT_NAME} SHARED src/main.cpp)
+add_library(${PROJECT_NAME} SHARED src/main.cpp src/calibration.cpp)
 
 if(WIN32)
     target_compile_definitions(${PROJECT_NAME} PRIVATE WIN_EXPORT)

@@ -24,6 +24,13 @@ extern "C"
     ISBL_NETVR_EXPORT int isbl_netvr_on_system_change(uint64_t xrSystem, uint64_t xrInstance, void *xrGetInstanceProcAddrPtr);
     ISBL_NETVR_EXPORT void isbl_netvr_set_logger(void (*callback)(const char *));
     ISBL_NETVR_EXPORT void *isbl_netvr_hook_get_instance_proc_addr(void *func);
+
+    ISBL_NETVR_EXPORT int isbl_netvr_calibration_create();
+    ISBL_NETVR_EXPORT void isbl_netvr_calibration_destroy(int handle);
+    ISBL_NETVR_EXPORT void
+    isbl_netvr_calibration_add_pair(int handle,
+                                    double x1, double y1, double z1, double qx1, double qy1, double qz1, double qw1,
+                                    double x2, double y2, double z2, double qx2, double qy2, double qz2, double qw2);
     // ABI end
 
 // clean up defines

@@ -17,6 +17,13 @@ insert_final_newline = false
 indent_size = 2
 insert_final_newline = true
 
+[*.{cpp}]
+indent_size = 4
+insert_final_newline = true
+
+[*.{md}]
+insert_final_newline = true
+trim_trailing_whitespace = true
 
 [*.cs]
 insert_final_newline = true
