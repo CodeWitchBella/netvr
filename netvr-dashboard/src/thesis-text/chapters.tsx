@@ -4,6 +4,7 @@ import chapter1 from './1-introduction.md?raw'
 import chapter2 from './2-analysis.md?raw'
 import chapter3 from './3-architecture.md?raw'
 import chapter4 from './4-accuracy.md?raw'
+import chapter5 from './5-demo.md?raw'
 import bib from './bibliography.json?raw'
 import chartSvg from './chart.svg?raw'
 
@@ -16,7 +17,8 @@ export const chapters: readonly (readonly [
   ['analysis', chapter2],
   ['architecture', chapter3],
   ['accuracy', chapter4],
-  ['technical-design', technicalDesign],
+  ['demo', chapter5],
+  ['technical-design', technicalDesign, { removeInProduction: true }],
   ['test', test, { removeInProduction: true }],
 ]
 

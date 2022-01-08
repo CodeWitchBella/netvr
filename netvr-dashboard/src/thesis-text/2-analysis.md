@@ -1,5 +1,7 @@
 # Analysis
 
+:todo[chybí mi hard literatura, asi bych si měla sehnat tu doporučenou]
+
 This chapter will describe various constraints and requirements that apply to this thesis. :todo[describe the actual contents of this chapter] First, I will do X, then Y and then finish it with Z.
 
 ## Target devices

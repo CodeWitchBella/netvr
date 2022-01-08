@@ -24,6 +24,7 @@ insert_final_newline = true
 [*.{md}]
 insert_final_newline = true
 trim_trailing_whitespace = true
+indent_size = 2
 
 [*.cs]
 insert_final_newline = true

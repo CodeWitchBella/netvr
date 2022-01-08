@@ -28,6 +28,7 @@ export function References({
   citations: readonly { id: string; index: number; data: BibReference | null }[]
   unused?: readonly (BibReference & { id: string })[]
 }) {
+  const { production } = usePDFContext()
   return (
     <Chapter title="References" id="references">
       {citations.map((cite) => (
@@ -60,21 +61,25 @@ export function References({
           )}
         </pdf.View>
       ))}
-      <Section title="Unused references">
-        {unused?.map((u) => (
-          <pdf.View key={u.id}>
-            <LMText
-              fontFamily="lmroman10-regular"
-              style={{ fontSize: 10, marginRight: '3mm' }}
-            >
-              [{u.id}]
-            </LMText>
-            <pdf.View style={{ flexDirection: 'row', paddingLeft: '0.875cm' }}>
-              <Citation data={u} />
+      {production ? null : (
+        <Section title="Unused references">
+          {unused?.map((u) => (
+            <pdf.View key={u.id}>
+              <LMText
+                fontFamily="lmroman10-regular"
+                style={{ fontSize: 10, marginRight: '3mm' }}
+              >
+                [{u.id}]
+              </LMText>
+              <pdf.View
+                style={{ flexDirection: 'row', paddingLeft: '0.875cm' }}
+              >
+                <Citation data={u} />
+              </pdf.View>
             </pdf.View>
-          </pdf.View>
-        )) ?? null}
-      </Section>
+          )) ?? null}
+        </Section>
+      )}
     </Chapter>
   )
 }

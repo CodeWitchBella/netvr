@@ -10,7 +10,7 @@ First, I measured how much does Quest 2 change its tracking space over time usin
 
 ![Quest 2 with 3D printed OptiTrack marker rig attached.](quest2-optitrack.png 'quest2-optitrack')
 
-:todo[maybe take a better picture? Maybe take a picture from leap motion showing the retroreflective markers.]
+:todo[maybe take a better picture? Maybe take a picture from leap motion showing the retroreflective markers. Škoda že není černý, takhle se moc nedá vyfotit na světlém pozadí 😢]
 
 OptiTrack is set to track a group of markers as a rigid body to measure the drift. Then I started a simple application for logging the headset's position. To avoid _unintended_ headset sleep, I covered the presence sensor for the entire duration of the measurement. The data is then collected and analysed after the fact.
 

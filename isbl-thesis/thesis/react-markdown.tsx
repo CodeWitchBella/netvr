@@ -166,6 +166,9 @@ const components: NotUndefined<ReactMarkdownOptions['components']> = {
   rect: pdf.Rect as any,
   ...({ 'mjx-container': (props: any) => <>{props.children}</> } as any),
   style: () => null,
+  ul: (props) => (
+    <View>{props.children.filter((v) => typeof v !== 'string')}</View>
+  ),
   ol: (props) => (
     <View>{props.children.filter((v) => typeof v !== 'string')}</View>
   ),
@@ -198,6 +201,8 @@ const components: NotUndefined<ReactMarkdownOptions['components']> = {
         return <pdf.View wrap={false}>{props.children}</pdf.View>
       if (props.directive === 'ref')
         return <ImageRef number={props.number} title={props.title} />
+      if (props.directive === 'space')
+        return <pdf.View style={{ height: 11 }} />
       if (props.directive === 'footnote') {
         return (
           <FootnoteRef
