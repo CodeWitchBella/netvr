@@ -218,7 +218,6 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   ButtonName: 
-  FarInteraction: 0.3
-  CloseInteraction: 0.15
-  Button: 10
+  FarInteraction: 0.15
+  CloseInteraction: 0.07
   LocalOnly: 0

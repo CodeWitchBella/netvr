@@ -71,6 +71,7 @@ public class IsblLocalXRDeviceManager : MonoBehaviour
 
     void DeviceDisconnected(InputDevice obj)
     {
+        Debug.Log($"Input device disconnected {obj.name}\n{obj.characteristics}");
         _devices.RemoveAll(d =>
         {
             if (d.LocalDevice.Device == obj)
