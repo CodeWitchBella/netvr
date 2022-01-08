@@ -10,7 +10,7 @@ First, I measured how much does Quest 2 change its tracking space over time usin
 
 ![Quest 2 with 3D printed OptiTrack marker rig attached.](quest2-optitrack.png 'quest2-optitrack')
 
-:todo[maybe take a better picture?]
+:todo[maybe take a better picture? Maybe take a picture from leap motion showing the retroreflective markers.]
 
 OptiTrack is set to track a group of markers as a rigid body to measure the drift. Then I started a simple application for logging the headset's position. To avoid _unintended_ headset sleep, I covered the presence sensor for the entire duration of the measurement. The data is then collected and analysed after the fact.
 
@@ -24,28 +24,19 @@ Measured actions always started with the headset being set on a chair in the mid
 
 I also tried putting the headset to sleep and waking it up again, both in the identical and in a different location, to see if it affected the drift. Finally, I tried occluding headsets cameras fully, moving to a different location and uncovering them to see if loss of tracking introduces drift.
 
-I did the following to analyse the data: first, I matched samples from OptiTrack and Quest 2 as best as possible according to their timestamps. Then from the stable initial position, I determined the initial offset between OptiTrack's rigid body and Quest 2's centre eye.
+:todo[I'll probably replace the rest of this section once I have the data. If not I should run it through grammarly]
 
-```tex
-$$P^0_{quest}&=P^0_{rb} + P^{0}\\
-R^0_{quest}&=R^0_{rb} + R^{0}$$
-```
+To do the computation I first aligned the datasets' timestamps by using the pause at the start. To do that I computed speed of both optitrack and quest 2 output and looked for long period of time containing only zeros. This was quiet simple.
 
-:todo[fix equation to be the actual equation used]
+Then to see if the data is reasonable I computed "distance from start" and plotted it (figure :ref[chart]). The output is not reasonable. I suspect that one of the datasets has a wrong scale, but it does not seem to be usable. Therefore I'll have to figure out the source of the problem and redo the measurement. Also, optitrack was loosing tracking constantly while measuring - this can be fixed by adding more cameras, but I did not want to spend too much time on acquiring data of unknown quality (I did not have the tools for analysis ready because I did not know the output format).
 
-:todo[rotation equation does not make sense]
+I am still not sure how to calculate the drift. Following articles will might have an answer:cite[vive-analysis]:cite[vive-analysis2].
 
-:todo[describe the variables in the equation]
-
-Afterwards, I calculated the same offset for each subsequent matched pair and subtracted the initial offset. This computation provides the cumulative drift.
-
-:todo[insert chart once I have one - certainly time/error, maybe distance travelled/error?]
-
-:todo[I should probably reference some article which calculates the same, maybe some VIVE evaluations]
+![Chart showing the wrong data](chart.svg 'chart')
 
 ## Simple method calibration precision
 
-:todo[I still do not know how to measure this? Probably assume that complex method works well if the controllers are attached well, calibrate everything to OptiTrack and then measure A-OT-B vs A-(simple)-B]
+:todo[I still do not know how to measure this? Probably assume that complex method works well if the controllers are attached well, calibrate everything to OptiTrack and then measure A->OT->B vs A->(simple)->B]
 
 ## Complex method calibration precision
 

@@ -1,6 +1,6 @@
 # Introduction
 
-Virtual Reality (VR) technology progressed considerably since the days of first head-mounted displays (HMDs):cite[sword-of-damocles], but implementing good same-room multi-user experiences:footnote[User's being in same physical space as opposed to connected online.] is still not very well documented.
+Virtual Reality (VR) technology progressed considerably since the days of first head-mounted displays (HMDs):cite[sword-of-damocles], but implementing good same-room multi-user experiences:footnote[Users being in same physical space as opposed to connected online.] is still not very well documented.
 
 There exist
 
@@ -14,4 +14,4 @@ There exist
 
 ## Thesis Structure
 
-:todo[describe how I structure this work. Can't describe something that I did not do yet, can I?]
+:todo[describe how I structure this work. Can't describe something that I did not do yet, can I??]

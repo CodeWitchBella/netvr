@@ -1,9 +1,17 @@
 import pdf from '@react-pdf/renderer'
-import { createContext, PropsWithChildren, useContext, useMemo } from 'react'
+import {
+  createContext,
+  Fragment,
+  PropsWithChildren,
+  useContext,
+  useMemo,
+} from 'react'
 import { TechnikaText, usePDFContext, View } from './base'
 import { colors } from './colors'
 import { LMText } from './font'
 import type { Style } from '@react-pdf/types/style'
+// @ts-ignore
+import { parse as parseSvg } from 'svg-parser'
 
 export function Paragraph({
   children,
@@ -252,6 +260,43 @@ export function SubSection({
   )
 }
 
+function HastSvg({ node }: { node: any }) {
+  const children =
+    (node.children as any[])?.map((child, i) => (
+      <HastSvg key={i} node={child} />
+    )) ?? null
+
+  if (node.type === 'root') return <>{children}</>
+  if (node.type === 'text') return node.value
+  if (node.type === 'element') {
+    const components: { [key: string]: any } = {
+      svg: pdf.Svg,
+      g: pdf.G,
+      path: pdf.Path,
+      tspan: pdf.Tspan,
+      text: pdf.Text,
+    }
+
+    const Component = components[node.tagName]
+    const properties = Object.fromEntries(
+      Object.entries(node.properties)
+        .filter(([k]) => k !== 'font-family')
+        .map(([k, v]) => [
+          k.replace(/(-[a-z])/g, (match) => match.substring(1).toUpperCase()),
+          v,
+        ]),
+    )
+    if (Component) return <Component {...properties}>{children}</Component>
+    if (Component !== undefined) return Component
+
+    console.log('Unknown svg element', node)
+    return <>{children}</>
+  }
+  console.log('Unknown svg node', node)
+
+  return <>{children}</>
+}
+
 export function Image({
   src,
   description,
@@ -265,9 +310,20 @@ export function Image({
 }) {
   const ctx = usePDFContext()
   const chapter = useContext(chapterContext)
+
+  const lowerSrc = src.substring(0, 20).toLowerCase()
+  let children =
+    lowerSrc.startsWith('<svg') ||
+    lowerSrc.startsWith('<?xml') ||
+    lowerSrc.startsWith('<!DOCTYPE svg') ? (
+      <HastSvg node={parseSvg(src)} />
+    ) : (
+      <pdf.Image src={src} />
+    )
+
   return (
     <View id={'figure-' + title}>
-      <pdf.Image src={src} />
+      {children}
       <LMText
         fontFamily="lmroman10-regular"
         style={{ fontSize: 11, textAlign: 'justify' }}

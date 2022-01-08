@@ -1,5 +1,8 @@
 import { visit, SKIP } from 'unist-util-visit'
+import type { Options as ReactMarkdownOptions } from 'react-markdown'
 import unimath from './unimath-table.opm?raw'
+
+import rehypeMathjaxSvg from 'rehype-mathjax/svg.js'
 
 let table: Map<string, string>
 let escapes: Map<string, string>
@@ -12,6 +15,7 @@ function initTable() {
         '>=': '≥',
         '<=': '≤',
         '<-': '\\leftarrow',
+        '->': '\\rightarrow',
       }),
     )
     let regStr = ''
@@ -40,7 +44,7 @@ export function replaceEscapes(text: string) {
   return text
 }
 
-export function rehypeLigature() {
+function rehypeLigature() {
   initTable()
   return (tree: import('hast').Root) => {
     visit(tree, (node, index, parent) => {
@@ -99,3 +103,9 @@ function replace(
   )
   return [SKIP, index + 2]
 }
+
+export const rehypePlugins: ReactMarkdownOptions['rehypePlugins'] = [
+  rehypeLigature,
+  [rehypeMathjaxSvg, { svg: { fontCache: 'none' } }],
+  //() => (tree) => void console.log(tree),
+]

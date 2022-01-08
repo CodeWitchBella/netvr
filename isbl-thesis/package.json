@@ -20,6 +20,7 @@
     "remark-sectionize": "^1.1.1",
     "remark-truncate-links": "^1.0.3",
     "remark-unwrap-images": "^3.0.1",
+    "svg-parser": "^2.0.4",
     "unist-util-visit": "^4.1.0"
   },
   "peerDependencies": {

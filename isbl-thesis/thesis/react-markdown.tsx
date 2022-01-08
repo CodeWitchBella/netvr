@@ -13,9 +13,7 @@ import {
 } from './design'
 import { LMText } from './font'
 import { remarkPlugins } from './remark-plugins'
-import rehypeMathjaxSvg from 'rehype-mathjax/svg.js'
 import type * as HAST from 'hast'
-import { rehypeLigature } from './rehype-ligatures'
 // @ts-ignore
 import { normalize } from './vendor/svgpathnormalizer.js'
 import { VFile } from 'vfile'
@@ -29,6 +27,7 @@ import { uriTransformer } from 'react-markdown'
 import { childrenToReact } from 'react-markdown/lib/ast-to-react.js'
 import { FootnoteRef } from './footnotes'
 import { usePDFContext, View } from './base'
+import { rehypePlugins } from './rehype-plugins'
 
 function getText(el: HAST.ElementContent): string {
   if (el.type === 'text') return el.value
@@ -279,11 +278,7 @@ const options: Omit<ReactMarkdownOptions, 'children'> = {
   allowElement,
   unwrapDisallowed: true,
   remarkPlugins,
-  rehypePlugins: [
-    rehypeLigature,
-    [rehypeMathjaxSvg, { svg: { fontCache: 'none' } }],
-    //() => (tree) => void console.log(tree),
-  ],
+  rehypePlugins,
   transformLinkUri: uriTransformer,
 }
 

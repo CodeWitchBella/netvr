@@ -5,6 +5,7 @@ import chapter2 from './2-analysis.md?raw'
 import chapter3 from './3-architecture.md?raw'
 import chapter4 from './4-accuracy.md?raw'
 import bib from './bibliography.json?raw'
+import chartSvg from './chart.svg?raw'
 
 export const chapters: readonly (readonly [
   id: string,
@@ -21,6 +22,7 @@ export const chapters: readonly (readonly [
 
 export const files = {
   'quest2-optitrack.png': new URL('quest2-optitrack.png', import.meta.url).href,
+  'chart.svg': chartSvg,
 }
 
 export const bibliography = JSON.parse(bib).references

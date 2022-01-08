@@ -1,6 +1,6 @@
 import pdf from '@react-pdf/renderer'
 import { createContext, PropsWithChildren, useContext, useEffect } from 'react'
-import { replaceEscapes } from './rehype-ligatures'
+import { replaceEscapes } from './rehype-plugins'
 
 class FootnoteContext {
   pages = new Map<number, string[]>()

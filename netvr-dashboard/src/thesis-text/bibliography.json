@@ -143,6 +143,39 @@
       "title": "Golem",
       "authors": [{ "group": "DIVR Labs" }],
       "accessed": "2022-01-03"
+    },
+    "vive-analysis": {
+      "title": "HTC Vive: Analysis and Accuracy Improvement",
+      "doi": "10.1109/IROS.2018.8593707",
+      "authors": [
+        { "firstname": "Miguel", "surname": "Borges" },
+        { "firstname": "Andrew", "surname": "Symington" },
+        { "firstname": "Brian", "surname": "Coltin" },
+        { "firstname": "Trey", "surname": "Smith" },
+        { "firstname": "Rodrigo", "surname": "Ventura" }
+      ],
+      "date": 2018,
+      "in": {
+        "journal": "IEEE/RSJ International Conference on Intelligent Robots and Systems (IROS)",
+        "page": 2610
+      }
+    },
+    "vive-analysis2": {
+      "title": "Agreement Analysis between Vive and Vicon Systems to Monitor Lumbar Postural Changes",
+      "doi": "10.3390/s19173632",
+      "authors": [
+        { "firstname": "Susanne M.", "surname": "van der Veen" },
+        { "firstname": "Martine", "surname": "Bordeleau" },
+        { "firstname": "Peter E.", "surname": "Pidcoe" },
+        { "firstname": "Christopher R.", "surname": "France" },
+        { "firstname": "James S.", "surname": "Thomas" }
+      ],
+      "in": {
+        "journal": "Sensors",
+        "volume": 19,
+        "number": 17,
+        "page": 3632
+      }
     }
   }
 }
