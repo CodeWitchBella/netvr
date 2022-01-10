@@ -22,7 +22,7 @@ public class IsblXRDeviceDrawer : PropertyDrawer
         var y = position.y;
         void DrawLine(string text, string text2 = "")
         {
-            EditorGUI.LabelField(new Rect(position.x, y, position.width, 20), text, text2);
+            EditorGUI.LabelField(new Rect(position.x, y, position.width, LineHeight), text, text2);
             y += LineHeight;
         }
         void DrawField<T>(string name, T value, bool native = true)
@@ -58,7 +58,16 @@ public class IsblXRDeviceDrawer : PropertyDrawer
             var haptics = device.Haptics;
             if (haptics != null)
             {
-                DrawLine("Haptics");
+                const int TextWidth = 75;
+                EditorGUI.LabelField(new Rect(position.x, y, TextWidth, 20), "Haptics");
+                if (haptics.SupportsImpulse && localDevice != null)
+                {
+                    if (GUI.Button(new Rect(TextWidth + 10, y, 75, 20), "test"))
+                    {
+                        localDevice.Device.SendHapticImpulse(0, 0.25f, 0.1f);
+                    }
+                }
+                y += LineHeight;
                 DrawLine("    NumChannels", haptics.NumChannels.ToString());
                 DrawLine("    SupportsImpulse", haptics.SupportsImpulse.ToString());
                 DrawLine("    SupportsBuffer", haptics.SupportsBuffer.ToString());
