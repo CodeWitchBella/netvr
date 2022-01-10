@@ -47,7 +47,7 @@ function deviceReducer(state: ClientData[], action: any) {
         if (!client) return stateClient
         return {
           ...stateClient,
-          info: stateClient.info?.map((stateInfo: any) => {
+          info: stateClient.info?.map((stateInfo: any): DeviceData => {
             const clientData = client.devices.find(
               (d) => d.deviceId === stateInfo.localId,
             )
@@ -124,7 +124,7 @@ function DashboardInner({ socket }: { socket: PWebSocket }) {
             <SyncDevicesButton sendMessage={sendMessage} clients={clients} />
           </ErrorBoundary>
           {clients.map((client) => (
-            <Client key={client.id} client={client} />
+            <Client key={client.id} client={client} socket={socket} />
           ))}
         </div>
         <div className="events">
@@ -145,7 +145,13 @@ function DashboardInner({ socket }: { socket: PWebSocket }) {
   )
 }
 
-function Client({ client }: { client: ClientData }) {
+function Client({
+  client,
+  socket,
+}: {
+  client: ClientData
+  socket: PWebSocket
+}) {
   const [showJson, toggleShowJson] = useReducer((prev: boolean) => !prev, false)
   return (
     <div
@@ -162,7 +168,12 @@ function Client({ client }: { client: ClientData }) {
         {showJson ? 'Hide JSON' : 'Show JSON'}
       </button>
       {client.info?.map((data) => (
-        <Device device={data} key={data.localId} />
+        <Device
+          device={data}
+          key={data.localId}
+          clientId={client.id}
+          socket={socket}
+        />
       )) ?? null}
       {showJson ? (
         <code>
@@ -190,12 +201,32 @@ function Client({ client }: { client: ClientData }) {
   )
 }
 
-function Device({ device }: { device: DeviceData }) {
+function Device({
+  device,
+  socket,
+  clientId,
+}: {
+  device: DeviceData
+  socket: PWebSocket
+  clientId: number
+}) {
   const { data, unknown } = mapData(device)
   const [showDetails, toggleShowDetails] = useReducer(
     (prev: boolean) => !prev,
     false,
   )
+
+  function identify() {
+    const buffer = new ArrayBuffer(21)
+    const view = new DataView(buffer)
+    view.setUint8(0, 2) // message type
+    view.setUint32(1, clientId, true)
+    view.setUint32(5, device.localId, true)
+    view.setUint32(9, 0, true) // channel
+    view.setFloat32(13, 0.25, true) // amplitude
+    view.setFloat32(17, 0.1, true) // time (oculus-only)
+    socket.send(buffer)
+  }
   return (
     <div
       style={{
@@ -205,7 +236,16 @@ function Device({ device }: { device: DeviceData }) {
         borderRadius: 4,
       }}
     >
-      <div>Device: {device.localId} </div>
+      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+        <div>Device: {device.localId}</div>
+        <button
+          type="button"
+          onClick={identify}
+          disabled={!device.haptics?.supportsImpulse}
+        >
+          Identify
+        </button>
+      </div>
       <div>Name: {device.name}</div>
       <div>Characteristics: {device.characteristics.join(', ')}</div>
       <button type="button" onClick={toggleShowDetails}>

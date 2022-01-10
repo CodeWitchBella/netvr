@@ -21,6 +21,14 @@ export type DeviceData = {
   localId: number
   lengths: { [key: string]: number }
   data?: DeviceBinaryData
+  haptics: null | {
+    numChannels: 1
+    supportsImpulse: true
+    supportsBuffer: false
+    bufferFrequencyHz: 0
+    bufferMaxSize: 0
+    bufferOptimalSize: 0
+  }
 }
 export type ClientData = {
   id: number

@@ -55,6 +55,7 @@ public class IsblLocalXRDeviceManager : MonoBehaviour
 
         #region add to IsblNet
         var net = IsblNet.Instance;
+        net?.LocalState.LocalDevices.Add(driver.LocalDevice.LocallyUniqueId, driver.LocalDevice);
         net?.LocalState.Devices.Add(driver.LocalDevice.LocallyUniqueId, driver.NetDevice);
         if (net == null) Debug.LogWarning("IsblNet is null");
         #endregion
@@ -76,7 +77,9 @@ public class IsblLocalXRDeviceManager : MonoBehaviour
         {
             if (d.LocalDevice.Device == obj)
             {
-                IsblNet.Instance?.LocalState.Devices.Remove(d.LocalDevice.LocallyUniqueId);
+                var net = IsblNet.Instance;
+                net?.LocalState.Devices.Remove(d.LocalDevice.LocallyUniqueId);
+                net?.LocalState.LocalDevices.Remove(d.LocalDevice.LocallyUniqueId);
                 return true;
             }
             return false;

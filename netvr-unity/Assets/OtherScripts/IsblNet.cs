@@ -157,11 +157,36 @@ public sealed class IsblNet : IDisposable
                         }
                     }
                 }
+                else if (messageType == 2)
+                {
+                    HandleHapticRequest(data, 1);
+                }
                 else
                 {
                     Debug.LogWarning($"Unknown binary message type {messageType}");
                 }
             };
+    }
+
+    void HandleHapticRequest(byte[] data, int offset)
+    {
+        Debug.Log($"HandleHapticRequest {string.Join(" ", data)}");
+        while (offset < data.Length)
+        {
+            int deviceId = BinaryPrimitives.ReadInt32LittleEndian(data[offset..]);
+            offset += 4;
+            uint channel = BinaryPrimitives.ReadUInt32LittleEndian(data[offset..]);
+            offset += 4;
+            BinaryReader reader = new BinaryReader(new MemoryStream(data[offset..]));
+            float duration = reader.ReadSingle();
+            float amplitude = reader.ReadSingle();
+            offset += 8;
+            //Debug.Log($"Net Haptic. deviceId: {deviceId}, channel: {channel}, amplitude: {amplitude}, duration: {duration}.");
+            if (LocalState.LocalDevices.TryGetValue(deviceId, out var device))
+            {
+                device.Device.SendHapticImpulse(channel, amplitude, duration);
+            }
+        }
     }
 
     void HandleDeviceData(int clientId, byte[] bytes, int offset)
@@ -262,7 +287,7 @@ public sealed class IsblNet : IDisposable
         LocalState.DeviceInfoChanged = false;
     }
 
-    public Isbl.NetStateData LocalState = new();
+    public Isbl.NetStateData LocalState = new(local: true);
     public Dictionary<int, Isbl.NetStateData> OtherStates = new();
 
     public void Dispose()

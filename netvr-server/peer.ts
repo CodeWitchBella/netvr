@@ -136,6 +136,15 @@ export class Peer {
       peers = Array.from(peers)
       for (const peer of peers) peer.binaryUnsent.set(this.id, this.data)
       if (sendToSelfAsDebug) this.binaryUnsent.set(this.id, this.data)
+    } else if (type === 2) {
+      const peerId = new DataView(data).getUint32(1, true)
+      const request = new Uint8Array(data.slice(4))
+      request[0] = 2
+
+      const peer = peers.find((peer) => peer.id === peerId)
+      if (peer) {
+        peer.socket.send(request)
+      }
     } else {
       console.warn(`Unknown binary message type ${type}`)
     }

@@ -1,7 +1,6 @@
 using UnityEngine;
 using GLTFast;
 using System.Threading.Tasks;
-using UnityEngine.XR;
 using System.Collections.Generic;
 using System;
 using System.IO;

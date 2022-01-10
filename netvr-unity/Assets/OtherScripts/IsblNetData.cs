@@ -19,7 +19,8 @@ namespace Isbl
         public Quaternion CalibrationRotation = Quaternion.identity;
         public Vector3 CalibrationScale = Vector3.one;
 
-        public Dictionary<int, IsblStaticXRDevice> Devices = new();
+        public readonly Dictionary<int, IsblStaticXRDevice> Devices = new();
+        public readonly Dictionary<int, IsblXRDevice> LocalDevices;
         public bool DeviceInfoChanged
         {
             get => Devices.Values.Any(d => d.DeviceInfoChanged && d.HasData);
@@ -31,6 +32,11 @@ namespace Isbl
             return 4 /* Int32 client ID */
                 + NetData.Count7BitEncodedIntBytes(Devices.Count(d => d.Value.HasData)) /* Device count */
                 + (from d in Devices where d.Value.HasData select d.Value.CalculateSerializationSize()).Sum() /* devices array */;
+        }
+
+        public NetStateData(bool local = false)
+        {
+            if (local) LocalDevices = new();
         }
     }
 
