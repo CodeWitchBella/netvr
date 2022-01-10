@@ -69,10 +69,11 @@ export class Peer {
     const count = this.binaryUnsent.size
     if (count === 0) return
     try {
-      const sendBuffer = new Uint8Array(this.binaryUnsentBytes() + 4)
-      const sizeView = new DataView(sendBuffer.buffer, 0, 4)
-      sizeView.setInt32(0, count, true)
-      let offset = 4
+      const sendBuffer = new Uint8Array(this.binaryUnsentBytes() + 4 + 1)
+      const headerView = new DataView(sendBuffer.buffer, 0, 5)
+      headerView.setUint8(0, 1) // type
+      headerView.setInt32(1, count, true)
+      let offset = 5
       for (const buff of this.binaryUnsent.values()) {
         sendBuffer.set(buff, offset)
         offset += buff.byteLength

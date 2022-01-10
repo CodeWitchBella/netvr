@@ -127,21 +127,37 @@ public sealed class IsblNet : IDisposable
         };
         _socket.OnBinaryMessage += (data) =>
             {
-                int clientCount = BinaryPrimitives.ReadInt32LittleEndian(data);
-                var offset = 4;
-
-                for (int clientIndex = 0; clientIndex < clientCount; ++clientIndex)
+                byte messageType = data[0];
+                if (messageType == 1)
                 {
-                    var clientId = BinaryPrimitives.ReadInt32LittleEndian(data[offset..]);
-                    offset += 4;
-                    offset += Isbl.NetData.Read7BitEncodedInt(data[offset..], out var numberOfDevices);
-
-                    for (int deviceIndex = 0; deviceIndex < numberOfDevices; deviceIndex++)
+                    if (data[1] == 0)
                     {
-                        HandleDeviceData(clientId, data, offset);
-                        offset += Isbl.NetData.Read7BitEncodedInt(data[offset..], out var deviceBytes);
-                        offset += deviceBytes;
+                        Debug.LogWarning("The server is probably using outdated protocol. Ignoring message.");
+                        // this could also happen with 256 other clients which is unlikely for now
+                        // TODO: remove this if
+                        return;
                     }
+
+                    int clientCount = BinaryPrimitives.ReadInt32LittleEndian(data[1..]);
+                    var offset = 5;
+
+                    for (int clientIndex = 0; clientIndex < clientCount; ++clientIndex)
+                    {
+                        var clientId = BinaryPrimitives.ReadInt32LittleEndian(data[offset..]);
+                        offset += 4;
+                        offset += Isbl.NetData.Read7BitEncodedInt(data[offset..], out var numberOfDevices);
+
+                        for (int deviceIndex = 0; deviceIndex < numberOfDevices; deviceIndex++)
+                        {
+                            HandleDeviceData(clientId, data, offset);
+                            offset += Isbl.NetData.Read7BitEncodedInt(data[offset..], out var deviceBytes);
+                            offset += deviceBytes;
+                        }
+                    }
+                }
+                else
+                {
+                    Debug.LogWarning($"Unknown binary message type {messageType}");
                 }
             };
     }

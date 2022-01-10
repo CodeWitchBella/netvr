@@ -33,25 +33,27 @@ function deviceReducer(state: ClientData[], action: any) {
     }
   } else {
     const binaryMessage = parseBinaryMessage(action)
-    state = state.map((stateClient) => {
-      const client = binaryMessage.clients.find(
-        (c) => c.clientId === stateClient.id,
-      )
-      if (!client) return stateClient
-      return {
-        ...stateClient,
-        info: stateClient.info?.map((stateInfo: any) => {
-          const clientData = client.devices.find(
-            (d) => d.deviceId === stateInfo.localId,
-          )
-          if (!clientData) return stateInfo
-          return {
-            ...stateInfo,
-            data: clientData,
-          }
-        }),
-      }
-    })
+    if (binaryMessage.clients) {
+      state = state.map((stateClient) => {
+        const client = binaryMessage.clients.find(
+          (c) => c.clientId === stateClient.id,
+        )
+        if (!client) return stateClient
+        return {
+          ...stateClient,
+          info: stateClient.info?.map((stateInfo: any) => {
+            const clientData = client.devices.find(
+              (d) => d.deviceId === stateInfo.localId,
+            )
+            if (!clientData) return stateInfo
+            return {
+              ...stateInfo,
+              data: clientData,
+            }
+          }),
+        }
+      })
+    }
     return state
   }
 
@@ -263,7 +265,7 @@ function BinaryMessage({ data }: { data: ArrayBuffer }) {
   return (
     <>
       <div style={{ whiteSpace: 'pre-wrap', width: 500 }}>
-        {'  ___count_____   __client_id__  #d _#bytes'}
+        {'type  ___count_____   __client_id__  #d _#bytes'}
       </div>
       <div style={{ whiteSpace: 'pre-wrap', width: 500 }}>
         {Array.from(new Uint8Array(data).values())

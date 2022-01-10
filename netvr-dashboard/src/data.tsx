@@ -83,39 +83,54 @@ export function mapData(device: DeviceData): {
 }
 
 export function parseBinaryMessage(data: ArrayBuffer) {
-  const view = new DataView(data, 0, data.byteLength)
-  var offset = { current: 0 }
-  const clientCount = readUint32(view, offset)
-  let clients = []
-  for (let clientIndex = 0; clientIndex < clientCount; ++clientIndex) {
-    const clientId = readUint32(view, offset)
-    const numberOfDevices = read7BitEncodedInt(view, offset)
-    let devices: DeviceBinaryData[] = []
-    for (let deviceId = 0; deviceId < numberOfDevices; ++deviceId) {
-      const deviceByteCount = read7BitEncodedInt(view, offset)
-      const deviceBytes = view.buffer.slice(
-        offset.current,
-        offset.current + deviceByteCount,
-      )
-      const offsetCopy = { ...offset }
-      offset.current += deviceByteCount
-      const deviceId = read7BitEncodedInt(view, offsetCopy)
+  try {
+    const view = new DataView(data, 0, data.byteLength)
+    var offset = { current: 0 }
+    const messageType = readByte(view, offset)
+    if (messageType === 1) {
+      const clientCount = readUint32(view, offset)
+      let clients = []
+      for (let clientIndex = 0; clientIndex < clientCount; ++clientIndex) {
+        const clientId = readUint32(view, offset)
+        const numberOfDevices = read7BitEncodedInt(view, offset)
+        let devices: DeviceBinaryData[] = []
+        for (let deviceId = 0; deviceId < numberOfDevices; ++deviceId) {
+          const deviceByteCount = read7BitEncodedInt(view, offset)
+          const deviceBytes = view.buffer.slice(
+            offset.current,
+            offset.current + deviceByteCount,
+          )
+          const offsetCopy = { ...offset }
+          offset.current += deviceByteCount
+          const deviceId = read7BitEncodedInt(view, offsetCopy)
 
-      devices.push({
-        deviceId,
-        deviceByteCount,
-        bytes: new Uint8Array(deviceBytes).join(' '),
-        quaternion: readArray(view, offsetCopy, readVec3),
-        vector3: readArray(view, offsetCopy, readVec3),
-        vector2: readArray(view, offsetCopy, readVec2),
-        float: readArray(view, offsetCopy, readFloat),
-        bool: readArray(view, offsetCopy, readBool),
-        uint32: readArray(view, offsetCopy, readUint32),
-      })
+          devices.push({
+            deviceId,
+            deviceByteCount,
+            bytes: new Uint8Array(deviceBytes).join(' '),
+            quaternion: readArray(view, offsetCopy, readVec3),
+            vector3: readArray(view, offsetCopy, readVec3),
+            vector2: readArray(view, offsetCopy, readVec2),
+            float: readArray(view, offsetCopy, readFloat),
+            bool: readArray(view, offsetCopy, readBool),
+            uint32: readArray(view, offsetCopy, readUint32),
+          })
+        }
+        clients.push({ devices, clientId })
+      }
+      return { clientCount, clients }
     }
-    clients.push({ devices, clientId })
+    return { error: 'Unknown message type' }
+  } catch (e: any) {
+    console.log(e)
+    return {
+      error: 'failed to parse binary message',
+      detail: {
+        message: e?.message,
+        error: e,
+      },
+    }
   }
-  return { clientCount, clients }
 }
 
 function readUint32(view: DataView, offset: { current: number }) {
