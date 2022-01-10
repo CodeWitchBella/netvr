@@ -11,3 +11,4 @@ isbl
 netvr
 vrlab
 golem
+brotli

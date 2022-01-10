@@ -22,7 +22,7 @@ public sealed class IsblNet : IDisposable
     public static void EnsureInstanceExists() { if (!IsblNetComponent.InstanceExists) IsblNetComponent.Instance = new(); }
 
     /// <summary>
-    /// When you need to send or recieve message via network use this to access
+    /// When you need to send or receive message via network use this to access
     /// primary IsblNet instance
     /// </summary>
     public static IsblNet Instance { get { EnsureInstanceExists(); return IsblNetComponent.Instance; } }
@@ -48,10 +48,10 @@ public sealed class IsblNet : IDisposable
                 // simulate disconnect
                 _socket.OnDisconnect?.Invoke();
                 _socket.OnDisconnect = null;
-                // cleanup
+                // clean up
                 _socket.Dispose();
             }
-            // reinit
+            // re-init
             var data = IsblPersistentData.Instance.GetConnection(value);
             Debug.Log($"Connecting to: {data.SocketUrl} with {data.PeerId}, {data.PeerIdToken}");
             LocalState.Id = data.PeerId;
@@ -213,7 +213,7 @@ public sealed class IsblNet : IDisposable
             {
                 if (id != LocalState.Id)
                 {
-                    Debug.LogWarning($"Recieved set calibration message for unknown device id {id}. Did it arive before device info?");
+                    Debug.LogWarning($"Received set calibration message for unknown device id {id}. Did it arrive before device info?");
                 }
                 continue;
             }
