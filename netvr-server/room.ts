@@ -1,5 +1,5 @@
 import { Peer } from './peer.js'
-import { getRandomString, promisifyWebsocket } from './utils.js'
+import { getRandomString, promisifyWebsocket, PWebSocket } from './utils.js'
 
 export function createRoom() {
   let idgen = 0
@@ -31,23 +31,34 @@ export function createRoom() {
         }
         const message = JSON.parse(event.data)
         if (message.action === 'gimme id') {
+          if (!checkProtocolVersion(message)) return
+
           thisPeer?.onDisconnect(other(peersById.values(), thisPeer.id))
+          if (thisPeer) peersById.delete(thisPeer.id)
           thisPeer = createPeer(++idgen, socket)
           socket.send(
             JSON.stringify({
               action: "id's here",
               intValue: thisPeer.id,
               stringValue: peerTokens.get(thisPeer.id),
+              protocolVersion: Peer.protocolVersion,
             }),
           )
         } else if (message.action === 'i already has id') {
+          if (!checkProtocolVersion(message)) return
+
           const requestedId = message.id
           const token = peerTokens.get(requestedId)
           if (token && token === message.token) {
             thisPeer?.onDisconnect(other(peersById.values(), thisPeer.id))
             thisPeer = createPeer(requestedId, socket)
             console.log(peersById)
-            socket.send(JSON.stringify({ action: 'id ack' }))
+            socket.send(
+              JSON.stringify({
+                action: 'id ack',
+                protocolVersion: Peer.protocolVersion,
+              }),
+            )
           } else {
             thisPeer?.onDisconnect(other(peersById.values(), thisPeer.id))
             thisPeer = createPeer(++idgen, socket)
@@ -57,6 +68,7 @@ export function createRoom() {
                 action: "id's here",
                 intValue: thisPeer.id,
                 stringValue: peerTokens.get(thisPeer.id),
+                protocolVersion: Peer.protocolVersion,
               }),
             )
           }
@@ -90,6 +102,21 @@ export function createRoom() {
     peersById.set(peer.id, peer)
     console.log(peersById)
     return peer
+  }
+
+  function checkProtocolVersion(message: { [key: string]: unknown }) {
+    if (message.protocolVersion !== Peer.protocolVersion) {
+      console.log(
+        `Protocol version mismatch. Server: ${Peer.protocolVersion}, Client: ${
+          typeof message.protocolVersion === 'number' &&
+          Number.isInteger(message.protocolVersion)
+            ? message.protocolVersion
+            : 0
+        }`,
+      )
+      return false
+    }
+    return true
   }
 }
 

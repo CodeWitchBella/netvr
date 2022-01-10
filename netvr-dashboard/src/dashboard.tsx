@@ -3,7 +3,13 @@ import { useLog } from './log'
 import { ListenToSocket, useSocket } from './listen-to-socket'
 import type { PWebSocket } from './utils'
 import { ErrorBoundary } from './error-boundary'
-import { ClientData, DeviceData, mapData, parseBinaryMessage } from './data'
+import {
+  ClientData,
+  DeviceData,
+  mapData,
+  parseBinaryMessage,
+  protocolVersion,
+} from './data'
 import { SyncDevicesButton } from './sync-devices'
 
 function useSendKeepAlive(socket: PWebSocket) {
@@ -73,7 +79,7 @@ export function Dashboard({ socketUrl }: { socketUrl: string }) {
 
 function DashboardInner({ socket }: { socket: PWebSocket }) {
   useEffect(() => {
-    socket.send(JSON.stringify({ action: 'gimme id' }))
+    socket.send(JSON.stringify({ action: 'gimme id', protocolVersion }))
   }, [socket])
 
   const [stopped, setStopped] = useState(false)

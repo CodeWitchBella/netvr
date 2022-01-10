@@ -13,6 +13,8 @@ using System.IO.Compression;
 /// Do not construct this directly, use .Instance accessor instead.
 public sealed class IsblNet : IDisposable
 {
+    public const int ProtocolVersion = 1;
+
     /// <summary>
     /// Makes sure that there is existing instance of IsblNet. This is usually
     /// not necessary to call directly because .Instance already does that.
@@ -74,8 +76,8 @@ public sealed class IsblNet : IDisposable
     {
         _socket.OnConnect += () =>
         {
-            if (LocalState.Id == 0) _socket.SendAsync(new { action = "gimme id" });
-            else _socket.SendAsync(new { action = "i already has id", id = LocalState.Id, token = LocalState.IdToken });
+            if (LocalState.Id == 0) _socket.SendAsync(new { action = "gimme id", protocolVersion = ProtocolVersion });
+            else _socket.SendAsync(new { action = "i already has id", id = LocalState.Id, token = LocalState.IdToken, protocolVersion = ProtocolVersion });
         };
         _socket.OnDisconnect += () =>
         {
@@ -95,6 +97,12 @@ public sealed class IsblNet : IDisposable
                         LocalState.Id = obj.Value<int>("intValue");
                         LocalState.IdToken = obj.Value<string>("stringValue");
                     }
+                    var serverVersion = obj.Value<int>("protocolVersion");
+                    if (serverVersion != ProtocolVersion)
+                    {
+                        throw new Exception($"Protocol version mismatch. Client: {ProtocolVersion}, Server: {serverVersion}.");
+                    }
+
                     IsblPersistentData.Instance.SaveConnection(socketUrl: _socket.Uri.ToString(), peerId: LocalState.Id, peerIdToken: LocalState.IdToken);
                     LocalState.Initialized = true;
                     SendDeviceInfo();
@@ -122,22 +130,16 @@ public sealed class IsblNet : IDisposable
             }
             catch (Exception e)
             {
+                Debug.Log($"Error while processing text message:\n{text}");
                 Debug.LogException(e);
             }
         };
         _socket.OnBinaryMessage += (data) =>
             {
+                if (data.Length < 1) return;
                 byte messageType = data[0];
                 if (messageType == 1)
                 {
-                    if (data[1] == 0)
-                    {
-                        Debug.LogWarning("The server is probably using outdated protocol. Ignoring message.");
-                        // this could also happen with 256 other clients which is unlikely for now
-                        // TODO: remove this if
-                        return;
-                    }
-
                     int clientCount = BinaryPrimitives.ReadInt32LittleEndian(data[1..]);
                     var offset = 5;
 
@@ -302,10 +304,11 @@ public sealed class IsblNet : IDisposable
     public void Tick()
     {
         if (!LocalState.Initialized || _socket == null) return;
-        var bytes = new byte[LocalState.CalculateSerializationSize()];
+        var bytes = new byte[LocalState.CalculateSerializationSize() + 1];
         var span = bytes.AsSpan();
-        BinaryPrimitives.WriteInt32LittleEndian(span[0..4], LocalState.Id);
-        int offset = 4;
+        span[0] = 1;
+        BinaryPrimitives.WriteInt32LittleEndian(span[1..5], LocalState.Id);
+        int offset = 5;
         offset += Isbl.NetData.Write7BitEncodedInt(span[offset..], LocalState.Devices.Count(d => d.Value.HasData));
         foreach (var devicePair in LocalState.Devices)
         {

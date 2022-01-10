@@ -79,8 +79,12 @@ async function serveSocket(event: Deno.RequestEvent) {
         socket.readyState !== socketState.CLOSING &&
         socket.readyState !== socketState.CLOSED
       ) {
+        console.log('Closing')
         socket.close()
       }
+    })
+    .catch((e) => {
+      console.error(e)
     })
   event.respondWith(response)
 }

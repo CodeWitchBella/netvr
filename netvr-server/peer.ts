@@ -9,6 +9,8 @@ type Calibration = {
 }
 
 export class Peer {
+  static protocolVersion = 1
+
   data: Uint8Array = new Uint8Array()
   deviceInfo?: any
   calibration: Calibration = {
@@ -126,12 +128,17 @@ export class Peer {
   }
 
   onBinary(data: ArrayBuffer, peers: readonly Peer[]) {
-    this.data = new Uint8Array(data)
+    const type = new Uint8Array(data.slice(0, 1))[0]
+    if (type === 1) {
+      this.data = new Uint8Array(data.slice(1))
 
-    //console.log(Array.from(this.data.values()).join(' '))
-    peers = Array.from(peers)
-    for (const peer of peers) peer.binaryUnsent.set(this.id, this.data)
-    if (sendToSelfAsDebug) this.binaryUnsent.set(this.id, this.data)
+      //console.log(Array.from(this.data.values()).join(' '))
+      peers = Array.from(peers)
+      for (const peer of peers) peer.binaryUnsent.set(this.id, this.data)
+      if (sendToSelfAsDebug) this.binaryUnsent.set(this.id, this.data)
+    } else {
+      console.warn(`Unknown binary message type ${type}`)
+    }
 
     this.sendBinaryUnsent()
     this.sendJsonUnsent(peers)

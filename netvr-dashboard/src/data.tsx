@@ -1,6 +1,8 @@
 import { notNull } from '@isbl/ts-utils'
 import { locationMap } from './location-map'
 
+export const protocolVersion = 1
+
 export type DeviceBinaryData = {
   readonly deviceId: number
   readonly deviceByteCount: number
