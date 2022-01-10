@@ -25,6 +25,10 @@ export const chapters: readonly (readonly [
 export const files = {
   'quest2-optitrack.png': new URL('quest2-optitrack.png', import.meta.url).href,
   'chart.svg': chartSvg,
+  'unity-device-drawer.png': new URL('unity-device-drawer.png', import.meta.url)
+    .href,
+  'unity-net-drawer.png': new URL('unity-net-drawer.png', import.meta.url).href,
+  'web-dashboard.png': new URL('web-dashboard.png', import.meta.url).href,
 }
 
 export const bibliography = JSON.parse(bib).references

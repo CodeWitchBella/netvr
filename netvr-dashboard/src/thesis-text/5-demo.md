@@ -27,3 +27,15 @@ To demonstrate all approaches and concepts in previous sections a simple applica
 - Interesting would be to actually have a VRPN client and allow to replace tracking with optitrack's (this would also simplify some measurements). But it seems to be too much work to be worth it.
 
 :todo[take a picture of multiple users in VR world]
+
+## Dashboard
+
+To allow testing of implemented algorithm as well as to simplify development a web-based dashboard was implemented. It can be seen on figure :ref[web-dashboard]. It implements the full communication protocol except for sending device data.
+
+![Web-based dashboard as of 2022-01-10](web-dashboard.png 'web-dashboard')
+
+## Images not referenced from text
+
+![Unity network drawer](unity-net-drawer.png 'net-drawer')
+
+![Unity device drawer](unity-device-drawer.png 'device-drawer')
