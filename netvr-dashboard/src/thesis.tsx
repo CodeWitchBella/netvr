@@ -18,10 +18,15 @@ export default function ThesisRenderer() {
 
   return (
     <>
-      <ThesisConfig config={config} setConfig={setConfig} />
+      <ThesisConfig
+        config={config}
+        setConfig={setConfig}
+        chapters={chapters.map((v) => v[0])}
+      />
       <Thesis
         bibliography={bibliography}
         chapters={chapters}
+        onlyChapter={config.onlyChapter}
         production={config.production}
         useBuiltIn={config.useBuiltIn}
         files={files}
@@ -29,18 +34,25 @@ export default function ThesisRenderer() {
     </>
   )
 }
-type Config = { useBuiltIn: boolean; production: boolean }
+type Config = {
+  useBuiltIn: boolean
+  production: boolean
+  onlyChapter: false | string
+}
 const defaultConfig: Config = {
   useBuiltIn: false,
   production: true,
+  onlyChapter: false,
 }
 
 function ThesisConfig({
   config,
   setConfig,
+  chapters,
 }: {
   config: Config
   setConfig: (cfg: Partial<Config>) => void
+  chapters: readonly string[]
 }) {
   return (
     <div
@@ -49,9 +61,11 @@ function ThesisConfig({
         display: 'flex',
         padding: 4,
         borderBottom: '1px solid gray',
+        alignItems: 'center',
       }}
     >
       <div>Config:</div>
+
       <label>
         <input
           type="checkbox"
@@ -77,6 +91,25 @@ function ThesisConfig({
           }}
         />{' '}
         only final-ready
+      </label>
+      <label>
+        <select
+          defaultValue={config.onlyChapter || ''}
+          onChange={(event) => {
+            setTimeout(
+              () => void setConfig({ onlyChapter: event.target.value }),
+              0,
+            )
+          }}
+        >
+          <option value="">Select chapter</option>
+          <option value="technical">technical</option>
+          {chapters.map((c) => (
+            <option value={c} key={c}>
+              {c}
+            </option>
+          ))}
+        </select>
       </label>
     </div>
   )

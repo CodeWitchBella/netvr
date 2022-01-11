@@ -20,6 +20,7 @@ export function Thesis({
   production,
   useBuiltIn,
   files = {},
+  onlyChapter,
 }: DocumentProps & {
   production: boolean
   language?: 'en' | 'cs'
@@ -27,8 +28,8 @@ export function Thesis({
   files?: { [key: string]: string }
 }) {
   const documentProps = useMemo(
-    () => ({ bibliography, chapters }),
-    [bibliography, chapters],
+    () => ({ bibliography, chapters, onlyChapter }),
+    [bibliography, chapters, onlyChapter],
   )
 
   const context = useMemo(

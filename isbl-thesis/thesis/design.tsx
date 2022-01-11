@@ -112,7 +112,6 @@ export function Chapter({
     <>
       <View
         id={'chapter-' + id}
-        break={no !== 1}
         wrap={false}
         style={{
           position: 'relative',
