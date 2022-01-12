@@ -4,7 +4,7 @@
 
 While the calibration subjectively works, measuring how well it works is also necessary. Another consideration, as previously noted, is whether and for how long is it possible to expect the calibration to hold if a one-time method of calibration is used.
 
-## Quest 2 drift
+## Quest 2 drift {#quest-2-drift}
 
 First, I measured how much does Quest 2 change its tracking space over time using OptiTrack as a ground-truth reference. To do so, I designed 3D printed rig (figure :ref[quest2-optitrack]) with an OptiTrack marker so that my measurements are repeatable without using adhesives for attaching the markers.
 
@@ -34,15 +34,15 @@ I am still not sure how to calculate the drift. Following articles will might ha
 
 ![Chart showing the wrong data](chart.svg 'chart')
 
-## Simple method calibration precision
+## Simple method calibration precision {#simple-method-calibration-precision}
 
 :todo[I still do not know how to measure this? Probably assume that complex method works well if the controllers are attached well, calibrate everything to OptiTrack and then measure A->OT->B vs A->(simple)->B]
 
-## Complex method calibration precision
+## Complex method calibration precision {#complex-method-calibration-precision}
 
 :todo[same methodology as in above?]
 
-## Effect of latency on calibration result
+## Effect of latency on calibration result {#effect-of-latency-on-calibration-result}
 
 My implementation deals with _symmetric_ latency correctly, but if one were to omit such code or the latency was asymmetric, it would affect the calibration results of the complex method. Therefore, this section estimates the error with respect to the speed at which the user moves tracked devices and subsequently validates the estimate with real-world measurement.
 

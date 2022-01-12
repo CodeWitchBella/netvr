@@ -5,6 +5,7 @@ import { visit, SKIP } from 'unist-util-visit'
 import remarkDirective from 'remark-directive'
 import remarkUnwrapImages from 'remark-unwrap-images'
 import remarkGfm from 'remark-gfm'
+import remarkHeadingId from 'remark-heading-id'
 import { remarkTruncateLinks } from 'remark-truncate-links'
 import { VFile } from 'vfile'
 
@@ -149,4 +150,5 @@ export const remarkPlugins = [
   remarkUnwrapImages,
   remarkGfm,
   [remarkTruncateLinks, { style: 'smart', length: 40 }],
+  remarkHeadingId,
 ]

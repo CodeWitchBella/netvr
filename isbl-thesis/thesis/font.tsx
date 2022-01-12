@@ -1,7 +1,7 @@
 import pdf from '@react-pdf/renderer'
 import type { Style } from '@react-pdf/types/style'
 // @ts-ignore
-import { lmdb, technika } from '../assets.js'
+import { hellvetica, lmdb, technika } from '../assets.js'
 const { Font } = pdf
 
 let registered = false
@@ -17,6 +17,10 @@ export function registerFonts() {
   Font.register({
     family: 'Technika',
     fonts: technika,
+  })
+  Font.register({
+    family: 'Hellvetica',
+    src: hellvetica,
   })
 
   for (const [longName, src] of Object.entries(lmdb)) {

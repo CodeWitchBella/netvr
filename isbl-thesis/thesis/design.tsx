@@ -164,9 +164,12 @@ export function Section({
   children,
   title,
   no = 0,
-}: PropsWithChildren<{ title: string; no?: number }>) {
+  id,
+}: PropsWithChildren<{ title: string; no?: number; id?: string }>) {
+  const link = id ? 'section-' + id : undefined
+  const { production } = usePDFContext()
   return (
-    <View style={{ marginTop: '7.8mm' }}>
+    <View style={{ marginTop: '7.8mm' }} id={link}>
       <View
         wrap={false}
         minPresenceAhead={10}
@@ -203,6 +206,14 @@ export function Section({
         >
           {title}
         </TechnikaText>
+        {production || !link ? null : (
+          <>
+            <View style={{ flexGrow: 1 }} />
+            <View style={{ alignSelf: 'flex-start' }}>
+              <TechnikaText>#{link}</TechnikaText>
+            </View>
+          </>
+        )}
       </View>
       <sectionContext.Provider value={no}>{children}</sectionContext.Provider>
     </View>

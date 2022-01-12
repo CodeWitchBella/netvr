@@ -103,3 +103,6 @@ export const technika = [
     src: new URL('./fonts/Technika-Regular.otf', import.meta.url).href,
   },
 ]
+
+export const hellvetica = new URL('./fonts/Hellvetica.ttf', import.meta.url)
+  .href

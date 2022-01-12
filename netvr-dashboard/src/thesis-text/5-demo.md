@@ -28,7 +28,7 @@ To demonstrate all approaches and concepts in previous sections a simple applica
 
 :todo[take a picture of multiple users in VR world]
 
-## Dashboard
+## Dashboard {#demo-dashboard}
 
 To allow testing of implemented algorithm as well as to simplify development a web-based dashboard was implemented. It can be seen on figure :ref[web-dashboard]. It implements the full communication protocol except for sending device data.
 

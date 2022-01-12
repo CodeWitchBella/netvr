@@ -244,7 +244,11 @@ const components: NotUndefined<ReactMarkdownOptions['components']> = {
       }
       if (firstChild.tagName === 'h2') {
         return (
-          <Section title={getText(firstChild)} no={(props as any).number}>
+          <Section
+            title={getText(firstChild)}
+            no={(props as any).number}
+            id={firstChild.properties?.id}
+          >
             {props.children.slice(1)}
           </Section>
         )

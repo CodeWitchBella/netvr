@@ -4,7 +4,7 @@
 
 This chapter will describe various constraints and requirements that apply to this thesis. :todo[describe the actual contents of this chapter] First, I will do X, then Y and then finish it with Z.
 
-## Target devices
+## Target devices {#target-devices}
 
 The first primary consideration is a choice of the target device. This choice will affect most other technical decisions because different devices have different capabilities and tracking systems. This thesis will target most devices with 6DOF tracking, meaning that they provide an application running on it with information about its position and rotation in the real world. In addition, this thesis will rely on the presence of two 6DOF-tracked controllers since most devices in this category have them available by default.
 
@@ -14,7 +14,7 @@ The most popular:cite[steam-hardware-survey] consumer VR headset in 2021 is Ques
 
 :todo[list other headsets in vrlab, because I want to try them all (except the lighthouse ones, one of lighthouse two should be enough)]
 
-## Required steps
+## Required steps {#required-steps}
 
 :todo[Better heading for this section]
 
@@ -30,7 +30,7 @@ Some headsets have a slightly wrong scale of about 0.8% according to [issue 23][
 
 [1]: https://github.com/pushrax/openvr-spacecalibrator/issues/23
 
-## Calibration Algorithms
+## Calibration Algorithms {#calibration-algorithms}
 
 There are many possible options for calibrating the tracking spaces. This section will first categorise all available options.
 
@@ -44,11 +44,11 @@ The third option is to do a predefined set of steps once at the beginning of eac
 
 The fourth option is to determine the calibration continuously while the user is in VR. For example, having the HTC VIVE tracker be attached to Quest 2, calibrating the Lighthouse-based headset to the Quest. Another option to do this would be to attach OptiTrack trackers to each headset. This option is different from replacing the tracking system with a different one by still using the integrated tracking for high-frequency data and the attached system only for low-frequency calibration updates.
 
-## Drift measurement
+## Drift measurement {#drift-measurement}
 
 To measure the drift of a tracking system and therefore the viability of using that system with one-time calibration :todo[finish]
 
-## Improving the calibration
+## Improving the calibration {#improving-the-calibration}
 
 :todo[Run this section through grammarly once I decide which parts of it I want to keep just as a "possible future improvement" and which parts to actually implement.]
 

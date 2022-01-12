@@ -1,6 +1,13 @@
 import pdf, { PDFViewer } from '@react-pdf/renderer'
-import { Page, usePDFContext, View } from './base'
-import { ChapterProvider, Paragraph, SplitView, Strong, TODO } from './design'
+import { Page, TechnikaText, usePDFContext, View } from './base'
+import {
+  ChapterProvider,
+  Link,
+  Paragraph,
+  SplitView,
+  Strong,
+  TODO,
+} from './design'
 import { LMText, registerFonts } from './font'
 import { TitlePage } from './title-page'
 const { Document: PDFDocument } = pdf
@@ -8,6 +15,7 @@ import { ReactMarkdown, markdownListToAst } from './react-markdown'
 import { BibReference, References } from './references'
 import { FootnoteRenderer } from './footnotes'
 import { Fragment } from 'react'
+import type * as hast from 'hast'
 
 function MarkdownChapter({
   children,
@@ -129,7 +137,10 @@ export function Document({
                   <Paragraph>
                     I would like to express my gratitude to my supervisor, Ing.
                     David Sedláček, Ph.D., for his guidance over the course of
-                    writing semester project and later of this thesis.
+                    writing semester project and later of this thesis. I would
+                    also like to thank him and the Department of Computer
+                    Graphics and Interaction for giving me access to equipment I
+                    needed for the completion of this thesis.
                   </Paragraph>
                 </View>
               }
@@ -156,26 +167,26 @@ export function Document({
               right={
                 <View>
                   <Paragraph>
-                    Vyšla ať té příslušník světa nové prozkoumány struktury o
-                    ságy rok místnost naši a bude superstrun jídelny i výstavě
-                    od one náš vlhkost pódia velkým. Tím slunce drží níž i
-                    básník zradit sedmikilometrového sledování vláknité a
-                    multi-dimenzionálním systematicky. Jednom, 80 ℃ kratší ptal
-                    ně indickým životním přetlakovaný i větší vystoupám tím
-                    instituce o hladinou šest psychologických starosta. Amoku
-                    kroje v nejprve i sociální existuje minerálů s potvrzují
-                    rozvoji, vznikly pás tisíc představ klidné kdysi by správní
-                    nadšenců hlavě. Nejméně jí tu chobotnice skákat, oxidu cíl
-                    posílily vláken testům. Z oprášil plyne vědecké třetí jednom
-                    ani itálie ekologickou ohrožení objeveny s vodorovně
-                    chorvati, o teoretickým snila nejlepší z predátorů kterou z
-                    zlata božská kanadské. Horečky k národností! Či EU sága
-                    vrátit řadu mohlo z svědčí spouští testy o zápory? Odlišné
-                    nebo marná mám, běžnou kontinentu. Ně ze včera vlna cestou
-                    po polopotopenou. Ať okouzlí, hlavní klecích zkoušet dosahu
-                    s s historkám ochlazení, mým pomocí od petr rozloučím
-                    slunečního skončení kostely, každý pravdou tj. 1963–1977
-                    starala o reprezentační.
+                    (placeholder from blabot.cz) Vyšla ať té příslušník světa
+                    nové prozkoumány struktury o ságy rok místnost naši a bude
+                    superstrun jídelny i výstavě od one náš vlhkost pódia
+                    velkým. Tím slunce drží níž i básník zradit
+                    sedmikilometrového sledování vláknité a multi-dimenzionálním
+                    systematicky. Jednom, 80 ℃ kratší ptal ně indickým životním
+                    přetlakovaný i větší vystoupám tím instituce o hladinou šest
+                    psychologických starosta. Amoku kroje v nejprve i sociální
+                    existuje minerálů s potvrzují rozvoji, vznikly pás tisíc
+                    představ klidné kdysi by správní nadšenců hlavě. Nejméně jí
+                    tu chobotnice skákat, oxidu cíl posílily vláken testům. Z
+                    oprášil plyne vědecké třetí jednom ani itálie ekologickou
+                    ohrožení objeveny s vodorovně chorvati, o teoretickým snila
+                    nejlepší z predátorů kterou z zlata božská kanadské. Horečky
+                    k národností! Či EU sága vrátit řadu mohlo z svědčí spouští
+                    testy o zápory? Odlišné nebo marná mám, běžnou kontinentu.
+                    Ně ze včera vlna cestou po polopotopenou. Ať okouzlí, hlavní
+                    klecích zkoušet dosahu s s historkám ochlazení, mým pomocí
+                    od petr rozloučím slunečního skončení kostely, každý pravdou
+                    tj. 1963–1977 starala o reprezentační.
                   </Paragraph>
                   <TODO>Replace blabot.cz output with real abstract</TODO>
                   <View style={{ height: '3mm' }} />
@@ -192,6 +203,7 @@ export function Document({
               left={
                 <View>
                   <Paragraph>
+                    (placeholder, real abstract will be provided for the thesis)
                     Lorem ipsum dolor sit amet, consectetur adipiscing elit.
                     Etiam commodo orci imperdiet volutpat malesuada. Vestibulum
                     quis massa tristique, lobortis arcu quis, pharetra ligula.
@@ -222,10 +234,26 @@ export function Document({
             <SplitView
               rightTitle=""
               leftTitle="Contents"
-              right={<View></View>}
+              right={<View />}
               left={
                 <View>
-                  <TODO>Table of contents</TODO>
+                  {parsed.asts.map((chapter, index) => {
+                    const id = usedChapters[index][0]
+                    return (
+                      <TableOfContentsChapter
+                        key={id}
+                        index={index}
+                        chapter={chapter}
+                        id={id}
+                      />
+                    )
+                  })}
+                  <View style={{ marginTop: 20 }}>
+                    <LMText fontFamily="lmroman10-regular">
+                      Please note that typography for this section is work in
+                      progress
+                    </LMText>
+                  </View>
                 </View>
               }
             />
@@ -277,5 +305,66 @@ export function Document({
         </FootnoteRenderer>
       </Page>
     </PDFDocument>
+  )
+}
+
+function getText(node: hast.ElementContent): string {
+  if (node.type === 'text') return node.value
+  if (node.type === 'element')
+    return node.children.map((v) => getText(v)).join('')
+  return ''
+}
+
+function findSections(
+  node: hast.ElementContent | hast.Root | hast.RootContent,
+  start = true,
+): hast.Element[] {
+  if (node.type === 'root') {
+    return node.children.map((child) => findSections(child, false)).flat()
+  }
+
+  if (node.type === 'element') {
+    if (node.tagName === 'section' && !start) return [node]
+    return node.children.map((child) => findSections(child, false)).flat()
+  }
+  return []
+}
+
+function TableOfContentsChapter({
+  chapter,
+  id,
+  index,
+}: {
+  chapter: hast.Root
+  id: string
+  index: number
+}) {
+  const rootSection = findSections(chapter)[0] ?? null
+  if (!rootSection) return null
+  return (
+    <View>
+      <Link src={'#chapter-' + id}>
+        <TechnikaText>
+          {index + 1} {getText(rootSection?.children?.[0])}
+        </TechnikaText>
+      </Link>
+      <View style={{ paddingLeft: '5mm' }}>
+        {findSections(rootSection).map((section, i) => {
+          const sectionId: string | undefined = (section.children[0] as any)
+            ?.properties?.id
+          const child = (
+            <TechnikaText key={i}>
+              {index + 1}.{i + 1} {getText(section.children[0])}
+            </TechnikaText>
+          )
+          if (!sectionId) return child
+          return (
+            <Link src={'#section-' + sectionId} key={i}>
+              {child}
+            </Link>
+          )
+        })}
+      </View>
+    </View>
   )
 }
