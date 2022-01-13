@@ -24,13 +24,15 @@ export type BibReference = {
 export function References({
   citations,
   unused,
+  denomination,
 }: {
   citations: readonly { id: string; index: number; data: BibReference | null }[]
   unused?: readonly (BibReference & { id: string })[]
+  denomination: string
 }) {
   const { production } = usePDFContext()
   return (
-    <Chapter title="References" id="references">
+    <Chapter title="Bibliography" id="bibliography" denomination={denomination}>
       {citations.map((cite) => (
         <pdf.View
           key={cite.id}

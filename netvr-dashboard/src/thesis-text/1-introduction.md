@@ -16,11 +16,6 @@ Full multi-user experience consists of multiple parts most of which are the same
 
 The main overarching goal is to prepare for the thesis, where I want to provide concrete guidance and tips should the reader want to implement such experience themselves.
 
-:todo[describe goals of this thesis]
-
-:todo[
-describe how I structure this work. Can't describe something that I did not do yet, can I??]
-
 ## Thesis Structure {#thesis-structure}
 
 This thesis will be split to multiple chapters describing the steps needed to implement such application. First I will analyse requirements and constraints - both from the assignment of this thesis and from resources available to me while writing this thesis.

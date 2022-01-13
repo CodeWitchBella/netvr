@@ -82,16 +82,16 @@ export function Strong({ children }: PropsWithChildren<{}>) {
   )
 }
 
-const chapterContext = createContext({ no: 0, id: '' })
+const chapterContext = createContext({ denomination: '', id: '' })
 
 export function ChapterProvider({
-  index,
+  denomination,
   id,
   children,
-}: PropsWithChildren<{ index: number; id: string }>) {
+}: PropsWithChildren<{ denomination: string; id: string }>) {
   return (
     <chapterContext.Provider
-      value={useMemo(() => ({ no: index, id }), [index, id])}
+      value={useMemo(() => ({ denomination, id }), [denomination, id])}
     >
       {children}
     </chapterContext.Provider>
@@ -102,16 +102,16 @@ export function Chapter({
   children,
   title,
   ...rest
-}: PropsWithChildren<{ title: string; no?: number; id?: string }>) {
+}: PropsWithChildren<{ title: string; denomination?: string; id?: string }>) {
   const ctx = useContext(chapterContext)
   const pdfContext = usePDFContext()
-  const no = rest.no ?? ctx.no
+  const denomination = rest.denomination ?? ctx.denomination
   const id = rest.id ?? ctx.id
-  const childContext = useMemo(() => ({ id, no }), [id, no])
+  const childContext = useMemo(() => ({ id, denomination }), [id, denomination])
   return (
     <>
       <View
-        id={'chapter-' + id}
+        id={id}
         wrap={false}
         style={{
           position: 'relative',
@@ -130,9 +130,7 @@ export function Chapter({
         />
         {pdfContext.production ? null : (
           <View style={{ position: 'absolute', top: 0, left: 0, right: 0 }}>
-            <TechnikaText style={{ textAlign: 'right' }}>
-              #chapter-{id}
-            </TechnikaText>
+            <TechnikaText style={{ textAlign: 'right' }}>#{id}</TechnikaText>
           </View>
         )}
         <TechnikaText
@@ -142,9 +140,10 @@ export function Chapter({
             marginBottom: '1.5mm',
           }}
         >
-          {no ? (
+          {denomination ? (
             <>
-              Chapter <pdf.Text style={{ fontSize: 30 }}>{no}</pdf.Text>
+              {/^[0-9]+$/.test(denomination) ? 'Chapter' : 'Appendix'}{' '}
+              <pdf.Text style={{ fontSize: 30 }}>{denomination}</pdf.Text>
             </>
           ) : null}
           {'\n'}
@@ -166,7 +165,8 @@ export function Section({
   no = 0,
   id,
 }: PropsWithChildren<{ title: string; no?: number; id?: string }>) {
-  const link = id ? 'section-' + id : undefined
+  const sectionDenomination = `${useContext(chapterContext).denomination}.${no}`
+  const link = id ? id : 'automatic-' + sectionDenomination
   const { production } = usePDFContext()
   return (
     <View style={{ marginTop: '7.8mm' }} id={link}>
@@ -184,7 +184,7 @@ export function Section({
           paddingBottom: '0.5mm',
         }}
       >
-        {no ? (
+        {sectionDenomination ? (
           <>
             <TechnikaText
               style={{
@@ -192,7 +192,7 @@ export function Section({
                 fontSize: 14.52,
               }}
             >
-              {useContext(chapterContext).no}.{no}
+              {sectionDenomination}
             </TechnikaText>
             <View style={{ width: '5.4mm' }} />
           </>
@@ -250,7 +250,7 @@ export function SubSection({
         {no ? (
           <>
             <TechnikaText style={{ fontWeight: 'bold', fontSize: 12 }}>
-              {chapter.no}.{section}.{no}
+              {chapter.denomination}.{section}.{no}
             </TechnikaText>
             <View style={{ width: '5.4mm' }} />
           </>
@@ -339,7 +339,8 @@ export function Image({
         style={{ fontSize: 11, textAlign: 'justify' }}
       >
         <TechnikaText>
-          {ctx.lang === 'en' ? 'Figure' : 'Obrázek'} {chapter.no}.{index}:{' '}
+          {ctx.lang === 'en' ? 'Figure' : 'Obrázek'} {chapter.denomination}.
+          {index}:{' '}
         </TechnikaText>
         {description}
       </LMText>
@@ -351,7 +352,7 @@ export function ImageRef({ number, title }: { number: number; title: string }) {
   const chapter = useContext(chapterContext)
   return (
     <Link src={'#figure-' + title} setFont={false}>
-      {chapter.no + '.' + number}
+      {chapter.denomination + '.' + number}
     </Link>
   )
 }

@@ -8,18 +8,26 @@ import chapter5 from './5-demo.md?raw'
 import bib from './bibliography.json?raw'
 import chartSvg from './chart.svg?raw'
 
-export const chapters: readonly (readonly [
-  id: string,
-  data: string,
-  extra?: { removeInProduction: boolean },
-])[] = [
+export const chapters: readonly (
+  | readonly [
+      id: string,
+      data: string,
+      extra?: { removeInProduction: boolean; appendix?: boolean },
+    ]
+  | 'references'
+)[] = [
   ['introduction', chapter1],
   ['analysis', chapter2],
   ['architecture', chapter3],
   ['accuracy', chapter4],
   ['demo', chapter5],
-  ['technical-design', technicalDesign, { removeInProduction: true }],
-  ['test', test, { removeInProduction: true }],
+  'references',
+  [
+    'technical-design',
+    technicalDesign,
+    { removeInProduction: true, appendix: true },
+  ],
+  ['test', test, { removeInProduction: true, appendix: true }],
 ]
 
 export const files = {

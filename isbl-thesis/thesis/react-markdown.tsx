@@ -291,7 +291,9 @@ const options: Omit<ReactMarkdownOptions, 'children'> = {
   transformLinkUri: uriTransformer,
 }
 
-export function markdownListToAst(markdowns: string[]) {
+export function markdownListToAst<T extends { text: string | null }>(
+  markdowns: readonly T[],
+) {
   const processor = unified()
     .use(remarkParse)
     .use(options.remarkPlugins || [])
@@ -300,17 +302,24 @@ export function markdownListToAst(markdowns: string[]) {
     .use(rehypeFilter, options)
 
   const file = new VFile()
-  const asts = markdowns.map((markdown) => {
-    file.value = markdown
+  const asts = markdowns.map(
+    (
+      entry: T & { ast?: any },
+    ): { ast: HAST.Root | null } & Omit<T, 'text' | 'ast'> => {
+      const { text, ast: astIn, ...meta } = entry
+      if (!text) return { ...meta, ast: null }
 
-    const hastNode = processor.runSync(processor.parse(file), file)
+      file.value = text
 
-    if (hastNode.type !== 'root') {
-      throw new TypeError('Expected a `root` node')
-    }
+      const hastNode = processor.runSync(processor.parse(file), file)
 
-    return hastNode
-  })
+      if (hastNode.type !== 'root') {
+        throw new TypeError('Expected a `root` node')
+      }
+
+      return { ...meta, ast: hastNode }
+    },
+  )
   return {
     asts,
     citeMap: Object.fromEntries(

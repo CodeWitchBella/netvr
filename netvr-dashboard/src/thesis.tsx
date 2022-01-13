@@ -21,7 +21,7 @@ export default function ThesisRenderer() {
       <ThesisConfig
         config={config}
         setConfig={setConfig}
-        chapters={chapters.map((v) => v[0])}
+        chapters={chapters.map((v) => (typeof v === 'string' ? v : v[0]))}
       />
       <Thesis
         bibliography={bibliography}

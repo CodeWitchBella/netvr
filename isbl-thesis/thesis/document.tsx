@@ -16,31 +16,65 @@ import { BibReference, References } from './references'
 import { FootnoteRenderer } from './footnotes'
 import { Fragment } from 'react'
 import type * as hast from 'hast'
+import { notNull } from '@isbl/ts-utils'
 
 function MarkdownChapter({
-  children,
-  index,
-  id,
+  data,
 }: {
-  children: any
-  index: number
-  id: string
+  data: ReturnType<typeof chapterParser>['asts'][0]
 }) {
+  if (!data.ast) return null
   return (
-    <ChapterProvider index={index} id={id}>
-      <ReactMarkdown hast={children} />
+    <ChapterProvider denomination={data.denomination ?? ''} id={data.id}>
+      <ReactMarkdown hast={data.ast} />
     </ChapterProvider>
   )
 }
 
 export type DocumentProps = {
   bibliography: { [key: string]: BibReference }
-  chapters: readonly (readonly [
-    id: string,
-    data: string,
-    extra?: { removeInProduction: boolean },
-  ])[]
+  chapters: readonly (
+    | readonly [
+        id: string,
+        data: string,
+        extra?: { removeInProduction: boolean; appendix: boolean },
+      ]
+    | 'references'
+  )[]
   onlyChapter?: string
+}
+
+function chapterParser(
+  chapters: DocumentProps['chapters'],
+  { production }: { production: boolean },
+) {
+  let numericCounter = 1
+  let letterCounter = 'A'.charCodeAt(0)
+
+  return markdownListToAst(
+    chapters
+      .map((chapterIn) => {
+        const chapter =
+          typeof chapterIn === 'string'
+            ? ([
+                chapterIn,
+                null,
+                { appendix: true, removeInProduction: false },
+              ] as const)
+            : chapterIn
+
+        if (production && chapter[2]?.removeInProduction) return null
+
+        return {
+          text: chapter[1],
+          id: chapter[0],
+          denomination: chapter[2]?.appendix
+            ? String.fromCharCode(letterCounter++)
+            : `${numericCounter++}`,
+        }
+      })
+      .filter(notNull),
+  )
 }
 
 export function Document({
@@ -51,11 +85,7 @@ export function Document({
   registerFonts()
   const { lang, production } = usePDFContext()
 
-  const usedChapters = chapters.filter(
-    (c) => !production || !c[2]?.removeInProduction,
-  )
-
-  const parsed = markdownListToAst(usedChapters.map(([key, text]) => text))
+  const parsed = chapterParser(chapters, { production })
 
   const unused = Object.entries(bibliography)
     .filter(([key]) => !(key in parsed.citeMap))
@@ -238,22 +268,16 @@ export function Document({
               left={
                 <View>
                   {parsed.asts.map((chapter, index) => {
-                    const id = usedChapters[index][0]
+                    if (!chapter.denomination) return null
                     return (
                       <TableOfContentsChapter
-                        key={id}
-                        index={index}
-                        chapter={chapter}
-                        id={id}
+                        key={chapter.id}
+                        denomination={chapter.denomination}
+                        chapter={chapter.ast}
+                        id={chapter.id}
                       />
                     )
                   })}
-                  <View style={{ marginTop: 20 }}>
-                    <LMText fontFamily="lmroman10-regular">
-                      Please note that typography for this section is work in
-                      progress
-                    </LMText>
-                  </View>
                 </View>
               }
             />
@@ -263,28 +287,29 @@ export function Document({
 
       <Page>
         <FootnoteRenderer>
-          {parsed.asts.map((ast, index) => {
-            const id = usedChapters[index][0]
+          {parsed.asts.map((chapter, index) => {
+            const { ast, id, denomination } = chapter
             if (onlyChapter && id !== onlyChapter) return null
+
             return (
               <Fragment key={id}>
                 <pdf.View break={!onlyChapter && index !== 0} />
-                <MarkdownChapter index={index + 1} id={id}>
-                  {ast}
-                </MarkdownChapter>
+                {ast ? (
+                  <MarkdownChapter data={chapter} />
+                ) : id === 'references' ? (
+                  <References
+                    citations={Object.entries(parsed.citeMap)
+                      .sort(([_1, a], [_2, b]) => a - b)
+                      .map(([id, index]) => {
+                        return { data: bibliography[id], id, index }
+                      })}
+                    unused={unused}
+                    denomination={denomination}
+                  />
+                ) : null}
               </Fragment>
             )
           })}
-          {onlyChapter && onlyChapter !== 'technical' ? null : (
-            <References
-              citations={Object.entries(parsed.citeMap)
-                .sort(([_1, a], [_2, b]) => a - b)
-                .map(([id, index]) => {
-                  return { data: bibliography[id], id, index }
-                })}
-              unused={unused}
-            />
-          )}
           <pdf.View
             fixed
             style={{
@@ -333,34 +358,46 @@ function findSections(
 function TableOfContentsChapter({
   chapter,
   id,
-  index,
+  denomination,
 }: {
-  chapter: hast.Root
+  chapter: hast.Root | null
   id: string
-  index: number
+  denomination: string
 }) {
-  const rootSection = findSections(chapter)[0] ?? null
+  const rootSection = chapter
+    ? findSections(chapter)[0] ?? null
+    : {
+        type: 'root' as const,
+        children: [
+          { type: 'text', value: id[0].toUpperCase() + id.slice(1) } as const,
+        ],
+      }
   if (!rootSection) return null
   return (
     <View>
-      <Link src={'#chapter-' + id}>
+      <Link src={`#${id}`}>
         <TechnikaText>
-          {index + 1} {getText(rootSection?.children?.[0])}
+          {denomination} {getText(rootSection?.children?.[0])}
         </TechnikaText>
       </Link>
       <View style={{ paddingLeft: '5mm' }}>
         {findSections(rootSection).map((section, i) => {
           const sectionId: string | undefined = (section.children[0] as any)
             ?.properties?.id
-          const child = (
-            <TechnikaText key={i}>
-              {index + 1}.{i + 1} {getText(section.children[0])}
-            </TechnikaText>
-          )
-          if (!sectionId) return child
+          const sectionDenomination = `${denomination}.${i + 1}`
+
           return (
-            <Link src={'#section-' + sectionId} key={i}>
-              {child}
+            <Link
+              src={
+                sectionId
+                  ? '#' + sectionId
+                  : '#automatic-' + sectionDenomination
+              }
+              key={i}
+            >
+              <TechnikaText key={i}>
+                {sectionDenomination} {getText(section.children[0])}
+              </TechnikaText>
             </Link>
           )
         })}
