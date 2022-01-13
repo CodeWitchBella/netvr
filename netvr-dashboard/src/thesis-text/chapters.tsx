@@ -14,14 +14,14 @@ export const chapters: readonly (
       data: string,
       extra?: { removeInProduction: boolean; appendix?: boolean },
     ]
-  | 'references'
+  | 'bibliography'
 )[] = [
   ['introduction', chapter1],
   ['analysis', chapter2],
   ['architecture', chapter3],
   ['accuracy', chapter4],
   ['demo', chapter5],
-  'references',
+  'bibliography',
   [
     'technical-design',
     technicalDesign,
@@ -39,4 +39,4 @@ export const files = {
   'web-dashboard.png': new URL('web-dashboard.png', import.meta.url).href,
 }
 
-export const bibliography = JSON.parse(bib).references
+export const bibliography = JSON.parse(bib).bibliography

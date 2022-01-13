@@ -1,6 +1,6 @@
 {
   "$schema": "../../../isbl-thesis/thesis/bibliography-schema.json",
-  "references": {
+  "bibliography": {
     "steam-hardware-survey": {
       "authors": [{ "firstname": "Ben", "surname": "Lang" }],
       "title": "VR on Steam Bounces Back to Nearly 2.8 Million Monthly-connected Headsets",

@@ -2,16 +2,16 @@
   "$schema": "http://json-schema.org/draft-07/schema",
   "type": "object",
   "properties": {
-    "references": {
-      "$ref": "#/definitions/references"
+    "bibliography": {
+      "$ref": "#/definitions/bibliography"
     },
     "$schema": { "type": "string" }
   },
   "additionalProperties": false,
-  "required": ["references"],
+  "required": ["bibliography"],
 
   "definitions": {
-    "references": {
+    "bibliography": {
       "type": "object",
       "additionalProperties": {
         "$ref": "#/definitions/reference"

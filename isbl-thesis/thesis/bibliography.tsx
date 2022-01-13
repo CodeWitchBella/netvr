@@ -21,7 +21,7 @@ export type BibReference = {
   doi?: string
 }
 
-export function References({
+export function Bibliography({
   citations,
   unused,
   denomination,

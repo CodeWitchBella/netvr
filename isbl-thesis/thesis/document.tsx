@@ -12,7 +12,7 @@ import { LMText, registerFonts } from './font'
 import { TitlePage } from './title-page'
 const { Document: PDFDocument } = pdf
 import { ReactMarkdown, markdownListToAst } from './react-markdown'
-import { BibReference, References } from './references'
+import { BibReference, Bibliography } from './bibliography'
 import { FootnoteRenderer } from './footnotes'
 import { Fragment } from 'react'
 import type * as hast from 'hast'
@@ -39,7 +39,7 @@ export type DocumentProps = {
         data: string,
         extra?: { removeInProduction: boolean; appendix: boolean },
       ]
-    | 'references'
+    | 'bibliography'
   )[]
   onlyChapter?: string
 }
@@ -296,8 +296,8 @@ export function Document({
                 <pdf.View break={!onlyChapter && index !== 0} />
                 {ast ? (
                   <MarkdownChapter data={chapter} />
-                ) : id === 'references' ? (
-                  <References
+                ) : id === 'bibliography' ? (
+                  <Bibliography
                     citations={Object.entries(parsed.citeMap)
                       .sort(([_1, a], [_2, b]) => a - b)
                       .map(([id, index]) => {
