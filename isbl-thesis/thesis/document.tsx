@@ -1,4 +1,4 @@
-import pdf, { PDFViewer } from '@react-pdf/renderer'
+import pdf from '@react-pdf/renderer'
 import { Page, TechnikaText, usePDFContext, View } from './base'
 import {
   ChapterProvider,
@@ -40,6 +40,14 @@ export type DocumentProps = {
         extra?: { removeInProduction: boolean; appendix: boolean },
       ]
     | 'bibliography'
+    | 'toc'
+    | 'begin'
+    | {
+        id: string
+        type: 'split'
+        text: readonly [string, string]
+        titles: readonly [string, string]
+      }
   )[]
   onlyChapter?: string
 }
@@ -54,13 +62,25 @@ function chapterParser(
   return markdownListToAst(
     chapters
       .map((chapterIn) => {
-        const chapter =
+        if (typeof chapterIn === 'object' && 'type' in chapterIn) {
+          return {
+            text: null,
+            id: chapterIn.id,
+            type: chapterIn.type,
+            asts: markdownListToAst(
+              chapterIn.text.map((text) => ({ text })),
+            ).asts.map((v) => v.ast),
+            titles: chapterIn.titles,
+          }
+        }
+
+        const chapter: readonly [
+          id: string,
+          data: string | null,
+          extra?: { removeInProduction: boolean; appendix: boolean },
+        ] =
           typeof chapterIn === 'string'
-            ? ([
-                chapterIn,
-                null,
-                { appendix: true, removeInProduction: false },
-              ] as const)
+            ? [chapterIn, null, { appendix: true, removeInProduction: false }]
             : chapterIn
 
         if (production && chapter[2]?.removeInProduction) return null
@@ -85,27 +105,35 @@ export function Document({
   registerFonts()
   const { lang, production } = usePDFContext()
 
-  const parsed = chapterParser(chapters, { production })
+  let title = 'Tracking multiple VR users in a shared physical space'
 
-  const unused = Object.entries(bibliography)
-    .filter(([key]) => !(key in parsed.citeMap))
-    .map(([id, value]) => ({ ...value, id }))
-
-  let titles = [
-    'Tracking multiple VR users in a shared physical space',
-    'Sledování více uživatelů VR světa ve sdíleném fyzickém prostoru',
-  ]
-  if (lang === 'cs') titles = titles.reverse()
+  const beginIndex = chapters.indexOf('begin')
+  const introChapters = chapterParser(chapters.slice(0, beginIndex), {
+    production,
+  })
+  const contentChapters = chapterParser(chapters.slice(beginIndex + 1), {
+    production,
+  })
 
   return (
     <PDFDocument>
       {onlyChapter && onlyChapter !== 'technical' ? null : (
-        <>
-          <TitlePage title={titles[0]} />
-          <Page style={{ alignItems: 'center', justifyContent: 'flex-end' }}>
-            <LMText fontFamily="lmroman10-regular">
-              Page intentionally left blank
-            </LMText>
+        <TitlePage title={title} />
+      )}
+      <Page>
+        {onlyChapter && onlyChapter !== 'technical' ? null : (
+          <>
+            <View
+              style={{
+                alignItems: 'center',
+                justifyContent: 'flex-end',
+                height: '99%',
+              }}
+            >
+              <LMText fontFamily="lmroman10-regular">
+                Page intentionally left blank
+              </LMText>
+            </View>
             <pdf.View
               fixed
               style={{
@@ -137,7 +165,7 @@ export function Document({
               )}
             />
             <pdf.View break={true}>
-              <TODO>Insert official zadání</TODO>
+              <TechnikaText style={{ fontSize: 20 }}>Zadání</TechnikaText>
               <LMText fontFamily="lmroman10-regular" style={{ fontSize: 11 }}>
                 1) Proveďte rešerši technik a postupů umožňujících sledování
                 více uživatelů virtuální reality (VR) ve sdíleném fyzickém
@@ -153,163 +181,39 @@ export function Document({
                 pripravit tutorial na jedno cviceni (side efect DP)
               </LMText>
             </pdf.View>
-            <pdf.View break={true}>
+            <pdf.View
+              style={{
+                alignItems: 'center',
+                justifyContent: 'flex-end',
+                height: '99%',
+              }}
+              break={true}
+            >
               <LMText fontFamily="lmroman10-regular">
                 Page intentionally left blank
               </LMText>
             </pdf.View>
-            <View break={true} />
-            <SplitView
-              leftTitle="Acknowledgements"
-              rightTitle="Declaration"
-              left={
-                <View>
-                  <Paragraph>
-                    I would like to express my gratitude to my supervisor, Ing.
-                    David Sedláček, Ph.D., for his guidance over the course of
-                    writing semester project and later of this thesis. I would
-                    also like to thank him and the Department of Computer
-                    Graphics and Interaction for giving me access to equipment I
-                    needed for the completion of this thesis.
-                  </Paragraph>
-                </View>
-              }
-              right={
-                <View>
-                  <Paragraph>
-                    I declare that this thesis represents my work and that I
-                    have listed all the literature used in the bibliography.
-                  </Paragraph>
-                  <Paragraph>Prague, 20 June 2022</Paragraph>
-                  <View style={{ height: '1cm' }} />
-                  <Paragraph>
-                    Prohlašuji, že jsem předloženou práci vypracovala
-                    samostatně, a že jsem uvedla veškerou použitou literaturu.
-                  </Paragraph>
-                  <Paragraph>V Praze, 20. června 2022</Paragraph>
-                  <TODO>Update dates, both of them</TODO>
-                </View>
-              }
-            />
-            <SplitView
-              rightTitle="Abstrakt"
-              leftTitle="Abstract"
-              right={
-                <View>
-                  <Paragraph>
-                    (placeholder from blabot.cz) Vyšla ať té příslušník světa
-                    nové prozkoumány struktury o ságy rok místnost naši a bude
-                    superstrun jídelny i výstavě od one náš vlhkost pódia
-                    velkým. Tím slunce drží níž i básník zradit
-                    sedmikilometrového sledování vláknité a multi-dimenzionálním
-                    systematicky. Jednom, 80 ℃ kratší ptal ně indickým životním
-                    přetlakovaný i větší vystoupám tím instituce o hladinou šest
-                    psychologických starosta. Amoku kroje v nejprve i sociální
-                    existuje minerálů s potvrzují rozvoji, vznikly pás tisíc
-                    představ klidné kdysi by správní nadšenců hlavě. Nejméně jí
-                    tu chobotnice skákat, oxidu cíl posílily vláken testům. Z
-                    oprášil plyne vědecké třetí jednom ani itálie ekologickou
-                    ohrožení objeveny s vodorovně chorvati, o teoretickým snila
-                    nejlepší z predátorů kterou z zlata božská kanadské. Horečky
-                    k národností! Či EU sága vrátit řadu mohlo z svědčí spouští
-                    testy o zápory? Odlišné nebo marná mám, běžnou kontinentu.
-                    Ně ze včera vlna cestou po polopotopenou. Ať okouzlí, hlavní
-                    klecích zkoušet dosahu s s historkám ochlazení, mým pomocí
-                    od petr rozloučím slunečního skončení kostely, každý pravdou
-                    tj. 1963–1977 starala o reprezentační.
-                  </Paragraph>
-                  <TODO>Replace blabot.cz output with real abstract</TODO>
-                  <View style={{ height: '3mm' }} />
-                  <Paragraph>
-                    <Strong>Klíčová slova:</Strong> VR, Stuff, Things{' '}
-                  </Paragraph>
-                  <TODO>keywords</TODO>
-                  <View style={{ height: '3mm' }} />
-                  <Paragraph>
-                    <Strong>Překlad názvu:</Strong> {titles[1]}
-                  </Paragraph>
-                </View>
-              }
-              left={
-                <View>
-                  <Paragraph>
-                    (placeholder, real abstract will be provided for the thesis)
-                    Lorem ipsum dolor sit amet, consectetur adipiscing elit.
-                    Etiam commodo orci imperdiet volutpat malesuada. Vestibulum
-                    quis massa tristique, lobortis arcu quis, pharetra ligula.
-                    Aliquam vestibulum metus eget sapien porta laoreet. Sed ut
-                    posuere urna. Sed quis mi hendrerit, cursus ligula in,
-                    luctus tellus. Integer rhoncus, mauris in eleifend volutpat,
-                    arcu elit semper ante, a luctus nisi metus id odio.
-                    Suspendisse potenti. Aliquam nec ante eget arcu sollicitudin
-                    vehicula. Aliquam faucibus, lorem pulvinar tristique
-                    blandit, ipsum nunc eleifend est, at feugiat velit quam vel
-                    ante. Sed sapien libero, volutpat sed mauris quis, molestie
-                    iaculis risus. Morbi pharetra, mi in fermentum vehicula,
-                    nisi ipsum ullamcorper turpis, finibus feugiat lectus eros
-                    nec turpis. Cras in orci ligula. Aenean sagittis, velit in
-                    ultricies lobortis, augue justo tempus orci, sit amet
-                    iaculis tellus elit vitae nunc. Etiam elementum sollicitudin
-                    lorem, eget ornare erat bibendum non.
-                  </Paragraph>
-                  <TODO>Replace lorem ipsum with real abstract</TODO>
-                  <View style={{ height: '3mm' }} />
-                  <Paragraph>
-                    <Strong>Keywords:</Strong> VR, Stuff, Things
-                  </Paragraph>
-                  <TODO>keywords</TODO>
-                </View>
-              }
-            />
-            <SplitView
-              rightTitle=""
-              leftTitle="Contents"
-              right={<View />}
-              left={
-                <View>
-                  {parsed.asts.map((chapter, index) => {
-                    if (!chapter.denomination) return null
-                    return (
-                      <TableOfContentsChapter
-                        key={chapter.id}
-                        denomination={chapter.denomination}
-                        chapter={chapter.ast}
-                        id={chapter.id}
-                      />
-                    )
-                  })}
-                </View>
-              }
-            />
-          </Page>
-        </>
-      )}
+            <pdf.View break={true} />
+          </>
+        )}
+        <AstListRenderer
+          data={introChapters.asts}
+          onlyChapter={onlyChapter}
+          bibliography={bibliography}
+          citeMap={contentChapters.citeMap}
+          contentChapters={contentChapters.asts}
+        />
+      </Page>
 
       <Page>
         <FootnoteRenderer>
-          {parsed.asts.map((chapter, index) => {
-            const { ast, id, denomination } = chapter
-            if (onlyChapter && id !== onlyChapter) return null
-
-            return (
-              <Fragment key={id}>
-                <pdf.View break={!onlyChapter && index !== 0} />
-                {ast ? (
-                  <MarkdownChapter data={chapter} />
-                ) : id === 'bibliography' ? (
-                  <Bibliography
-                    citations={Object.entries(parsed.citeMap)
-                      .sort(([_1, a], [_2, b]) => a - b)
-                      .map(([id, index]) => {
-                        return { data: bibliography[id], id, index }
-                      })}
-                    unused={unused}
-                    denomination={denomination}
-                  />
-                ) : null}
-              </Fragment>
-            )
-          })}
+          <AstListRenderer
+            data={contentChapters.asts}
+            onlyChapter={onlyChapter}
+            bibliography={bibliography}
+            citeMap={contentChapters.citeMap}
+            contentChapters={contentChapters.asts}
+          />
           <pdf.View
             fixed
             style={{
@@ -330,6 +234,79 @@ export function Document({
         </FootnoteRenderer>
       </Page>
     </PDFDocument>
+  )
+}
+function AstListRenderer({
+  data,
+  citeMap,
+  onlyChapter,
+  bibliography,
+  contentChapters,
+}: {
+  data: ReturnType<typeof chapterParser>['asts']
+  citeMap: ReturnType<typeof chapterParser>['citeMap']
+  onlyChapter?: string
+  bibliography: { [key: string]: BibReference }
+  contentChapters: ReturnType<typeof chapterParser>['asts']
+}) {
+  return (
+    <>
+      {data.map((chapter, index) => {
+        const { ast, id, denomination } = chapter
+        if (onlyChapter && id !== onlyChapter) return null
+
+        return (
+          <Fragment key={id}>
+            <pdf.View break={!onlyChapter && index !== 0} />
+            {ast ? (
+              <MarkdownChapter data={chapter} />
+            ) : id === 'bibliography' ? (
+              <Bibliography
+                citations={Object.entries(citeMap)
+                  .sort(([_1, a], [_2, b]) => a - b)
+                  .map(([id, index]) => {
+                    return { data: bibliography[id], id, index }
+                  })}
+                unused={Object.entries(bibliography)
+                  .filter(([key]) => !(key in citeMap))
+                  .map(([id, value]) => ({ ...value, id }))}
+                denomination={denomination}
+              />
+            ) : id === 'toc' ? (
+              <SplitView
+                rightTitle=""
+                leftTitle="Contents"
+                right={<View />}
+                left={
+                  <View>
+                    {contentChapters.map((chapter, index) => {
+                      if (!chapter.denomination) return null
+                      return (
+                        <TableOfContentsChapter
+                          key={chapter.id}
+                          denomination={chapter.denomination}
+                          chapter={chapter.ast}
+                          id={chapter.id}
+                        />
+                      )
+                    })}
+                  </View>
+                }
+              />
+            ) : chapter.asts ? (
+              <SplitView
+                left={<ReactMarkdown hast={chapter.asts[0]} />}
+                right={<ReactMarkdown hast={chapter.asts[1]} />}
+                leftTitle={chapter.titles?.[0] ?? ''}
+                rightTitle={chapter.titles?.[1] ?? ''}
+              />
+            ) : (
+              void console.log('unknown chapter type', chapter)
+            )}
+          </Fragment>
+        )
+      })}
+    </>
   )
 }
 

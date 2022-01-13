@@ -375,7 +375,7 @@ export function SplitView({
     marginBottom: '6.5mm',
   }
   return (
-    <View style={{ flexDirection: 'row', height: '100%', width: '100%' }}>
+    <View style={{ flexDirection: 'row', height: '99%', width: '100%' }}>
       <View style={{ flexGrow: 1, flexBasis: 1 }}>
         <TechnikaText style={[headerStyle, { alignSelf: 'flex-end' }]}>
           {leftTitle}

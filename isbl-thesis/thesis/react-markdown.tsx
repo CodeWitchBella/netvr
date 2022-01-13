@@ -302,6 +302,7 @@ export function markdownListToAst<T extends { text: string | null }>(
     .use(rehypeFilter, options)
 
   const file = new VFile()
+  file.data.citeMap = new Map<string, number>()
   const asts = markdowns.map(
     (
       entry: T & { ast?: any },
@@ -323,17 +324,15 @@ export function markdownListToAst<T extends { text: string | null }>(
   return {
     asts,
     citeMap: Object.fromEntries(
-      (file.data.citeMap as Map<string, number>).entries(),
+      (file?.data?.citeMap as Map<string, number>).entries(),
     ),
   }
 }
 
 export function ReactMarkdown({ hast }: { hast: any }) {
-  return (
-    <>
-      {childrenToReact({ options, schema: html, listDepth: 0 }, hast).filter(
-        (v: any) => typeof v !== 'string',
-      )}
-    </>
-  )
+  const children = childrenToReact(
+    { options, schema: html, listDepth: 0 },
+    hast,
+  ).filter((v: any) => typeof v !== 'string')
+  return <>{children}</>
 }

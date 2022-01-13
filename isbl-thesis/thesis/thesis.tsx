@@ -1,5 +1,4 @@
-import pdf from '@react-pdf/renderer'
-import { memo, useEffect, useMemo, useReducer, useRef } from 'react'
+import { useEffect, useMemo, useRef } from 'react'
 import { PDFContext, PDFContextProvider } from './base'
 import { Document, DocumentProps } from './document'
 // @ts-ignore
@@ -21,15 +20,17 @@ export function Thesis({
   useBuiltIn,
   files = {},
   onlyChapter,
+  page,
 }: DocumentProps & {
   production: boolean
   language?: 'en' | 'cs'
   useBuiltIn: boolean
   files?: { [key: string]: string }
+  page?: number
 }) {
   const documentProps = useMemo(
-    () => ({ bibliography, chapters, onlyChapter }),
-    [bibliography, chapters, onlyChapter],
+    () => ({ bibliography, chapters, onlyChapter, page }),
+    [bibliography, chapters, onlyChapter, page],
   )
 
   const context = useMemo(
@@ -39,13 +40,12 @@ export function Thesis({
 
   if (useBuiltIn) {
     return (
-      <>
-        <pdf.PDFViewer style={{ flexGrow: 1, border: 0 }}>
-          <PDFContextProvider value={context}>
-            <Document {...documentProps} />
-          </PDFContextProvider>
-        </pdf.PDFViewer>
-      </>
+      <ThesisObject
+        Document={Document}
+        context={context}
+        documentProps={documentProps}
+        page={page}
+      />
     )
   }
   return (
@@ -55,6 +55,32 @@ export function Thesis({
       documentProps={documentProps}
     />
   )
+}
+
+function ThesisObject({
+  Document,
+  context,
+  documentProps,
+  page,
+}: {
+  Document: any
+  context: PDFContext
+  documentProps: DocumentProps
+  page?: number
+}) {
+  const instance = usePDF({
+    document: useMemo(
+      () => (
+        <PDFContextProvider value={context}>
+          <Document {...documentProps} />
+        </PDFContextProvider>
+      ),
+      [context, documentProps, Document],
+    ),
+  })
+
+  const src = instance.url ? `${instance.url}#toolbar=1&page=${page ?? 1}` : ''
+  return <iframe src={src} style={{ flexGrow: 1, border: 0 }} />
 }
 
 function ThesisCustom({

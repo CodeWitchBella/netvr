@@ -82,10 +82,6 @@ function reduce<V, Res>(
 function remarkCiteCounter() {
   return (tree: import('mdast').Root, file: VFile) => {
     let map: Map<string, number> = file.data.citeMap as any
-    if (!map) {
-      map = new Map<string, number>()
-      file.data.citeMap = map
-    }
     let counter = reduce(map.values(), 0, (a, b) => Math.max(a, b))
 
     visit(tree, 'textDirective', (node, index, parent) => {

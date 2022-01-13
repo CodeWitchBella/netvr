@@ -28,7 +28,7 @@ export function Bibliography({
 }: {
   citations: readonly { id: string; index: number; data: BibReference | null }[]
   unused?: readonly (BibReference & { id: string })[]
-  denomination: string
+  denomination?: string
 }) {
   const { production } = usePDFContext()
   return (

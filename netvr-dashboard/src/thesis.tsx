@@ -21,7 +21,9 @@ export default function ThesisRenderer() {
       <ThesisConfig
         config={config}
         setConfig={setConfig}
-        chapters={chapters.map((v) => (typeof v === 'string' ? v : v[0]))}
+        chapters={chapters.map((v) =>
+          typeof v === 'string' ? v : 'id' in v ? v.id : v[0],
+        )}
       />
       <Thesis
         bibliography={bibliography}
@@ -30,6 +32,7 @@ export default function ThesisRenderer() {
         production={config.production}
         useBuiltIn={config.useBuiltIn}
         files={files}
+        page={Number.parseInt(config.page, 10) || undefined}
       />
     </>
   )
@@ -38,11 +41,13 @@ type Config = {
   useBuiltIn: boolean
   production: boolean
   onlyChapter: false | string
+  page: string
 }
 const defaultConfig: Config = {
   useBuiltIn: false,
   production: true,
   onlyChapter: false,
+  page: '1',
 }
 
 function ThesisConfig({
@@ -111,6 +116,19 @@ function ThesisConfig({
           ))}
         </select>
       </label>
+      {config.useBuiltIn ? (
+        <label>
+          Page{' '}
+          <input
+            type="number"
+            defaultValue={config.page}
+            style={{ width: 50 }}
+            onChange={(event) => {
+              setTimeout(() => void setConfig({ page: event.target.value }), 0)
+            }}
+          />
+        </label>
+      ) : null}
     </div>
   )
 }
