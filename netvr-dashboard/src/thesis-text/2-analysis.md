@@ -40,7 +40,7 @@ Important to note is that before the calibration can be meaningfully implemented
 
 ## Calibration Algorithms {#calibration-algorithms}
 
-There are many possible options for calibrating the tracking spaces. This section will first categorise all available options.
+There are multiple ways of approaching the calibration of the tracking spaces. This section will first categorise all available options.
 
 The first option is to choose devices with a globally anchored tracking system, meaning that all devices have the same origin of their respective tracking spaces. SteamVR's Lighthouse system falls into this category. The main drawback of this option is limited options for headsets - no option to use existing devices if they do not use the correct tracking system. However, the advantage of this option is simplicity.
 
@@ -54,6 +54,6 @@ The fourth option is to determine the calibration continuously while the user is
 
 ## Drift measurement {#drift-measurement}
 
-To measure the drift of a tracking system and therefore the viability of using that system with one-time calibration, the drift in the tracking has to be measured. Drift is a change in the frame of reference over time. Since the VIVE has a reference point in the base stations it should not experience drift. On the other hand, the inside-out tracked Quest 2 might.
+To measure the drift of a tracking system and, therefore, the viability of using that system with one-time calibration, the drift in the tracking has to be measured. Drift is a change in the frame of reference over time. Since the VIVE has a reference point in the base stations, it should not experience drift. On the other hand, the inside-out tracked Quest 2 might.
 
-To measure the drift a ground truth system has to be used simultaneously and the results should then be compared.
+To quantify the amount of drift, a ground truth system has to be used simultaneously with the system being measured, and the results should then be compared.

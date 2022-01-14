@@ -69,7 +69,7 @@ export function Bibliography({
           )}
         </pdf.View>
       ))}
-      {production ? null : (
+      {production && false ? null : (
         <Section title="Unused references">
           {unused?.map((u) => (
             <pdf.View key={u.id}>

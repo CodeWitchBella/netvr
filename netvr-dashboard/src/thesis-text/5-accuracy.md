@@ -2,7 +2,7 @@
 
 :todo[drop personal usage of personal pronoun from this section - should I prefer passive voice, or using stuff like "this thesis" and "author of this thesis"?]
 
-While the calibration subjectively works, measuring how well it works is also necessary. Another consideration, as previously noted, is whether and for how long is it possible to expect the calibration to hold if a one-time method of calibration is used.
+While the simple calibration method subjectively works, measuring how well it works is also necessary. Another consideration, as previously noted, is whether and for how long is it possible to expect the calibration to hold if a one-time method of calibration is used.
 
 ## Quest 2 drift {#quest-2-drift}
 
@@ -34,6 +34,8 @@ I am still not sure how to calculate the drift. Following articles will might ha
 
 ![Chart showing the wrong data](chart.svg 'chart')
 
+:::todo[]
+
 ## Simple method calibration precision {#simple-method-calibration-precision}
 
 :todo[I still do not know how to measure this? Probably assume that complex method works well if the controllers are attached well, calibrate everything to OptiTrack and then measure A->OT->B vs A->(simple)->B]
@@ -41,6 +43,8 @@ I am still not sure how to calculate the drift. Following articles will might ha
 ## Complex method calibration precision {#complex-method-calibration-precision}
 
 :todo[same methodology as in above?]
+
+:::todo
 
 ## Effect of latency on calibration result {#effect-of-latency-on-calibration-result}
 
