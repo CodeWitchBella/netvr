@@ -105,7 +105,7 @@ function replace(
 }
 
 export const rehypePlugins: ReactMarkdownOptions['rehypePlugins'] = [
-  rehypeLigature,
   [rehypeMathjaxSvg, { svg: { fontCache: 'none' } }],
+  rehypeLigature,
   //() => (tree) => void console.log(tree),
 ]

@@ -2,7 +2,7 @@ import test from './test.md?raw'
 import technicalDesign from './technical-design.md?raw'
 import chapter1 from './1-introduction.md?raw'
 import chapter2 from './2-analysis.md?raw'
-import chapter3 from './3-architecture.md?raw'
+import chapter3 from './3-design.md?raw'
 import chapter4 from './4-demo.md?raw'
 import chapter5 from './5-accuracy.md?raw'
 import chapter6 from './6-conclusion.md?raw'
@@ -32,7 +32,7 @@ export const chapters: readonly (
   'begin',
   ['introduction', chapter1],
   ['analysis', chapter2],
-  ['architecture', chapter3],
+  ['design', chapter3],
   ['demo', chapter4],
   ['accuracy', chapter5],
   ['conclusion', chapter6],

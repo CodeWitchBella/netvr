@@ -54,4 +54,6 @@ The fourth option is to determine the calibration continuously while the user is
 
 ## Drift measurement {#drift-measurement}
 
-To measure the drift of a tracking system and therefore the viability of using that system with one-time calibration :todo[finish]
+To measure the drift of a tracking system and therefore the viability of using that system with one-time calibration, the drift in the tracking has to be measured. Drift is a change in the frame of reference over time. Since the VIVE has a reference point in the base stations it should not experience drift. On the other hand, the inside-out tracked Quest 2 might.
+
+To measure the drift a ground truth system has to be used simultaneously and the results should then be compared.

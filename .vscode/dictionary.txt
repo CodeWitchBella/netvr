@@ -12,3 +12,4 @@ netvr
 vrlab
 golem
 brotli
+Deno

@@ -119,8 +119,8 @@ const components: NotUndefined<ReactMarkdownOptions['components']> = {
   // MathJax
   svg: ({ children, width, height, ...props }) => {
     const size = {
-      width: parseFloat((width + '').replace(/[^0-9.]/g, '')) * 11,
-      height: parseFloat((height + '').replace(/[^0-9.]/g, '')) * 11,
+      width: parseFloat((width + '').replace(/[^0-9.]/g, '')) * 5.5,
+      height: parseFloat((height + '').replace(/[^0-9.]/g, '')) * 5.5,
     }
     const style = {
       width: size.width + 'pt',
@@ -147,22 +147,24 @@ const components: NotUndefined<ReactMarkdownOptions['components']> = {
         </pdf.Text>
       )
     }
-    //console.log()
-
     return (
-      <pdf.View style={{ alignSelf: 'center', ...style }}>
+      <pdf.View
+        style={{ alignSelf: 'center', marginTop: 6, marginBottom: 4, ...style }}
+      >
         <pdf.Svg {...(props as any)} style={style}>
           {children}
         </pdf.Svg>
       </pdf.View>
     )
   },
-  g: pdf.G as any,
+  g: ({ style: { fontFamily, ...style } = {} as any, ...props }: any) => (
+    <pdf.G {...props} style={style} />
+  ),
   defs: pdf.Defs as any,
   path: ({ d, ...props }) => (
     <pdf.Path d={d ? normalizePath(d) : d} {...(props as any)} />
   ),
-  text: pdf.Text as any,
+  text: (props: any) => null,
   rect: pdf.Rect as any,
   ...({ 'mjx-container': (props: any) => <>{props.children}</> } as any),
   style: () => null,

@@ -67,15 +67,15 @@ export function SyncDevicesButton({
           sendMessage({
             action: 'set calibration',
             calibrations: headsets.map((headset) => {
-              const x = -headset.position[0]
-              const z = -headset.position[2]
+              const x = headset.position[0]
+              const z = headset.position[2]
               const angle = headset.rotation[1]
               return {
                 id: headset.clientId,
                 translate: {
-                  x: Math.cos(angle) * x - Math.sin(angle) * z,
+                  x: -Math.cos(angle) * x + Math.sin(angle) * z,
                   y: 0,
-                  z: Math.sin(angle) * x + Math.cos(angle) * z,
+                  z: -Math.sin(angle) * x - Math.cos(angle) * z,
                 },
                 rotate: {
                   x: 0,
