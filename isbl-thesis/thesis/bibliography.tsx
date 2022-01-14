@@ -16,9 +16,15 @@ export type BibReference = {
   publisher?: string
   in?:
     | string
-    | { journal: string; page?: string; volume?: string; number?: string }
+    | {
+        journal: string
+        page?: string | number
+        volume?: string
+        number?: string
+      }
   accessed?: string
   doi?: string
+  isbn?: string
 }
 
 export function Bibliography({
@@ -173,6 +179,9 @@ function Citation({ data }: { data: BibReference }) {
             </Link>
           </LMText>
         )
+      ) : null}
+      {data.isbn ? (
+        <LMText fontFamily="lmroman10-regular">ISBN:{data.isbn}</LMText>
       ) : null}
     </pdf.View>
   )

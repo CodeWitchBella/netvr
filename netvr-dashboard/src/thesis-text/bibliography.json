@@ -2,12 +2,11 @@
   "$schema": "../../../isbl-thesis/thesis/bibliography-schema.json",
   "bibliography": {
     "steam-hardware-survey": {
-      "authors": [{ "firstname": "Ben", "surname": "Lang" }],
-      "title": "VR on Steam Bounces Back to Nearly 2.8 Million Monthly-connected Headsets",
-      "url": "https://www.roadtovr.com/steam-survey-vr-headsets-on-steam-data-july-2021/",
+      "title": "Steam Hardware & Software Survey: December 2021",
+      "url": "https://store.steampowered.com/hwsurvey/",
       "date": 2021,
-      "publisher": "Road to VR",
-      "accessed": "2021-12-29"
+      "publisher": "Valve",
+      "accessed": "2021-01-14"
     },
     "unity": {
       "url": "https://unity.com/",
@@ -176,6 +175,25 @@
         "number": 17,
         "page": 3632
       }
+    },
+    "google-cardboard": {
+      "title": "Google Cardboard",
+      "url": "https://arvr.google.com/cardboard/",
+      "accessed": "2022-01-14"
+    },
+    "classification": {
+      "title": "A Classification of Virtual Reality Technology: Suitability of Different VR Devices and Methods for Research in Tourism and Events.",
+      "doi": "10.1007/978-3-030-37869-1_26",
+      "authors": [
+        { "firstname": "Shinyong (Shawn)", "surname": "Jung" },
+        { "firstname": "Jiyong", "surname": "Jeong" }
+      ],
+      "publisher": "Springer, Cham",
+      "in": {
+        "page": "323-332",
+        "journal": "Augmented Reality and Virtual Reality. Progress in IS."
+      },
+      "isbn": "978-3-030-37869-1"
     }
   }
 }
