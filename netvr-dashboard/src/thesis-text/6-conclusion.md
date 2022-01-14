@@ -10,4 +10,4 @@ Another avenue for improvement is to lower the latency of used network solution.
 
 If I can't meaningfully improve the calibration it might be interesting to implement more calibration methods such as using hand tracking:cite[slam-hands]
 
-Lastly, I would like to keep out on updates from Meta to Quests firmware because it might become possible to implement something similar to what HTC announced recently:cite[focus-lbe]. Or their might release their own solution:cite[quest-mapsharing] making this whole project basically useless.
+Lastly, I would like to keep an eye out for updates from Meta to Quest's firmware because it might become possible to implement something similar to what HTC announced recently:cite[focus-lbe]. Or their might release their own solution:cite[quest-mapsharing] making this whole project basically useless.
