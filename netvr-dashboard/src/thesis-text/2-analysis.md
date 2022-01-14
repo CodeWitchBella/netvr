@@ -1,4 +1,4 @@
-# Analysis
+# Analysis {#analysis}
 
 :todo[chybí mi hard literatura, asi bych si měla sehnat tu doporučenou]
 

@@ -1,4 +1,4 @@
-# Demo application
+# Demo application {#demo}
 
 To demonstrate all approaches and concepts in previous sections a simple application was implemented.
 

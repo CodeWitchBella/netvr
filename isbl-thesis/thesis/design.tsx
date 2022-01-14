@@ -332,7 +332,7 @@ export function Image({
     )
 
   return (
-    <View id={'figure-' + title}>
+    <View id={title}>
       {children}
       <LMText
         fontFamily="lmroman10-regular"
@@ -348,11 +348,50 @@ export function Image({
   )
 }
 
-export function ImageRef({ number, title }: { number: number; title: string }) {
+const refContext = createContext<{ [key: string]: string }>({})
+export const RefContextProvider = refContext.Provider
+
+function useReference({
+  number,
+  title,
+  ordinal,
+}: {
+  number: number
+  title: string
+  ordinal?: any
+}) {
   const chapter = useContext(chapterContext)
+  const ref = useContext(refContext)
+  if (title in ref) {
+    let res = ref[title]
+    if (ordinal) {
+      // prettier-ignore
+      const ordinals = ['zeroth', 'first', 'second', 'third', 'fourth', 'fifth',
+                  'sixth', 'seventh', 'eighth', 'tenth', 'eleventh', 'twelfth']
+      res = ordinals[Number.parseInt(res, 10)] ?? res
+    }
+    return res
+  }
+  return chapter.denomination + '.' + number
+}
+
+export function Reference(props: any) {
+  const result = useReference(props)
+  if (props.children?.length) {
+    return (
+      <Link src={'#' + props.title} setFont={false}>
+        {props.children.map((child: any) => {
+          if (typeof child !== 'string') return child
+          const index = child.indexOf('?')
+          if (index < 0) return child
+          return child.replace('?', result)
+        })}
+      </Link>
+    )
+  }
   return (
-    <Link src={'#figure-' + title} setFont={false}>
-      {chapter.denomination + '.' + number}
+    <Link src={'#' + props.title} setFont={false}>
+      {result}
     </Link>
   )
 }

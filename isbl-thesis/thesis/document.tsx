@@ -1,20 +1,13 @@
 import pdf from '@react-pdf/renderer'
 import { Page, TechnikaText, usePDFContext, View } from './base'
-import {
-  ChapterProvider,
-  Link,
-  Paragraph,
-  SplitView,
-  Strong,
-  TODO,
-} from './design'
+import { ChapterProvider, Link, SplitView, RefContextProvider } from './design'
 import { LMText, registerFonts } from './font'
 import { TitlePage } from './title-page'
 const { Document: PDFDocument } = pdf
 import { ReactMarkdown, markdownListToAst } from './react-markdown'
 import { BibReference, Bibliography } from './bibliography'
 import { FootnoteRenderer } from './footnotes'
-import { Fragment } from 'react'
+import { Fragment, PropsWithChildren } from 'react'
 import type * as hast from 'hast'
 import { notNull } from '@isbl/ts-utils'
 
@@ -47,6 +40,7 @@ export type DocumentProps = {
         type: 'split'
         text: readonly [string, string]
         titles: readonly [string, string]
+        removeInProduction?: boolean
       }
   )[]
   onlyChapter?: string
@@ -63,6 +57,7 @@ function chapterParser(
     chapters
       .map((chapterIn) => {
         if (typeof chapterIn === 'object' && 'type' in chapterIn) {
+          if (chapterIn.removeInProduction) return null
           return {
             text: null,
             id: chapterIn.id,
@@ -97,6 +92,17 @@ function chapterParser(
   )
 }
 
+function Wrapper({
+  refContext,
+  children,
+}: PropsWithChildren<{ refContext: { [key: string]: string } }>) {
+  return (
+    <PDFDocument>
+      <RefContextProvider value={refContext}>{children}</RefContextProvider>
+    </PDFDocument>
+  )
+}
+
 export function Document({
   bibliography,
   chapters,
@@ -116,7 +122,7 @@ export function Document({
   })
 
   return (
-    <PDFDocument>
+    <Wrapper refContext={contentChapters.refIds}>
       {onlyChapter && onlyChapter !== 'technical' ? null : (
         <TitlePage title={title} />
       )}
@@ -233,7 +239,7 @@ export function Document({
           />
         </FootnoteRenderer>
       </Page>
-    </PDFDocument>
+    </Wrapper>
   )
 }
 function AstListRenderer({

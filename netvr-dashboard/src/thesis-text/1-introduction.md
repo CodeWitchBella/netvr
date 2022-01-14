@@ -1,4 +1,4 @@
-# Introduction
+# Introduction {#introduction}
 
 Virtual Reality (VR) technology progressed considerably since the days of first head-mounted displays (HMDs):cite[sword-of-damocles], but implementing good same-room multi-user experiences:footnote[Users being in same physical space as opposed to connected online.] is still not very well documented.
 
@@ -18,4 +18,4 @@ The main overarching goal is to prepare for the thesis, where I want to provide 
 
 ## Thesis Structure {#thesis-structure}
 
-This thesis will be split to multiple chapters describing the steps needed to implement such application. First I will analyse requirements and constraints - both from the assignment of this thesis and from resources available to me while writing this thesis.
+This thesis will be split into multiple chapters describing the steps needed to implement such an application. First, the thesis will analyse requirements and constraints - arising from the assignment of this thesis and resources available to the writer of this thesis. This part of the thesis also explores existing solutions. Then in :ref[chapter&nbsp;?]{title=architecture}, an application will be designed from an architectural standpoint. The :ref[? chapter]{ordinal=true title=demo} will contain notes about the actual implementation of an application used to demonstrate the main concepts described earlier. After the implementation chapters, :ref[chapter&nbsp;?]{title=accuracy} will present accuracy measurement data. Furthermore, a final chapter, :ref[chapter&nbsp;?]{title=conclusion}, contains conclusions and ideas for future improvement.

@@ -1,4 +1,4 @@
-# Application Architecture
+# Application Architecture {#architecture}
 
 :todo[Describe how the application is implemented]
 

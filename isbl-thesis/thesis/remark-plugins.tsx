@@ -39,12 +39,16 @@ function remarkImageNumbering() {
         node.children.length > 0 &&
         node.children[0].type === 'text'
       ) {
-        const ref = node.children[0].value
+        const attributes: any = node.attributes || (node.attributes = {})
+
+        const ref = attributes.title || node.children[0].value
         const number = map.get(ref)
+        if (!attributes.title) {
+          attributes.title = ref
+          node.children = []
+        }
         if (number) {
-          const attributes = node.attributes || (node.attributes = {})
-          ;(attributes as any).number = number
-          ;(attributes as any).title = ref
+          attributes.number = number
         }
       }
     })
@@ -52,17 +56,20 @@ function remarkImageNumbering() {
 }
 
 function remarkSectionNumbering() {
-  return (tree: import('mdast').Root) => {
+  return (tree: import('mdast').Root, file: VFile) => {
     let counter: number[] = []
     visit(tree, 'section', (node, index, parent) => {
       const depth = node.depth
       if (node.type === 'section' && typeof depth === 'number') {
-        while (counter.length < depth) counter.push(1)
+        while (counter.length < depth)
+          counter.push(depth === 1 ? (file.data as any)?.chapterIndex ?? 0 : 0)
         while (counter.length > depth) counter.pop()
-        const number = counter[depth - 1]
         counter[depth - 1]++
 
+        const number = counter[depth - 1]
+
         const data = node.data || (node.data = {})
+        data.textNumber = counter.join('.')
         data.hProperties = { number }
       }
     })
@@ -113,6 +120,16 @@ function remarkCiteCounter() {
   }
 }
 
+function remarkCollectIds() {
+  return (tree: import('mdast').Root, file: VFile) => {
+    let map: Map<string, string> = file.data.refIds as any
+    visit(tree, 'heading', (node, index, parent) => {
+      const id: string = node?.data?.id
+      if (id) map.set(id, (parent.data as any)?.textNumber)
+    })
+  }
+}
+
 function remarkGenericDirective() {
   return (tree: import('mdast').Root) => {
     visit(tree, (node) => {
@@ -147,4 +164,5 @@ export const remarkPlugins = [
   remarkGfm,
   [remarkTruncateLinks, { style: 'smart', length: 40 }],
   remarkHeadingId,
+  remarkCollectIds,
 ]

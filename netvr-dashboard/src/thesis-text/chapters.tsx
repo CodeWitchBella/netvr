@@ -3,8 +3,9 @@ import technicalDesign from './technical-design.md?raw'
 import chapter1 from './1-introduction.md?raw'
 import chapter2 from './2-analysis.md?raw'
 import chapter3 from './3-architecture.md?raw'
-import chapter4 from './4-accuracy.md?raw'
-import chapter5 from './5-demo.md?raw'
+import chapter4 from './4-demo.md?raw'
+import chapter5 from './5-accuracy.md?raw'
+import chapter6 from './6-conclusion.md?raw'
 import bib from './bibliography.json?raw'
 import chartSvg from './chart.svg?raw'
 
@@ -22,17 +23,19 @@ export const chapters: readonly (
       type: 'split'
       text: readonly [string, string]
       titles: readonly [string, string]
+      removeInProduction?: boolean
     }
 )[] = [
   declaration(),
-  abstract(),
+  { ...abstract(), removeInProduction: true },
   'toc',
   'begin',
   ['introduction', chapter1],
   ['analysis', chapter2],
   ['architecture', chapter3],
-  ['accuracy', chapter4],
-  ['demo', chapter5],
+  ['demo', chapter4],
+  ['accuracy', chapter5],
+  ['conclusion', chapter6],
   'bibliography',
   [
     'technical-design',

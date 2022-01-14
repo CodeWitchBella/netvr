@@ -7,7 +7,7 @@ import {
   Em,
   TODO,
   Link,
-  ImageRef,
+  Reference,
   Image,
   SubSection,
 } from './design'
@@ -199,10 +199,10 @@ const components: NotUndefined<ReactMarkdownOptions['components']> = {
       if (props.directive === 'pagebreak') return <pdf.View break={true} />
       if (props.directive === 'nowrap')
         return <pdf.View wrap={false}>{props.children}</pdf.View>
-      if (props.directive === 'ref')
-        return <ImageRef number={props.number} title={props.title} />
+      if (props.directive === 'ref') return <Reference {...props} />
       if (props.directive === 'space')
         return <pdf.View style={{ height: 11 }} />
+      if (props.directive === 'nbsp') return '\u00A0'
       if (props.directive === 'footnote') {
         return (
           <FootnoteRef
@@ -247,7 +247,7 @@ const components: NotUndefined<ReactMarkdownOptions['components']> = {
           <Section
             title={getText(firstChild)}
             no={(props as any).number}
-            id={firstChild.properties?.id}
+            id={firstChild.properties?.id ?? undefined}
           >
             {props.children.slice(1)}
           </Section>
@@ -303,14 +303,17 @@ export function markdownListToAst<T extends { text: string | null }>(
 
   const file = new VFile()
   file.data.citeMap = new Map<string, number>()
+  file.data.refIds = new Map()
   const asts = markdowns.map(
     (
       entry: T & { ast?: any },
+      chapterIndex,
     ): { ast: HAST.Root | null } & Omit<T, 'text' | 'ast'> => {
       const { text, ast: astIn, ...meta } = entry
       if (!text) return { ...meta, ast: null }
 
       file.value = text
+      file.data.chapterIndex = chapterIndex
 
       const hastNode = processor.runSync(processor.parse(file), file)
 
@@ -325,6 +328,9 @@ export function markdownListToAst<T extends { text: string | null }>(
     asts,
     citeMap: Object.fromEntries(
       (file?.data?.citeMap as Map<string, number>).entries(),
+    ),
+    refIds: Object.fromEntries(
+      (file?.data?.refIds as Map<string, string>).entries(),
     ),
   }
 }

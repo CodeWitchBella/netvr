@@ -1,4 +1,4 @@
-# Accuracy Measurement
+# Accuracy Measurement {#accuracy}
 
 :todo[drop personal usage of personal pronoun from this section - should I prefer passive voice, or using stuff like "this thesis" and "author of this thesis"?]
 
