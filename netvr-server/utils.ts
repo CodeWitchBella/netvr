@@ -3,7 +3,7 @@ export type PWebSocket = Await<ReturnType<typeof promisifyWebsocket>>
 
 export async function promisifyWebsocket<Message = any>(socket: WebSocket) {
   const messageQueue: (
-    | { type: 'message'; value: MessageEvent<Message> }
+    | { type: 'message'; value: MessageEvent }
     | {
         type: 'error'
         value: unknown
@@ -18,6 +18,7 @@ export async function promisifyWebsocket<Message = any>(socket: WebSocket) {
     messageQueue.push({ type: 'message', value: e })
     onQueueHasMessage?.()
   })
+  // @ts-expect-error
   socket.onerror = (e) => {
     messageQueue.push({ type: 'error', value: e })
     onQueueHasMessage?.()
@@ -30,6 +31,7 @@ export async function promisifyWebsocket<Message = any>(socket: WebSocket) {
   })
 
   await new Promise<void>((resolve) => {
+    // @ts-expect-error
     socket.onopen = () => resolve()
     onQueueHasMessage = resolve
   })
@@ -37,16 +39,17 @@ export async function promisifyWebsocket<Message = any>(socket: WebSocket) {
 
   return {
     get bufferedAmount() {
+      // @ts-expect-error
       const amount = socket.bufferedAmount
       return !Number.isInteger(amount) ? 0 : amount
     },
-    send(data: string | ArrayBufferLike | Blob | ArrayBufferView): void {
-      socket.send(data)
+    send(data: string | ArrayBufferLike): void {
+      if (!finished) socket.send(data)
     },
-    [Symbol.asyncIterator](): AsyncIterator<MessageEvent<Message>> {
+    [Symbol.asyncIterator](): AsyncIterator<MessageEvent> {
       return {
         next() {
-          const promise = new Promise<IteratorResult<MessageEvent<Message>>>(
+          const promise = new Promise<IteratorResult<MessageEvent>>(
             (resolve, reject) => {
               onQueueHasMessage = () => {
                 onQueueHasMessage = null

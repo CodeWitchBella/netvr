@@ -11,6 +11,7 @@ import {
   protocolVersion,
 } from './data'
 import { SyncDevicesButton } from './sync-devices'
+import { Calibration } from './calibration'
 
 function useSendKeepAlive(socket: PWebSocket) {
   useEffect(() => {
@@ -122,6 +123,9 @@ function DashboardInner({ socket }: { socket: PWebSocket }) {
         <div className="clients" style={{ width: 'auto' }}>
           <ErrorBoundary>
             <SyncDevicesButton sendMessage={sendMessage} clients={clients} />
+          </ErrorBoundary>
+          <ErrorBoundary>
+            <Calibration sendMessage={sendMessage} />
           </ErrorBoundary>
           {clients.map((client) => (
             <Client key={client.id} client={client} socket={socket} />

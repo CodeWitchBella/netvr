@@ -19,6 +19,9 @@ export class Peer {
     rotate: { x: 0, y: 0, z: 0 },
     scale: { x: 1, y: 1, z: 1 },
   }
+  requestedCalibration = false
+  disconnected = false
+
   constructor(public readonly id: number, public readonly socket: PWebSocket) {
     this.calibration.id = id
   }
@@ -52,12 +55,50 @@ export class Peer {
           }
         }
       }
+    } else if (message.action === 'trigger calibration begin') {
+      const timestamp = Date.now()
+      const message = JSON.stringify({
+        action: 'calibration begin',
+        timestamp,
+        peer: this.id,
+      })
+      this.socket.send(message) // send to self too
+      for (const peer of peers) peer.socket.send(message)
+    } else if (message.action === 'trigger calibration end') {
+      this.triggerCalibrationEnd(peers)
+    } else if (message.action === 'give calibration data') {
+      for (const peer of peers) {
+        if (peer.id === message.peer) {
+          peer.socket.send(
+            JSON.stringify({
+              action: 'give calibration data',
+              payload: message.payload,
+              peer: this.id,
+            }),
+          )
+          break
+        }
+      }
     } else {
       console.log('message with unknown action', JSON.stringify(message.action))
     }
 
     this.sendBinaryUnsent()
     this.sendJsonUnsent(peers)
+  }
+
+  private triggerCalibrationEnd(peers: readonly Peer[]) {
+    if (!this.requestedCalibration) return
+    this.requestedCalibration = true
+
+    const timestamp = Date.now()
+    const message = JSON.stringify({
+      action: 'calibration end',
+      timestamp,
+      peer: this.id,
+    })
+    this.socket.send(message) // send to self too
+    for (const peer of peers) peer.socket.send(message)
   }
 
   binaryUnsent = new Map<number, Uint8Array>()
@@ -155,6 +196,8 @@ export class Peer {
 
   onDisconnect(peers: readonly Peer[]) {
     console.log('onDisconnect', this.id)
+    this.disconnected = true
+    this.triggerCalibrationEnd(peers)
     for (const peer of peers) {
       peer.disconnectUnsent.add(this.id)
     }
