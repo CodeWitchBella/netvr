@@ -6,53 +6,61 @@ import {
 } from './message-utils'
 import type { WebSocketStream } from './websocketstream'
 
-export interface NetvrHandler<
-  RestoreData,
-  Handler extends NetvrHandler<RestoreData, Handler>,
-> {
+export interface NetvrHandler<RestoreData> {
   save(): RestoreData
   onJson(message: { [type: string]: string }): void
   onBinary(message: ArrayBuffer): void
+  destroy(): void
 }
 
 export interface NetvrRoom {
   onWebSocket(socket: WebSocketStream): void
 }
 
-export type NetvrRoomOptions<
-  RestoreData,
-  Handler extends NetvrHandler<RestoreData, Handler>,
-> = {
-  newConnection: (id: number) => Handler
-  restoreConnection: (data: RestoreData) => Handler
+export type NetvrRoomOptions<RestoreData> = {
+  newConnection: (id: number) => NetvrHandler<RestoreData>
+  restoreConnection: (data: RestoreData) => NetvrHandler<RestoreData>
   protocolVersion: number
 }
 
-export type Utils = ReturnType<typeof utils>
+type BroadcastOptions = { omit: number }
 
-type Client<RestoreData, Handler extends NetvrHandler<RestoreData, Handler>> = {
+export type Utils = {
+  send(id: number, message: { action: string; [key: string]: any }): void
+  broadcast(
+    message: { action: string; [key: string]: any },
+    opts?: { omit: number },
+  ): void
+
+  sendBinary(id: number, message: ArrayBuffer): void
+  broadcastBinary(message: ArrayBuffer, opts?: BroadcastOptions): void
+}
+
+type Client<RestoreData> = {
   token: string
   id: number
 } & (
   | {
-      handler: NetvrHandler<RestoreData, Handler>
+      handler: NetvrHandler<RestoreData>
       reader: ReadableStreamDefaultReader
       writer: WritableStreamDefaultWriter
     }
-  | { restoreData: RestoreData }
+  | {
+      restoreData: RestoreData
+    }
 )
 
 /**
  * TODO: jsdoc
  */
-export function createNetvrRoom<
-  RestoreData,
-  Handler extends NetvrHandler<RestoreData, Handler>,
->(opts: NetvrRoomOptions<RestoreData, Handler>): NetvrRoom {
+export function createNetvrRoom<RestoreData>(
+  getOpts: (utils: Utils) => NetvrRoomOptions<RestoreData>,
+): NetvrRoom {
   const state = {
-    clients: new Map<number, Client<RestoreData, Handler>>(),
+    clients: new Map<number, Client<RestoreData>>(),
     idGen: 0,
   }
+  const opts = getOpts(createUtils(state.clients))
 
   return {
     onWebSocket(socket: WebSocketStream) {
@@ -118,7 +126,7 @@ export function createNetvrRoom<
     assertMessageResult(setupMessage)
     assertProtocolVersion(opts.protocolVersion, setupMessage)
 
-    let client: Client<RestoreData, Handler> | null = null
+    let client: Client<RestoreData> | null = null
     if (setupMessage.type === 'i already has id') {
       const requestedId = setupMessage.id
       const oldClient = state.clients.get(requestedId)
@@ -227,4 +235,36 @@ function assertProtocolVersion(
   }
 }
 
-function utils() {}
+function createUtils(clients: Map<number, Client<unknown>>): Utils {
+  function sendRaw(id: number, message: ArrayBuffer | string) {
+    const client = clients.get(id)
+    if (!client) {
+      throw new Error(`Client ${id} not found`)
+    } else if ('restoreData' in client) {
+      throw new Error(`Client ${id} is currently disconnected`)
+    } else {
+      client.writer.write(message)
+    }
+  }
+  function broadcastRaw(
+    message: ArrayBuffer | string,
+    broadcastOptions?: BroadcastOptions,
+  ) {
+    const omit = broadcastOptions?.omit
+    for (const client of clients.values()) {
+      if ('handler' in client && client.id !== omit) {
+        client.writer.write(message)
+      }
+    }
+  }
+  return {
+    send: (id, message) => {
+      sendRaw(id, JSON.stringify(message))
+    },
+    sendBinary: sendRaw,
+    broadcast: (message, options) => {
+      broadcastRaw(JSON.stringify(message), options)
+    },
+    broadcastBinary: broadcastRaw,
+  }
+}
