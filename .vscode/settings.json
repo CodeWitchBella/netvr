@@ -5,7 +5,7 @@
   "cmake.configureOnOpen": true,
   "cmake.sourceDirectory": "${workspaceFolder}/netvr-cpp",
   "cmake.buildDirectory": "${workspaceFolder}/netvr-cpp/build",
-  "typescript.tsdk": "./netvr-dashboard/node_modules/typescript/lib",
+  "typescript.tsdk": "./netvr-server/node_modules/typescript/lib",
   "cmake.buildArgs": ["--config Release"],
   "grammarly.audience": "knowledgeable",
   "grammarly.emotions": ["neutral"],

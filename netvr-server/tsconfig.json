@@ -1,16 +1,17 @@
 {
-    "compilerOptions": {
-        "allowJs": true,
-        "esModuleInterop": true,
-        "experimentalDecorators": true,
-        "inlineSourceMap": true,
-        "jsx": "react",
-        "types": ["@cloudflare/workers-types"],
-        "lib": ["es2020"],
-        "module": "esnext",
-        "strict": true,
-        "target": "esnext",
-        "useDefineForClassFields": true,
-        "moduleResolution": "node"
-    }
+  "compilerOptions": {
+    "allowJs": true,
+    "esModuleInterop": true,
+    "experimentalDecorators": true,
+    "inlineSourceMap": true,
+    "jsx": "react",
+    "types": ["@cloudflare/workers-types"],
+    "lib": ["es2020"],
+    "module": "esnext",
+    "strict": true,
+    "target": "esnext",
+    "useDefineForClassFields": true,
+    "moduleResolution": "node",
+    "noEmit": true
+  }
 }
