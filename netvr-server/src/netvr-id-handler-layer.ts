@@ -6,9 +6,8 @@ import {
 } from './message-utils'
 import type { WebSocketStream } from './websocketstream'
 
-export interface NetvrHandler<RestoreData> {
-  save(): RestoreData
-  onJson(message: { [type: string]: string }): void
+export interface NetvrHandler {
+  onJson(message: { action: string; [key: string]: any }): void
   onBinary(message: ArrayBuffer): void
   destroy(): void
 }
@@ -18,14 +17,18 @@ export interface NetvrRoom {
 }
 
 export type NetvrRoomOptions<RestoreData> = {
-  newConnection: (id: number) => NetvrHandler<RestoreData>
-  restoreConnection: (data: RestoreData) => NetvrHandler<RestoreData>
+  newConnection: (id: number) => NetvrHandler
+  restoreConnection: (id: number) => NetvrHandler
   protocolVersion: number
+  save: () => RestoreData
+  restore: (data: RestoreData) => void
+  destroy: () => void
 }
 
 type BroadcastOptions = { omit: number }
 
 export type Utils = {
+  triggerSave(): void
   send(id: number, message: { action: string; [key: string]: any }): void
   broadcast(
     message: { action: string; [key: string]: any },
@@ -34,34 +37,72 @@ export type Utils = {
 
   sendBinary(id: number, message: ArrayBuffer): void
   broadcastBinary(message: ArrayBuffer, opts?: BroadcastOptions): void
+  readonly clients: Iterable<number>
 }
 
-type Client<RestoreData> = {
+type Client = {
   token: string
   id: number
 } & (
   | {
-      handler: NetvrHandler<RestoreData>
+      handler: NetvrHandler
       reader: ReadableStreamDefaultReader
       writer: WritableStreamDefaultWriter
     }
-  | {
-      restoreData: RestoreData
-    }
+  | {}
 )
+
+export type NetvrServerImpl = {
+  save(data: string): void
+}
+
+export function createIdHandler<RestoreData>(
+  getOpts: (utils: Utils) => NetvrRoomOptions<RestoreData>,
+  impl: NetvrServerImpl,
+): NetvrRoom {
+  const state = {
+    clients: new Map<number, Client>(),
+    idGen: 0,
+    saveTriggered: { current: false },
+  }
+
+  const opts = getOpts(createUtils(state.clients, state.saveTriggered))
+
+  return netvrRoomInternal(state, opts, impl)
+}
+
+export function restoreIdHandler<RestoreData>(
+  getOpts: (utils: Utils) => NetvrRoomOptions<RestoreData>,
+  impl: NetvrServerImpl,
+  restoreData: string,
+): NetvrRoom {
+  const data = JSON.parse(restoreData)
+  const state = {
+    clients: new Map<number, Client>(Object.entries(data.clients) as any),
+    idGen: 0,
+    saveTriggered: { current: false },
+  }
+  for (const id of state.clients.keys()) {
+    if (id >= state.idGen) state.idGen = id + 1
+  }
+
+  const opts = getOpts(createUtils(state.clients, state.saveTriggered))
+  opts.restore(data.handler)
+  return netvrRoomInternal(state, opts, impl)
+}
 
 /**
  * TODO: jsdoc
  */
-export function createNetvrRoom<RestoreData>(
-  getOpts: (utils: Utils) => NetvrRoomOptions<RestoreData>,
+function netvrRoomInternal<RestoreData>(
+  state: {
+    clients: Map<number, Client>
+    idGen: number
+    saveTriggered: { current: boolean }
+  },
+  opts: NetvrRoomOptions<RestoreData>,
+  impl: NetvrServerImpl,
 ): NetvrRoom {
-  const state = {
-    clients: new Map<number, Client<RestoreData>>(),
-    idGen: 0,
-  }
-  const opts = getOpts(createUtils(state.clients))
-
   return {
     onWebSocket(socket: WebSocketStream) {
       const reader = socket.connection.readable.getReader()
@@ -126,13 +167,13 @@ export function createNetvrRoom<RestoreData>(
     assertMessageResult(setupMessage)
     assertProtocolVersion(opts.protocolVersion, setupMessage)
 
-    let client: Client<RestoreData> | null = null
+    let client: Client | null = null
     if (setupMessage.type === 'i already has id') {
       const requestedId = setupMessage.id
       const oldClient = state.clients.get(requestedId)
       if (
         oldClient &&
-        'restoreData' in oldClient &&
+        !('handler' in oldClient) &&
         oldClient.token === setupMessage.token
       ) {
         // If unconnected client with id exists and token matches.
@@ -155,12 +196,13 @@ export function createNetvrRoom<RestoreData>(
           }),
         )
         client = {
-          handler: opts.restoreConnection(oldClient.restoreData),
+          handler: opts.restoreConnection(oldClient.id),
           id: requestedId,
           token: oldClient.token,
           reader,
           writer,
         }
+        state.clients.set(client.id, client)
       } else {
         // can't use client-provided ID, give a new one.
       }
@@ -175,6 +217,7 @@ export function createNetvrRoom<RestoreData>(
         token: getRandomString(64),
       }
       state.clients.set(id, client)
+      save()
       writer.write(
         JSON.stringify({
           action: "id's here",
@@ -191,8 +234,20 @@ export function createNetvrRoom<RestoreData>(
         if (result.done) return
         try {
           if (typeof result.value === 'string') {
-            const obj = JSON.parse(result.value)
-            client.handler.onJson(obj)
+            const data = safeJsonParse(result.value)
+            if (
+              typeof data === 'object' &&
+              data &&
+              typeof data.action === 'string'
+            ) {
+              client.handler.onJson(data)
+            } else {
+              writer.write(
+                JSON.stringify({
+                  error: 'Invalid message recieved',
+                }),
+              )
+            }
           } else {
             client.handler.onBinary(result.value)
           }
@@ -212,10 +267,28 @@ export function createNetvrRoom<RestoreData>(
       state.clients.set(client.id, {
         id: client.id,
         token: client.token,
-        restoreData: client.handler.save(),
       })
     }
   }
+
+  function save() {
+    impl.save(
+      JSON.stringify({
+        clients: Array.from(state.clients.values()).map((v) => ({
+          id: v.id,
+          token: v.token,
+        })),
+        handler: opts.save(),
+      }),
+    )
+  }
+}
+
+function safeJsonParse(text: string) {
+  try {
+    return JSON.parse(text)
+  } catch {}
+  return null
 }
 
 function assertProtocolVersion(
@@ -235,15 +308,18 @@ function assertProtocolVersion(
   }
 }
 
-function createUtils(clients: Map<number, Client<unknown>>): Utils {
+function createUtils(
+  clients: Map<number, Client>,
+  saveTriggered: { current: boolean },
+): Utils {
   function sendRaw(id: number, message: ArrayBuffer | string) {
     const client = clients.get(id)
     if (!client) {
       throw new Error(`Client ${id} not found`)
-    } else if ('restoreData' in client) {
-      throw new Error(`Client ${id} is currently disconnected`)
-    } else {
+    } else if ('writer' in client) {
       client.writer.write(message)
+    } else {
+      throw new Error(`Client ${id} is currently disconnected`)
     }
   }
   function broadcastRaw(
@@ -258,6 +334,9 @@ function createUtils(clients: Map<number, Client<unknown>>): Utils {
     }
   }
   return {
+    triggerSave: () => {
+      saveTriggered.current = true
+    },
     send: (id, message) => {
       sendRaw(id, JSON.stringify(message))
     },
@@ -266,5 +345,13 @@ function createUtils(clients: Map<number, Client<unknown>>): Utils {
       broadcastRaw(JSON.stringify(message), options)
     },
     broadcastBinary: broadcastRaw,
+    get clients() {
+      return getClientIds()
+    },
+  }
+  function* getClientIds() {
+    for (const client of clients.values()) {
+      if ('handler' in client) yield client.id
+    }
   }
 }
