@@ -67,6 +67,11 @@ export function netvrKeyValueStore<Key, Value>(initialValue: Value) {
       target.addEventListener(type, callback as any)
       return () => void target.removeEventListener(type, callback as any)
     },
+    clear() {
+      setState((draft) => {
+        draft.clear()
+      })
+    },
     drainMicrotasks: changeEmitter.drain,
     snapshot: () => state,
     initialValue: immer.castImmutable(initialValue),

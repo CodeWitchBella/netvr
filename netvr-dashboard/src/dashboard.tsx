@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useReducer, useRef, useState } from 'react'
+import { useEffect, useMemo, useReducer, useState } from 'react'
 import { useLog } from './log'
 import { ListenToSocket, useSocket } from './listen-to-socket'
 import type { PWebSocket } from './utils'
@@ -12,6 +12,15 @@ import {
 } from './data'
 import { SyncDevicesButton } from './sync-devices'
 import { Calibration } from './calibration'
+import { useImmer } from 'use-immer'
+import { applyPatches, enableMapSet, enablePatches } from 'immer'
+import { JSONTree } from 'react-json-tree'
+import * as base16 from 'base16'
+import { useLocalStorage } from './utils'
+import { invertTheme, type Base16Theme } from 'react-base16-styling'
+
+enableMapSet()
+enablePatches()
 
 function useSendKeepAlive(socket: PWebSocket) {
   useEffect(() => {
@@ -78,9 +87,75 @@ export function Dashboard({ socketUrl }: { socketUrl: string }) {
   return null
 }
 
-function DashboardInner({ socket }: { socket: PWebSocket }) {
+const isValidTheme = (v: unknown): v is keyof typeof base16 =>
+  typeof v === 'string' && v in base16
+
+const isValidThemeVersion = (v: unknown): v is 'dark' | 'light' | 'system' =>
+  v === 'dark' || v === 'light' || v === 'system'
+
+function useSystemTheme() {
+  const query = '(prefers-color-scheme: light)'
+  const [light, setLight] = useState(window.matchMedia(query).matches)
   useEffect(() => {
-    socket.send(JSON.stringify({ action: 'gimme id', protocolVersion }))
+    const match = window.matchMedia(query)
+    match.addEventListener('change', listener)
+    return () => match.removeEventListener('change', listener)
+    function listener() {
+      setLight(match.matches)
+    }
+  }, [])
+  return light ? 'light' : 'dark'
+}
+
+function useTheme() {
+  const [themeName, setThemeName] = useLocalStorage(
+    'theme',
+    'monokai',
+    isValidTheme,
+  )
+  const [preferredThemeVersion, setThemeVersion] = useLocalStorage(
+    'themeVersion',
+    'system',
+    isValidThemeVersion,
+  )
+  const systemThemeVersion = useSystemTheme()
+  const themeVersion =
+    preferredThemeVersion === 'system'
+      ? systemThemeVersion
+      : preferredThemeVersion
+  const baseTheme = base16[themeName]
+  return {
+    resolved: (themeVersion === 'light'
+      ? invertTheme(baseTheme)
+      : baseTheme) as any as Base16Theme,
+    name: themeName,
+    inverted: themeVersion === 'light',
+    setName: setThemeName,
+    setVersion: setThemeVersion,
+    version: preferredThemeVersion,
+  }
+}
+
+function DashboardInner({ socket }: { socket: PWebSocket }) {
+  const theme = useTheme()
+  useEffect(() => {
+    let sent = false
+    try {
+      const reconnection = localStorage.getItem('reconnection')
+      const data = JSON.parse(reconnection || 'invalid')
+      socket.send(
+        JSON.stringify({
+          action: 'i already has id',
+          protocolVersion,
+          ...data,
+        }),
+      )
+      sent = true
+    } catch {}
+
+    if (!sent) {
+      socket.send(JSON.stringify({ action: 'gimme id', protocolVersion }))
+    }
   }, [socket])
 
   const [stopped, setStopped] = useState(false)
@@ -89,6 +164,7 @@ function DashboardInner({ socket }: { socket: PWebSocket }) {
     true,
   )
   const [clients, dispatchDevices] = useReducer(deviceReducer, [])
+  const [serverState, setServerState] = useImmer({})
 
   const [log, dispatchLog] = useLog({ showBinary })
   useSendKeepAlive(socket)
@@ -107,6 +183,26 @@ function DashboardInner({ socket }: { socket: PWebSocket }) {
           if (stopped) return
           dispatchLog({ direction: 'down', message })
           dispatchDevices(message)
+          if (typeof message === 'string') {
+            const msg = JSON.parse(message)
+            if (msg.action === "id's here") {
+              localStorage.setItem(
+                'reconnection',
+                JSON.stringify({
+                  id: msg.intValue,
+                  token: msg.stringValue,
+                }),
+              )
+            } else if (msg.action === 'full state reset') {
+              setServerState(
+                Object.fromEntries(msg.clients.map((c: any) => [c.id, c.data])),
+              )
+            } else if (msg.action === 'patch') {
+              setServerState((draft) => {
+                applyPatches(draft, msg.patches)
+              })
+            }
+          }
         }}
       />
       <button type="button" onClick={() => setStopped((v) => !v)}>
@@ -121,12 +217,110 @@ function DashboardInner({ socket }: { socket: PWebSocket }) {
         }}
       >
         <div className="clients" style={{ width: 'auto' }}>
+          <div
+            style={{
+              padding: 8,
+              margin: 8,
+              borderRadius: 4,
+              border: '1px solid gray',
+            }}
+          >
+            <label>
+              Theme:{' '}
+              <select
+                value={theme.name}
+                onChange={(event) => {
+                  theme.setName(event.target.value)
+                }}
+              >
+                {Object.keys(base16).map((k) => (
+                  <option value={k} key={k}>
+                    {k[0].toUpperCase() + k.slice(1)}
+                  </option>
+                ))}
+              </select>
+            </label>
+            <br />
+            <label>
+              Version:{' '}
+              <select
+                value={theme.version}
+                onChange={(event) => {
+                  theme.setVersion(event.target.value)
+                }}
+              >
+                <option value="light">Light</option>
+                <option value="dark">Dark</option>
+                <option value="system">Follow system preferences</option>
+              </select>
+            </label>
+          </div>
+          <div
+            style={{
+              padding: 8,
+              margin: 8,
+              borderRadius: 4,
+              border: '1px solid gray',
+            }}
+          >
+            <button
+              type="button"
+              onClick={() => {
+                sendMessage({ action: 'reset room' })
+                setTimeout(() => {
+                  window.location.reload()
+                }, 100)
+              }}
+            >
+              Reset room
+            </button>
+          </div>
           <ErrorBoundary>
             <SyncDevicesButton sendMessage={sendMessage} clients={clients} />
           </ErrorBoundary>
           <ErrorBoundary>
             <Calibration sendMessage={sendMessage} />
           </ErrorBoundary>
+          <div
+            style={{
+              padding: 8,
+              paddingTop: 0,
+              margin: 8,
+              borderRadius: 4,
+              border: '1px solid gray',
+              background: theme.resolved.base00,
+            }}
+          >
+            <JSONTree
+              data={serverState}
+              theme={theme.name}
+              invertTheme={theme.inverted}
+              shouldExpandNode={(keyPath, data, level) =>
+                data.connected || level === 0
+              }
+              keyPath={['state']}
+              isCustomNode={(value) => {
+                return (
+                  typeof value === 'object' &&
+                  value &&
+                  Object.keys(value).length === 3 &&
+                  typeof value.x === 'number' &&
+                  typeof value.y === 'number' &&
+                  typeof value.z === 'number'
+                )
+              }}
+              valueRenderer={(valueAsString, value) => {
+                if (typeof value === 'object' && value) {
+                  return (
+                    <span style={{ color: theme.resolved.base09 }}>
+                      Vector3[{value.x}, {value.y}, {value.z}]
+                    </span>
+                  )
+                }
+                return valueAsString
+              }}
+            />
+          </div>
           {clients.map((client) => (
             <Client key={client.id} client={client} socket={socket} />
           ))}

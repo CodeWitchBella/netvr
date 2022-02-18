@@ -174,7 +174,7 @@ function idHandlerInternal<RestoreData>(
     assertProtocolVersion(opts.protocolVersion, setupMessage)
 
     let client: Client | null = null
-    if (setupMessage.type === 'i already has id') {
+    if (setupMessage.action === 'i already has id') {
       const requestedId = setupMessage.id
       const oldClient = state.clients.get(requestedId)
       if (

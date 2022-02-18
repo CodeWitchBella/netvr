@@ -21,6 +21,7 @@ type ClientState = {
   calibration: Calibration
 }
 
+const sendToSelfAsDebug = false
 export function netvrRoomOptions(
   utils: Utils,
 ): NetvrRoomOptions<SerializedKeyValueState<number, ClientState>> {
@@ -40,7 +41,7 @@ export function netvrRoomOptions(
 
   return {
     newConnection: (id) => onConnection(id),
-    protocolVersion: 1,
+    protocolVersion: 2,
     restoreConnection: (id) => onConnection(id),
     save: store.save,
     restore: store.restore,
@@ -79,7 +80,9 @@ export function netvrRoomOptions(
         })
       },
       onJson(message) {
-        if (message.action === 'set') {
+        if (message.action === 'reset room') {
+          store.clear()
+        } else if (message.action === 'set') {
           if (
             typeof message.client === 'number' &&
             typeof message.field === 'string' &&
@@ -114,7 +117,32 @@ export function netvrRoomOptions(
           )
         }
       },
-      onBinary(message) {},
+      onBinary(data) {
+        const type = new Uint8Array(data.slice(0, 1))[0]
+        if (type === 1 /* tracking info */) {
+          const contents = new Uint8Array(data.slice(1))
+
+          const sendBuffer = new Uint8Array(contents.byteLength + 4 + 1)
+          const headerView = new DataView(sendBuffer.buffer, 0, 5)
+          headerView.setUint8(0, 1) // type
+          headerView.setInt32(1, 1, true) // count
+          let offset = 5
+          sendBuffer.set(contents, offset)
+
+          utils.broadcastBinary(
+            sendBuffer,
+            sendToSelfAsDebug ? undefined : { omit: id },
+          )
+        } else if (type === 2 /* haptics */) {
+          const target = new DataView(data).getUint32(1, true)
+          const request = new Uint8Array(data.slice(4))
+          request[0] = 2
+
+          utils.sendBinary(target, request)
+        } else {
+          console.warn(`Unknown binary message type ${type}`)
+        }
+      },
     }
   }
 }
