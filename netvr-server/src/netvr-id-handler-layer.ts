@@ -1,10 +1,10 @@
-import { getRandomString } from '../utils'
+import { getRandomString } from './utils.js'
 import {
   awaitMesageWithAction,
   ExpectedError,
   assertMessageResult,
-} from './message-utils'
-import type { WebSocketStream } from './websocketstream'
+} from './message-utils.js'
+import type { WebSocketStream } from './websocketstream.js'
 
 export interface NetvrHandler {
   onJson(message: { action: string; [key: string]: any }): void
@@ -12,7 +12,7 @@ export interface NetvrHandler {
   destroy(): void
 }
 
-export interface NetvrRoom {
+export interface NetvrIdHandlerLayer {
   onWebSocket(socket: WebSocketStream): void
 }
 
@@ -59,7 +59,7 @@ export type NetvrServerImpl = {
 export function createIdHandler<RestoreData>(
   getOpts: (utils: Utils) => NetvrRoomOptions<RestoreData>,
   impl: NetvrServerImpl,
-): NetvrRoom {
+): NetvrIdHandlerLayer {
   const state = {
     clients: new Map<number, Client>(),
     idGen: 0,
@@ -68,14 +68,14 @@ export function createIdHandler<RestoreData>(
 
   const opts = getOpts(createUtils(state.clients, state.saveTriggered))
 
-  return netvrRoomInternal(state, opts, impl)
+  return idHandlerInternal(state, opts, impl)
 }
 
 export function restoreIdHandler<RestoreData>(
   getOpts: (utils: Utils) => NetvrRoomOptions<RestoreData>,
   impl: NetvrServerImpl,
   restoreData: string,
-): NetvrRoom {
+): NetvrIdHandlerLayer {
   const data = JSON.parse(restoreData)
   const state = {
     clients: new Map<number, Client>(Object.entries(data.clients) as any),
@@ -88,13 +88,13 @@ export function restoreIdHandler<RestoreData>(
 
   const opts = getOpts(createUtils(state.clients, state.saveTriggered))
   opts.restore(data.handler)
-  return netvrRoomInternal(state, opts, impl)
+  return idHandlerInternal(state, opts, impl)
 }
 
 /**
  * TODO: jsdoc
  */
-function netvrRoomInternal<RestoreData>(
+function idHandlerInternal<RestoreData>(
   state: {
     clients: Map<number, Client>
     idGen: number
@@ -102,47 +102,53 @@ function netvrRoomInternal<RestoreData>(
   },
   opts: NetvrRoomOptions<RestoreData>,
   impl: NetvrServerImpl,
-): NetvrRoom {
+): NetvrIdHandlerLayer {
   return {
     onWebSocket(socket: WebSocketStream) {
-      const reader = socket.connection.readable.getReader()
-      const writer = socket.connection.writable.getWriter()
-      handleConnection({ reader, writer })
-        .catch((e: any) => {
-          if (e instanceof ExpectedError) {
-            if (!e.clientMessage) {
-              // do nothing
+      ;(async () => {
+        const connection = await socket.connection
+        const reader = connection.readable.getReader()
+        const writer = connection.writable.getWriter()
+        await handleConnection({ reader, writer })
+          .catch((e: any) => {
+            if (e instanceof ExpectedError) {
+              if (!e.clientMessage) {
+                // do nothing
+              } else if (!writer.closed) {
+                writer.write(e.clientMessage)
+              } else {
+                console.warn(
+                  "Can't send ExpectedError.clientMessage because connection is already closed",
+                )
+              }
             } else if (!writer.closed) {
-              writer.write(e.clientMessage)
+              // notify this client of error thrown in the server
+              if (typeof e === 'object' && e && e.message) {
+                writer.write(
+                  JSON.stringify({ message: e.message, stack: e.stack }),
+                )
+              } else {
+                writer.write(JSON.stringify({ message: 'unknown error' }))
+              }
             } else {
-              console.warn(
-                "Can't send ExpectedError.clientMessage because connection is already closed",
-              )
+              console.error('Error occured after connection was closed')
+              console.error(e)
             }
-          } else if (!writer.closed) {
-            // notify this client of error thrown in the server
-            if (typeof e === 'object' && e && e.message) {
-              writer.write(
-                JSON.stringify({ message: e.message, stack: e.stack }),
-              )
-            } else {
-              writer.write(JSON.stringify({ message: 'unknown error' }))
-            }
-          } else {
-            console.error('Error occured after connection was closed')
+          })
+          .catch((e) => {
+            console.error('This is somewhat bad - error handler failed')
             console.error(e)
-          }
-        })
-        .catch((e) => {
-          console.error('This is somewhat bad - error handler failed')
-          console.error(e)
-        })
-        .then(() => {
-          if (!writer.closed) writer.close()
-        })
+          })
+          .then(() => {
+            if (!writer.closed) writer.close()
+          })
+      })()
         .catch((e) => {
           console.error('This is somewhat bad - failed to close the socket')
           console.error(e)
+        })
+        .then(() => {
+          socket.close()
         })
     },
   }
@@ -264,10 +270,12 @@ function netvrRoomInternal<RestoreData>(
         }
       }
     } finally {
+      console.log('Disconnect')
       state.clients.set(client.id, {
         id: client.id,
         token: client.token,
       })
+      client.handler.destroy()
     }
   }
 
@@ -313,14 +321,16 @@ function createUtils(
   saveTriggered: { current: boolean },
 ): Utils {
   function sendRaw(id: number, message: ArrayBuffer | string) {
-    const client = clients.get(id)
-    if (!client) {
-      throw new Error(`Client ${id} not found`)
-    } else if ('writer' in client) {
-      client.writer.write(message)
-    } else {
-      throw new Error(`Client ${id} is currently disconnected`)
-    }
+    Promise.resolve().then(() => {
+      const client = clients.get(id)
+      if (!client) {
+        throw new Error(`Client ${id} not found`)
+      } else if ('writer' in client) {
+        client.writer.write(message)
+      } else {
+        throw new Error(`Client ${id} is currently disconnected`)
+      }
+    })
   }
   function broadcastRaw(
     message: ArrayBuffer | string,

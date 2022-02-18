@@ -1,5 +1,5 @@
 import * as immer from 'immer'
-import { batchUsingMicrotasks } from './batch-messages'
+import { batchUsingMicrotasks } from './batch-messages.js'
 
 export type SerializedKeyValueState<Key, Value> = readonly (readonly [
   Key,
@@ -18,19 +18,21 @@ export function netvrKeyValueStore<Key, Value>(initialValue: Value) {
       super('change')
     }
   }
-  const target = new EventTarget<{ change: ChangeEvent }>()
+  const target = new EventTarget()
 
   let patchQueue: immer.Patch[] = []
-  const queueEmitChange = batchUsingMicrotasks(() => {
+  const changeEmitter = batchUsingMicrotasks(() => {
     target.dispatchEvent(new ChangeEvent(patchQueue))
     patchQueue = []
   })
 
   function setState(recipe: (draft: immer.Draft<Map<Key, Value>>) => void) {
-    const [nextState, patches] = immer.produceWithPatches(state, recipe)
+    const [nextState, patches] = immer.produceWithPatches(state, (draft) => {
+      recipe(draft)
+    })
     state = nextState
     for (const patch of patches) patchQueue.push(patch)
-    queueEmitChange()
+    changeEmitter.trigger()
   }
 
   return {
@@ -50,7 +52,7 @@ export function netvrKeyValueStore<Key, Value>(initialValue: Value) {
       setState((draft) => {
         let value = draft.get(id)
         if (!value) {
-          value = immer.castDraft(initialValue)
+          value = immer.createDraft(initialValue)
           draft.set(id, value)
         }
         recipe(value)
@@ -62,9 +64,10 @@ export function netvrKeyValueStore<Key, Value>(initialValue: Value) {
     addEventListener: target.addEventListener.bind(target),
     removeEventListener: target.removeEventListener.bind(target),
     subscribe(type: 'change', callback: (event: ChangeEvent) => void) {
-      target.addEventListener(type, callback)
-      return () => void target.removeEventListener(type, callback)
+      target.addEventListener(type, callback as any)
+      return () => void target.removeEventListener(type, callback as any)
     },
+    drainMicrotasks: changeEmitter.drain,
     snapshot: () => state,
     initialValue: immer.castImmutable(initialValue),
   }

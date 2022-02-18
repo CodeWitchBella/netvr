@@ -1,4 +1,4 @@
-import type { PWebSocket } from './utils.js'
+import type { PWebSocket } from './src/utils.js'
 
 const sendToSelfAsDebug = true
 type Calibration = {

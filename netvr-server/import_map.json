@@ -1,8 +1,15 @@
 {
   "imports": {
     "./room.js": "./room.ts",
-    "./utils.js": "./utils.ts",
     "./peer.js": "./peer.ts",
-    "./paths.js": "./paths.ts"
+    "./paths.js": "./paths.ts",
+    "./src/utils.js": "./src/utils.ts",
+    "./src/websocketstream.js": "./src/websocketstream.ts",
+    "./src/netvr-handler.js": "./src/netvr-handler.ts",
+    "./src/netvr-id-handler-layer.js": "./src/netvr-id-handler-layer.ts",
+    "./src/batch-messages.js": "./src/batch-messages.ts",
+    "./src/message-utils.js": "./src/message-utils.ts",
+    "./src/netvr-key-value-store.js": "./src/netvr-key-value-store.ts",
+    "immer": "https://cdn.skypack.dev/immer@8.0.1?dts"
   }
 }

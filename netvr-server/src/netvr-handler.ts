@@ -1,13 +1,14 @@
-import { batchUsingMicrotasks } from './batch-messages'
+import produce, { applyPatches, Patch } from 'immer'
+import { batchUsingMicrotasks } from './batch-messages.js'
 import type {
   NetvrHandler,
   NetvrRoomOptions,
   Utils,
-} from './netvr-id-handler-layer'
+} from './netvr-id-handler-layer.js'
 import {
   netvrKeyValueStore,
   SerializedKeyValueState,
-} from './netvr-key-value-store'
+} from './netvr-key-value-store.js'
 
 type Calibration = {
   translate: { x: number; y: number; z: number }
@@ -34,7 +35,7 @@ export function netvrRoomOptions(
 
   const cancelSaveListener = store.subscribe(
     'change',
-    batchUsingMicrotasks(utils.triggerSave),
+    batchUsingMicrotasks(utils.triggerSave).trigger,
   )
 
   return {
@@ -50,21 +51,28 @@ export function netvrRoomOptions(
 
   function onConnection(id: number): NetvrHandler {
     store.update(id, (draft) => {
+      console.log(draft)
       draft.connected = true
+    })
+    store.drainMicrotasks()
+
+    let stateBeforePatches = store.snapshot()
+    let patches: Patch[] = []
+    const unsubscribe = store.subscribe('change', (event) => {
+      for (const patch of event.patches) patches.push(patch)
     })
 
     utils.send(id, {
       action: 'full state reset',
-      clients: Array.from(store.snapshot().entries()).map(([id, data]) => ({
+      clients: Array.from(stateBeforePatches.entries()).map(([id, data]) => ({
         id,
         data,
       })),
     })
 
-    const unsubscribe = store.subscribe('change', (event) => {})
-
     return {
       destroy() {
+        console.log('destroy()')
         unsubscribe()
         store.update(id, (draft) => {
           draft.connected = false
@@ -85,8 +93,25 @@ export function netvrRoomOptions(
           } else {
             throw new Error('Invalid action:set message')
           }
+        } else if (message.action === 'keep alive') {
+          produce(
+            stateBeforePatches,
+            (draft) => void applyPatches(draft, patches),
+            (p) => {
+              patches = p
+            },
+          )
+
+          if (patches.length > 0) {
+            utils.send(id, { action: 'patch', patches })
+          }
+
+          patches = []
+          stateBeforePatches = store.snapshot()
         } else {
-          throw new Error('Unknown message action')
+          throw new Error(
+            'Unknown message action ' + JSON.stringify(message.action),
+          )
         }
       },
       onBinary(message) {},

@@ -1,5 +1,5 @@
 import { Peer } from './peer.js'
-import { getRandomString, promisifyWebsocket, PWebSocket } from './utils.js'
+import { getRandomString } from './src/utils.js'
 
 export function createRoom() {
   let idgen = 0

@@ -9,7 +9,9 @@
  */
 
 import { index } from './paths.js'
-import { createRoom } from './room.js'
+import { netvrRoomOptions } from './src/netvr-handler.js'
+import { createIdHandler } from './src/netvr-id-handler-layer.js'
+import { wrapWebSocket } from './src/websocketstream.js'
 
 await Deno.permissions.request({ name: 'net' })
 await Deno.permissions.request({
@@ -21,7 +23,7 @@ const l = Deno.listen({ port: 10_000 })
 console.log(l.addr)
 console.log(Deno.build)
 console.log(Deno.version)
-const room = createRoom()
+const room = createIdHandler(netvrRoomOptions, { save() {} })
 
 async function main() {
   for await (const tcpConn of l) {
@@ -51,41 +53,10 @@ async function handleConnection(tcpConn: Deno.Conn) {
   }
 }
 
-const socketState = {
-  CONNECTING: 0, // Socket has been created. The connection is not yet open.
-  OPEN: 1, // The connection is open and ready to communicate.
-  CLOSING: 2, // The connection is in the process of closing.
-  CLOSED: 3, // The connection is closed or couldn't be opened.
-}
-
 async function serveSocket(event: Deno.RequestEvent) {
   const { socket, response } = Deno.upgradeWebSocket(event.request)
-  room
-    .onSocket(socket)
-    .catch((e) => void console.error(e))
-    .then(() => {
-      console.log(
-        socket.readyState === socketState.CLOSING
-          ? 'WebSocket.CLOSING'
-          : socket.readyState === socketState.CLOSED
-          ? 'WebSocket.CLOSED'
-          : socket.readyState === socketState.OPEN
-          ? 'WebSocket.OPEN'
-          : socket.readyState === socketState.CONNECTING
-          ? 'WebSocket.CONNECTING'
-          : socket.readyState,
-      )
-      if (
-        socket.readyState !== socketState.CLOSING &&
-        socket.readyState !== socketState.CLOSED
-      ) {
-        console.log('Closing')
-        socket.close()
-      }
-    })
-    .catch((e) => {
-      console.error(e)
-    })
+  room.onWebSocket(wrapWebSocket(socket))
+
   event.respondWith(response)
 }
 

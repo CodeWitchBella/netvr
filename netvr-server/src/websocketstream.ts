@@ -1,10 +1,20 @@
 export interface WebSocketStream {
   // new(url: string, options?: { protocols?: readonly string[] }): WebSocketStream
-  connection: { readable: ReadableStream; writable: WritableStream }
+  connection: Promise<{ readable: ReadableStream; writable: WritableStream }>
+  close(): void
 }
 
 class WebSocketStreamPonyfill implements WebSocketStream {
-  constructor(public connection: WebSocketStream['connection']) {}
+  #socket: WebSocket
+  constructor(
+    socket: WebSocket,
+    public connection: WebSocketStream['connection'],
+  ) {
+    this.#socket = socket
+  }
+  close() {
+    this.#socket.close()
+  }
 }
 
 /**
@@ -27,7 +37,7 @@ export function wrapWebSocket(socket: WebSocket): WebSocketStream {
     writer.write(event.data)
   })
   socket.addEventListener('close', () => {
-    if (!writer.closed) writer.close()
+    writer.close()
   })
   ;(async () => {
     while (true) {
@@ -41,8 +51,11 @@ export function wrapWebSocket(socket: WebSocket): WebSocketStream {
     }
   })()
 
-  return new WebSocketStreamPonyfill({
-    readable: readable.readable,
-    writable: writable.writable,
-  })
+  return new WebSocketStreamPonyfill(
+    socket,
+    Promise.resolve({
+      readable: readable.readable,
+      writable: writable.writable,
+    }),
+  )
 }
