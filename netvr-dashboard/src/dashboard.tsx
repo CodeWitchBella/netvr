@@ -141,6 +141,7 @@ function DashboardInner({ socket }: { socket: PWebSocket }) {
               key={event.key}
               timestamp={event.timestamp}
               type={event.type}
+              direction={event.direction}
             />
           ))}
         </div>
@@ -291,14 +292,18 @@ function Message({
   message,
   timestamp,
   type,
+  direction,
 }: {
   message: any
   timestamp: string
   type: 'binary' | 'json'
+  direction: 'up' | 'down'
 }) {
   return (
     <div className="event">
-      <div>🔽 {timestamp}</div>
+      <div>
+        {direction === 'down' ? '🔽' : '🔼'} {timestamp}
+      </div>
       <pre>
         {type === 'binary' ? (
           <BinaryMessage data={message} />
