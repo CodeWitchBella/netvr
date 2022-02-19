@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useReducer, useState } from 'react'
 import { useLog } from './log'
-import { ListenToSocket, useSocket } from './listen-to-socket'
+import { ListenToSocket, SocketProvider, useSocket } from './listen-to-socket'
 import type { PWebSocket } from './utils'
 import { ErrorBoundary } from './error-boundary'
 import {
@@ -14,9 +14,10 @@ import { SyncDevicesButton } from './sync-devices'
 import { Calibration } from './calibration'
 import { useImmer } from 'use-immer'
 import { applyPatches, enableMapSet, enablePatches } from 'immer'
-import { JSONTree } from 'react-json-tree'
-import { useTheme } from './use-theme'
-import * as base16 from 'base16'
+
+import { ThemeSelector } from './use-theme'
+import { JSONPane, JSONView } from './json-view'
+import { Pane } from './design'
 
 enableMapSet()
 enablePatches()
@@ -76,18 +77,15 @@ function deviceReducer(state: ClientData[], action: any) {
 }
 
 export function Dashboard({ socketUrl }: { socketUrl: string }) {
-  const state = useSocket(socketUrl)
-  useEffect(() => {
-    if (state.status === 'disconnected') window.location.reload()
-  })
-  if (state.status === 'connected')
-    return <DashboardInner socket={state.socket} />
-  if (state.status === 'connecting') return <div>Connecting...</div>
-  return null
+  return (
+    <SocketProvider url={socketUrl}>
+      <DashboardInner />
+    </SocketProvider>
+  )
 }
 
-function DashboardInner({ socket }: { socket: PWebSocket }) {
-  const theme = useTheme()
+function DashboardInner() {
+  const socket = useSocket()
   useEffect(() => {
     let sent = false
     try {
@@ -166,53 +164,9 @@ function DashboardInner({ socket }: { socket: PWebSocket }) {
           justifyContent: 'space-between',
         }}
       >
-        <div className="clients" style={{ width: 'auto' }}>
-          <div
-            style={{
-              padding: 8,
-              margin: 8,
-              borderRadius: 4,
-              border: '1px solid gray',
-            }}
-          >
-            <label>
-              Theme:{' '}
-              <select
-                value={theme.name}
-                onChange={(event) => {
-                  theme.setName(event.target.value)
-                }}
-              >
-                {Object.keys(base16).map((k) => (
-                  <option value={k} key={k}>
-                    {k[0].toUpperCase() + k.slice(1)}
-                  </option>
-                ))}
-              </select>
-            </label>
-            <br />
-            <label>
-              Version:{' '}
-              <select
-                value={theme.version}
-                onChange={(event) => {
-                  theme.setVersion(event.target.value)
-                }}
-              >
-                <option value="light">Light</option>
-                <option value="dark">Dark</option>
-                <option value="system">Follow system preferences</option>
-              </select>
-            </label>
-          </div>
-          <div
-            style={{
-              padding: 8,
-              margin: 8,
-              borderRadius: 4,
-              border: '1px solid gray',
-            }}
-          >
+        <div className="clients" style={{ width: 'auto', flexGrow: 1 }}>
+          <ThemeSelector />
+          <Pane>
             <button
               type="button"
               onClick={() => {
@@ -224,58 +178,25 @@ function DashboardInner({ socket }: { socket: PWebSocket }) {
             >
               Reset room
             </button>
-          </div>
+          </Pane>
           <ErrorBoundary>
             <SyncDevicesButton sendMessage={sendMessage} clients={clients} />
           </ErrorBoundary>
           <ErrorBoundary>
             <Calibration sendMessage={sendMessage} />
           </ErrorBoundary>
-          <div
-            style={{
-              padding: 8,
-              paddingTop: 0,
-              margin: 8,
-              borderRadius: 4,
-              border: '1px solid gray',
-              background: theme.resolved.base00,
-            }}
-          >
-            <JSONTree
-              data={serverState}
-              theme={theme.name}
-              invertTheme={theme.inverted}
-              shouldExpandNode={(keyPath, data, level) =>
-                data.connected || level === 0
-              }
-              keyPath={['state']}
-              isCustomNode={(value) => {
-                return (
-                  typeof value === 'object' &&
-                  value &&
-                  Object.keys(value).length === 3 &&
-                  typeof value.x === 'number' &&
-                  typeof value.y === 'number' &&
-                  typeof value.z === 'number'
-                )
-              }}
-              valueRenderer={(valueAsString, value) => {
-                if (typeof value === 'object' && value) {
-                  return (
-                    <span style={{ color: theme.resolved.base09 }}>
-                      Vector3[{value.x}, {value.y}, {value.z}]
-                    </span>
-                  )
-                }
-                return valueAsString
-              }}
-            />
-          </div>
+          <JSONPane
+            name="state"
+            data={serverState}
+            shouldExpandNode={(keyPath, data, level) =>
+              data.connected || level === 0
+            }
+          />
           {clients.map((client) => (
             <Client key={client.id} client={client} socket={socket} />
           ))}
         </div>
-        <div className="events">
+        <div style={{ flexGrow: 1 }}>
           <button type="button" onClick={toggleShowBinary}>
             {showBinary ? 'Hide binary' : 'Show binary'}
           </button>
@@ -444,18 +365,18 @@ function Message({
   direction: 'up' | 'down'
 }) {
   return (
-    <div className="event">
+    <Pane>
       <div>
         {direction === 'down' ? '🔽' : '🔼'} {timestamp}
       </div>
-      <pre>
-        {type === 'binary' ? (
+      {type === 'binary' ? (
+        <pre>
           <BinaryMessage data={message} />
-        ) : (
-          JSON.stringify(message, null, 2)
-        )}
-      </pre>
-    </div>
+        </pre>
+      ) : (
+        <JSONView name="message" data={message} shouldExpandNode={() => true} />
+      )}
+    </Pane>
   )
 }
 

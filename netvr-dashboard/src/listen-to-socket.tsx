@@ -1,4 +1,13 @@
-import { useState, useRef, useEffect, memo, useReducer } from 'react'
+import {
+  useState,
+  useRef,
+  useEffect,
+  memo,
+  useReducer,
+  PropsWithChildren,
+  createContext,
+  useContext,
+} from 'react'
 import { promisifyWebsocket, PWebSocket } from './utils'
 
 function cancellableAsyncIterable<Data>(
@@ -61,7 +70,7 @@ export const ListenToSocket = memo(function ListenToSocket({
   return null
 })
 
-export function useSocket(url: string) {
+function useSocketState(url: string) {
   type SocketState =
     | { socket: PWebSocket; status: 'connected' }
     | { status: 'connecting' | 'disconnected' }
@@ -91,4 +100,25 @@ export function useSocket(url: string) {
     }
   }, [url])
   return state
+}
+
+const ctx = createContext<PWebSocket | null>(null)
+export function SocketProvider({
+  children,
+  url,
+}: PropsWithChildren<{ url: string }>) {
+  const state = useSocketState(url)
+  useEffect(() => {
+    if (state.status === 'disconnected') window.location.reload()
+  })
+  if (state.status === 'connected')
+    return <ctx.Provider value={state.socket}>{children}</ctx.Provider>
+  if (state.status === 'connecting') return <div>Connecting...</div>
+  return null
+}
+
+export function useSocket() {
+  const value = useContext(ctx)
+  if (!value) throw new Error('Missing SocketProvider')
+  return value
 }
