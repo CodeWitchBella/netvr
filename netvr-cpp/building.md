@@ -55,15 +55,14 @@ To do this you will need to have up to date compiler installed (see above).
 To build netvr-cpp .so for Quest 2 you'll need CMake. You can use the same cmake
 installation from Windows build. You'll also need Android NDK, which you can get
 by using [Unity Hub](https://store.unity.com/download) and installing Unity
-2021.2.9f1 along with Android Build Support module.
+2021.2.12f1 along with Android Build Support module.
 
 Open powershell with CMake available, for example **Developer PowerShell for VS 2022**
 and run following commands (you'll have to replace paths with correct ones for
 your unity install).
 
-
 ```powershell
-$ANDROID_NDK="C:\Stuff\Unity Editors\2021.2.9f1\Editor\Data\PlaybackEngines\AndroidPlayer\NDK"
+$ANDROID_NDK="C:\Stuff\Unity Editors\2021.2.12f1\Editor\Data\PlaybackEngines\AndroidPlayer\NDK"
 cd C:\Source\netvr\netvr-cpp
 cmake . "-DCMAKE_TOOLCHAIN_FILE=$ANDROID_NDK\build\cmake\android.toolchain.cmake" -DCMAKE_SYSTEM_NAME="Android" "-DANDROID_NDK=$ANDROID_NDK" -DANDROID_PLATFORM=android-29 -DANDROID_ABI="arm64-v8a" -B Android -GNinja
 cmake --build Android
