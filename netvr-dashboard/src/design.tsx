@@ -1,6 +1,8 @@
 import { PropsWithChildren } from 'react'
 import { useTheme } from './use-theme'
 
+export const fontFamily = 'Inter, sans-serif'
+
 export function Pane({ children }: PropsWithChildren<{}>) {
   const theme = useTheme()
   return (
@@ -35,12 +37,39 @@ export function Button(
         border: `1px solid ${theme.resolved.base03}`,
         padding: '4px 8px',
         borderRadius: 4,
-        fontFamily: 'sans-serif',
+        fontFamily,
         fontSize: '1rem',
         color: theme.resolved.base07,
         background: theme.resolved.base01,
         ...props.style,
       }}
     />
+  )
+}
+
+export function Select(
+  props: React.DetailedHTMLProps<
+    React.SelectHTMLAttributes<HTMLSelectElement>,
+    HTMLSelectElement
+  >,
+) {
+  const theme = useTheme()
+  return (
+    <select
+      {...props}
+      style={{
+        border: `1px solid ${theme.resolved.base03}`,
+        padding: '2px 4px',
+        borderRadius: 4,
+        fontFamily,
+        fontSize: '1rem',
+        color: theme.resolved.base07,
+        background: theme.resolved.base01,
+        position: 'relative',
+        ...props.style,
+      }}
+    >
+      {props.children}
+    </select>
   )
 }

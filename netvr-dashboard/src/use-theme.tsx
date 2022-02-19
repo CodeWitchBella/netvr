@@ -10,7 +10,7 @@ import {
 } from 'react'
 import { useLocalStorage } from './utils'
 import { useContext } from 'react'
-import { Pane } from './design'
+import { Pane, Select } from './design'
 
 const isValidTheme = (v: unknown): v is keyof typeof base16 =>
   typeof v === 'string' && v in base16
@@ -88,7 +88,7 @@ export function ThemeSelector() {
       <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
         <label>
           Theme:{' '}
-          <select
+          <Select
             value={theme.name}
             onChange={(event) => {
               theme.setName(event.target.value)
@@ -99,21 +99,21 @@ export function ThemeSelector() {
                 {k[0].toUpperCase() + k.slice(1)}
               </option>
             ))}
-          </select>
+          </Select>
         </label>
         <br />
         <label>
           Version:{' '}
-          <select
+          <Select
             value={theme.version}
             onChange={(event) => {
               theme.setVersion(event.target.value)
             }}
           >
+            <option value="system">Follow system</option>
             <option value="light">Light</option>
             <option value="dark">Dark</option>
-            <option value="system">Follow system preferences</option>
-          </select>
+          </Select>
         </label>
         <div
           style={{
@@ -137,7 +137,6 @@ export function ThemeSelector() {
                       textAlign: 'center',
                       left: 0,
                       right: 0,
-                      fontFamily: 'sans-serif',
                       top: '50%',
                       transform: 'translateY(-50%)',
                       color:

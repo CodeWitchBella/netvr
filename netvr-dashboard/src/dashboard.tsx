@@ -15,7 +15,7 @@ import { Calibration } from './calibration'
 import { useImmer } from 'use-immer'
 import { applyPatches, enableMapSet, enablePatches } from 'immer'
 
-import { ThemeSelector } from './use-theme'
+import { ThemeSelector, useTheme } from './use-theme'
 import { JSONPane, JSONView } from './json-view'
 import { Button, Pane } from './design'
 
@@ -123,100 +123,105 @@ function DashboardInner() {
     socket.send(message)
   }
 
+  const theme = useTheme()
   return (
-    <ErrorBoundary>
-      <ListenToSocket
-        socket={socket}
-        onMessage={(message) => {
-          if (stopped) return
-          dispatchLog({ direction: 'down', message })
-          dispatchDevices(message)
-          if (typeof message === 'string') {
-            const msg = JSON.parse(message)
-            if (msg.action === "id's here") {
-              localStorage.setItem(
-                'reconnection',
-                JSON.stringify({
-                  id: msg.intValue,
-                  token: msg.stringValue,
-                }),
-              )
-            } else if (msg.action === 'full state reset') {
-              setServerState(
-                Object.fromEntries(msg.clients.map((c: any) => [c.id, c.data])),
-              )
-            } else if (msg.action === 'patch') {
-              setServerState((draft) => {
-                applyPatches(draft, msg.patches)
-              })
+    <div style={{ flexGrow: 1, background: theme.resolved.base01 }}>
+      <ErrorBoundary>
+        <ListenToSocket
+          socket={socket}
+          onMessage={(message) => {
+            if (stopped) return
+            dispatchLog({ direction: 'down', message })
+            dispatchDevices(message)
+            if (typeof message === 'string') {
+              const msg = JSON.parse(message)
+              if (msg.action === "id's here") {
+                localStorage.setItem(
+                  'reconnection',
+                  JSON.stringify({
+                    id: msg.intValue,
+                    token: msg.stringValue,
+                  }),
+                )
+              } else if (msg.action === 'full state reset') {
+                setServerState(
+                  Object.fromEntries(
+                    msg.clients.map((c: any) => [c.id, c.data]),
+                  ),
+                )
+              } else if (msg.action === 'patch') {
+                setServerState((draft) => {
+                  applyPatches(draft, msg.patches)
+                })
+              }
             }
-          }
-        }}
-      />
+          }}
+        />
 
-      <div
-        style={{
-          display: 'flex',
-          flexDirection: 'row',
-          flexWrap: 'wrap',
-          justifyContent: 'space-between',
-        }}
-      >
-        <div className="clients" style={{ width: 'auto', flexGrow: 1 }}>
-          <ThemeSelector />
-          <Pane>
-            <Button
-              type="button"
-              onClick={() => {
-                sendMessage({ action: 'reset room' })
-                setTimeout(() => {
-                  window.location.reload()
-                }, 100)
-              }}
-            >
-              Reset room
-            </Button>
-          </Pane>
-          <ErrorBoundary>
-            <SyncDevicesButton sendMessage={sendMessage} clients={clients} />
-          </ErrorBoundary>
-          <ErrorBoundary>
-            <Calibration sendMessage={sendMessage} />
-          </ErrorBoundary>
-          <JSONPane
-            name="state"
-            data={serverState}
-            shouldExpandNode={(keyPath, data, level) =>
-              data.connected || level === 0
-            }
-          />
-          {clients.map((client) => (
-            <Client key={client.id} client={client} socket={socket} />
-          ))}
-        </div>
-        <div style={{ flexGrow: 1 }}>
-          <Pane>
-            <div style={{ flexDirection: 'row', gap: 8, display: 'flex' }}>
-              <Button type="button" onClick={toggleShowBinary}>
-                {showBinary ? 'Hide binary' : 'Show binary'}
+        <div
+          style={{
+            display: 'flex',
+            flexDirection: 'row',
+            flexWrap: 'wrap',
+            justifyContent: 'space-between',
+          }}
+        >
+          <div className="clients" style={{ width: 'auto', flexGrow: 1 }}>
+            <ThemeSelector />
+            <Pane>
+              <Button
+                type="button"
+                onClick={() => {
+                  sendMessage({ action: 'reset room' })
+                  setTimeout(() => {
+                    window.location.reload()
+                  }, 100)
+                }}
+              >
+                Reset room
               </Button>
-              <Button type="button" onClick={() => setStopped((v) => !v)}>
-                {stopped ? 'Resume' : 'Pause'}
-              </Button>
-            </div>
-          </Pane>
-          {log.map((event) => (
-            <Message
-              message={event.message}
-              key={event.key}
-              timestamp={event.timestamp}
-              type={event.type}
-              direction={event.direction}
+            </Pane>
+            <ErrorBoundary>
+              <SyncDevicesButton sendMessage={sendMessage} clients={clients} />
+            </ErrorBoundary>
+            <ErrorBoundary>
+              <Calibration sendMessage={sendMessage} />
+            </ErrorBoundary>
+            <JSONPane
+              name="state"
+              data={serverState}
+              shouldExpandNode={(keyPath, data, level) =>
+                data.connected || level === 0
+              }
             />
-          ))}
+            {clients.map((client) => (
+              <Client key={client.id} client={client} socket={socket} />
+            ))}
+          </div>
+          <div style={{ flexGrow: 1 }}>
+            <Pane>
+              <div style={{ flexDirection: 'row', gap: 8, display: 'flex' }}>
+                <Button type="button" onClick={toggleShowBinary}>
+                  {showBinary ? 'Hide binary' : 'Show binary'}
+                </Button>
+                <Button type="button" onClick={() => setStopped((v) => !v)}>
+                  {stopped ? 'Resume' : 'Pause'}
+                </Button>
+              </div>
+            </Pane>
+            {log.map((event) => (
+              <Message
+                message={event.message}
+                key={event.key}
+                timestamp={event.timestamp}
+                type={event.type}
+                direction={event.direction}
+              />
+            ))}
+          </div>
         </div>
-      </div>
-    </ErrorBoundary>
+      </ErrorBoundary>
+    </div>
   )
 }
 
