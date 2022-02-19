@@ -33,18 +33,19 @@ export function wrapWebSocket(socket: WebSocket): WebSocketStream {
   const writer = readable.writable.getWriter()
   const reader = writable.readable.getReader()
 
+  let closed = false
   socket.addEventListener('message', (event) => {
-    writer.write(event.data)
+    if (!closed) writer.write(event.data)
   })
   socket.addEventListener('close', () => {
-    writer.close()
+    closed = true
+    writer.close().catch(() => {})
   })
   ;(async () => {
     while (true) {
       const { value, done } = await reader.read()
       if (done) {
         socket.close()
-        if (!writer.closed) writer.close()
         break
       }
       socket.send(value)

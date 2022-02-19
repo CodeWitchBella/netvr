@@ -5,10 +5,8 @@ import type {
   NetvrRoomOptions,
   Utils,
 } from './netvr-id-handler-layer.js'
-import {
-  netvrKeyValueStore,
-  SerializedKeyValueState,
-} from './netvr-key-value-store.js'
+import { immerStore } from './immer-store.js'
+import * as immer from 'immer'
 
 type Calibration = {
   translate: { x: number; y: number; z: number }
@@ -21,18 +19,29 @@ type ClientState = {
   calibration: Calibration
 }
 
-const sendToSelfAsDebug = false
-export function netvrRoomOptions(
-  utils: Utils,
-): NetvrRoomOptions<SerializedKeyValueState<number, ClientState>> {
-  const store = netvrKeyValueStore<number, ClientState>({
+const version = 1
+type SerializedState = {
+  version: number
+  clients: (Omit<ClientState, 'connected'> & { id: number })[]
+}
+
+const emptyClient = immer.freeze(
+  {
     connected: false,
     calibration: {
       translate: { x: 0, y: 0, z: 0 },
       rotate: { x: 0, y: 0, z: 0 },
       scale: { x: 1, y: 1, z: 1 },
     },
-  })
+  },
+  true,
+)
+
+const sendToSelfAsDebug = false
+export function netvrRoomOptions(
+  utils: Utils,
+): NetvrRoomOptions<SerializedState> {
+  const store = immerStore(new Map<number, ClientState>())
 
   const cancelSaveListener = store.subscribe(
     'change',
@@ -43,17 +52,46 @@ export function netvrRoomOptions(
     newConnection: (id) => onConnection(id),
     protocolVersion: 2,
     restoreConnection: (id) => onConnection(id),
-    save: store.save,
-    restore: (data) =>
-      store.restore(data.map(([k, v]) => [k, { ...v, connected: false }])),
+    save: () => {
+      return {
+        version,
+        clients: Array.from(store.snapshot().entries()).map(
+          ([k, { connected, ...v }]) => ({ ...v, id: k }),
+        ),
+      }
+    },
+    restore: (data) => {
+      if (version !== data.version) return
+      store.reset(
+        new Map(
+          data.clients.map(({ id, ...client }) => [
+            id,
+            { connected: false, ...client },
+          ]),
+        ),
+      )
+    },
     destroy: () => {
       cancelSaveListener()
     },
   }
 
+  function updateClient(
+    id: number,
+    recipe: (draft: immer.Draft<ClientState>) => void,
+  ) {
+    store.update((draft) => {
+      let value = draft.get(id)
+      if (!value) {
+        value = immer.createDraft(emptyClient)
+        draft.set(id, value)
+      }
+      recipe(value)
+    })
+  }
+
   function onConnection(id: number): NetvrHandler {
-    store.update(id, (draft) => {
-      console.log(draft)
+    updateClient(id, (draft) => {
       draft.connected = true
     })
     store.drainMicrotasks()
@@ -75,23 +113,21 @@ export function netvrRoomOptions(
     return {
       destroy() {
         unsubscribe()
-        store.update(id, (draft) => {
+        updateClient(id, (draft) => {
           draft.connected = false
         })
         utils.triggerSave()
       },
       onJson(message) {
-        if (message.action === 'reset room') {
-          store.clear()
-        } else if (message.action === 'set') {
+        if (message.action === 'set') {
           if (
             typeof message.client === 'number' &&
             typeof message.field === 'string' &&
             message.field in store.initialValue &&
             message.value &&
-            store.has(message.client)
+            store.snapshot().has(message.client)
           ) {
-            store.update(message.client, (draft) => {
+            updateClient(message.client, (draft) => {
               ;(draft as any)[message.field] = message.value
             })
           } else {

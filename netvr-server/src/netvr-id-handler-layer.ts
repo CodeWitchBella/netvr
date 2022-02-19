@@ -48,6 +48,7 @@ type Client = {
       handler: NetvrHandler
       reader: ReadableStreamDefaultReader
       writer: WritableStreamDefaultWriter
+      socket: WebSocketStream
     }
   | {}
 )
@@ -61,19 +62,40 @@ export function createIdHandler<RestoreData>(
   impl: NetvrServerImpl,
   restoreData?: string | null,
 ): NetvrIdHandlerLayer {
-  const data = restoreData ? JSON.parse(restoreData) : { clients: [] }
-  const state = {
+  let data = restoreData ? JSON.parse(restoreData) : { clients: [] }
+  let state = {
     clients: new Map<number, Client>(Object.entries(data?.clients) as any),
     idGen: 0,
     saveTriggered: { current: false },
   }
-  for (const id of state.clients.keys()) {
-    if (id >= state.idGen) state.idGen = id + 1
+  for (const client of state.clients.values()) {
+    if (client.id >= state.idGen) state.idGen = client.id
   }
-  const opts = getOpts(createUtils(state.clients, state.saveTriggered))
+  let opts = getOpts(createUtils(state.clients, state.saveTriggered))
   if (restoreData) opts.restore(data.handler)
+  data = { clients: [] }
 
-  return idHandlerInternal(state, opts, impl)
+  const reset = () => {
+    for (const client of state.clients.values()) {
+      if ('socket' in client) client.socket.close()
+    }
+    state = {
+      clients: new Map<number, Client>(),
+      idGen: 0,
+      saveTriggered: { current: false },
+    }
+    opts = getOpts(createUtils(state.clients, state.saveTriggered))
+
+    result = idHandlerInternal(state, opts, impl, reset)
+    result.save()
+  }
+  let result = idHandlerInternal(state, opts, impl, reset)
+
+  return {
+    onWebSocket(socket: WebSocketStream) {
+      result.onWebSocket(socket)
+    },
+  }
 }
 
 /**
@@ -87,14 +109,16 @@ function idHandlerInternal<RestoreData>(
   },
   opts: NetvrRoomOptions<RestoreData>,
   impl: NetvrServerImpl,
-): NetvrIdHandlerLayer {
+  reset: () => void,
+) {
   return {
+    constructTime: new Date().toISOString(),
     onWebSocket(socket: WebSocketStream) {
       ;(async () => {
         const connection = await socket.connection
         const reader = connection.readable.getReader()
         const writer = connection.writable.getWriter()
-        await handleConnection({ reader, writer })
+        await handleConnection({ reader, writer, socket })
           .catch((e: any) => {
             if (e instanceof ExpectedError) {
               if (!e.clientMessage) {
@@ -138,6 +162,7 @@ function idHandlerInternal<RestoreData>(
           } catch {}
         })
     },
+    save,
   }
 
   /**
@@ -149,9 +174,11 @@ function idHandlerInternal<RestoreData>(
   async function handleConnection({
     reader,
     writer,
+    socket,
   }: {
     reader: ReadableStreamDefaultReader
     writer: WritableStreamDefaultWriter
+    socket: WebSocketStream
   }) {
     const setupMessage = await awaitMesageWithAction(reader, {
       timeout: 15000,
@@ -194,6 +221,7 @@ function idHandlerInternal<RestoreData>(
           token: oldClient.token,
           reader,
           writer,
+          socket,
         }
         state.clients.set(client.id, client)
         handleSaveTrigger()
@@ -204,11 +232,12 @@ function idHandlerInternal<RestoreData>(
     if (!client) {
       const id = ++state.idGen
       client = {
-        id,
         handler: opts.newConnection(id),
+        id,
+        token: getRandomString(64),
         reader,
         writer,
-        token: getRandomString(64),
+        socket,
       }
       state.clients.set(id, client)
       save()
@@ -234,8 +263,12 @@ function idHandlerInternal<RestoreData>(
               data &&
               typeof data.action === 'string'
             ) {
-              client.handler.onJson(data)
-              handleSaveTrigger()
+              if (data.action === 'reset room') {
+                reset()
+              } else {
+                client.handler.onJson(data)
+                handleSaveTrigger()
+              }
             } else {
               writer.write(
                 JSON.stringify({
