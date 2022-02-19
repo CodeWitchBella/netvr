@@ -1,4 +1,5 @@
 import { Component } from 'react'
+import { Button } from './design'
 
 export class ErrorBoundary extends Component {
   state = { hasError: false }
@@ -17,9 +18,9 @@ export class ErrorBoundary extends Component {
       return (
         <>
           <h1>Something went wrong.</h1>
-          <button type="button" onClick={this.reset}>
+          <Button type="button" onClick={this.reset}>
             Reset
-          </button>
+          </Button>
         </>
       )
     }

@@ -19,3 +19,28 @@ export function Pane({ children }: PropsWithChildren<{}>) {
     </div>
   )
 }
+
+export function Button(
+  props: React.DetailedHTMLProps<
+    React.ButtonHTMLAttributes<HTMLButtonElement>,
+    HTMLButtonElement
+  >,
+) {
+  const theme = useTheme()
+  return (
+    <button
+      {...props}
+      style={{
+        all: 'unset',
+        border: `1px solid ${theme.resolved.base03}`,
+        padding: '4px 8px',
+        borderRadius: 4,
+        fontFamily: 'sans-serif',
+        fontSize: '1rem',
+        color: theme.resolved.base07,
+        background: theme.resolved.base01,
+        ...props.style,
+      }}
+    />
+  )
+}

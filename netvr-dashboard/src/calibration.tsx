@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import { Pane } from './design'
+import { Button, Pane } from './design'
 
 export function Calibration({
   sendMessage,
@@ -10,7 +10,7 @@ export function Calibration({
   return (
     <Pane>
       <div style={{ display: 'flex', gap: 8 }}>
-        <button
+        <Button
           type="button"
           onClick={() => {
             setMessage('Calibrating')
@@ -19,8 +19,8 @@ export function Calibration({
           }}
         >
           Trigger Calibration begin
-        </button>
-        <button
+        </Button>
+        <Button
           type="button"
           onClick={() => {
             setMessage('Calibration ended')
@@ -29,7 +29,7 @@ export function Calibration({
           }}
         >
           Trigger Calibration end
-        </button>
+        </Button>
         {message}
       </div>
     </Pane>

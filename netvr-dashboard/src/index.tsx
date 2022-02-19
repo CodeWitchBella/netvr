@@ -2,7 +2,6 @@ import ReactDOM from 'react-dom'
 import { Dashboard } from './dashboard'
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
 import { NotFound } from './not-found'
-import { Menu } from './menu'
 import { ThemeProvider } from './use-theme'
 
 export async function run() {
@@ -12,7 +11,6 @@ export async function run() {
   ReactDOM.render(
     <ThemeProvider>
       <BrowserRouter>
-        <Menu />
         <Routes>
           <Route index element={<Dashboard socketUrl={getSocketUrl()} />} />
           <Route path="*" element={<NotFound />} />

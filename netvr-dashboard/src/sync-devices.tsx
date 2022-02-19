@@ -1,7 +1,7 @@
 import { notNull } from '@isbl/ts-utils'
 import { useState } from 'react'
 import { ClientData, mapData } from './data'
-import { Pane } from './design'
+import { Button, Pane } from './design'
 
 export function SyncDevicesButton({
   clients,
@@ -13,7 +13,7 @@ export function SyncDevicesButton({
   const [message, setMessage] = useState('')
   return (
     <Pane>
-      <button
+      <Button
         type="button"
         onClick={() => {
           setMessage('')
@@ -85,7 +85,7 @@ export function SyncDevicesButton({
         }}
       >
         Sync Devices by headset position
-      </button>
+      </Button>
       {message}
     </Pane>
   )

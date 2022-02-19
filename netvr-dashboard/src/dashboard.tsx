@@ -17,7 +17,7 @@ import { applyPatches, enableMapSet, enablePatches } from 'immer'
 
 import { ThemeSelector } from './use-theme'
 import { JSONPane, JSONView } from './json-view'
-import { Pane } from './design'
+import { Button, Pane } from './design'
 
 enableMapSet()
 enablePatches()
@@ -153,9 +153,7 @@ function DashboardInner() {
           }
         }}
       />
-      <button type="button" onClick={() => setStopped((v) => !v)}>
-        {stopped ? 'Resume' : 'Pause'}
-      </button>
+
       <div
         style={{
           display: 'flex',
@@ -167,7 +165,7 @@ function DashboardInner() {
         <div className="clients" style={{ width: 'auto', flexGrow: 1 }}>
           <ThemeSelector />
           <Pane>
-            <button
+            <Button
               type="button"
               onClick={() => {
                 sendMessage({ action: 'reset room' })
@@ -177,7 +175,7 @@ function DashboardInner() {
               }}
             >
               Reset room
-            </button>
+            </Button>
           </Pane>
           <ErrorBoundary>
             <SyncDevicesButton sendMessage={sendMessage} clients={clients} />
@@ -197,9 +195,16 @@ function DashboardInner() {
           ))}
         </div>
         <div style={{ flexGrow: 1 }}>
-          <button type="button" onClick={toggleShowBinary}>
-            {showBinary ? 'Hide binary' : 'Show binary'}
-          </button>
+          <Pane>
+            <div style={{ flexDirection: 'row', gap: 8, display: 'flex' }}>
+              <Button type="button" onClick={toggleShowBinary}>
+                {showBinary ? 'Hide binary' : 'Show binary'}
+              </Button>
+              <Button type="button" onClick={() => setStopped((v) => !v)}>
+                {stopped ? 'Resume' : 'Pause'}
+              </Button>
+            </div>
+          </Pane>
           {log.map((event) => (
             <Message
               message={event.message}
@@ -234,9 +239,9 @@ function Client({
       }}
     >
       <div>id: {client.id}</div>
-      <button type="button" onClick={toggleShowJson}>
+      <Button type="button" onClick={toggleShowJson}>
         {showJson ? 'Hide JSON' : 'Show JSON'}
-      </button>
+      </Button>
       {client.info?.map((data) => (
         <Device
           device={data}
@@ -308,19 +313,19 @@ function Device({
     >
       <div style={{ display: 'flex', justifyContent: 'space-between' }}>
         <div>Device: {device.localId}</div>
-        <button
+        <Button
           type="button"
           onClick={identify}
           disabled={!device.haptics?.supportsImpulse}
         >
           Identify
-        </button>
+        </Button>
       </div>
       <div>Name: {device.name}</div>
       <div>Characteristics: {device.characteristics.join(', ')}</div>
-      <button type="button" onClick={toggleShowDetails}>
+      <Button type="button" onClick={toggleShowDetails}>
         {showDetails ? 'Hide details' : 'Show details'}
-      </button>
+      </Button>
       {showDetails ? (
         <>
           {Object.entries(data).map(([key, o]) => (
