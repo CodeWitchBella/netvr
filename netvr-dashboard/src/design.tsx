@@ -34,6 +34,7 @@ export function Button(
       {...props}
       style={{
         all: 'unset',
+        cursor: 'pointer',
         border: `1px solid ${theme.resolved.base03}`,
         padding: '4px 8px',
         borderRadius: 4,

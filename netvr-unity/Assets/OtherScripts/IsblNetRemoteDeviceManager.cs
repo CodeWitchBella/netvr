@@ -42,7 +42,7 @@ public class IsblNetRemoteDeviceManager : MonoBehaviour
         }
     }
 
-    static void SyncClient(Isbl.NetStateData netState, IsblNetRemoteClient remoteClient)
+    static void SyncClient(Isbl.NetStateDataOld netState, IsblNetRemoteClient remoteClient)
     {
         var toRemove = remoteClient.Devices.Where(device =>
         {

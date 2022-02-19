@@ -96,7 +96,6 @@ export function netvrRoomOptions(
     })
     store.drainMicrotasks()
 
-    let stateBeforePatches = store.snapshot()
     let patches: Patch[] = []
     const unsubscribe = store.subscribe('change', (event) => {
       for (const patch of event.patches) patches.push(patch)
@@ -104,10 +103,7 @@ export function netvrRoomOptions(
 
     utils.send(id, {
       action: 'full state reset',
-      clients: Array.from(stateBeforePatches.entries()).map(([id, data]) => ({
-        id,
-        data,
-      })),
+      clients: Object.fromEntries(store.snapshot().entries()),
     })
 
     return {
@@ -134,20 +130,11 @@ export function netvrRoomOptions(
             throw new Error('Invalid action:set message')
           }
         } else if (message.action === 'keep alive') {
-          produce(
-            stateBeforePatches,
-            (draft) => void applyPatches(draft, patches),
-            (p) => {
-              patches = p
-            },
-          )
-
           if (patches.length > 0) {
             utils.send(id, { action: 'patch', patches })
           }
 
           patches = []
-          stateBeforePatches = store.snapshot()
         } else {
           throw new Error(
             'Unknown message action ' + JSON.stringify(message.action),

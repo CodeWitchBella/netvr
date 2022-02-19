@@ -13,7 +13,7 @@ using System.IO.Compression;
 /// Do not construct this directly, use .Instance accessor instead.
 public sealed class IsblNet : IDisposable
 {
-    public const int ProtocolVersion = 1;
+    public const int ProtocolVersion = 2;
 
     /// <summary>
     /// Makes sure that there is existing instance of IsblNet. This is usually
@@ -107,22 +107,8 @@ public sealed class IsblNet : IDisposable
                     LocalState.Initialized = true;
                     SendDeviceInfo();
                 }
-                else if (action == "device info")
-                {
-                    HandleDeviceInfo(obj);
-                }
-                else if (action == "set calibration")
-                {
-                    HandleSetCalibration(obj);
-                }
-                else if (action == "disconnect")
-                {
-                    foreach (var idToken in obj.GetValue("ids").Children<JToken>())
-                    {
-                        int id = (int)idToken;
-                        if (OtherStates.ContainsKey(id)) OtherStates.Remove(id);
-                    }
-                }
+                else if (action == "patch") { }
+                else if (action == "full state reset") { }
                 else if (!string.IsNullOrEmpty(action))
                 {
                     Debug.Log($"Unknown action \"{action}\"");
@@ -202,80 +188,6 @@ public sealed class IsblNet : IDisposable
         }
     }
 
-    void HandleDeviceInfo(JObject obj)
-    {
-        foreach (var peer in obj.GetValue("info").Children<JObject>())
-        {
-            var id = peer.Value<int>("id");
-            Isbl.NetStateData localOtherState = OtherStates.GetValueOrDefault(id, null);
-            if (localOtherState == null)
-            {
-                localOtherState = new()
-                {
-                    Id = id,
-                    Initialized = true,
-                };
-                OtherStates.Add(id, localOtherState);
-            }
-            if (!peer.ContainsKey("info")) continue;
-
-            var children = peer.GetValue("info").Children<JObject>();
-            HashSet<int> unvisited = new(localOtherState.Devices.Keys);
-            foreach (var device in children)
-            {
-                var localId = device.Value<int>("localId");
-                unvisited.Remove(localId);
-                var localDevice = localOtherState.Devices.GetValueOrDefault(localId, null);
-                if (localDevice == null)
-                {
-                    localDevice = new();
-                    localOtherState.Devices.Add(localId, localDevice);
-                }
-                localDevice.DeSerializeConfiguration(device);
-            }
-        }
-    }
-
-    /// <summary>
-    /// Handles incoming messages with action set to "set calibration"
-    /// </summary>
-    void HandleSetCalibration(JObject obj)
-    {
-        foreach (var peer in obj.GetValue("calibrations").Children<JObject>())
-        {
-            var id = peer.Value<int>("id");
-            Isbl.NetStateData localState = OtherStates.GetValueOrDefault(id, null);
-            if (id == LocalState.Id)
-            {
-                LocalState.CalibrationPosition = Vector3Value(peer.Value<JObject>("translate"));
-                LocalState.CalibrationRotation = Quaternion.Euler(Vector3Value(peer.Value<JObject>("rotate")) * 180f / (float)Math.PI);
-                LocalState.CalibrationScale = Vector3Value(peer.Value<JObject>("scale"));
-            }
-
-            if (localState == null)
-            {
-                if (id != LocalState.Id)
-                {
-                    Debug.LogWarning($"Received set calibration message for unknown device id {id}. Did it arrive before device info?");
-                }
-                continue;
-            }
-
-            localState.CalibrationPosition = Vector3Value(peer.Value<JObject>("translate"));
-            localState.CalibrationRotation = Quaternion.Euler(Vector3Value(peer.Value<JObject>("rotate")) * 180f / (float)Math.PI);
-            localState.CalibrationScale = Vector3Value(peer.Value<JObject>("scale"));
-        }
-    }
-
-    /// <summary>
-    /// Utility function used to deserialize Unity Vector3 from JSON in format
-    /// {"x":1, "y":2, "z":3}
-    /// </summary>
-    Vector3 Vector3Value(JObject o)
-    {
-        return new Vector3(o.Value<float>("x"), o.Value<float>("y"), o.Value<float>("z"));
-    }
-
     void SendDeviceInfo()
     {
         _ = _socket.SendAsync(new
@@ -287,8 +199,8 @@ public sealed class IsblNet : IDisposable
         LocalState.DeviceInfoChanged = false;
     }
 
-    public Isbl.NetStateData LocalState = new(local: true);
-    public Dictionary<int, Isbl.NetStateData> OtherStates = new();
+    public Isbl.NetStateDataOld LocalState = new(local: true);
+    public Dictionary<int, Isbl.NetStateDataOld> OtherStates = new();
 
     public void Dispose()
     {

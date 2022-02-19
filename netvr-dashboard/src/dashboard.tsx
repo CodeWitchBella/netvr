@@ -144,11 +144,7 @@ function DashboardInner() {
                   }),
                 )
               } else if (msg.action === 'full state reset') {
-                setServerState(
-                  Object.fromEntries(
-                    msg.clients.map((c: any) => [c.id, c.data]),
-                  ),
-                )
+                setServerState(msg.clients)
               } else if (msg.action === 'patch') {
                 setServerState((draft) => {
                   applyPatches(draft, msg.patches)

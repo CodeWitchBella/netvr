@@ -3,13 +3,42 @@ using System.Buffers.Binary;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
+using Newtonsoft.Json;
 using Newtonsoft.Json.Linq;
 using Newtonsoft.Json.Serialization;
 using UnityEngine;
 
 namespace Isbl
 {
-    public class NetStateData
+    public struct NetStateCalibration
+    {
+        [JsonProperty(propertyName: "translate")]
+        public Vector3 Translate;
+
+        [JsonProperty(propertyName: "rotate")]
+        public Vector3 Rotate;
+
+        [JsonProperty(propertyName: "scale")]
+        public Vector3 Scale;
+    }
+
+    public struct NetStateClient
+    {
+        [JsonProperty(propertyName: "connected")]
+        public bool Connected;
+
+        [JsonProperty(propertyName: "calibration")]
+        public NetStateCalibration Calibration;
+    }
+
+    public class NetState
+    {
+        [JsonProperty(propertyName: "clients")]
+        public readonly Dictionary<int, NetStateClient> Clients = new();
+
+    }
+
+    public class NetStateDataOld
     {
         public bool Initialized;
         public int Id;
@@ -34,7 +63,7 @@ namespace Isbl
                 + (from d in Devices where d.Value.HasData select d.Value.CalculateSerializationSize()).Sum() /* devices array */;
         }
 
-        public NetStateData(bool local = false)
+        public NetStateDataOld(bool local = false)
         {
             if (local) LocalDevices = new();
         }
