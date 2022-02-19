@@ -15,9 +15,8 @@ import { Calibration } from './calibration'
 import { useImmer } from 'use-immer'
 import { applyPatches, enableMapSet, enablePatches } from 'immer'
 import { JSONTree } from 'react-json-tree'
+import { useTheme } from './use-theme'
 import * as base16 from 'base16'
-import { useLocalStorage } from './utils'
-import { invertTheme, type Base16Theme } from 'react-base16-styling'
 
 enableMapSet()
 enablePatches()
@@ -85,55 +84,6 @@ export function Dashboard({ socketUrl }: { socketUrl: string }) {
     return <DashboardInner socket={state.socket} />
   if (state.status === 'connecting') return <div>Connecting...</div>
   return null
-}
-
-const isValidTheme = (v: unknown): v is keyof typeof base16 =>
-  typeof v === 'string' && v in base16
-
-const isValidThemeVersion = (v: unknown): v is 'dark' | 'light' | 'system' =>
-  v === 'dark' || v === 'light' || v === 'system'
-
-function useSystemTheme() {
-  const query = '(prefers-color-scheme: light)'
-  const [light, setLight] = useState(window.matchMedia(query).matches)
-  useEffect(() => {
-    const match = window.matchMedia(query)
-    match.addEventListener('change', listener)
-    return () => match.removeEventListener('change', listener)
-    function listener() {
-      setLight(match.matches)
-    }
-  }, [])
-  return light ? 'light' : 'dark'
-}
-
-function useTheme() {
-  const [themeName, setThemeName] = useLocalStorage(
-    'theme',
-    'monokai',
-    isValidTheme,
-  )
-  const [preferredThemeVersion, setThemeVersion] = useLocalStorage(
-    'themeVersion',
-    'system',
-    isValidThemeVersion,
-  )
-  const systemThemeVersion = useSystemTheme()
-  const themeVersion =
-    preferredThemeVersion === 'system'
-      ? systemThemeVersion
-      : preferredThemeVersion
-  const baseTheme = base16[themeName]
-  return {
-    resolved: (themeVersion === 'light'
-      ? invertTheme(baseTheme)
-      : baseTheme) as any as Base16Theme,
-    name: themeName,
-    inverted: themeVersion === 'light',
-    setName: setThemeName,
-    setVersion: setThemeVersion,
-    version: preferredThemeVersion,
-  }
 }
 
 function DashboardInner({ socket }: { socket: PWebSocket }) {

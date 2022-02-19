@@ -3,20 +3,22 @@ import { Dashboard } from './dashboard'
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
 import { NotFound } from './not-found'
 import { Menu } from './menu'
-import { lazy, Suspense } from 'react'
+import { ThemeProvider } from './use-theme'
 
 export async function run() {
   const events = document.querySelector('#events')!
   if (!events) throw new Error('Cant find #events')
 
   ReactDOM.render(
-    <BrowserRouter>
-      <Menu />
-      <Routes>
-        <Route index element={<Dashboard socketUrl={getSocketUrl()} />} />
-        <Route path="*" element={<NotFound />} />
-      </Routes>
-    </BrowserRouter>,
+    <ThemeProvider>
+      <BrowserRouter>
+        <Menu />
+        <Routes>
+          <Route index element={<Dashboard socketUrl={getSocketUrl()} />} />
+          <Route path="*" element={<NotFound />} />
+        </Routes>
+      </BrowserRouter>
+    </ThemeProvider>,
     events,
   )
 }
