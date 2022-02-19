@@ -44,7 +44,8 @@ export function netvrRoomOptions(
     protocolVersion: 2,
     restoreConnection: (id) => onConnection(id),
     save: store.save,
-    restore: store.restore,
+    restore: (data) =>
+      store.restore(data.map(([k, v]) => [k, { ...v, connected: false }])),
     destroy: () => {
       cancelSaveListener()
     },
@@ -73,11 +74,11 @@ export function netvrRoomOptions(
 
     return {
       destroy() {
-        console.log('destroy()')
         unsubscribe()
         store.update(id, (draft) => {
           draft.connected = false
         })
+        utils.triggerSave()
       },
       onJson(message) {
         if (message.action === 'reset room') {

@@ -2,14 +2,21 @@
  * Server used for relaying messages between multiple users. Alternative
  * entrypoint intended for running on cloudflare workers.
  *
- * Example invocation:
+ * Run using:
+ * $ yarn miniflare --watch --debug --port 10000
+ * or
  * $ yarn dev
  */
 
 import { getAssetFromKV } from '@cloudflare/kv-asset-handler'
 import manifestJSON from '__STATIC_CONTENT_MANIFEST'
-import { index } from './paths.js'
-import { createRoom } from './room.js'
+import { index } from './src/paths.js'
+import { netvrRoomOptions } from './src/netvr-handler.js'
+import {
+  createIdHandler,
+  type NetvrIdHandlerLayer,
+} from './src/netvr-id-handler-layer.js'
+import { wrapWebSocket } from './src/websocketstream.js'
 const manifest = JSON.parse(manifestJSON)
 
 export default {
@@ -44,20 +51,27 @@ export default {
 
 export class DurableObjectWebSocket {
   state
-  room = createRoom()
+  room?: NetvrIdHandlerLayer
+
+  save = (data: string) => {
+    this.state.storage.put('data', data)
+  }
+
   constructor(state: any, env: any) {
     this.state = state
   }
 
   async fetch(request: Request) {
+    if (!this.room) {
+      const data = await this.state.storage.get('data')
+      this.room = createIdHandler(netvrRoomOptions, { save: this.save }, data)
+    }
+
     const ip = request.headers.get('CF-Connecting-IP')
 
     const [client, server] = Object.values(new WebSocketPair())
 
-    this.room.onSocket(server).catch((e) => {
-      console.error(e)
-    })
-    ;(server as any).onopen() // workaround missing onopen call
+    this.room.onWebSocket(wrapWebSocket(server))
     server.accept()
     server.send(JSON.stringify({ ip }))
 

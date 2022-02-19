@@ -59,35 +59,20 @@ export type NetvrServerImpl = {
 export function createIdHandler<RestoreData>(
   getOpts: (utils: Utils) => NetvrRoomOptions<RestoreData>,
   impl: NetvrServerImpl,
+  restoreData?: string | null,
 ): NetvrIdHandlerLayer {
+  const data = restoreData ? JSON.parse(restoreData) : { clients: [] }
   const state = {
-    clients: new Map<number, Client>(),
-    idGen: 0,
-    saveTriggered: { current: false },
-  }
-
-  const opts = getOpts(createUtils(state.clients, state.saveTriggered))
-
-  return idHandlerInternal(state, opts, impl)
-}
-
-export function restoreIdHandler<RestoreData>(
-  getOpts: (utils: Utils) => NetvrRoomOptions<RestoreData>,
-  impl: NetvrServerImpl,
-  restoreData: string,
-): NetvrIdHandlerLayer {
-  const data = JSON.parse(restoreData)
-  const state = {
-    clients: new Map<number, Client>(Object.entries(data.clients) as any),
+    clients: new Map<number, Client>(Object.entries(data?.clients) as any),
     idGen: 0,
     saveTriggered: { current: false },
   }
   for (const id of state.clients.keys()) {
     if (id >= state.idGen) state.idGen = id + 1
   }
-
   const opts = getOpts(createUtils(state.clients, state.saveTriggered))
-  opts.restore(data.handler)
+  if (restoreData) opts.restore(data.handler)
+
   return idHandlerInternal(state, opts, impl)
 }
 
@@ -148,7 +133,9 @@ function idHandlerInternal<RestoreData>(
           console.error(e)
         })
         .then(() => {
-          socket.close()
+          try {
+            socket.close()
+          } catch {}
         })
     },
   }
@@ -209,6 +196,7 @@ function idHandlerInternal<RestoreData>(
           writer,
         }
         state.clients.set(client.id, client)
+        handleSaveTrigger()
       } else {
         // can't use client-provided ID, give a new one.
       }
@@ -247,6 +235,7 @@ function idHandlerInternal<RestoreData>(
               typeof data.action === 'string'
             ) {
               client.handler.onJson(data)
+              handleSaveTrigger()
             } else {
               writer.write(
                 JSON.stringify({
@@ -256,6 +245,7 @@ function idHandlerInternal<RestoreData>(
             }
           } else {
             client.handler.onBinary(result.value)
+            handleSaveTrigger()
           }
         } catch (e: any) {
           if (typeof e === 'object' && e) {
@@ -270,25 +260,36 @@ function idHandlerInternal<RestoreData>(
         }
       }
     } finally {
-      console.log('Disconnect')
       state.clients.set(client.id, {
         id: client.id,
         token: client.token,
       })
       client.handler.destroy()
+      handleSaveTrigger()
     }
   }
 
   function save() {
+    state.saveTriggered.current = false
     impl.save(
-      JSON.stringify({
-        clients: Array.from(state.clients.values()).map((v) => ({
-          id: v.id,
-          token: v.token,
-        })),
-        handler: opts.save(),
-      }),
+      JSON.stringify(
+        {
+          clients: Array.from(state.clients.values()).map((v) => ({
+            id: v.id,
+            token: v.token,
+          })),
+          handler: opts.save(),
+        },
+        null,
+        2,
+      ),
     )
+  }
+
+  function handleSaveTrigger() {
+    if (state.saveTriggered.current) {
+      save()
+    }
   }
 }
 

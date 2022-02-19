@@ -3,11 +3,14 @@
   "main": "./dist/worker.js",
   "private": true,
   "type": "module",
+  "license": "UNLICENSED",
   "scripts": {
     "build": "esbuild --bundle --sourcemap --outfile=dist/worker.mjs --format=esm --external:__STATIC_CONTENT_MANIFEST ./worker.ts",
     "dev": "miniflare --watch --debug --port 10000",
-    "deno:compile": "deno run --unstable --allow-read --allow-write --allow-run compile.ts",
-    "deno:run": "deno run --watch --import-map ./import_map.json --allow-net --allow-read=../netvr-dashboard/dist server.ts"
+    "update-invocations": "deno run --allow-read --allow-write scripts/update-invocations.ts",
+    "deno:vendor": "deno run --allow-read --allow-write --allow-run scripts/vendor.ts",
+    "deno:compile": "deno run --unstable --allow-read --allow-write --allow-run --allow-net scripts/compile.ts",
+    "deno:run": "deno run --watch --import-map ./vendor/import_map.json --allow-net --allow-read=../netvr-dashboard/dist,./netvr-room.json --allow-write=./netvr-room.json server.ts"
   },
   "devDependencies": {
     "@cloudflare/workers-types": "^3.1.1",
