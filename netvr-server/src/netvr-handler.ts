@@ -41,7 +41,7 @@ const sendToSelfAsDebug = false
 export function netvrRoomOptions(
   utils: Utils,
 ): NetvrRoomOptions<SerializedState> {
-  const store = immerStore(new Map<number, ClientState>())
+  const store = immerStore({ clients: new Map<number, ClientState>() })
 
   const cancelSaveListener = store.subscribe(
     'change',
@@ -55,21 +55,21 @@ export function netvrRoomOptions(
     save: () => {
       return {
         version,
-        clients: Array.from(store.snapshot().entries()).map(
+        clients: Array.from(store.snapshot().clients.entries()).map(
           ([k, { connected, ...v }]) => ({ ...v, id: k }),
         ),
       }
     },
     restore: (data) => {
       if (version !== data.version) return
-      store.reset(
-        new Map(
+      store.reset({
+        clients: new Map(
           data.clients.map(({ id, ...client }) => [
             id,
             { connected: false, ...client },
           ]),
         ),
-      )
+      })
     },
     destroy: () => {
       cancelSaveListener()
@@ -81,10 +81,10 @@ export function netvrRoomOptions(
     recipe: (draft: immer.Draft<ClientState>) => void,
   ) {
     store.update((draft) => {
-      let value = draft.get(id)
+      let value = draft.clients.get(id)
       if (!value) {
         value = immer.createDraft(emptyClient)
-        draft.set(id, value)
+        draft.clients.set(id, value)
       }
       recipe(value)
     })
@@ -101,10 +101,16 @@ export function netvrRoomOptions(
       for (const patch of event.patches) patches.push(patch)
     })
 
-    utils.send(id, {
-      action: 'full state reset',
-      clients: Object.fromEntries(store.snapshot().entries()),
-    })
+    {
+      const snap = store.snapshot()
+      utils.send(id, {
+        action: 'full state reset',
+        state: {
+          ...snap,
+          clients: Object.fromEntries(snap.clients.entries()),
+        },
+      })
+    }
 
     return {
       destroy() {
@@ -121,7 +127,7 @@ export function netvrRoomOptions(
             typeof message.field === 'string' &&
             message.field in store.initialValue &&
             message.value &&
-            store.snapshot().has(message.client)
+            store.snapshot().clients.has(message.client)
           ) {
             updateClient(message.client, (draft) => {
               ;(draft as any)[message.field] = message.value

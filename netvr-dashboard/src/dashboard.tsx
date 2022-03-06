@@ -112,7 +112,7 @@ function DashboardInner() {
     true,
   )
   const [clients, dispatchDevices] = useReducer(deviceReducer, [])
-  const [serverState, setServerState] = useImmer({})
+  const [serverState, setServerState] = useImmer({ clients: [] })
 
   const [log, dispatchLog] = useLog({ showBinary })
   useSendKeepAlive(socket)
@@ -144,7 +144,7 @@ function DashboardInner() {
                   }),
                 )
               } else if (msg.action === 'full state reset') {
-                setServerState(msg.clients)
+                setServerState(msg.state)
               } else if (msg.action === 'patch') {
                 setServerState((draft) => {
                   applyPatches(draft, msg.patches)
