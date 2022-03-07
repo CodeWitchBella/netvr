@@ -3,39 +3,85 @@ using System.Buffers.Binary;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
-using Newtonsoft.Json;
-using Newtonsoft.Json.Linq;
-using Newtonsoft.Json.Serialization;
+using System.Text.Json;
+using System.Text.Json.Nodes;
+using System.Text.Json.Serialization;
 using UnityEngine;
 
 namespace Isbl
 {
-    public struct NetStateCalibration
+    public class Vector3JsonConverter : System.Text.Json.Serialization.JsonConverter<Vector3>
     {
-        [JsonProperty(propertyName: "translate")]
+        public override Vector3 Read(
+            ref Utf8JsonReader reader,
+            Type typeToConvert,
+            JsonSerializerOptions options) => JsonSerializer.Deserialize<Vector3>(ref reader);
+
+        public override void Write(
+            Utf8JsonWriter writer,
+            Vector3 value,
+            JsonSerializerOptions options)
+        {
+            if (options.WriteIndented)
+            {
+                writer.WriteRawValue($"{{ \"x\": {value.x}, \"y\": {value.y}, \"z\": {value.z} }}");
+                return;
+            }
+
+            writer.WriteStartObject();
+            writer.WritePropertyName("x");
+            writer.WriteNumberValue(value.x);
+            writer.WritePropertyName("y");
+            writer.WriteNumberValue(value.y);
+            writer.WritePropertyName("z");
+            writer.WriteNumberValue(value.z);
+            writer.WriteEndObject();
+        }
+    }
+
+    // NOTE: it must be a class because otherwise Marvin.JsonPatch does not work
+    public class NetStateCalibration
+    {
+        [JsonConverter(typeof(Vector3JsonConverter))]
+        [JsonInclude]
+        [Newtonsoft.Json.JsonProperty(propertyName: "translate")]
+        [JsonPropertyName("translate")]
         public Vector3 Translate;
 
-        [JsonProperty(propertyName: "rotate")]
+        [JsonConverter(typeof(Vector3JsonConverter))]
+        [JsonInclude]
+        [Newtonsoft.Json.JsonProperty(propertyName: "rotate")]
+        [JsonPropertyName("rotate")]
         public Vector3 Rotate;
 
-        [JsonProperty(propertyName: "scale")]
+        [JsonConverter(typeof(Vector3JsonConverter))]
+        [JsonInclude]
+        [Newtonsoft.Json.JsonProperty(propertyName: "scale")]
+        [JsonPropertyName("scale")]
         public Vector3 Scale;
     }
 
-    public struct NetStateClient
+    // NOTE: it must be a class because otherwise Marvin.JsonPatch does not work
+    public class NetStateClient
     {
-        [JsonProperty(propertyName: "connected")]
+        [JsonInclude]
+        [Newtonsoft.Json.JsonProperty(propertyName: "connected")]
+        [JsonPropertyName("connected")]
         public bool Connected;
 
-        [JsonProperty(propertyName: "calibration")]
+        [JsonInclude]
+        [Newtonsoft.Json.JsonProperty(propertyName: "calibration")]
+        [JsonPropertyName("calibration")]
         public NetStateCalibration Calibration;
     }
 
+    // NOTE: it must be a class because otherwise Marvin.JsonPatch does not work
     public class NetState
     {
-        [JsonProperty(propertyName: "clients")]
-        public readonly Dictionary<int, NetStateClient> Clients = new();
-
+        [JsonInclude]
+        [Newtonsoft.Json.JsonProperty(propertyName: "clients")]
+        [JsonPropertyName("clients")]
+        public Dictionary<string, NetStateClient> Clients = new();
     }
 
     public class NetStateDataOld
@@ -128,16 +174,16 @@ namespace Isbl
             return r;
         }
 
-        public static T FromJObjectCamelCase<T>(JObject jobject)
+        public static T FromJObjectCamelCase<T>(Newtonsoft.Json.Linq.JObject jobject)
         {
             return jobject.ToObject<T>(new Newtonsoft.Json.JsonSerializer()
-            { ContractResolver = new CamelCasePropertyNamesContractResolver() });
+            { ContractResolver = new Newtonsoft.Json.Serialization.CamelCasePropertyNamesContractResolver() });
         }
 
-        public static JObject ToJObjectCamelCase<T>(T value)
+        public static Newtonsoft.Json.Linq.JObject ToJObjectCamelCase<T>(T value)
         {
-            return JObject.FromObject(value, new Newtonsoft.Json.JsonSerializer()
-            { ContractResolver = new CamelCasePropertyNamesContractResolver() });
+            return Newtonsoft.Json.Linq.JObject.FromObject(value, new Newtonsoft.Json.JsonSerializer()
+            { ContractResolver = new Newtonsoft.Json.Serialization.CamelCasePropertyNamesContractResolver() });
         }
     }
 }

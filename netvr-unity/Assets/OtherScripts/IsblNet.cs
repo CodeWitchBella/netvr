@@ -6,6 +6,9 @@ using Newtonsoft.Json.Linq;
 using System.Buffers.Binary;
 using System.IO;
 using System.IO.Compression;
+using System.Text.Json.Nodes;
+using Json.Patch;
+using System.Text.Json;
 
 /// <summary>
 /// Main implementation of network interface
@@ -86,11 +89,25 @@ public sealed class IsblNet : IDisposable
         };
         _socket.OnTextMessage += (text) =>
         {
+            Debug.Log($"message: {text}");
             try
             {
                 var obj = JObject.Parse(text);
                 var action = obj.Value<string>("action");
-                if (action == "id's here" || action == "id ack")
+                if (action == null)
+                {
+                    JsonNode node = JsonNode.Parse(text);
+                    if (node["error"] != null)
+                    {
+                        Debug.LogError($"Server reported error: {node["error"].GetValue<string>()}");
+                    }
+                    else
+                    {
+                        var json = JsonSerializer.Serialize(node, new JsonSerializerOptions { WriteIndented = true });
+                        Debug.LogError(json);
+                    }
+                }
+                else if (action == "id's here" || action == "id ack")
                 {
                     if (action == "id's here")
                     {
@@ -107,8 +124,22 @@ public sealed class IsblNet : IDisposable
                     LocalState.Initialized = true;
                     SendDeviceInfo();
                 }
-                else if (action == "patch") { }
-                else if (action == "full state reset") { }
+                else if (action == "patch")
+                {
+                    var patchString = Newtonsoft.Json.JsonConvert.SerializeObject(obj.Value<JArray>("patches"));
+                    var patch = JsonSerializer.Deserialize<JsonPatch>(patchString);
+                    ServerState = patch.Apply(ServerState);
+                    //var patch = Newtonsoft.Json.JsonConvert.DeserializeObject<JsonPatch>(patches);
+                    //Debug.Log(Newtonsoft.Json.JsonConvert.SerializeObject(patch));
+                    //var patch = obj.Value<JsonPatchDocument<Isbl.NetState>>("patches");
+                    //patch.ApplyTo(ServerState);
+                }
+                else if (action == "full state reset")
+                {
+                    JsonNode node = JsonNode.Parse(text);
+                    ServerState = node["state"].Deserialize<Isbl.NetState>();
+                    Debug.Log($"ServerState: {JsonSerializer.Serialize(ServerState, new JsonSerializerOptions { WriteIndented = true })}\njson: {node["state"]}");
+                }
                 else if (!string.IsNullOrEmpty(action))
                 {
                     Debug.Log($"Unknown action \"{action}\"");
@@ -199,6 +230,7 @@ public sealed class IsblNet : IDisposable
         LocalState.DeviceInfoChanged = false;
     }
 
+    public Isbl.NetState ServerState = new();
     public Isbl.NetStateDataOld LocalState = new(local: true);
     public Dictionary<int, Isbl.NetStateDataOld> OtherStates = new();
 

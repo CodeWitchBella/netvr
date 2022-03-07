@@ -1,5 +1,8 @@
 using UnityEngine;
 using UnityEditor;
+using System.Text.Json;
+using System.Linq;
+using System.Collections.Generic;
 
 [CustomPropertyDrawer(typeof(IsblNetComponent.SelfPropertyAttribute))]
 public class IsblNetDrawer : PropertyDrawer
@@ -9,7 +12,8 @@ public class IsblNetDrawer : PropertyDrawer
 
     public override float GetPropertyHeight(SerializedProperty property, GUIContent label)
     {
-        return LineHeight * 24;
+        var net = IsblNetComponent.InstanceExists ? IsblNetComponent.Instance : null;
+        return LineHeight * (24 + SerializeIsblNet(net).Count);
     }
 
     public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
@@ -66,11 +70,48 @@ public class IsblNetDrawer : PropertyDrawer
             DrawLineI("    Brotli Size", net.Stats.MessageSizeBrotli);
             DrawLineI("    Max Brotli", net.Stats.MessageSizeBrotliMax);
             DrawLine("Peer count", net.OtherStates.Count.ToString());
+            foreach (var line in SerializeIsblNet(net)) DrawLine(line.Key, line.Value);
+            DrawLine("Last Redraw", System.DateTime.Now.ToLongTimeString());
         }
         EditorGUI.EndProperty();
         if (net != null && Button("Simulate Disconnect"))
         {
             net?.UnityEditorOnlyDebug.SimulateDisconnect();
         }
+    }
+
+    List<KeyValuePair<string, string>> SerializeIsblNet(IsblNet net)
+    {
+        List<KeyValuePair<string, string>> val = new();
+
+        var json = JsonSerializer.Serialize(net.ServerState, new JsonSerializerOptions
+        {
+            WriteIndented = true,
+        }).Split(System.Environment.NewLine);
+
+        foreach (var line in json)
+        {
+            var index = line.IndexOf(":");
+            if (line.Trim() == "}," || line.Trim() == "}" || line == "{") continue;
+            if (index < 0)
+            {
+                val.Add(new(line, ""));
+            }
+            else
+            {
+                var key = line[..index];
+                var value = line[(index + 2)..];
+                var trimmedKey = key.TrimStart();
+                var indent = key.Length - trimmedKey.Length;
+                if (trimmedKey.StartsWith("\"") && key.EndsWith("\""))
+                {
+                    key = key[(key.Length - trimmedKey.Length + 1)..(key.Length - 1)];
+                }
+                if (value.EndsWith(",")) value = value[0..(value.Length - 1)];
+                if (value == "{") value = "";
+                val.Add(new(string.Concat(Enumerable.Repeat(" |  ", indent / 2 - 1)) + key, value));
+            }
+        }
+        return val;
     }
 }

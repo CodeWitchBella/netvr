@@ -66,6 +66,7 @@ public class IsblNetComponent : MonoBehaviour
 
 #if UNITY_EDITOR
         if (_net != null) _net.UnityEditorOnlyDebug.PrintDebug = PrintDebug;
+        UnityEditor.EditorUtility.SetDirty(this);
 #endif
     }
 

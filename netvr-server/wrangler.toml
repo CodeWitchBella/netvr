@@ -1,7 +1,7 @@
 name = "netvr"
 type = "javascript"
 workers_dev = true
-compatibility_date = "2021-11-19"
+compatibility_date = "2022-03-07"
 account_id = "cce7f3b93d1cc5016fffc6068a30a3bb"
 
 [build]

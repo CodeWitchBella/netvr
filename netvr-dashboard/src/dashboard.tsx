@@ -147,7 +147,13 @@ function DashboardInner() {
                 setServerState(msg.state)
               } else if (msg.action === 'patch') {
                 setServerState((draft) => {
-                  applyPatches(draft, msg.patches)
+                  applyPatches(
+                    draft,
+                    msg.patches.map((p) => ({
+                      ...p,
+                      path: p.path.substring(1).split('/'),
+                    })),
+                  )
                 })
               }
             }

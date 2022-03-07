@@ -112,6 +112,17 @@ export function netvrRoomOptions(
       })
     }
 
+    function sendPatches() {
+      if (patches.length > 0) {
+        utils.send(id, {
+          action: 'patch',
+          patches: patches.map((p) => ({ ...p, path: '/' + p.path.join('/') })),
+        })
+      }
+
+      patches = []
+    }
+
     return {
       destroy() {
         unsubscribe()
@@ -136,11 +147,7 @@ export function netvrRoomOptions(
             throw new Error('Invalid action:set message')
           }
         } else if (message.action === 'keep alive') {
-          if (patches.length > 0) {
-            utils.send(id, { action: 'patch', patches })
-          }
-
-          patches = []
+          sendPatches()
         } else {
           throw new Error(
             'Unknown message action ' + JSON.stringify(message.action),
@@ -172,6 +179,7 @@ export function netvrRoomOptions(
         } else {
           console.warn(`Unknown binary message type ${type}`)
         }
+        sendPatches()
       },
     }
   }

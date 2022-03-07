@@ -35,7 +35,10 @@ export function JSONView({ data, shouldExpandNode, name }: Props) {
       valueRenderer={(valueAsString, value) => {
         if (typeof value === 'object' && value) {
           return (
-            <span style={{ color: theme.resolved.base09 }}>
+            <span
+              style={{ color: theme.resolved.base09 }}
+              title={JSON.stringify(value)}
+            >
               Vector3[{value.x}, {value.y}, {value.z}]
             </span>
           )
