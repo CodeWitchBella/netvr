@@ -41,6 +41,5 @@ export function immerStore<T>(initialState: T) {
     },
     drainMicrotasks: changeEmitter.drain,
     snapshot: () => state,
-    initialValue: immer.castImmutable(initialState),
   }
 }

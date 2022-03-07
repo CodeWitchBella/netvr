@@ -37,6 +37,9 @@ const emptyClient = immer.freeze(
   true,
 )
 
+const sampleClient = {
+  devices: [],
+}
 const sendToSelfAsDebug = false
 export function netvrRoomOptions(
   utils: Utils,
@@ -136,10 +139,11 @@ export function netvrRoomOptions(
           if (
             typeof message.client === 'number' &&
             typeof message.field === 'string' &&
-            message.field in store.initialValue &&
+            message.field in sampleClient &&
             message.value &&
             store.snapshot().clients.has(message.client)
           ) {
+            console.log(message)
             updateClient(message.client, (draft) => {
               ;(draft as any)[message.field] = message.value
             })
