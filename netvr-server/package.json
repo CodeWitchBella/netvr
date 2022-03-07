@@ -13,13 +13,13 @@
     "deno:run": "deno run --watch --import-map ./vendor/import_map.json --allow-net --allow-read=../netvr-dashboard/dist,./netvr-room.json --allow-write=./netvr-room.json server.ts"
   },
   "devDependencies": {
-    "@cloudflare/workers-types": "^3.1.1",
-    "esbuild": "^0.13.13",
-    "miniflare": "^2.0.0-rc.1"
+    "@cloudflare/workers-types": "^3.4.0",
+    "esbuild": "^0.14.25",
+    "miniflare": "^2.3.0"
   },
   "dependencies": {
     "@cloudflare/kv-asset-handler": "^0.2.0",
     "immer": "^9.0.12",
-    "typescript": "^4.5.5"
+    "typescript": "^4.6.2"
   }
 }
