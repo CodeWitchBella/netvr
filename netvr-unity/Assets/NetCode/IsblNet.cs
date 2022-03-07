@@ -223,9 +223,10 @@ public sealed class IsblNet : IDisposable
     {
         _ = _socket.SendAsync(new
         {
-            action = "device info",
-            deviceCount = LocalState.Devices.Count, // TODO remove this line
-            info = (from d in LocalState.Devices where d.Value.HasData select d.Value.SerializeConfiguration()).ToArray(),
+            action = "set",
+            client = LocalState.Id,
+            field = "devices",
+            value = (from d in LocalState.Devices where d.Value.HasData select d.Value.SerializeConfiguration()).ToArray(),
         });
         LocalState.DeviceInfoChanged = false;
     }
