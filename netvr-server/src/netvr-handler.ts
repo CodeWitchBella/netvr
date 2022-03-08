@@ -169,12 +169,13 @@ export function netvrRoomOptions(
         if (type === 1 /* tracking info */) {
           const contents = new Uint8Array(data.slice(1))
 
-          const sendBuffer = new Uint8Array(contents.byteLength + 4 + 1)
-          const headerView = new DataView(sendBuffer.buffer, 0, 5)
+          let headerLength = 4 + 4 + 1
+          const sendBuffer = new Uint8Array(contents.byteLength + headerLength)
+          const headerView = new DataView(sendBuffer.buffer, 0, headerLength)
           headerView.setUint8(0, 1) // type
-          headerView.setInt32(1, 1, true) // count
-          let offset = 5
-          sendBuffer.set(contents, offset)
+          headerView.setUint32(1, 1, true) // count
+          headerView.setUint32(5, id, true) // client id
+          sendBuffer.set(contents, headerLength)
 
           utils.broadcastBinary(
             sendBuffer,

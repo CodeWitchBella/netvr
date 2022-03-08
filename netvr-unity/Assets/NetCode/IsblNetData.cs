@@ -96,8 +96,7 @@ namespace Isbl
 
         public int CalculateSerializationSize()
         {
-            return 4 /* Int32 client ID */
-                + NetData.Count7BitEncodedIntBytes(Devices.Count(d => d.Value.HasData)) /* Device count */
+            return NetData.Count7BitEncodedIntBytes(Devices.Count(d => d.Value.HasData)) /* Device count */
                 + (from d in Devices where d.Value.HasData select d.Value.CalculateSerializationSize()).Sum() /* devices array */;
         }
 

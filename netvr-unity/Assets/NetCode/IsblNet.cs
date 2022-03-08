@@ -276,8 +276,8 @@ public sealed class IsblNet : IDisposable
         var bytes = new byte[LocalState.CalculateSerializationSize() + 1];
         var span = bytes.AsSpan();
         span[0] = 1;
-        BinaryPrimitives.WriteInt32LittleEndian(span[1..5], LocalState.Id);
-        int offset = 5;
+        //BinaryPrimitives.WriteInt32LittleEndian(span[1..5], LocalState.Id);
+        int offset = 1;
         offset += Isbl.NetData.Write7BitEncodedInt(span[offset..], LocalState.Devices.Count(d => d.Value.HasData));
         foreach (var devicePair in LocalState.Devices)
         {

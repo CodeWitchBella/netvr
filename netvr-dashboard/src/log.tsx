@@ -3,7 +3,7 @@ import { useReducer } from 'react'
 type MessageData<T extends 'binary' | 'json'> = {
   type: T
   key: number
-  message: T extends 'binary' ? ArrayBuffer : any
+  message: T extends 'binary' ? { raw: ArrayBuffer; parsed: any } : any
   timestamp: string
   direction: 'down' | 'up'
 }
@@ -16,18 +16,21 @@ type State = {
 
 function logReducer(
   state: State,
-  { direction, message }: { direction: 'down' | 'up'; message: any },
+  action: { direction: 'down' | 'up' } & (
+    | { type: 'text'; message: string; parsed: any }
+    | { type: 'binary'; message: ArrayBuffer; parsed: any }
+  ),
 ) {
   const timestamp = new Date().toISOString()
-  if (typeof message === 'string') {
+  if (action.type === 'text') {
     return {
       ...state,
       events: state.events.concat({
         type: 'json',
-        message: JSON.parse(message),
+        message: action.parsed,
         key: state.keyGen,
         timestamp,
-        direction,
+        direction: action.direction,
       }),
       keyGen: state.keyGen + 1,
     }
@@ -38,10 +41,13 @@ function logReducer(
     binaryEvents: state.binaryEvents
       .concat({
         type: 'binary',
-        message,
+        message: {
+          raw: action.message,
+          parsed: action.parsed,
+        },
         key: state.keyGen,
         timestamp,
-        direction,
+        direction: action.direction,
       })
       .slice(-10),
   }

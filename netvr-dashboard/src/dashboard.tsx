@@ -33,9 +33,14 @@ function useSendKeepAlive(socket: PWebSocket) {
   }, [socket])
 }
 
-function deviceReducer(state: ClientData[], action: any) {
-  if (typeof action === 'string') {
-    const message = JSON.parse(action)
+function deviceReducer(
+  state: ClientData[],
+  action:
+    | { type: 'text'; message: any }
+    | { type: 'binary'; message: ReturnType<typeof parseBinaryMessage> },
+) {
+  if (action.type === 'text') {
+    const message = action.message
     if (message.action === 'device info') {
       const incomingIds = new Set<number>(
         message.info.map((info: any) => info.id),
@@ -48,7 +53,7 @@ function deviceReducer(state: ClientData[], action: any) {
       return state.filter((dev) => !incomingIds.has(dev.id))
     }
   } else {
-    const binaryMessage = parseBinaryMessage(action)
+    const binaryMessage = action.message
     if (binaryMessage.clients) {
       state = state.map((stateClient) => {
         const client = binaryMessage.clients.find(
@@ -121,10 +126,10 @@ function DashboardInner() {
 
   function sendMessage(data: any) {
     const message = JSON.stringify(data)
-    dispatchLog({ direction: 'up', message })
+    dispatchLog({ direction: 'up', message, type: 'text', parsed: data })
     socket.send(message)
   }
-  const lastAcceptedBinaryTimestamp = useRef(0)
+  const lastAcceptedBinaryTimestamps = useRef(new Map<number, number>()).current
 
   const theme = useTheme()
   return (
@@ -135,17 +140,34 @@ function DashboardInner() {
           onMessage={(message) => {
             if (stopped) return
             if (typeof message !== 'string') {
-              // throttle binary messages
+              const parsed = parseBinaryMessage(message)
               const now = Date.now()
-              if (lastAcceptedBinaryTimestamp.current + 1000 > now) {
+              const skippable = (client: { clientId: number }) => {
+                const last = lastAcceptedBinaryTimestamps.get(client.clientId)
+                return last && last + 1000 > now
+              }
+              if (parsed.clients?.every(skippable)) {
                 return
               }
-              lastAcceptedBinaryTimestamp.current = now
-            }
-            dispatchLog({ direction: 'down', message })
-            dispatchDevices(message)
-            if (typeof message === 'string') {
+              for (const client of parsed.clients || []) {
+                lastAcceptedBinaryTimestamps.set(client.clientId, now)
+              }
+              dispatchLog({
+                direction: 'down',
+                type: 'binary',
+                message,
+                parsed,
+              })
+              dispatchDevices({ type: 'binary', message: parsed })
+            } else {
               const msg = JSON.parse(message)
+              dispatchLog({
+                direction: 'down',
+                type: 'text',
+                message,
+                parsed: msg,
+              })
+              dispatchDevices({ type: 'text', message: msg })
               if (msg.action === "id's here") {
                 localStorage.setItem(
                   'reconnection',
@@ -160,7 +182,7 @@ function DashboardInner() {
                 setServerState((draft) => {
                   applyPatches(
                     draft,
-                    msg.patches.map((p) => ({
+                    msg.patches.map((p: any) => ({
                       ...p,
                       path: p.path.substring(1).split('/'),
                     })),
@@ -394,7 +416,7 @@ function Message({
       </div>
       {type === 'binary' ? (
         <pre>
-          <BinaryMessage data={message} />
+          <BinaryMessage raw={message.raw} parsed={message.parsed} />
         </pre>
       ) : (
         <JSONView name="message" data={message} shouldExpandNode={() => true} />
@@ -403,23 +425,24 @@ function Message({
   )
 }
 
-function BinaryMessage({ data }: { data: ArrayBuffer }) {
-  const parsed = useMemo(() => parseBinaryMessage(data), [data])
+function BinaryMessage({ raw, parsed }: { raw: ArrayBuffer; parsed: any }) {
+  const rawText = useMemo(
+    () =>
+      Array.from(new Uint8Array(raw).values())
+        .map((v, i) => (v + '').padStart(3, ' ') + (i % 16 === 15 ? '\n' : ' '))
+        .join(''),
+    [raw],
+  )
   return (
     <>
       <div style={{ whiteSpace: 'pre-wrap', width: 500 }}>
         {'type  ___count_____   __client_id__  #d _#bytes'}
       </div>
       <div style={{ whiteSpace: 'pre-wrap', width: 500 }}>
-        {Array.from(new Uint8Array(data).values())
-          .map(
-            (v, i) => (v + '').padStart(3, ' ') + (i % 16 === 15 ? '\n' : ' '),
-          )
-          .join('')}{' '}
-        ({data.byteLength})
+        {rawText} ({raw.byteLength})
       </div>
       <div style={{ whiteSpace: 'pre-wrap', width: 500 }}>
-        {JSON.stringify(parsed, null, 2)}
+        <JSONView data={parsed} shouldExpandNode={() => true} />
       </div>
     </>
   )

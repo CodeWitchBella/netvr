@@ -5,10 +5,8 @@ export const protocolVersion = 2
 
 export type DeviceBinaryData = {
   readonly deviceId: number
-  readonly deviceByteCount: number
-  readonly bytes: string
-  readonly quaternion: readonly (readonly [number, number, number])[]
-  readonly vector3: readonly (readonly [number, number, number])[]
+  readonly quaternion: readonly { x: number; y: number; z: number }[]
+  readonly vector3: readonly { x: number; y: number; z: number }[]
   readonly vector2: readonly (readonly [number, number])[]
   readonly float: readonly number[]
   readonly bool: readonly (boolean | 'fail')[]
@@ -106,18 +104,12 @@ export function parseBinaryMessage(data: ArrayBuffer) {
         let devices: DeviceBinaryData[] = []
         for (let deviceId = 0; deviceId < numberOfDevices; ++deviceId) {
           const deviceByteCount = read7BitEncodedInt(view, offset)
-          const deviceBytes = view.buffer.slice(
-            offset.current,
-            offset.current + deviceByteCount,
-          )
           const offsetCopy = { ...offset }
           offset.current += deviceByteCount
           const deviceId = read7BitEncodedInt(view, offsetCopy)
 
           devices.push({
             deviceId,
-            deviceByteCount,
-            bytes: new Uint8Array(deviceBytes).join(' '),
             quaternion: readArray(view, offsetCopy, readVec3),
             vector3: readArray(view, offsetCopy, readVec3),
             vector2: readArray(view, offsetCopy, readVec2),
@@ -162,11 +154,11 @@ function readBool(view: DataView, offset: { current: number }) {
 }
 
 function readVec3(view: DataView, offset: { current: number }) {
-  return [
-    readFloat(view, offset),
-    readFloat(view, offset),
-    readFloat(view, offset),
-  ] as const
+  return {
+    x: readFloat(view, offset),
+    y: readFloat(view, offset),
+    z: readFloat(view, offset),
+  } as const
 }
 
 function readVec2(view: DataView, offset: { current: number }) {
