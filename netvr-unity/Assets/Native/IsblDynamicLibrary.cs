@@ -49,7 +49,7 @@ class IsblDynamicLibrary : IDisposable
     }
     IntPtr _library;
     const string Prefix = "Assets/Plugins/Windows/x64/";
-    const string FullPath = Prefix + LibraryName + "0.dll";
+    readonly string _fullPath;
 #endif // UNITY_EDITOR_WIN
 
     public delegate int OnSystemChange_Delegate(ulong xrSystem, ulong xrInstance, IntPtr xrGetInstanceProcAddr);
@@ -74,11 +74,25 @@ class IsblDynamicLibrary : IDisposable
     public IsblDynamicLibrary()
     {
 #if UNITY_EDITOR_WIN
-        // copy to new file so that original is still writeable
-        File.Copy(Prefix + LibraryName + ".dll", FullPath, true);
+        for (int i = 0; ; ++i)
+        {
+            _fullPath = Prefix + LibraryName + $"{i}.dll";
+            try
+            {
+                // copy to new file so that original is still writeable
+                File.Copy(Prefix + LibraryName + ".dll", _fullPath, true);
+                break;
+            }
+            catch (IOException) when (i != 9)
+            {
+                // retry
+            }
+        }
+
         // load
-        _library = SystemLibrary.LoadLibrary(FullPath);
-        if (_library == default) Debug.LogWarning($"Failed to load {FullPath}");
+        Debug.Log($"Loading library from {_fullPath}");
+        _library = SystemLibrary.LoadLibrary(_fullPath);
+        if (_library == default) Debug.LogWarning($"Failed to load {_fullPath}");
         // get function pointers converted to delegates
         SystemLibrary.GetDelegate(_library, "isbl_netvr_on_system_change", out OnSystemChange);
         SystemLibrary.GetDelegate(_library, "isbl_netvr_set_logger", out SetLogger);
@@ -98,8 +112,8 @@ class IsblDynamicLibrary : IDisposable
             Debug.Log("IsblDynamicLibrary.Dispose()");
             SystemLibrary.FreeLibrary(_library);
             _library = default;
-            File.Delete(FullPath);
-            try { File.Delete(FullPath + ".meta"); } catch (FileNotFoundException) { }
+            File.Delete(_fullPath);
+            try { File.Delete(_fullPath + ".meta"); } catch (FileNotFoundException) { }
         }
 #endif
     }
