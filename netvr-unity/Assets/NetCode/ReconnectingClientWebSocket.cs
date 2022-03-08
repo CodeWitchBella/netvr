@@ -4,7 +4,6 @@ using System.Text;
 using System.Threading;
 using System.Threading.Tasks;
 using UnityEngine;
-using Newtonsoft.Json;
 using System.Linq;
 
 public class ReconnectingClientWebSocket : IDisposable
@@ -48,7 +47,7 @@ public class ReconnectingClientWebSocket : IDisposable
     }
     public Task SendAsync(object obj)
     {
-        var text = JsonConvert.SerializeObject(obj);
+        var text = Newtonsoft.Json.JsonConvert.SerializeObject(obj);
         // Debug.Log($"Sending: {text}");
         return SendAsync(Encoding.UTF8.GetBytes(text), WebSocketMessageType.Text);
     }

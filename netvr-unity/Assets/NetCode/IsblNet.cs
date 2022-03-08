@@ -2,7 +2,6 @@ using System;
 using UnityEngine;
 using System.Linq;
 using System.Collections.Generic;
-using Newtonsoft.Json.Linq;
 using System.Buffers.Binary;
 using System.IO;
 using System.IO.Compression;
@@ -92,7 +91,7 @@ public sealed class IsblNet : IDisposable
             Debug.Log($"message: {text}");
             try
             {
-                var obj = JObject.Parse(text);
+                var obj = Newtonsoft.Json.Linq.JObject.Parse(text);
                 var action = obj.Value<string>("action");
                 if (action == null)
                 {
@@ -126,7 +125,7 @@ public sealed class IsblNet : IDisposable
                 }
                 else if (action == "patch")
                 {
-                    var patchString = Newtonsoft.Json.JsonConvert.SerializeObject(obj.Value<JArray>("patches"));
+                    var patchString = Newtonsoft.Json.JsonConvert.SerializeObject(obj.Value<Newtonsoft.Json.Linq.JArray>("patches"));
                     var patch = JsonSerializer.Deserialize<JsonPatch>(patchString);
                     ServerState = patch.Apply(ServerState);
                     //var patch = Newtonsoft.Json.JsonConvert.DeserializeObject<JsonPatch>(patches);

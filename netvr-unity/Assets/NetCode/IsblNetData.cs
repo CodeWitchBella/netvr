@@ -10,7 +10,7 @@ using UnityEngine;
 
 namespace Isbl
 {
-    public class Vector3JsonConverter : System.Text.Json.Serialization.JsonConverter<Vector3>
+    public class Vector3JsonConverter : JsonConverter<Vector3>
     {
         public override Vector3 Read(
             ref Utf8JsonReader reader,
@@ -24,6 +24,7 @@ namespace Isbl
         {
             if (options.WriteIndented)
             {
+                // print on one line even when WriteIndented is enabled
                 writer.WriteRawValue($"{{ \"x\": {value.x}, \"y\": {value.y}, \"z\": {value.z} }}");
                 return;
             }
@@ -39,47 +40,38 @@ namespace Isbl
         }
     }
 
-    // NOTE: it must be a class because otherwise Marvin.JsonPatch does not work
-    public class NetStateCalibration
+    public struct NetStateCalibration
     {
         [JsonConverter(typeof(Vector3JsonConverter))]
         [JsonInclude]
-        [Newtonsoft.Json.JsonProperty(propertyName: "translate")]
         [JsonPropertyName("translate")]
         public Vector3 Translate;
 
         [JsonConverter(typeof(Vector3JsonConverter))]
         [JsonInclude]
-        [Newtonsoft.Json.JsonProperty(propertyName: "rotate")]
         [JsonPropertyName("rotate")]
         public Vector3 Rotate;
 
         [JsonConverter(typeof(Vector3JsonConverter))]
         [JsonInclude]
-        [Newtonsoft.Json.JsonProperty(propertyName: "scale")]
         [JsonPropertyName("scale")]
         public Vector3 Scale;
     }
 
-    // NOTE: it must be a class because otherwise Marvin.JsonPatch does not work
-    public class NetStateClient
+    public struct NetStateClient
     {
         [JsonInclude]
-        [Newtonsoft.Json.JsonProperty(propertyName: "connected")]
         [JsonPropertyName("connected")]
         public bool Connected;
 
         [JsonInclude]
-        [Newtonsoft.Json.JsonProperty(propertyName: "calibration")]
         [JsonPropertyName("calibration")]
         public NetStateCalibration Calibration;
     }
 
-    // NOTE: it must be a class because otherwise Marvin.JsonPatch does not work
     public class NetState
     {
         [JsonInclude]
-        [Newtonsoft.Json.JsonProperty(propertyName: "clients")]
         [JsonPropertyName("clients")]
         public Dictionary<string, NetStateClient> Clients = new();
     }
@@ -184,6 +176,29 @@ namespace Isbl
         {
             return Newtonsoft.Json.Linq.JObject.FromObject(value, new Newtonsoft.Json.JsonSerializer()
             { ContractResolver = new Newtonsoft.Json.Serialization.CamelCasePropertyNamesContractResolver() });
+        }
+
+        public static JsonDocument ToJsonCamelCase<T>(T value)
+        {
+            return JsonDocument.Parse(JsonSerializer.Serialize(value, new JsonSerializerOptions
+            {
+                DictionaryKeyPolicy = JsonNamingPolicy.CamelCase
+            }));
+        }
+
+        public static T FromJsonCamelCase<T>(JsonDocument doc)
+        {
+            return doc.Deserialize<T>(new JsonSerializerOptions
+            {
+                DictionaryKeyPolicy = JsonNamingPolicy.CamelCase
+            });
+        }
+
+        public static JsonObject JsonFromObject(object value)
+        {
+            var node = JsonNode.Parse(JsonSerializer.Serialize(value));
+            if (typeof(JsonObject) == node.GetType()) return (JsonObject)node;
+            throw new Exception("Failed to convert to json object");
         }
     }
 }

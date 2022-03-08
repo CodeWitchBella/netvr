@@ -1,7 +1,6 @@
 using System.Collections.Generic;
 using System.IO;
 using System.Threading.Tasks;
-using Newtonsoft.Json;
 using UnityEngine;
 
 public sealed class IsblPersistentData
@@ -29,7 +28,7 @@ public sealed class IsblPersistentData
                     Debug.Log($"Application.persistentDataPath: {Application.persistentDataPath}, Current Directory: {Directory.GetCurrentDirectory()}");
                     using var reader = new StreamReader(DataPath);
                     fileData = reader.ReadToEnd();
-                    _instance = JsonConvert.DeserializeObject<IsblPersistentData>(fileData);
+                    _instance = Newtonsoft.Json.JsonConvert.DeserializeObject<IsblPersistentData>(fileData);
                 }
                 catch
                 {
@@ -41,7 +40,7 @@ public sealed class IsblPersistentData
                     _instance._connections.Add(new Connection { SocketUrl = "ws://192.168.1.31:10000/" });
                 }
 
-                if (JsonConvert.SerializeObject(_instance) != fileData) _instance.Save();
+                if (Newtonsoft.Json.JsonConvert.SerializeObject(_instance) != fileData) _instance.Save();
             }
             return _instance;
         }
@@ -49,20 +48,20 @@ public sealed class IsblPersistentData
 
     public class Connection
     {
-        [JsonProperty(propertyName: "peerId")]
+        [Newtonsoft.Json.JsonProperty(propertyName: "peerId")]
         public int PeerId = 0;
-        [JsonProperty(propertyName: "peerIdToken")]
+        [Newtonsoft.Json.JsonProperty(propertyName: "peerIdToken")]
         public string PeerIdToken = "";
-        [JsonProperty(propertyName: "socketUrl")]
+        [Newtonsoft.Json.JsonProperty(propertyName: "socketUrl")]
         public string SocketUrl;
     }
 
-    [JsonProperty(propertyName: "connections")]
+    [Newtonsoft.Json.JsonProperty(propertyName: "connections")]
     readonly List<Connection> _connections = new();
 
     bool _logLocalData;
 
-    [JsonProperty(propertyName: "logLocalData")]
+    [Newtonsoft.Json.JsonProperty(propertyName: "logLocalData")]
     public bool LogLocalData
     {
         get => _logLocalData;
@@ -133,7 +132,7 @@ public sealed class IsblPersistentData
         Directory.CreateDirectory(DataDirectory);
         {
             using var writer = new StreamWriter(DataPath);
-            await writer.WriteAsync(JsonConvert.SerializeObject(this));
+            await writer.WriteAsync(Newtonsoft.Json.JsonConvert.SerializeObject(this));
         }
         _saving = false;
 

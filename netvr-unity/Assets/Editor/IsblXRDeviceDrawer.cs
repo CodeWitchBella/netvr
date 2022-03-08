@@ -1,7 +1,6 @@
 using UnityEngine;
 using UnityEditor;
 using UnityEngine.XR;
-using Newtonsoft.Json.Linq;
 
 [CustomPropertyDrawer(typeof(IsblTrackedPoseDriver.SelfPropertyAttribute))]
 public class IsblXRDeviceDrawer : PropertyDrawer
@@ -47,11 +46,11 @@ public class IsblXRDeviceDrawer : PropertyDrawer
             DrawField("Characteristics", SerializeCharacteristics(device.Characteristics));
             DrawField("HasData", device.HasData);
 
-            var locations = device.SerializeConfiguration().Value<JObject>("locations");
-            foreach (var prop in locations.Properties())
+            var locations = device.SerializeConfiguration()["locations"];
+            foreach (var prop in locations.AsObject())
             {
-                var propName = char.ToUpper(prop.Name[0]) + prop.Name[1..];
-                if (prop.Value.Value<int>() >= 0)
+                var propName = char.ToUpper(prop.Key[0]) + prop.Key[1..];
+                if (prop.Value.GetValue<int>() >= 0)
                     DrawField(propName, device.GetType().GetProperty(propName).GetValue(device).ToString());
             }
 

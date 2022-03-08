@@ -1,7 +1,6 @@
 using System;
 using System.IO;
-using Newtonsoft.Json.Linq;
-using Newtonsoft.Json.Serialization;
+using System.Text.Json.Nodes;
 using UnityEngine;
 using UnityEngine.XR;
 
@@ -296,9 +295,9 @@ public class IsblStaticXRDevice
         return builder.ToString();
     }
 
-    public JObject SerializeConfiguration()
+    public JsonObject SerializeConfiguration()
     {
-        JArray characteristics = new();
+        JsonArray characteristics = new();
         void Check(InputDeviceCharacteristics reference, string text)
         {
             if ((Characteristics & reference) != 0)
@@ -316,7 +315,7 @@ public class IsblStaticXRDevice
         Check(InputDeviceCharacteristics.Right, "Right");
         Check(InputDeviceCharacteristics.Simulated6DOF, "Simulated6DOF");
 
-        return JObject.FromObject(new
+        return Isbl.NetData.JsonFromObject(new
         {
             locations = Isbl.NetData.ToJObjectCamelCase(_locations),
             name = Name,
@@ -339,10 +338,10 @@ public class IsblStaticXRDevice
         });
     }
 
-    public void DeSerializeConfiguration(JObject message)
+    public void DeSerializeConfiguration(Newtonsoft.Json.Linq.JObject message)
     {
         Characteristics = 0;
-        foreach (var c in message.Value<JArray>("characteristics"))
+        foreach (var c in message.Value<Newtonsoft.Json.Linq.JArray>("characteristics"))
         {
             Characteristics |= (string)c switch
             {
@@ -361,13 +360,13 @@ public class IsblStaticXRDevice
             };
         }
 
-        var haptics = message.Value<JObject>("haptics");
+        var haptics = message.Value<Newtonsoft.Json.Linq.JObject>("haptics");
         Haptics = haptics != null ? new StaticHaptics(haptics) : null;
 
-        _locations = Isbl.NetData.FromJObjectCamelCase<Locations>(message.Value<JObject>("locations"));
+        _locations = Isbl.NetData.FromJObjectCamelCase<Locations>(message.Value<Newtonsoft.Json.Linq.JObject>("locations"));
         Name = message.Value<string>("name");
         LocallyUniqueId = message.Value<int>("localId");
-        var lengths = message.Value<JObject>("lengths");
+        var lengths = message.Value<Newtonsoft.Json.Linq.JObject>("lengths");
         _dataQuaternion = new Quaternion[lengths.Value<int>("quaternion")];
         _dataVector3 = new Vector3[lengths.Value<int>("vector3")];
         _dataVector2 = new Vector2[lengths.Value<int>("vector2")];
@@ -405,7 +404,7 @@ public class IsblStaticXRDevice
             BufferMaxSize = caps.bufferMaxSize;
             BufferOptimalSize = caps.bufferOptimalSize;
         }
-        public StaticHaptics(JObject caps)
+        public StaticHaptics(Newtonsoft.Json.Linq.JObject caps)
         {
             NumChannels = caps.Value<uint>("numChannels");
             SupportsImpulse = caps.Value<bool>("supportsImpulse");
