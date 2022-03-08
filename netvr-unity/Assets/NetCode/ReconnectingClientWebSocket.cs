@@ -33,6 +33,8 @@ public class ReconnectingClientWebSocket : IDisposable
 
     public async Task SendAsync(byte[] buffer, WebSocketMessageType messageType = WebSocketMessageType.Binary)
     {
+        if (ShouldReconnect(_webSocket)) await Connect();
+
         try
         {
             _ = KeepAlive(); // Reset keepalive timer
@@ -47,7 +49,7 @@ public class ReconnectingClientWebSocket : IDisposable
     }
     public Task SendAsync(object obj)
     {
-        var text = Newtonsoft.Json.JsonConvert.SerializeObject(obj);
+        var text = System.Text.Json.JsonSerializer.Serialize(obj);
         // Debug.Log($"Sending: {text}");
         return SendAsync(Encoding.UTF8.GetBytes(text), WebSocketMessageType.Text);
     }

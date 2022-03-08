@@ -103,7 +103,7 @@ public sealed class IsblNet : IDisposable
                     else
                     {
                         var json = JsonSerializer.Serialize(node, new JsonSerializerOptions { WriteIndented = true });
-                        Debug.LogError(json);
+                        Debug.LogWarning($"Unknown message: {json}");
                     }
                 }
                 else if (action == "id's here" || action == "id ack")

@@ -182,7 +182,8 @@ namespace Isbl
         {
             return JsonDocument.Parse(JsonSerializer.Serialize(value, new JsonSerializerOptions
             {
-                DictionaryKeyPolicy = JsonNamingPolicy.CamelCase
+                DictionaryKeyPolicy = JsonNamingPolicy.CamelCase,
+                IncludeFields = true,
             }));
         }
 

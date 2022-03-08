@@ -83,6 +83,7 @@ public class IsblNetDrawer : PropertyDrawer
     List<KeyValuePair<string, string>> SerializeIsblNet(IsblNet net)
     {
         List<KeyValuePair<string, string>> val = new();
+        if (net == null) return val;
 
         var json = JsonSerializer.Serialize(net.ServerState, new JsonSerializerOptions
         {

@@ -317,11 +317,11 @@ public class IsblStaticXRDevice
 
         return Isbl.NetData.JsonFromObject(new
         {
-            locations = Isbl.NetData.ToJObjectCamelCase(_locations),
+            locations = Isbl.NetData.ToJsonCamelCase(_locations),
             name = Name,
             characteristics,
             localId = LocallyUniqueId,
-            haptics = Haptics != null ? Isbl.NetData.ToJObjectCamelCase(Haptics) : null,
+            haptics = Haptics != null ? Isbl.NetData.ToJsonCamelCase(Haptics) : null,
             lengths = new
             {
                 quaternion = _dataQuaternion?.Length ?? 0,
