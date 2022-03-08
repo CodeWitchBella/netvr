@@ -1,6 +1,7 @@
 import produce, { applyPatches, Patch } from 'immer'
 import { batchUsingMicrotasks } from './batch-messages.js'
 import type {
+  ConnectionInfo,
   NetvrHandler,
   NetvrRoomOptions,
   Utils,
@@ -16,6 +17,7 @@ type Calibration = {
 
 type ClientState = {
   connected: boolean
+  connectionInfo: ConnectionInfo
   calibration: Calibration
 }
 
@@ -25,9 +27,10 @@ type SerializedState = {
   clients: (Omit<ClientState, 'connected'> & { id: number })[]
 }
 
-const emptyClient = immer.freeze(
+const emptyClient = immer.freeze<ClientState>(
   {
     connected: false,
+    connectionInfo: {},
     calibration: {
       translate: { x: 0, y: 0, z: 0 },
       rotate: { x: 0, y: 0, z: 0 },
@@ -52,9 +55,9 @@ export function netvrRoomOptions(
   )
 
   return {
-    newConnection: (id) => onConnection(id),
+    newConnection: onConnection,
     protocolVersion: 2,
-    restoreConnection: (id) => onConnection(id),
+    restoreConnection: onConnection,
     save: () => {
       return {
         version,
@@ -93,9 +96,13 @@ export function netvrRoomOptions(
     })
   }
 
-  function onConnection(id: number): NetvrHandler {
+  function onConnection(
+    id: number,
+    connectionInfo: ConnectionInfo,
+  ): NetvrHandler {
     updateClient(id, (draft) => {
       draft.connected = true
+      draft.connectionInfo = connectionInfo
     })
     store.drainMicrotasks()
 
@@ -143,7 +150,6 @@ export function netvrRoomOptions(
             message.value &&
             store.snapshot().clients.has(message.client)
           ) {
-            console.log(message)
             updateClient(message.client, (draft) => {
               ;(draft as any)[message.field] = message.value
             })

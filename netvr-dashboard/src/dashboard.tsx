@@ -1,4 +1,4 @@
-import { useEffect, useMemo, useReducer, useState } from 'react'
+import { useEffect, useMemo, useReducer, useRef, useState } from 'react'
 import { useLog } from './log'
 import { ListenToSocket, SocketProvider, useSocket } from './listen-to-socket'
 import type { PWebSocket } from './utils'
@@ -26,7 +26,7 @@ function useSendKeepAlive(socket: PWebSocket) {
   useEffect(() => {
     const interval = setInterval(() => {
       socket.send(JSON.stringify({ action: 'keep alive' }))
-    }, 250)
+    }, 1000)
     return () => {
       clearInterval(interval)
     }
@@ -99,7 +99,9 @@ function DashboardInner() {
         }),
       )
       sent = true
-    } catch {}
+    } catch (e) {
+      console.log(e)
+    }
 
     if (!sent) {
       socket.send(JSON.stringify({ action: 'gimme id', protocolVersion }))
@@ -122,6 +124,7 @@ function DashboardInner() {
     dispatchLog({ direction: 'up', message })
     socket.send(message)
   }
+  const lastAcceptedBinaryTimestamp = useRef(0)
 
   const theme = useTheme()
   return (
@@ -131,6 +134,14 @@ function DashboardInner() {
           socket={socket}
           onMessage={(message) => {
             if (stopped) return
+            if (typeof message !== 'string') {
+              // throttle binary messages
+              const now = Date.now()
+              if (lastAcceptedBinaryTimestamp.current + 1000 > now) {
+                return
+              }
+              lastAcceptedBinaryTimestamp.current = now
+            }
             dispatchLog({ direction: 'down', message })
             dispatchDevices(message)
             if (typeof message === 'string') {

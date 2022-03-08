@@ -11,14 +11,18 @@ export interface NetvrHandler {
   onBinary(message: ArrayBuffer): void
   destroy(): void
 }
+export type ConnectionInfo = { [key: string]: unknown }
 
 export interface NetvrIdHandlerLayer {
-  onWebSocket(socket: WebSocketStream): void
+  onWebSocket(socket: WebSocketStream, connectionInfo: ConnectionInfo): void
 }
 
 export type NetvrRoomOptions<RestoreData> = {
-  newConnection: (id: number) => NetvrHandler
-  restoreConnection: (id: number) => NetvrHandler
+  newConnection: (id: number, connectionInfo: ConnectionInfo) => NetvrHandler
+  restoreConnection: (
+    id: number,
+    connectionInfo: ConnectionInfo,
+  ) => NetvrHandler
   protocolVersion: number
   save: () => RestoreData
   restore: (data: RestoreData) => void
@@ -77,7 +81,11 @@ export function createIdHandler<RestoreData>(
 
   const reset = () => {
     for (const client of state.clients.values()) {
-      if ('socket' in client) client.socket.close()
+      if ('socket' in client) {
+        console.log('Closing socket')
+        client.writer.close()
+        client.socket.close()
+      }
     }
     state = {
       clients: new Map<number, Client>(),
@@ -92,8 +100,8 @@ export function createIdHandler<RestoreData>(
   let result = idHandlerInternal(state, opts, impl, reset)
 
   return {
-    onWebSocket(socket: WebSocketStream) {
-      result.onWebSocket(socket)
+    onWebSocket(socket, connectionInfo) {
+      result.onWebSocket(socket, connectionInfo)
     },
   }
 }
@@ -113,12 +121,12 @@ function idHandlerInternal<RestoreData>(
 ) {
   return {
     constructTime: new Date().toISOString(),
-    onWebSocket(socket: WebSocketStream) {
+    onWebSocket(socket: WebSocketStream, connectionInfo: ConnectionInfo) {
       ;(async () => {
         const connection = await socket.connection
         const reader = connection.readable.getReader()
         const writer = connection.writable.getWriter()
-        await handleConnection({ reader, writer, socket })
+        await handleConnection({ reader, writer, socket, connectionInfo })
           .catch((e: any) => {
             if (e instanceof ExpectedError) {
               if (!e.clientMessage) {
@@ -175,10 +183,12 @@ function idHandlerInternal<RestoreData>(
     reader,
     writer,
     socket,
+    connectionInfo,
   }: {
     reader: ReadableStreamDefaultReader
     writer: WritableStreamDefaultWriter
     socket: WebSocketStream
+    connectionInfo: ConnectionInfo
   }) {
     const setupMessage = await awaitMesageWithAction(reader, {
       timeout: 15000,
@@ -216,7 +226,7 @@ function idHandlerInternal<RestoreData>(
           }),
         )
         client = {
-          handler: opts.restoreConnection(oldClient.id),
+          handler: opts.restoreConnection(oldClient.id, connectionInfo),
           id: requestedId,
           token: oldClient.token,
           reader,
@@ -232,7 +242,7 @@ function idHandlerInternal<RestoreData>(
     if (!client) {
       const id = ++state.idGen
       client = {
-        handler: opts.newConnection(id),
+        handler: opts.newConnection(id, connectionInfo),
         id,
         token: getRandomString(64),
         reader,

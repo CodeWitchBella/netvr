@@ -14,7 +14,6 @@ type Props = {
 
 export function JSONView({ data, shouldExpandNode, name }: Props) {
   const theme = useTheme()
-  console.log(theme)
   return (
     <JSONTree
       data={data}

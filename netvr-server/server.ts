@@ -11,7 +11,10 @@
 
 import { index } from './src/paths.js'
 import { netvrRoomOptions } from './src/netvr-handler.js'
-import { createIdHandler } from './src/netvr-id-handler-layer.js'
+import {
+  type ConnectionInfo,
+  createIdHandler,
+} from './src/netvr-id-handler-layer.js'
 import { wrapWebSocket } from './src/websocketstream.js'
 
 await Deno.permissions.request({ name: 'net' })
@@ -44,7 +47,12 @@ async function handleConnection(tcpConn: Deno.Conn) {
     console.log(event.request.url, event.request.headers.get('upgrade'))
     // dont block next request while current one is ongoing
     if (event.request.headers.get('upgrade') === 'websocket') {
-      await serveSocket(event)
+      await serveSocket(event, {
+        ip:
+          'hostname' in tcpConn.remoteAddr
+            ? tcpConn.remoteAddr.hostname
+            : tcpConn.remoteAddr.path,
+      })
     } else {
       const { pathname } = new URL(event.request.url)
       if (pathname.startsWith('/assets')) {
@@ -60,9 +68,12 @@ async function handleConnection(tcpConn: Deno.Conn) {
   }
 }
 
-async function serveSocket(event: Deno.RequestEvent) {
+async function serveSocket(
+  event: Deno.RequestEvent,
+  connectionInfo: ConnectionInfo,
+) {
   const { socket, response } = Deno.upgradeWebSocket(event.request)
-  room.onWebSocket(wrapWebSocket(socket))
+  room.onWebSocket(wrapWebSocket(socket), connectionInfo)
 
   event.respondWith(response)
 }

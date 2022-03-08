@@ -71,9 +71,8 @@ export class DurableObjectWebSocket {
 
     const [client, server] = Object.values(new WebSocketPair())
 
-    this.room.onWebSocket(wrapWebSocket(server))
+    this.room.onWebSocket(wrapWebSocket(server), { ip })
     server.accept()
-    server.send(JSON.stringify({ ip }))
 
     return new Response(null, {
       status: 101,
