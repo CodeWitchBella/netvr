@@ -3,19 +3,23 @@ using UnityEngine;
 using UnityEngine.XR;
 using System.Linq;
 using UnityEngine.XR.OpenXR;
+using System;
 
 public class IsblLocalXRDeviceManager : MonoBehaviour
 {
-    readonly List<IsblTrackedPoseDriver> _devices = new();
+    public readonly List<IsblTrackedPoseDriver> Devices = new();
+    public bool DeviceInfoChanged = false;
 
     void OnEnable()
     {
+        IsblNet.Instance.DeviceManager = this;
+
         InputDevices.deviceConnected += DeviceConnected;
         InputDevices.deviceDisconnected += DeviceDisconnected;
 
         var currentDevices = new List<InputDevice>();
         InputDevices.GetDevices(currentDevices);
-        _devices.AddRange(currentDevices.Select(d => CreateDriver(d)).Where(d => d != null));
+        foreach (var device in currentDevices) DeviceConnected(device);
 
         List<SubsystemDescriptor> subsystemDescriptors = new();
         SubsystemManager.GetSubsystemDescriptors(subsystemDescriptors);
@@ -53,13 +57,6 @@ public class IsblLocalXRDeviceManager : MonoBehaviour
         if (driver == null) return null;
         driver.LocalDevice = new IsblXRDevice(device);
 
-        #region add to IsblNet
-        var net = IsblNet.Instance;
-        net?.LocalState.LocalDevices.Add(driver.LocalDevice.LocallyUniqueId, driver.LocalDevice);
-        net?.LocalState.Devices.Add(driver.LocalDevice.LocallyUniqueId, driver.NetDevice);
-        if (net == null) Debug.LogWarning("IsblNet is null");
-        #endregion
-
         return driver;
     }
 
@@ -67,23 +64,19 @@ public class IsblLocalXRDeviceManager : MonoBehaviour
     {
         InputDevices.deviceConnected -= DeviceConnected;
         InputDevices.deviceDisconnected -= DeviceDisconnected;
-        _devices.Clear();
+
+        var net = IsblNet.Instance;
+        while (Devices.Count > 0)
+            DeviceDisconnected(Devices[0].LocalDevice.Device);
+
+        if (IsblNet.Instance.DeviceManager == this) IsblNet.Instance.DeviceManager = null;
     }
 
     void DeviceDisconnected(InputDevice obj)
     {
         Debug.Log($"Input device disconnected {obj.name}\n{obj.characteristics}");
-        _devices.RemoveAll(d =>
-        {
-            if (d.LocalDevice.Device == obj)
-            {
-                var net = IsblNet.Instance;
-                net?.LocalState.Devices.Remove(d.LocalDevice.LocallyUniqueId);
-                net?.LocalState.LocalDevices.Remove(d.LocalDevice.LocallyUniqueId);
-                return true;
-            }
-            return false;
-        });
+        var index = Devices.FindIndex(d => d.LocalDevice.Device == obj);
+        if (index >= 0) Devices.RemoveAt(index);
     }
 
     void DeviceConnected(InputDevice obj)
@@ -94,15 +87,37 @@ public class IsblLocalXRDeviceManager : MonoBehaviour
         Debug.Log($"Input device connected {obj.name}\n{obj.characteristics}\n{text}");
 
         var driver = CreateDriver(obj);
-        if (driver != null) _devices.Add(driver);
+        if (driver != null) Devices.Add(driver);
     }
 
     void Update()
     {
         var net = IsblNet.Instance;
         if (net == null) return;
-        transform.localPosition = net.LocalState.CalibrationPosition;
-        transform.localRotation = net.LocalState.CalibrationRotation;
-        transform.localScale = net.LocalState.CalibrationScale;
+        // TODO: only do this on calibration config change
+        if (net.ServerState.Clients.TryGetValue(net.SelfId, out var self))
+        {
+            transform.localPosition = self.Calibration.Translate;
+            transform.localRotation = self.Calibration.Rotate;
+            transform.localScale = self.Calibration.Scale;
+        }
+    }
+
+    public bool TryFindDevice(UInt16 id, out IsblTrackedPoseDriver outDevice)
+    {
+        var deviceIdx = Devices.FindIndex(d => d.NetDevice.LocallyUniqueId == id);
+        if (deviceIdx >= 0)
+        {
+            outDevice = Devices[deviceIdx];
+            return true;
+        }
+        outDevice = new();
+        return false;
+    }
+
+    public int CalculateSerializationSize()
+    {
+        return Isbl.NetUtils.Count7BitEncodedIntBytes(Devices.Count(d => d.NetDevice.HasData)) /* Device count */
+            + (from d in Devices where d.NetDevice.HasData select d.NetDevice.CalculateSerializationSize()).Sum() /* devices array */;
     }
 }

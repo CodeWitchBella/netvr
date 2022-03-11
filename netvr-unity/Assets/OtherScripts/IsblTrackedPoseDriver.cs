@@ -184,10 +184,10 @@ public class IsblTrackedPoseDriver : MonoBehaviour
             {
                 if (_file == null)
                 {
-                    Directory.CreateDirectory(IsblPersistentData.DataDirectory);
+                    Directory.CreateDirectory(IsblPersistentDataSaver<IsblPersistentData>.DataDirectory);
                     string logDir = $"{DateTime.UtcNow:o}".Replace(":", "-")[..17];
-                    Directory.CreateDirectory(Path.Combine(IsblPersistentData.DataDirectory, logDir));
-                    _file = File.OpenWrite(Path.Combine(IsblPersistentData.DataDirectory, logDir, $"controller-{NetDevice.LocallyUniqueId}-{DateTime.UtcNow:o}.csv.gz".Replace(":", "-")));
+                    Directory.CreateDirectory(Path.Combine(IsblPersistentDataSaver<IsblPersistentData>.DataDirectory, logDir));
+                    _file = File.OpenWrite(Path.Combine(IsblPersistentDataSaver<IsblPersistentData>.DataDirectory, logDir, $"controller-{NetDevice.LocallyUniqueId}-{DateTime.UtcNow:o}.csv.gz".Replace(":", "-")));
                     _gzip = new(_file, System.IO.Compression.CompressionLevel.Optimal);
                     _gzip.Write(System.Text.Encoding.UTF8.GetBytes("#" + Newtonsoft.Json.JsonConvert.SerializeObject(NetDevice.SerializeConfiguration()) + "\n"));
                     _gzip.Write(System.Text.Encoding.UTF8.GetBytes("iso time;timestamp;" + NetDevice.CSVHeader + "\n"));

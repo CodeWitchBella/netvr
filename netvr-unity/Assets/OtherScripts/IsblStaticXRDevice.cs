@@ -102,7 +102,7 @@ public class IsblStaticXRDevice
     Eyes[] _dataEyes;
 
     public string Name { get; private set; }
-    public int LocallyUniqueId;
+    public UInt16 LocallyUniqueId;
     public bool IsLocal;
     public InputDeviceCharacteristics Characteristics { get; private set; }
     public StaticHaptics Haptics;
@@ -127,20 +127,20 @@ public class IsblStaticXRDevice
     {
         if (_dataQuaternion == null) return TypeCount;
         var contentBytes =
-            Isbl.NetData.Count7BitEncodedIntBytes(LocallyUniqueId)
-            + Isbl.NetData.CountArrayEncodingBytes(_dataQuaternion.Length, 4 * 3)
-            + Isbl.NetData.CountArrayEncodingBytes(_dataVector3.Length, 4 * 3)
-            + Isbl.NetData.CountArrayEncodingBytes(_dataVector2.Length, 4 * 2)
-            + Isbl.NetData.CountArrayEncodingBytes(_dataFloat.Length, 4)
-            + Isbl.NetData.CountArrayEncodingBytes(_dataBool.Length, 1)
-            + Isbl.NetData.CountArrayEncodingBytes(_dataUint.Length, 4)
+            Isbl.NetUtils.Count7BitEncodedIntBytes(LocallyUniqueId)
+            + Isbl.NetUtils.CountArrayEncodingBytes(_dataQuaternion.Length, 4 * 3)
+            + Isbl.NetUtils.CountArrayEncodingBytes(_dataVector3.Length, 4 * 3)
+            + Isbl.NetUtils.CountArrayEncodingBytes(_dataVector2.Length, 4 * 2)
+            + Isbl.NetUtils.CountArrayEncodingBytes(_dataFloat.Length, 4)
+            + Isbl.NetUtils.CountArrayEncodingBytes(_dataBool.Length, 1)
+            + Isbl.NetUtils.CountArrayEncodingBytes(_dataUint.Length, 4)
             // HAND_NETCODE: add size calculation
             // EYES_NETCODE: add size calculation
             // ADDING_NEW_TYPE:
             // add line for calculating serialization size above this comment
             ;
         if (contentOnly) return contentBytes;
-        return Isbl.NetData.Count7BitEncodedIntBytes(contentBytes) + contentBytes;
+        return Isbl.NetUtils.Count7BitEncodedIntBytes(contentBytes) + contentBytes;
     }
 
     public int DeSerializeData(byte[] source, int offset)
@@ -150,42 +150,42 @@ public class IsblStaticXRDevice
         BinaryReader reader = new(stream);
 
         {
-            var len = Isbl.NetData.Read7BitEncodedInt(reader);
+            var len = Isbl.NetUtils.Read7BitEncodedInt(reader);
             if (_dataQuaternion?.Length == len)
                 for (int i = 0; i < len; ++i) _dataQuaternion[i] = Quaternion.Euler((float)(reader.ReadSingle() / Math.PI * 180f), (float)(reader.ReadSingle() / Math.PI * 180f), (float)(reader.ReadSingle() / Math.PI * 180f));
             else reader.BaseStream.Seek(len * 4 * 3, SeekOrigin.Current);
         }
 
         {
-            var len = Isbl.NetData.Read7BitEncodedInt(reader);
+            var len = Isbl.NetUtils.Read7BitEncodedInt(reader);
             if (_dataVector3?.Length == len)
                 for (int i = 0; i < len; ++i) _dataVector3[i] = new Vector3(reader.ReadSingle(), reader.ReadSingle(), reader.ReadSingle());
             else reader.BaseStream.Seek(len * 4 * 3, SeekOrigin.Current);
         }
 
         {
-            var len = Isbl.NetData.Read7BitEncodedInt(reader);
+            var len = Isbl.NetUtils.Read7BitEncodedInt(reader);
             if (_dataVector2?.Length == len)
                 for (int i = 0; i < len; ++i) _dataVector2[i] = new Vector2(reader.ReadSingle(), reader.ReadSingle());
             else reader.BaseStream.Seek(len * 4 * 2, SeekOrigin.Current);
         }
 
         {
-            var len = Isbl.NetData.Read7BitEncodedInt(reader);
+            var len = Isbl.NetUtils.Read7BitEncodedInt(reader);
             if (_dataFloat?.Length == len)
                 for (int i = 0; i < len; ++i) _dataFloat[i] = reader.ReadSingle();
             else reader.BaseStream.Seek(len * 4, SeekOrigin.Current);
         }
 
         {
-            var len = Isbl.NetData.Read7BitEncodedInt(reader);
+            var len = Isbl.NetUtils.Read7BitEncodedInt(reader);
             if (_dataBool?.Length == len)
                 for (int i = 0; i < len; ++i) _dataBool[i] = reader.ReadBoolean();
             else reader.BaseStream.Seek(len * 1, SeekOrigin.Current);
         }
 
         {
-            var len = Isbl.NetData.Read7BitEncodedInt(reader);
+            var len = Isbl.NetUtils.Read7BitEncodedInt(reader);
             if (_dataUint?.Length == len)
                 for (int i = 0; i < len; ++i) _dataUint[i] = reader.ReadUInt32();
             else reader.BaseStream.Seek(len * 4, SeekOrigin.Current);
@@ -205,14 +205,14 @@ public class IsblStaticXRDevice
         MemoryStream stream = new(target);
         stream.Position = offset;
         BinaryWriter writer = new(stream);
-        Isbl.NetData.Write7BitEncodedInt(writer, CalculateSerializationSize(contentOnly: true));
-        Isbl.NetData.Write7BitEncodedInt(writer, LocallyUniqueId);
+        Isbl.NetUtils.Write7BitEncodedInt(writer, CalculateSerializationSize(contentOnly: true));
+        Isbl.NetUtils.Write7BitEncodedInt(writer, LocallyUniqueId);
         if (_dataQuaternion == null)
         {
             throw new Exception("You should not serialize empty devices");
         }
 
-        Isbl.NetData.Write7BitEncodedInt(writer, _dataQuaternion.Length);
+        Isbl.NetUtils.Write7BitEncodedInt(writer, _dataQuaternion.Length);
         foreach (var el in _dataQuaternion)
         {
             writer.Write((float)(el.eulerAngles.x / 180.0 * Math.PI));
@@ -220,7 +220,7 @@ public class IsblStaticXRDevice
             writer.Write((float)(el.eulerAngles.z / 180.0 * Math.PI));
         }
 
-        Isbl.NetData.Write7BitEncodedInt(writer, _dataVector3.Length);
+        Isbl.NetUtils.Write7BitEncodedInt(writer, _dataVector3.Length);
         foreach (var el in _dataVector3)
         {
             writer.Write(el.x);
@@ -228,20 +228,20 @@ public class IsblStaticXRDevice
             writer.Write(el.z);
         }
 
-        Isbl.NetData.Write7BitEncodedInt(writer, _dataVector2.Length);
+        Isbl.NetUtils.Write7BitEncodedInt(writer, _dataVector2.Length);
         foreach (var el in _dataVector2)
         {
             writer.Write(el.x);
             writer.Write(el.y);
         }
 
-        Isbl.NetData.Write7BitEncodedInt(writer, _dataFloat.Length);
+        Isbl.NetUtils.Write7BitEncodedInt(writer, _dataFloat.Length);
         foreach (var el in _dataFloat) writer.Write(el);
 
-        Isbl.NetData.Write7BitEncodedInt(writer, _dataBool.Length);
+        Isbl.NetUtils.Write7BitEncodedInt(writer, _dataBool.Length);
         foreach (var el in _dataBool) writer.Write(el);
 
-        Isbl.NetData.Write7BitEncodedInt(writer, _dataUint.Length);
+        Isbl.NetUtils.Write7BitEncodedInt(writer, _dataUint.Length);
         foreach (var el in _dataUint) writer.Write(el);
 
         // HAND_NETCODE: add serialization block
@@ -315,13 +315,13 @@ public class IsblStaticXRDevice
         Check(InputDeviceCharacteristics.Right, "Right");
         Check(InputDeviceCharacteristics.Simulated6DOF, "Simulated6DOF");
 
-        return Isbl.NetData.JsonFromObject(new
+        return Isbl.NetUtils.JsonFromObject(new
         {
-            locations = Isbl.NetData.ToJsonCamelCase(_locations),
+            locations = Isbl.NetUtils.ToJsonCamelCase(_locations),
             name = Name,
             characteristics,
             localId = LocallyUniqueId,
-            haptics = Haptics != null ? Isbl.NetData.ToJsonCamelCase(Haptics) : null,
+            haptics = Haptics != null ? Isbl.NetUtils.ToJsonCamelCase(Haptics) : null,
             lengths = new
             {
                 quaternion = _dataQuaternion?.Length ?? 0,
@@ -363,9 +363,9 @@ public class IsblStaticXRDevice
         var haptics = message.Value<Newtonsoft.Json.Linq.JObject>("haptics");
         Haptics = haptics != null ? new StaticHaptics(haptics) : null;
 
-        _locations = Isbl.NetData.FromJObjectCamelCase<Locations>(message.Value<Newtonsoft.Json.Linq.JObject>("locations"));
+        _locations = Isbl.NetUtils.FromJObjectCamelCase<Locations>(message.Value<Newtonsoft.Json.Linq.JObject>("locations"));
         Name = message.Value<string>("name");
-        LocallyUniqueId = message.Value<int>("localId");
+        LocallyUniqueId = message.Value<UInt16>("localId");
         var lengths = message.Value<Newtonsoft.Json.Linq.JObject>("lengths");
         _dataQuaternion = new Quaternion[lengths.Value<int>("quaternion")];
         _dataVector3 = new Vector3[lengths.Value<int>("vector3")];

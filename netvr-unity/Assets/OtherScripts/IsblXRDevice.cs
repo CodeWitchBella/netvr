@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 using UnityEngine.XR;
@@ -9,8 +10,8 @@ using UnityEngine.XR;
 public class IsblXRDevice
 {
     public InputDevice Device { get; }
-    static int _locallyUniqueIdGenerator;
-    public readonly int LocallyUniqueId;
+    static UInt16 _locallyUniqueIdGenerator;
+    public readonly UInt16 LocallyUniqueId;
     public string Name => Device.name;
     public InputDeviceCharacteristics Characteristics => Device.characteristics;
 

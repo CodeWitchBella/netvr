@@ -32,7 +32,13 @@ public sealed class IsblNet : IDisposable
     public static IsblNet Instance { get { EnsureInstanceExists(); return IsblNetComponent.Instance; } }
 
     ReconnectingClientWebSocket _socket;
-    public bool Connected => false;
+
+    JsonNode _serverStateJson;
+    public Isbl.NetServerState ServerState = new();
+    public Isbl.NetFastState FastState = new();
+    public UInt16 SelfId = 0;
+    public IsblLocalXRDeviceManager DeviceManager;
+
 #if UNITY_EDITOR
     /// <summary>
     /// UNITY_EDITOR-only getter for _socket so that I don't have to implement
@@ -56,11 +62,8 @@ public sealed class IsblNet : IDisposable
                 _socket.Dispose();
             }
             // re-init
-            var data = IsblPersistentData.Instance.GetConnection(value);
-            Debug.Log($"Connecting to: {data.SocketUrl} with {data.PeerId}, {data.PeerIdToken}");
-            LocalState.Id = data.PeerId;
-            LocalState.IdToken = data.PeerIdToken;
-            _socket = new(data.SocketUrl);
+            Debug.Log($"Connecting to: {value}");
+            _socket = new(value);
             InitializeSocket();
         }
     }
@@ -78,14 +81,21 @@ public sealed class IsblNet : IDisposable
     {
         _socket.OnConnect += () =>
         {
-            if (LocalState.Id == 0) _socket.SendAsync(new { action = "gimme id", protocolVersion = ProtocolVersion });
-            else _socket.SendAsync(new { action = "i already has id", id = LocalState.Id, token = LocalState.IdToken, protocolVersion = ProtocolVersion });
+            var conn = IsblPersistentData.Instance.GetConnection(SocketUrl);
+            if (conn != null)
+                _socket.SendAsync(new { action = "i already has id", id = conn.PeerId, token = conn.PeerIdToken, protocolVersion = ProtocolVersion });
+            else
+                _socket.SendAsync(new { action = "gimme id", protocolVersion = ProtocolVersion });
         };
+
         _socket.OnDisconnect += () =>
         {
-            LocalState.Initialized = false;
-            OtherStates.Clear();
+            SelfId = 0;
+
+            ServerState = new();
+            FastState = new();
         };
+
         _socket.OnTextMessage += (text) =>
         {
             Debug.Log($"message: {text}");
@@ -108,19 +118,28 @@ public sealed class IsblNet : IDisposable
                 }
                 else if (action == "id's here" || action == "id ack")
                 {
-                    if (action == "id's here")
-                    {
-                        LocalState.Id = obj.Value<int>("intValue");
-                        LocalState.IdToken = obj.Value<string>("stringValue");
-                    }
                     var serverVersion = obj.Value<int>("protocolVersion");
                     if (serverVersion != ProtocolVersion)
                     {
                         throw new Exception($"Protocol version mismatch. Client: {ProtocolVersion}, Server: {serverVersion}.");
                     }
 
-                    IsblPersistentData.Instance.SaveConnection(socketUrl: _socket.Uri.ToString(), peerId: LocalState.Id, peerIdToken: LocalState.IdToken);
-                    LocalState.Initialized = true;
+                    if (action == "id's here")
+                    {
+                        SelfId = obj.Value<UInt16>("intValue");
+                        var idToken = obj.Value<string>("stringValue");
+                        IsblPersistentData.Update((data) => data.AddConnection(
+                            socketUrl: SocketUrl,
+                            peerId: SelfId,
+                            peerIdToken: idToken
+                        ));
+                    }
+                    else
+                    {
+                        var conn = IsblPersistentData.Instance.GetConnection(SocketUrl);
+                        SelfId = conn.PeerId;
+                    }
+
                     SendDeviceInfo();
                 }
                 else if (action == "patch")
@@ -131,13 +150,13 @@ public sealed class IsblNet : IDisposable
                         _serverStateJson = JsonNode.Parse(JsonSerializer.Serialize(ServerState));
 
                     _serverStateJson = patch.Apply(_serverStateJson);
-                    ServerState = _serverStateJson.Deserialize<Isbl.NetState>();
+                    ServerState = _serverStateJson.Deserialize<Isbl.NetServerState>();
                 }
                 else if (action == "full state reset")
                 {
                     JsonNode node = JsonNode.Parse(text);
                     _serverStateJson = node["state"];
-                    ServerState = _serverStateJson.Deserialize<Isbl.NetState>();
+                    ServerState = _serverStateJson.Deserialize<Isbl.NetServerState>();
                     Debug.Log($"ServerState: {JsonSerializer.Serialize(ServerState, new JsonSerializerOptions { WriteIndented = true })}\njson: {node["state"]}");
                 }
                 else if (!string.IsNullOrEmpty(action))
@@ -162,14 +181,14 @@ public sealed class IsblNet : IDisposable
 
                     for (int clientIndex = 0; clientIndex < clientCount; ++clientIndex)
                     {
-                        var clientId = BinaryPrimitives.ReadInt32LittleEndian(data[offset..]);
+                        var clientId = Isbl.NetUtils.CastUInt16(BinaryPrimitives.ReadInt32LittleEndian(data[offset..]));
                         offset += 4;
-                        offset += Isbl.NetData.Read7BitEncodedInt(data[offset..], out var numberOfDevices);
+                        offset += Isbl.NetUtils.Read7BitEncodedInt(data[offset..], out var numberOfDevices);
 
                         for (int deviceIndex = 0; deviceIndex < numberOfDevices; deviceIndex++)
                         {
                             HandleDeviceData(clientId, data, offset);
-                            offset += Isbl.NetData.Read7BitEncodedInt(data[offset..], out var deviceBytes);
+                            offset += Isbl.NetUtils.Read7BitEncodedInt(data[offset..], out var deviceBytes);
                             offset += deviceBytes;
                         }
                     }
@@ -190,7 +209,11 @@ public sealed class IsblNet : IDisposable
         Debug.Log($"HandleHapticRequest {string.Join(" ", data)}");
         while (offset < data.Length)
         {
-            int deviceId = BinaryPrimitives.ReadInt32LittleEndian(data[offset..]);
+            var deviceId = BinaryPrimitives.ReadUInt16LittleEndian(data[offset..]);
+            // TODO: update offset+= and remove this this once message format uses UInt16
+            if (BinaryPrimitives.ReadUInt16LittleEndian(data[(offset + 2)..]) != 0)
+                throw new Exception("Id is > 65535");
+
             offset += 4;
             uint channel = BinaryPrimitives.ReadUInt32LittleEndian(data[offset..]);
             offset += 4;
@@ -199,23 +222,21 @@ public sealed class IsblNet : IDisposable
             float amplitude = reader.ReadSingle();
             offset += 8;
             //Debug.Log($"Net Haptic. deviceId: {deviceId}, channel: {channel}, amplitude: {amplitude}, duration: {duration}.");
-            if (LocalState.LocalDevices.TryGetValue(deviceId, out var device))
+            if (DeviceManager.TryFindDevice(deviceId, out var device))
             {
-                device.Device.SendHapticImpulse(channel, amplitude, duration);
+                device.LocalDevice.Device.SendHapticImpulse(channel, amplitude, duration);
             }
         }
     }
 
-    void HandleDeviceData(int clientId, byte[] bytes, int offset)
+    void HandleDeviceData(UInt16 clientId, byte[] bytes, int offset)
     {
-        var offsetCopy = offset + Isbl.NetData.Read7BitEncodedInt(bytes[offset..], out var deviceBytes);
-        offsetCopy += Isbl.NetData.Read7BitEncodedInt(bytes[offsetCopy..], out var deviceId);
+        var offsetCopy = offset + Isbl.NetUtils.Read7BitEncodedInt(bytes[offset..], out var deviceBytes);
+        offsetCopy += Isbl.NetUtils.Read7BitEncodedInt(bytes[offsetCopy..], out var deviceId);
 
-        var state = OtherStates.GetValueOrDefault(clientId, null);
-        if (state != null)
+        if (FastState.TryGetRemoteDevice(clientId, Isbl.NetUtils.CastUInt16(deviceId), out var device))
         {
-            var device = state.Devices.GetValueOrDefault(deviceId, null);
-            device?.DeSerializeData(bytes, offsetCopy);
+            device.DeviceData.DeSerializeData(bytes, offsetCopy);
         }
     }
 
@@ -224,17 +245,12 @@ public sealed class IsblNet : IDisposable
         _ = _socket.SendAsync(new
         {
             action = "set",
-            client = LocalState.Id,
+            client = SelfId,
             field = "devices",
-            value = (from d in LocalState.Devices where d.Value.HasData select d.Value.SerializeConfiguration()).ToArray(),
+            value = (from d in DeviceManager.Devices where d.NetDevice.HasData select d.NetDevice.SerializeConfiguration()).ToArray(),
         });
-        LocalState.DeviceInfoChanged = false;
+        DeviceManager.DeviceInfoChanged = false;
     }
-
-    JsonNode _serverStateJson;
-    public Isbl.NetState ServerState = new();
-    public Isbl.NetStateDataOld LocalState = new(local: true);
-    public Dictionary<int, Isbl.NetStateDataOld> OtherStates = new();
 
     public void Dispose()
     {
@@ -274,16 +290,16 @@ public sealed class IsblNet : IDisposable
     /// </summary>
     public void Tick()
     {
-        if (!LocalState.Initialized || _socket == null) return;
-        var bytes = new byte[LocalState.CalculateSerializationSize() + 1];
+        if (SelfId < 1 || _socket == null) return;
+        var bytes = new byte[DeviceManager.CalculateSerializationSize() + 1];
         var span = bytes.AsSpan();
         span[0] = 1;
         //BinaryPrimitives.WriteInt32LittleEndian(span[1..5], LocalState.Id);
         int offset = 1;
-        offset += Isbl.NetData.Write7BitEncodedInt(span[offset..], LocalState.Devices.Count(d => d.Value.HasData));
-        foreach (var devicePair in LocalState.Devices)
+        offset += Isbl.NetUtils.Write7BitEncodedInt(span[offset..], DeviceManager.Devices.Count(d => d.NetDevice.HasData));
+        foreach (var driver in DeviceManager.Devices)
         {
-            var device = devicePair.Value;
+            var device = driver.NetDevice;
             if (!device.HasData) continue;
             var len = device.CalculateSerializationSize();
             var realLen = device.SerializeData(bytes, offset);
@@ -299,6 +315,6 @@ public sealed class IsblNet : IDisposable
 #endif
 
         _ = _socket.SendAsync(bytes, System.Net.WebSockets.WebSocketMessageType.Binary);
-        if (LocalState.DeviceInfoChanged) SendDeviceInfo();
+        if (DeviceManager.DeviceInfoChanged) SendDeviceInfo();
     }
 }

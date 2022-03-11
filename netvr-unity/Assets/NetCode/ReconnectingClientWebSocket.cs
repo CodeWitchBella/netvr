@@ -120,6 +120,8 @@ public class ReconnectingClientWebSocket : IDisposable
             {
                 _ = CloseNicely(_webSocket);
                 _webSocket = new();
+                // disable ping/pong frames to workaround a bug in deno
+                _webSocket.Options.KeepAliveInterval = TimeSpan.Zero;
                 try
                 {
                     if (PrintDebug) Debug.Log("Trying to connect");
@@ -229,5 +231,6 @@ public class ReconnectingClientWebSocket : IDisposable
     public void SimulateDisconnect()
     {
         _ = CloseNicely(_webSocket);
+        _webSocket = null;
     }
 }

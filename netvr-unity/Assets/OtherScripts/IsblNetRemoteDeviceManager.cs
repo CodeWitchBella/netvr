@@ -1,10 +1,11 @@
 using System.Collections.Generic;
 using UnityEngine;
 using System.Linq;
+using System;
 
 public class IsblNetRemoteDeviceManager : MonoBehaviour
 {
-    readonly Dictionary<int, IsblNetRemoteClient> _remoteClients = new();
+    readonly Dictionary<UInt16, IsblNetRemoteClient> _remoteClients = new();
 
     void Update()
     {
@@ -13,7 +14,7 @@ public class IsblNetRemoteDeviceManager : MonoBehaviour
 
         var toRemove = _remoteClients.Where(client =>
         {
-            if (!net.OtherStates.ContainsKey(client.Key))
+            if (!net.ServerState.Clients.ContainsKey(client.Key))
             {
                 Destroy(client.Value.gameObject);
                 return true;
@@ -23,7 +24,7 @@ public class IsblNetRemoteDeviceManager : MonoBehaviour
 
         foreach (var key in toRemove) _remoteClients.Remove(key);
 
-        foreach (var iter in net.OtherStates)
+        foreach (var iter in net.ServerState.Clients)
         {
             IsblNetRemoteClient client;
             if (_remoteClients.ContainsKey(iter.Key))
@@ -38,15 +39,16 @@ public class IsblNetRemoteDeviceManager : MonoBehaviour
                 _remoteClients.Add(iter.Key, client);
             }
 
-            SyncClient(iter.Value, client);
+            SyncClient(net, iter.Key, iter.Value, client);
         }
     }
 
-    static void SyncClient(Isbl.NetStateDataOld netState, IsblNetRemoteClient remoteClient)
+    static void SyncClient(IsblNet net, UInt16 id, Isbl.NetServerState.Client netState, IsblNetRemoteClient remoteClient)
     {
+        var devices = net.FastState.GetClientDevices(id);
         var toRemove = remoteClient.Devices.Where(device =>
         {
-            if (!netState.Devices.ContainsKey(device.Key))
+            if (!devices.ContainsKey(device.Key))
             {
                 Destroy(device.Value.gameObject);
                 return true;
@@ -55,18 +57,18 @@ public class IsblNetRemoteDeviceManager : MonoBehaviour
         }).Select(c => c.Key).ToArray();
         foreach (var key in toRemove) remoteClient.Devices.Remove(key);
 
-        foreach (var iter in netState.Devices)
+        foreach (var iter in devices)
         {
             IsblNetRemoteDevice device;
-            if (remoteClient.Devices.ContainsKey(iter.Value.LocallyUniqueId))
-                device = remoteClient.Devices[iter.Value.LocallyUniqueId];
+            if (remoteClient.Devices.ContainsKey(iter.Key))
+                device = remoteClient.Devices[iter.Key];
             else
-                device = CreateDevice(remoteClient, iter.Value);
+                device = CreateDevice(remoteClient, iter.Value.DeviceData);
         }
 
-        remoteClient.transform.localPosition = netState.CalibrationPosition;
-        remoteClient.transform.localRotation = netState.CalibrationRotation;
-        remoteClient.transform.localScale = netState.CalibrationScale;
+        remoteClient.transform.localPosition = netState.Calibration.Translate;
+        remoteClient.transform.localRotation = netState.Calibration.Rotate;
+        remoteClient.transform.localScale = netState.Calibration.Scale;
     }
 
     static IsblNetRemoteDevice CreateDevice(IsblNetRemoteClient remoteClient, IsblStaticXRDevice iter)

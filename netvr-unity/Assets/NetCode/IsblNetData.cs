@@ -1,5 +1,4 @@
 using System;
-using System.Buffers.Binary;
 using System.Collections.Generic;
 using System.IO;
 using System.Linq;
@@ -10,103 +9,76 @@ using UnityEngine;
 
 namespace Isbl
 {
-    public class Vector3JsonConverter : JsonConverter<Vector3>
+    /**
+     * Contains everything that is directly synchronized with server using json
+     * patches. Synchronizations in this structure are mostly automated, but
+     * might be too slow for realtime. Therefore it mostly stores configuration.
+     *
+     * Contains the whole state from server including a copy of local state.
+     */
+    public class NetServerState
     {
-        public override Vector3 Read(
-            ref Utf8JsonReader reader,
-            Type typeToConvert,
-            JsonSerializerOptions options) => JsonSerializer.Deserialize<Vector3>(ref reader);
-
-        public override void Write(
-            Utf8JsonWriter writer,
-            Vector3 value,
-            JsonSerializerOptions options)
+        public struct Calibration
         {
-            if (options.WriteIndented)
-            {
-                // print on one line even when WriteIndented is enabled
-                writer.WriteRawValue($"{{ \"x\": {value.x}, \"y\": {value.y}, \"z\": {value.z} }}");
-                return;
-            }
+            [JsonConverter(typeof(Json.Vector3Converter))]
+            [JsonInclude]
+            [JsonPropertyName("translate")]
+            public Vector3 Translate;
 
-            writer.WriteStartObject();
-            writer.WritePropertyName("x");
-            writer.WriteNumberValue(value.x);
-            writer.WritePropertyName("y");
-            writer.WriteNumberValue(value.y);
-            writer.WritePropertyName("z");
-            writer.WriteNumberValue(value.z);
-            writer.WriteEndObject();
+            [JsonConverter(typeof(Json.QuaternionAsEulerConverter))]
+            [JsonInclude]
+            [JsonPropertyName("rotate")]
+            public Quaternion Rotate;
+
+            [JsonConverter(typeof(Json.Vector3Converter))]
+            [JsonInclude]
+            [JsonPropertyName("scale")]
+            public Vector3 Scale;
         }
-    }
 
-    public struct NetStateCalibration
-    {
-        [JsonConverter(typeof(Vector3JsonConverter))]
-        [JsonInclude]
-        [JsonPropertyName("translate")]
-        public Vector3 Translate;
+        public struct Client
+        {
+            [JsonInclude]
+            [JsonPropertyName("connected")]
+            public bool Connected;
 
-        [JsonConverter(typeof(Vector3JsonConverter))]
-        [JsonInclude]
-        [JsonPropertyName("rotate")]
-        public Vector3 Rotate;
+            [JsonInclude]
+            [JsonPropertyName("calibration")]
+            public Calibration Calibration;
+        }
 
-        [JsonConverter(typeof(Vector3JsonConverter))]
-        [JsonInclude]
-        [JsonPropertyName("scale")]
-        public Vector3 Scale;
-    }
-
-    public struct NetStateClient
-    {
-        [JsonInclude]
-        [JsonPropertyName("connected")]
-        public bool Connected;
-
-        [JsonInclude]
-        [JsonPropertyName("calibration")]
-        public NetStateCalibration Calibration;
-    }
-
-    public class NetState
-    {
         [JsonInclude]
         [JsonPropertyName("clients")]
-        public Dictionary<string, NetStateClient> Clients = new();
+        public Dictionary<UInt16, Client> Clients = new();
     }
 
-    public class NetStateDataOld
+    /**
+     * Contains remote information which is synchronized via fast channels and
+     * therefore not via the JSON. Contains mostly data from remote devices.
+     */
+    public class NetFastState
     {
-        public bool Initialized;
-        public int Id;
-        public string IdToken;
-
-        public Vector3 CalibrationPosition = Vector3.zero;
-        public Quaternion CalibrationRotation = Quaternion.identity;
-        public Vector3 CalibrationScale = Vector3.one;
-
-        public readonly Dictionary<int, IsblStaticXRDevice> Devices = new();
-        public readonly Dictionary<int, IsblXRDevice> LocalDevices;
-        public bool DeviceInfoChanged
+        public struct RemoteDevice
         {
-            get => Devices.Values.Any(d => d.DeviceInfoChanged && d.HasData);
-            set { foreach (var d in Devices) if (d.Value.HasData) d.Value.DeviceInfoChanged = value; }
+            public IsblNetRemoteDevice Device;
+            public IsblStaticXRDevice DeviceData;
+        }
+        private readonly Dictionary<UInt32, RemoteDevice> _remoteDevices = new();
+        private readonly Dictionary<UInt16, Dictionary<UInt16, RemoteDevice>> _clients = new();
+
+        public bool TryGetRemoteDevice(UInt16 clientId, UInt16 deviceId, out RemoteDevice outDevice)
+        {
+            return _remoteDevices.TryGetValue(((UInt32)clientId) << 16 | deviceId, out outDevice);
         }
 
-        public int CalculateSerializationSize()
+        public Dictionary<UInt16, RemoteDevice> GetClientDevices(UInt16 clientId)
         {
-            return NetData.Count7BitEncodedIntBytes(Devices.Count(d => d.Value.HasData)) /* Device count */
-                + (from d in Devices where d.Value.HasData select d.Value.CalculateSerializationSize()).Sum() /* devices array */;
-        }
-
-        public NetStateDataOld(bool local = false)
-        {
-            if (local) LocalDevices = new();
+            if (_clients.TryGetValue(clientId, out var res)) return res;
+            throw new Exception("Client not found");
         }
     }
 
-    public static class NetData
+    public static class NetUtils
     {
         // Copied from: https://github.com/dotnet/runtime/issues/24473#issuecomment-450755980
         public static int Read7BitEncodedInt(BinaryReader reader)
@@ -129,6 +101,12 @@ namespace Isbl
                 value |= ((b = (sbyte)data[offset++]) & 0x7F) << (r += 7);
             while (b < 0);
             return offset;
+        }
+
+        public static UInt16 CastUInt16(int value)
+        {
+            if (value < 0 || value > 65535) throw new Exception("Expected value storeable in UInt16");
+            return (UInt16)value;
         }
 
         public static void Write7BitEncodedInt(BinaryWriter writer, int i)

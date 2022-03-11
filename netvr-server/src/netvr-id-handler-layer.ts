@@ -126,26 +126,31 @@ function idHandlerInternal<RestoreData>(
         const connection = await socket.connection
         const reader = connection.readable.getReader()
         const writer = connection.writable.getWriter()
+        let isClosed = false
+        writer.closed.then(() => {
+          isClosed = true
+        })
+
         await handleConnection({ reader, writer, socket, connectionInfo })
-          .catch((e: any) => {
+          .catch(async (e: any) => {
             if (e instanceof ExpectedError) {
               if (!e.clientMessage) {
                 // do nothing
-              } else if (!writer.closed) {
-                writer.write(e.clientMessage)
+              } else if (!isClosed) {
+                await writer.write(e.clientMessage)
               } else {
                 console.warn(
                   "Can't send ExpectedError.clientMessage because connection is already closed",
                 )
               }
-            } else if (!writer.closed) {
+            } else if (!isClosed) {
               // notify this client of error thrown in the server
               if (typeof e === 'object' && e && e.message) {
-                writer.write(
+                await writer.write(
                   JSON.stringify({ message: e.message, stack: e.stack }),
                 )
               } else {
-                writer.write(JSON.stringify({ message: 'unknown error' }))
+                await writer.write(JSON.stringify({ message: 'unknown error' }))
               }
             } else {
               console.error('Error occured after connection was closed')
@@ -157,7 +162,7 @@ function idHandlerInternal<RestoreData>(
             console.error(e)
           })
           .then(() => {
-            if (!writer.closed) writer.close()
+            if (!isClosed) return writer.close()
           })
       })()
         .catch((e) => {

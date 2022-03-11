@@ -44,7 +44,7 @@ public class IsblNetDrawer : PropertyDrawer
             DrawLine("IsblNet is not active.");
             DrawLine("");
             DrawLine("IsblPersistentData");
-            DrawLine(".DataDirectory", IsblPersistentData.DataDirectory);
+            DrawLine(".DataDirectory", IsblPersistentDataSaver<IsblPersistentData>.DataDirectory);
             DrawLine(".LogLocalData", IsblPersistentData.Instance.LogLocalData.ToString());
             DrawLine(".GetLatestConnection()");
             var data = IsblPersistentData.Instance.GetLatestConnection();
@@ -62,14 +62,12 @@ public class IsblNetDrawer : PropertyDrawer
             y += LineHeight;
 
             DrawLine("Socket.State", net.UnityEditorOnlyDebug.State.ToString());
-            DrawLine("PeerId", net.LocalState.Id.ToString());
-            DrawLine("Initialized", net.LocalState.Initialized.ToString());
+            DrawLine("SelfId", net.SelfId.ToString());
             DrawLine("Last Successful Message", net.UnityEditorOnlyDebug.LastSuccessfulMessage.ToLongTimeString());
             DrawLineI("Data Message Size", net.Stats.MessageSize);
             DrawLineI("    Gzip Size", net.Stats.MessageSizeGzip);
             DrawLineI("    Brotli Size", net.Stats.MessageSizeBrotli);
             DrawLineI("    Max Brotli", net.Stats.MessageSizeBrotliMax);
-            DrawLine("Peer count", net.OtherStates.Count.ToString());
             foreach (var line in SerializeIsblNet(net)) DrawLine(line.Key, line.Value);
             DrawLine("Last Redraw", System.DateTime.Now.ToLongTimeString());
         }

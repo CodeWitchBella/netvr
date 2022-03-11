@@ -226,7 +226,7 @@ function DashboardInner() {
               name="state"
               data={serverState}
               shouldExpandNode={(keyPath, data, level) =>
-                data.connected || level === 0
+                data.connected || level <= 1 || keyPath[0] === 'connectionInfo'
               }
             />
             {clients.map((client) => (
