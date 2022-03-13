@@ -23,16 +23,29 @@ export function JSONView({ data, shouldExpandNode, name }: Props) {
       keyPath={name ? [name] : undefined}
       isCustomNode={(value) => {
         return (
-          typeof value === 'object' &&
-          value &&
-          Object.keys(value).length === 3 &&
-          typeof value.x === 'number' &&
-          typeof value.y === 'number' &&
-          typeof value.z === 'number'
+          (typeof value === 'object' &&
+            value &&
+            Object.keys(value).length === 3 &&
+            typeof value.x === 'number' &&
+            typeof value.y === 'number' &&
+            typeof value.z === 'number') ||
+          (typeof value === 'object' &&
+            value &&
+            Array.isArray(value) &&
+            value.every((v) => typeof v === 'string'))
         )
       }}
       valueRenderer={(valueAsString, value) => {
         if (typeof value === 'object' && value) {
+          if (Array.isArray(value))
+            return (
+              <span
+                style={{ color: theme.resolved.base09 }}
+                title={JSON.stringify(value)}
+              >
+                {value.join(', ')}
+              </span>
+            )
           return (
             <span
               style={{ color: theme.resolved.base09 }}
