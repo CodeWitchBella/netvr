@@ -103,6 +103,7 @@ public class IsblStaticXRDevice
 
     public string Name { get; private set; }
     public UInt16 LocallyUniqueId;
+    public string SerialNumber;
     public bool IsLocal;
     public InputDeviceCharacteristics Characteristics { get; private set; }
     public StaticHaptics Haptics;
@@ -321,6 +322,7 @@ public class IsblStaticXRDevice
             name = Name,
             characteristics,
             localId = LocallyUniqueId,
+            serialNumber = SerialNumber,
             haptics = Haptics != null ? Isbl.NetUtils.ToJsonCamelCase(Haptics) : null,
             lengths = new
             {
@@ -366,6 +368,7 @@ public class IsblStaticXRDevice
         _locations = Isbl.NetUtils.FromJObjectCamelCase<Locations>(message.Value<Newtonsoft.Json.Linq.JObject>("locations"));
         Name = message.Value<string>("name");
         LocallyUniqueId = message.Value<UInt16>("localId");
+        SerialNumber = message.Value<string>("serialNumber");
         var lengths = message.Value<Newtonsoft.Json.Linq.JObject>("lengths");
         _dataQuaternion = new Quaternion[lengths.Value<int>("quaternion")];
         _dataVector3 = new Vector3[lengths.Value<int>("vector3")];
@@ -846,6 +849,7 @@ public class IsblStaticXRDevice
         if (LocallyUniqueId != device.LocallyUniqueId)
         {
             LocallyUniqueId = device.LocallyUniqueId;
+            SerialNumber = device.Device.serialNumber;
             Characteristics = device.Characteristics;
             Name = device.Name;
             Haptics = device.Haptics.HasValue ? new(device.Haptics.Value) : null;

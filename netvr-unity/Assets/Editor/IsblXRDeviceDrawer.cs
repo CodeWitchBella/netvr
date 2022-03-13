@@ -43,6 +43,7 @@ public class IsblXRDeviceDrawer : PropertyDrawer
             DrawField("Device", !device.IsLocal ? "Networked" : device.TrackingState == 0 ? "Local (disconnected)" : "Local");
             DrawField("LocallyUniqueId", device.LocallyUniqueId);
             DrawField("Name", device.Name);
+            DrawField("SerialNumber", device.SerialNumber);
             DrawField("Characteristics", SerializeCharacteristics(device.Characteristics));
             DrawField("HasData", device.HasData);
 

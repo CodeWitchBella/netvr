@@ -1,13 +1,13 @@
 import { notNull } from '@isbl/ts-utils'
 import { useState } from 'react'
-import { ClientData, mapData } from './data'
+import { ClientBinaryData, mapData } from './data'
 import { Button, Pane } from './design'
 
 export function SyncDevicesButton({
   clients,
   sendMessage,
 }: {
-  clients: ClientData[]
+  clients: ClientBinaryData[]
   sendMessage: (message: any) => void
 }) {
   const [message, setMessage] = useState('')

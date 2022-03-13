@@ -7,6 +7,7 @@ import {
   createContext,
   PropsWithChildren,
   useMemo,
+  memo,
 } from 'react'
 import { useLocalStorage } from './utils'
 import { useContext } from 'react'
@@ -81,7 +82,7 @@ export function useTheme() {
   return theme
 }
 
-export function ThemeSelector() {
+export const ThemeSelector = memo(function ThemeSelector() {
   const theme = useTheme()
   return (
     <Pane>
@@ -157,4 +158,4 @@ export function ThemeSelector() {
       </div>
     </Pane>
   )
-}
+})

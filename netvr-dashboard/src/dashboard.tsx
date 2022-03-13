@@ -1,14 +1,17 @@
-import { useEffect, useMemo, useReducer, useRef, useState } from 'react'
+import { memo, useEffect, useMemo, useReducer, useRef, useState } from 'react'
 import { useLog } from './log'
 import { ListenToSocket, SocketProvider, useSocket } from './listen-to-socket'
 import type { PWebSocket } from './utils'
 import { ErrorBoundary } from './error-boundary'
 import {
-  ClientData,
-  DeviceData,
+  ClientBinaryData,
+  ClientConfiguration,
+  DeviceBinaryData,
+  DeviceConfiguration,
   mapData,
   parseBinaryMessage,
   protocolVersion,
+  ServerState,
 } from './data'
 import { SyncDevicesButton } from './sync-devices'
 import { Calibration } from './calibration'
@@ -34,50 +37,26 @@ function useSendKeepAlive(socket: PWebSocket) {
 }
 
 function deviceReducer(
-  state: ClientData[],
+  state: ClientBinaryData[],
   action:
     | { type: 'text'; message: any }
     | { type: 'binary'; message: ReturnType<typeof parseBinaryMessage> },
 ) {
-  if (action.type === 'text') {
-    const message = action.message
-    if (message.action === 'device info') {
-      const incomingIds = new Set<number>(
-        message.info.map((info: any) => info.id),
-      )
-      return state
-        .filter((dev) => !incomingIds.has(dev.id))
-        .concat(message.info)
-    } else if (message.action === 'disconnect') {
-      const incomingIds = new Set(message.ids)
-      return state.filter((dev) => !incomingIds.has(dev.id))
-    }
-  } else {
-    const binaryMessage = action.message
-    if (binaryMessage.clients) {
-      state = state.map((stateClient) => {
-        const client = binaryMessage.clients.find(
-          (c) => c.clientId === stateClient.id,
-        )
-        if (!client) return stateClient
-        return {
-          ...stateClient,
-          info: stateClient.info?.map((stateInfo: any): DeviceData => {
-            const clientData = client.devices.find(
-              (d) => d.deviceId === stateInfo.localId,
-            )
-            if (!clientData) return stateInfo
-            return {
-              ...stateInfo,
-              data: clientData,
-            }
-          }),
-        }
-      })
-    }
-    return state
-  }
+  if (action.type !== 'binary') return state
+  const binaryMessage = action.message
+  if (binaryMessage.clients) {
+    const nonExistingClients = binaryMessage.clients.filter(
+      (c) => !state.some((s) => s.clientId === c.clientId),
+    )
+    const messageClients = new Map<number, typeof binaryMessage.clients[0]>()
+    for (const c of binaryMessage.clients) messageClients.set(c.clientId, c)
 
+    return state.concat(nonExistingClients).map((stateClient) => {
+      const dataFromMessage = messageClients.get(stateClient.clientId)
+      if (!dataFromMessage) return stateClient
+      return dataFromMessage
+    })
+  }
   return state
 }
 
@@ -119,7 +98,7 @@ function DashboardInner() {
     true,
   )
   const [clients, dispatchDevices] = useReducer(deviceReducer, [])
-  const [serverState, setServerState] = useImmer({ clients: [] })
+  const [serverState, setServerState] = useImmer<ServerState>({ clients: {} })
 
   const [log, dispatchLog] = useLog({ showBinary })
   useSendKeepAlive(socket)
@@ -144,7 +123,7 @@ function DashboardInner() {
               const now = Date.now()
               const skippable = (client: { clientId: number }) => {
                 const last = lastAcceptedBinaryTimestamps.get(client.clientId)
-                return last && last + 1000 > now
+                return last && last + 100 > now
               }
               if (parsed.clients?.every(skippable)) {
                 return
@@ -222,16 +201,25 @@ function DashboardInner() {
             <ErrorBoundary>
               <Calibration sendMessage={sendMessage} />
             </ErrorBoundary>
-            <JSONPane
-              name="state"
-              data={serverState}
-              shouldExpandNode={(keyPath, data, level) =>
-                data.connected || level <= 1 || keyPath[0] === 'connectionInfo'
-              }
-            />
-            {clients.map((client) => (
-              <Client key={client.id} client={client} socket={socket} />
-            ))}
+            <StatePane data={serverState} />
+
+            {Object.entries(serverState.clients).map(
+              ([key, clientConfiguration]) => {
+                const clientId = Number.parseInt(key, 10)
+                const binaryClient = clients.find(
+                  (c) => c.clientId === clientId,
+                )
+                if (!binaryClient) return null
+                return (
+                  <Client
+                    key={clientId}
+                    client={clientConfiguration}
+                    binaryClient={binaryClient}
+                    socket={socket}
+                  />
+                )
+              },
+            )}
           </div>
           <div style={{ flexGrow: 1 }}>
             <Pane>
@@ -260,41 +248,52 @@ function DashboardInner() {
   )
 }
 
+const StatePane = memo<{ data: ServerState }>(function StatePane({ data }) {
+  return (
+    <JSONPane
+      name="state"
+      data={data}
+      shouldExpandNode={(keyPath, data, level) =>
+        data.connected || level <= 1 || keyPath[0] === 'connectionInfo'
+      }
+    />
+  )
+})
+
 function Client({
+  binaryClient,
   client,
   socket,
 }: {
-  client: ClientData
+  binaryClient: ClientBinaryData
+  client: ClientConfiguration
   socket: PWebSocket
 }) {
   const [showJson, toggleShowJson] = useReducer((prev: boolean) => !prev, false)
   return (
-    <div
-      className="device"
-      style={{
-        border: '1px solid gray',
-        margin: 8,
-        padding: 8,
-        borderRadius: 4,
-      }}
-    >
-      <div>id: {client.id}</div>
+    <Pane>
+      <div>id: {binaryClient.clientId}</div>
       <Button type="button" onClick={toggleShowJson}>
         {showJson ? 'Hide JSON' : 'Show JSON'}
       </Button>
-      {client.info?.map((data) => (
-        <Device
-          device={data}
-          key={data.localId}
-          clientId={client.id}
-          socket={socket}
-        />
-      )) ?? null}
+      {binaryClient.devices.map((data) => {
+        const info = client.devices?.find((d) => d.localId === data.deviceId)
+        if (!info) return null
+        return (
+          <Device
+            device={data}
+            configuration={info}
+            key={data.deviceId}
+            clientId={binaryClient.clientId}
+            socket={socket}
+          />
+        )
+      }) ?? null}
       {showJson ? (
         <code>
           <pre style={{ whiteSpace: 'pre-wrap', width: 500 }}>
             {JSON.stringify(
-              client,
+              binaryClient,
               (key, value) => {
                 if (
                   Array.isArray(value) &&
@@ -312,20 +311,22 @@ function Client({
           </pre>
         </code>
       ) : null}
-    </div>
+    </Pane>
   )
 }
 
 function Device({
   device,
+  configuration,
   socket,
   clientId,
 }: {
-  device: DeviceData
+  device: DeviceBinaryData
+  configuration: DeviceConfiguration
   socket: PWebSocket
   clientId: number
 }) {
-  const { data, unknown } = mapData(device)
+  const { data, unknown } = mapData(device, configuration)
   const [showDetails, toggleShowDetails] = useReducer(
     (prev: boolean) => !prev,
     false,
@@ -336,7 +337,7 @@ function Device({
     const view = new DataView(buffer)
     view.setUint8(0, 2) // message type
     view.setUint32(1, clientId, true)
-    view.setUint32(5, device.localId, true)
+    view.setUint32(5, device.deviceId, true)
     view.setUint32(9, 0, true) // channel
     view.setFloat32(13, 0.25, true) // amplitude
     view.setFloat32(17, 0.1, true) // time (oculus-only)
@@ -352,17 +353,17 @@ function Device({
       }}
     >
       <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-        <div>Device: {device.localId}</div>
+        <div>Device: {device.deviceId}</div>
         <Button
           type="button"
           onClick={identify}
-          disabled={!device.haptics?.supportsImpulse}
+          disabled={!configuration.haptics?.supportsImpulse}
         >
           Identify
         </Button>
       </div>
-      <div>Name: {device.name}</div>
-      <div>Characteristics: {device.characteristics.join(', ')}</div>
+      <div>Name: {configuration.name}</div>
+      <div>Characteristics: {configuration.characteristics.join(', ')}</div>
       <Button type="button" onClick={toggleShowDetails}>
         {showDetails ? 'Hide details' : 'Show details'}
       </Button>
@@ -371,10 +372,12 @@ function Device({
           {Object.entries(data).map(([key, o]) => (
             <div key={key}>
               {key}:{' '}
-              {o.type === 'quaternion' ||
-              o.type === 'vector3' ||
-              o.type === 'vector2'
-                ? o.value.map((v) => v.toFixed(2)).join(', ')
+              {o.type === 'quaternion' || o.type === 'vector3'
+                ? `${o.value.x.toFixed(2)}, ${o.value.y.toFixed(
+                    2,
+                  )}, ${o.value.z.toFixed(2)}`
+                : o.type === 'vector2'
+                ? `${o.value.x.toFixed(2)}, ${o.value.y.toFixed(2)} `
                 : o.type === 'float'
                 ? o.value.toFixed(2)
                 : o.type === 'uint32'
@@ -398,7 +401,7 @@ function Device({
   )
 }
 
-function Message({
+const Message = memo(function Message({
   message,
   timestamp,
   type,
@@ -423,7 +426,7 @@ function Message({
       )}
     </Pane>
   )
-}
+})
 
 function BinaryMessage({ raw, parsed }: { raw: ArrayBuffer; parsed: any }) {
   const rawText = useMemo(
@@ -442,7 +445,7 @@ function BinaryMessage({ raw, parsed }: { raw: ArrayBuffer; parsed: any }) {
         {rawText} ({raw.byteLength})
       </div>
       <div style={{ whiteSpace: 'pre-wrap', width: 500 }}>
-        <JSONView data={parsed} shouldExpandNode={() => true} />
+        <JSONView data={parsed} shouldExpandNode={() => false} />
       </div>
     </>
   )

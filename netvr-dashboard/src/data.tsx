@@ -7,12 +7,18 @@ export type DeviceBinaryData = {
   readonly deviceId: number
   readonly quaternion: readonly { x: number; y: number; z: number }[]
   readonly vector3: readonly { x: number; y: number; z: number }[]
-  readonly vector2: readonly (readonly [number, number])[]
+  readonly vector2: readonly { x: number; y: number }[]
   readonly float: readonly number[]
   readonly bool: readonly (boolean | 'fail')[]
   readonly uint32: readonly number[]
 }
-export type DeviceData = {
+
+export type ClientBinaryData = {
+  clientId: number
+  devices: readonly DeviceBinaryData[]
+}
+
+export type DeviceConfiguration = {
   locations: { [key: string]: number }
   name: string
   characteristics: string[]
@@ -28,12 +34,26 @@ export type DeviceData = {
     bufferOptimalSize: 0
   }
 }
-export type ClientData = {
-  id: number
-  info?: readonly DeviceData[]
+
+export type ClientConfiguration = {
+  connected: boolean
+  connectionInfo: { ip: string }
+  calibration: {
+    translate: { x: number; y: number; z: number }
+    rotate: { x: number; y: number; z: number }
+    scale: { x: number; y: number; z: number }
+  }
+  devices?: DeviceConfiguration[]
 }
 
-export function mapData(device: DeviceData): {
+export type ServerState = {
+  clients: { [key: number]: ClientConfiguration }
+}
+
+export function mapData(
+  rawData: DeviceBinaryData,
+  configuration: DeviceConfiguration,
+): {
   unknown: any
   data: {
     [key in keyof typeof locationMap]?: typeof locationMap[key] extends 'bool'
@@ -43,14 +63,14 @@ export function mapData(device: DeviceData): {
       : typeof locationMap[key] extends 'quaternion' | 'vector3'
       ? {
           type: typeof locationMap[key]
-          value: readonly [number, number, number]
+          value: { x: number; y: number; z: number }
         }
       : typeof locationMap[key] extends 'vector2'
-      ? { type: typeof locationMap[key]; value: readonly [number, number] }
+      ? { type: typeof locationMap[key]; value: { x: number; y: number } }
       : never
   }
 } {
-  if (!device.data) return { unknown: [], data: {} }
+  if (!rawData) return { unknown: [], data: {} }
   const visited = {
     quaternion: new Set<number>(),
     vector3: new Set<number>(),
@@ -63,8 +83,8 @@ export function mapData(device: DeviceData): {
   const data = Object.fromEntries(
     Object.entries(locationMap)
       .map(([key, type]) => {
-        const loc = device.locations[key]
-        const value = device.data?.[type][loc]
+        const loc = configuration.locations[key]
+        const value = rawData?.[type][loc]
         if (loc < 0 || value === undefined) return null
         visited[type]?.add(loc)
         return [key, { type, value }]
@@ -75,8 +95,8 @@ export function mapData(device: DeviceData): {
     Object.entries(visited) as [keyof typeof visited, Set<number>][]
   )
     .map(([key, set]) => {
-      if (!device.data || !(key in device.data)) return null
-      const items = (device.data[key] as any[])
+      if (!rawData || !(key in rawData)) return null
+      const items = (rawData[key] as any[])
         .filter((data, i) => !set.has(i))
         .map((data, index) => ({ data, index }))
       if (items.length < 1) return null
@@ -97,7 +117,7 @@ export function parseBinaryMessage(data: ArrayBuffer) {
     const messageType = readByte(view, offset)
     if (messageType === 1) {
       const clientCount = readUint32(view, offset)
-      let clients = []
+      let clients: ClientBinaryData[] = []
       for (let clientIndex = 0; clientIndex < clientCount; ++clientIndex) {
         const clientId = readUint32(view, offset)
         const numberOfDevices = read7BitEncodedInt(view, offset)
@@ -162,7 +182,7 @@ function readVec3(view: DataView, offset: { current: number }) {
 }
 
 function readVec2(view: DataView, offset: { current: number }) {
-  return [readFloat(view, offset), readFloat(view, offset)] as const
+  return { x: readFloat(view, offset), y: readFloat(view, offset) } as const
 }
 
 function readFloat(view: DataView, offset: { current: number }): number {

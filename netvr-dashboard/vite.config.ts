@@ -1,4 +1,4 @@
-import { defineConfig } from 'vite'
+import { defineConfig, Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
 import shimReactPdf from 'vite-plugin-shim-react-pdf'
 
@@ -8,6 +8,7 @@ export default defineConfig({
       exclude: /thesis\/[^/]+.tsx?$/,
     }),
     shimReactPdf(),
+    openerFixPlugin(),
   ],
   server: {
     fs: { allow: ['..'] },
@@ -19,3 +20,23 @@ export default defineConfig({
     polyfillModulePreload: false,
   },
 })
+
+function openerFixPlugin(): Plugin {
+  return {
+    name: 'opener-fix',
+
+    configureServer(server) {
+      server.middlewares.use((req: any, res, next) => {
+        console.log(req.url)
+        const prefix = '/__open-in-editor?file='
+        if (req.url.startsWith(prefix)) {
+          let path = req.url.slice(prefix.length)
+          if (path.startsWith('%')) path = decodeURIComponent(path)
+          req.url = prefix + path.slice(1)
+        }
+        console.log(req.url)
+        next()
+      })
+    },
+  }
+}

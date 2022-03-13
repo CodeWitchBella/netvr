@@ -1,4 +1,5 @@
 import { PropsWithChildren } from 'react'
+import { ErrorBoundary } from './error-boundary'
 import { useTheme } from './use-theme'
 
 export const fontFamily = 'Inter, sans-serif'
@@ -17,7 +18,7 @@ export function Pane({ children }: PropsWithChildren<{}>) {
         color: theme.resolved.base06,
       }}
     >
-      {children}
+      <ErrorBoundary>{children}</ErrorBoundary>
     </div>
   )
 }
