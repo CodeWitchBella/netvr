@@ -94,7 +94,23 @@ public class IsblLocalXRDeviceManager : MonoBehaviour
         List<InputFeatureUsage> usages = new();
         obj.TryGetFeatureUsages(usages);
         var text = string.Join("\n", from u in usages select $"{u.name}: {u.type}");
-        Debug.Log($"Input device connected {obj.name}\n{obj.characteristics}\n{text}");
+        var supportedModesString = "";
+        var supportedModes = obj.subsystem.GetSupportedTrackingOriginModes();
+        void CheckMode(TrackingOriginModeFlags flag)
+        {
+            if ((supportedModes & flag) != 0)
+            {
+                if (supportedModesString != "") supportedModesString += ", ";
+                supportedModesString += flag;
+            }
+        }
+        CheckMode(TrackingOriginModeFlags.Device);
+        CheckMode(TrackingOriginModeFlags.Floor);
+        CheckMode(TrackingOriginModeFlags.TrackingReference);
+        CheckMode(TrackingOriginModeFlags.Unbounded);
+        if (supportedModes == TrackingOriginModeFlags.Unknown) supportedModesString = "Unknown";
+
+        Debug.Log($"Input device connected {obj.name}\n{obj.characteristics}\n{text}\nTrackingOriginMode: {obj.subsystem.GetTrackingOriginMode()}\n  SupportedModes: {obj.subsystem.GetSupportedTrackingOriginModes()}");
 
         var driver = CreateDriver(obj);
         if (driver != null) Devices.Add(driver);
