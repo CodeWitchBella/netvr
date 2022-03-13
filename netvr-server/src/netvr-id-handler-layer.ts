@@ -67,8 +67,11 @@ export function createIdHandler<RestoreData>(
   restoreData?: string | null,
 ): NetvrIdHandlerLayer {
   let data = restoreData ? JSON.parse(restoreData) : { clients: [] }
+  console.log(data)
   let state = {
-    clients: new Map<number, Client>(Object.entries(data?.clients) as any),
+    clients: new Map<number, Client>(
+      data?.clients.map((c: any) => [c.id, c]) as any,
+    ),
     idGen: 0,
     saveTriggered: { current: false },
   }
