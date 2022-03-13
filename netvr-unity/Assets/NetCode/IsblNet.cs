@@ -82,7 +82,7 @@ public sealed class IsblNet : IDisposable
         _socket.OnConnect += () =>
         {
             var conn = IsblPersistentData.Instance.GetConnection(SocketUrl);
-            if (conn != null)
+            if (conn?.PeerId > 0)
                 _socket.SendAsync(new { action = "i already has id", id = conn.PeerId, token = conn.PeerIdToken, protocolVersion = ProtocolVersion });
             else
                 _socket.SendAsync(new { action = "gimme id", protocolVersion = ProtocolVersion });

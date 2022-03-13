@@ -51,14 +51,12 @@ public sealed class IsblPersistentDataSaver<TInstance> where TInstance : IIsblPe
                     using var reader = new StreamReader(DataPath);
                     _fileData = reader.ReadToEnd();
                     _instance = JsonSerializer.Deserialize<TInstance>(_fileData) ?? new TInstance();
-                    Debug.Log($"_fileData: {_fileData}");
                 }
                 catch
                 {
                     _instance = new TInstance();
                 }
                 _instance.Init();
-                Debug.Log($"Serialize(): {Serialize()}");
 
                 if (Serialize() != _fileData) Save();
             }

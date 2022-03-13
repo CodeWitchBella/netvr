@@ -45,7 +45,12 @@ public class IsblNetRemoteDeviceManager : MonoBehaviour
 
     static void SyncClient(IsblNet net, UInt16 id, Isbl.NetServerState.Client netState, IsblNetRemoteClient remoteClient)
     {
-        var devices = net.FastState.GetClientDevices(id);
+        if (!net.FastState.Clients.TryGetValue(id, out var devices))
+        {
+            devices = new();
+            net.FastState.Clients.Add(id, devices);
+        }
+
         var toRemove = remoteClient.Devices.Where(device =>
         {
             if (!devices.ContainsKey(device.Key))

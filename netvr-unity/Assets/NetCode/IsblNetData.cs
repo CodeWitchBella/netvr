@@ -63,18 +63,14 @@ namespace Isbl
             public IsblNetRemoteDevice Device;
             public IsblStaticXRDevice DeviceData;
         }
-        private readonly Dictionary<UInt32, RemoteDevice> _remoteDevices = new();
-        private readonly Dictionary<UInt16, Dictionary<UInt16, RemoteDevice>> _clients = new();
+        public readonly Dictionary<UInt16, Dictionary<UInt16, RemoteDevice>> Clients = new();
 
         public bool TryGetRemoteDevice(UInt16 clientId, UInt16 deviceId, out RemoteDevice outDevice)
         {
-            return _remoteDevices.TryGetValue(((UInt32)clientId) << 16 | deviceId, out outDevice);
-        }
-
-        public Dictionary<UInt16, RemoteDevice> GetClientDevices(UInt16 clientId)
-        {
-            if (_clients.TryGetValue(clientId, out var res)) return res;
-            throw new Exception("Client not found");
+            if (Clients.TryGetValue(clientId, out var devices))
+                return devices.TryGetValue(deviceId, out outDevice);
+            outDevice = default;
+            return false;
         }
     }
 

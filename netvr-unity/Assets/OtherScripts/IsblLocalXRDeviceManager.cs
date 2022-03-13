@@ -16,6 +16,7 @@ public class IsblLocalXRDeviceManager : MonoBehaviour
 
         InputDevices.deviceConnected += DeviceConnected;
         InputDevices.deviceDisconnected += DeviceDisconnected;
+        InputDevices.deviceConfigChanged += DeviceConfigChanged;
 
         var currentDevices = new List<InputDevice>();
         InputDevices.GetDevices(currentDevices);
@@ -29,7 +30,7 @@ public class IsblLocalXRDeviceManager : MonoBehaviour
             var version = OpenXRRuntime.GetExtensionVersion(ext);
             return version == 1 ? ext : $"{ext} v{version}";
         }
-
+        var features = OpenXRSettings.ActiveBuildTargetInstance.GetFeatures();
         Debug.Log($@"OpenXR info
         OpenXRRuntime.name: {OpenXRRuntime.name}
         OpenXRRuntime.apiVersion: {OpenXRRuntime.apiVersion}
@@ -38,6 +39,7 @@ public class IsblLocalXRDeviceManager : MonoBehaviour
         Available extensions: {string.Join(", ", OpenXRRuntime.GetAvailableExtensions().Select(SelectVersion))}
         Enabled extensions: {string.Join(", ", OpenXRRuntime.GetEnabledExtensions().Select(SelectVersion))}
         Subsystems: {(subsystemDescriptors.Count < 1 ? "none" : string.Join(", ", subsystemDescriptors.ConvertAll(s => s.id)))}
+        Features: {string.Join(", ", features.Select(f => f.name + (f.enabled ? "" : " (disabled)")))}
         ");
     }
 
@@ -64,6 +66,7 @@ public class IsblLocalXRDeviceManager : MonoBehaviour
     {
         InputDevices.deviceConnected -= DeviceConnected;
         InputDevices.deviceDisconnected -= DeviceDisconnected;
+        InputDevices.deviceConfigChanged -= DeviceConfigChanged;
 
         var net = IsblNet.Instance;
         while (Devices.Count > 0)
@@ -77,6 +80,13 @@ public class IsblLocalXRDeviceManager : MonoBehaviour
         Debug.Log($"Input device disconnected {obj.name}\n{obj.characteristics}");
         var index = Devices.FindIndex(d => d.LocalDevice.Device == obj);
         if (index >= 0) Devices.RemoveAt(index);
+
+        DeviceInfoChanged = true;
+    }
+
+    void DeviceConfigChanged(InputDevice device)
+    {
+        DeviceInfoChanged = true;
     }
 
     void DeviceConnected(InputDevice obj)
@@ -88,12 +98,15 @@ public class IsblLocalXRDeviceManager : MonoBehaviour
 
         var driver = CreateDriver(obj);
         if (driver != null) Devices.Add(driver);
+
+        DeviceInfoChanged = true;
     }
 
     void Update()
     {
         var net = IsblNet.Instance;
         if (net == null) return;
+
         // TODO: only do this on calibration config change
         if (net.ServerState.Clients.TryGetValue(net.SelfId, out var self))
         {
