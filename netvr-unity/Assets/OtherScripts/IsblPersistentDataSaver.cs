@@ -7,6 +7,7 @@ using UnityEngine;
 public interface IIsblPersistentData
 {
     void Init();
+    string Serialize();
 }
 
 /**
@@ -27,16 +28,12 @@ public sealed class IsblPersistentDataSaver<TInstance> where TInstance : IIsblPe
             return Path.Combine(Directory.GetCurrentDirectory(), "user-data");
         }
     }
-    static string DataPath => Path.Combine(DataDirectory, "config.json");
 
-    string Serialize()
+    readonly string _fileName;
+    string DataPath => Path.Combine(DataDirectory, _fileName);
+    public IsblPersistentDataSaver(string fileName)
     {
-        return JsonSerializer.Serialize(_instance, new JsonSerializerOptions
-        {
-            IncludeFields = true,
-            IgnoreReadOnlyFields = false,
-            WriteIndented = true,
-        });
+        _fileName = fileName;
     }
 
     public TInstance Instance
@@ -58,7 +55,7 @@ public sealed class IsblPersistentDataSaver<TInstance> where TInstance : IIsblPe
                 }
                 _instance.Init();
 
-                if (Serialize() != _fileData) Save();
+                if (_instance.Serialize() != _fileData) Save();
             }
             return _instance;
         }
@@ -78,7 +75,7 @@ public sealed class IsblPersistentDataSaver<TInstance> where TInstance : IIsblPe
         _shouldResave = false;
         try
         {
-            var value = Serialize();
+            var value = _instance.Serialize();
             if (value != _fileData)
             {
                 await Task.Run(() => Directory.CreateDirectory(DataDirectory));

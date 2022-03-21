@@ -159,15 +159,6 @@ namespace Isbl
                 IncludeFields = true,
             }));
         }
-
-        public static T FromJsonCamelCase<T>(JsonDocument doc)
-        {
-            return doc.Deserialize<T>(new JsonSerializerOptions
-            {
-                PropertyNamingPolicy = JsonNamingPolicy.CamelCase
-            });
-        }
-
         public static JsonObject JsonFromObject(object value)
         {
             var node = JsonNode.Parse(JsonSerializer.Serialize(value));

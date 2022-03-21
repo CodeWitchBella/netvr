@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Linq;
+using System.Text.Json;
 using System.Text.Json.Serialization;
 using UnityEngine;
 
@@ -29,7 +30,7 @@ public sealed class IsblPersistentData : IIsblPersistentData
     }
 
     [JsonPropertyName("connections")]
-    public readonly List<Connection> Connections = new();
+    public List<Connection> Connections = new();
 
     public Connection GetConnection(string socketUrl)
         => Connections.Find(c => c.SocketUrl == socketUrl);
@@ -67,7 +68,20 @@ public sealed class IsblPersistentData : IIsblPersistentData
         InsertIfNotPresent("ws://192.168.1.31:10000/");
     }
 
-    static readonly IsblPersistentDataSaver<IsblPersistentData> _saver = new();
+    #region data saving
+
+
+    public string Serialize()
+    {
+        return JsonSerializer.Serialize(this, new JsonSerializerOptions
+        {
+            IncludeFields = true,
+            IgnoreReadOnlyFields = false,
+            WriteIndented = true,
+        });
+    }
+
+    static readonly IsblPersistentDataSaver<IsblPersistentData> _saver = new("config.json");
     public delegate void Updater(IsblPersistentData instance);
     public static void Update(Updater updater)
     {
@@ -76,4 +90,5 @@ public sealed class IsblPersistentData : IIsblPersistentData
     }
 
     public static IsblPersistentData Instance { get { return _saver.Instance; } }
+    #endregion
 }
