@@ -19,12 +19,14 @@ namespace Isbl.Json
             Vector3 value,
             JsonSerializerOptions options)
         {
+#if NET6_0
             if (options.WriteIndented)
             {
                 // print on one line even when WriteIndented is enabled
                 writer.WriteRawValue($"{{ \"x\": {value.x}, \"y\": {value.y}, \"z\": {value.z} }}");
                 return;
             }
+#endif
 
             writer.WriteStartObject();
             writer.WritePropertyName("x");

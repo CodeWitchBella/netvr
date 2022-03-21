@@ -1,6 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.IO;
-using System.Text.Json.Nodes;
+using System.Text.Json;
 using UnityEngine;
 using UnityEngine.XR;
 
@@ -296,9 +297,9 @@ public class IsblStaticXRDevice
         return builder.ToString();
     }
 
-    public JsonObject SerializeConfiguration()
+    public JsonElement SerializeConfiguration()
     {
-        JsonArray characteristics = new();
+        List<string> characteristics = new();
         void Check(InputDeviceCharacteristics reference, string text)
         {
             if ((Characteristics & reference) != 0)

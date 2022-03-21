@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.IO;
 using System.Linq;
 using System.Text.Json;
-using System.Text.Json.Nodes;
 using System.Text.Json.Serialization;
 using UnityEngine;
 
@@ -159,11 +158,10 @@ namespace Isbl
                 IncludeFields = true,
             }));
         }
-        public static JsonObject JsonFromObject(object value)
+        public static JsonElement JsonFromObject(object value)
         {
-            var node = JsonNode.Parse(JsonSerializer.Serialize(value));
-            if (typeof(JsonObject) == node.GetType()) return (JsonObject)node;
-            throw new Exception("Failed to convert to json object");
+            var node = JsonDocument.Parse(JsonSerializer.Serialize(value));
+            return node.RootElement;
         }
     }
 }

@@ -1,11 +1,9 @@
 using System;
 using UnityEngine;
 using System.Linq;
-using System.Collections.Generic;
 using System.Buffers.Binary;
 using System.IO;
 using System.IO.Compression;
-using System.Text.Json.Nodes;
 using Json.Patch;
 using System.Text.Json;
 
@@ -33,7 +31,7 @@ public sealed class IsblNet : IDisposable
 
     ReconnectingClientWebSocket _socket;
 
-    JsonNode _serverStateJson;
+    JsonElement _serverStateJson;
     public Isbl.NetServerState ServerState = new();
     public Isbl.NetFastState FastState = new();
     public UInt16 SelfId = 0;
@@ -105,10 +103,10 @@ public sealed class IsblNet : IDisposable
                 var action = obj.Value<string>("action");
                 if (action == null)
                 {
-                    JsonNode node = JsonNode.Parse(text);
-                    if (node["error"] != null)
+                    var node = JsonDocument.Parse(text).RootElement;
+                    if (node.TryGetProperty("error", out var error))
                     {
-                        Debug.LogError($"Server reported error: {node["error"].GetValue<string>()}");
+                        Debug.LogError($"Server reported error: {error.GetString()}");
                     }
                     else
                     {
@@ -146,18 +144,19 @@ public sealed class IsblNet : IDisposable
                 {
                     var patchString = Newtonsoft.Json.JsonConvert.SerializeObject(obj.Value<Newtonsoft.Json.Linq.JArray>("patches"));
                     var patch = JsonSerializer.Deserialize<JsonPatch>(patchString);
-                    if (_serverStateJson == null)
-                        _serverStateJson = JsonNode.Parse(JsonSerializer.Serialize(ServerState));
+                    if (_serverStateJson.ValueKind != JsonValueKind.Object)
+                        _serverStateJson = Isbl.NetUtils.JsonFromObject(ServerState); ;
 
-                    _serverStateJson = patch.Apply(_serverStateJson);
-                    ServerState = _serverStateJson.Deserialize<Isbl.NetServerState>();
+                    var result = patch.Apply(_serverStateJson);
+                    _serverStateJson = result.Result;
+                    ServerState = JsonSerializer.Deserialize<Isbl.NetServerState>(JsonSerializer.Serialize(_serverStateJson));
                 }
                 else if (action == "full state reset")
                 {
-                    JsonNode node = JsonNode.Parse(text);
-                    _serverStateJson = node["state"];
-                    ServerState = _serverStateJson.Deserialize<Isbl.NetServerState>();
-                    Debug.Log($"ServerState: {JsonSerializer.Serialize(ServerState, new JsonSerializerOptions { WriteIndented = true })}\njson: {node["state"]}");
+                    var node = JsonDocument.Parse(text).RootElement;
+                    _serverStateJson = node.GetProperty("state");
+                    ServerState = JsonSerializer.Deserialize<Isbl.NetServerState>(JsonSerializer.Serialize(_serverStateJson));
+                    Debug.Log($"ServerState: {JsonSerializer.Serialize(ServerState, new JsonSerializerOptions { WriteIndented = true })}\njson: {_serverStateJson}");
                 }
                 else if (!string.IsNullOrEmpty(action))
                 {

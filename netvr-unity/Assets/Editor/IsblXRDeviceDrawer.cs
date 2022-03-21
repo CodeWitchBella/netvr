@@ -47,11 +47,11 @@ public class IsblXRDeviceDrawer : PropertyDrawer
             DrawField("Characteristics", SerializeCharacteristics(device.Characteristics));
             DrawField("HasData", device.HasData);
 
-            var locations = device.SerializeConfiguration()["locations"];
-            foreach (var prop in locations.AsObject())
+            var locations = device.SerializeConfiguration().GetProperty("locations");
+            foreach (var prop in locations.EnumerateObject())
             {
-                var propName = char.ToUpper(prop.Key[0]) + prop.Key[1..];
-                if (prop.Value.GetValue<int>() >= 0)
+                var propName = char.ToUpper(prop.Name[0]) + prop.Name[1..];
+                if (prop.Value.GetInt32() >= 0)
                     DrawField(propName, device.GetType().GetProperty(propName).GetValue(device).ToString());
             }
 
