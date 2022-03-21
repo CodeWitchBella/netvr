@@ -81,6 +81,7 @@ public sealed class IsblPersistentDataSaver<TInstance> where TInstance : IIsblPe
             var value = Serialize();
             if (value != _fileData)
             {
+                await Task.Run(() => Directory.CreateDirectory(DataDirectory));
                 using var writer = new StreamWriter(DataPath);
                 await writer.WriteAsync(value);
                 _fileData = value;

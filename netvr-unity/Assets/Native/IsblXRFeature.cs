@@ -14,7 +14,7 @@ using UnityEngine.XR.OpenXR.Features;
     Company = "Isbl",
     Desc = "Noop extension.",
     // https://www.khronos.org/registry/OpenXR/specs/1.0/html/xrspec.html#XR_EXT_hand_tracking
-    OpenxrExtensionStrings = ExtHandTracking,
+    OpenxrExtensionStrings = "",//ExtHandTracking,
     Version = "0.0.1",
     FeatureId = FeatureId)]
 #endif
