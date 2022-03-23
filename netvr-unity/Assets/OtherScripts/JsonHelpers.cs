@@ -1,4 +1,5 @@
 using System;
+using System.Text;
 using System.Text.Json;
 using System.Text.Json.Serialization;
 using UnityEngine;
@@ -7,8 +8,38 @@ namespace Isbl.Json
 {
     public class Vector3Converter : JsonConverter<Vector3>
     {
+        private static readonly byte[] _propX = Encoding.UTF8.GetBytes("x");
+        private static readonly byte[] _propY = Encoding.UTF8.GetBytes("y");
+        private static readonly byte[] _propZ = Encoding.UTF8.GetBytes("z");
+
+        private static float ReadFloat(ref Utf8JsonReader reader)
+        {
+            if (!reader.Read()) throw new Exception("Unexpected end");
+            return (float)reader.GetDouble();
+        }
+
+
         public static Vector3 StaticRead(ref Utf8JsonReader reader)
-            => JsonSerializer.Deserialize<Vector3>(ref reader);
+        {
+            if (reader.TokenType != JsonTokenType.StartObject) throw new Exception("Expected object start");
+
+            Vector3 result = Vector3.zero;
+            while (reader.Read())
+            {
+                switch (reader.TokenType)
+                {
+                case JsonTokenType.EndObject: return result;
+                case JsonTokenType.PropertyName:
+                    if (reader.ValueTextEquals(_propX)) result.x = ReadFloat(ref reader);
+                    else if (reader.ValueTextEquals(_propY)) result.y = ReadFloat(ref reader);
+                    else if (reader.ValueTextEquals(_propZ)) result.z = ReadFloat(ref reader);
+                    else reader.Skip();
+                    break;
+                default: throw new Exception("Unexpected token when parsing vector");
+                }
+            }
+            throw new Exception("Unexpected end");
+        }
 
         public override Vector3 Read(
             ref Utf8JsonReader reader,
