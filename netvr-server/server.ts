@@ -2,9 +2,14 @@
  * Server used for relaying messages between multiple users.
  *
  * Example invocation:
- * $ deno run --watch --import-map ./vendor/import_map.json --allow-net --allow-read=../netvr-dashboard/dist,./netvr-room.json --allow-write=./netvr-room.json server.ts
+ * $ deno run --watch --import-map ./vendor/import_map.json --allow-net --allow-read=../netvr-dashboard/dist,./netvr-room.json --allow-write=./netvr-room.json --no-check --unstable --allow-env server.ts
  * or
  * $ yarn deno:run
+ *
+ * To run in debug mode:
+ * $ deno run --inspect-brk --import-map ./vendor/import_map.json --allow-net --allow-read=../netvr-dashboard/dist,./netvr-room.json --allow-write=./netvr-room.json --no-check --unstable --allow-env server.ts
+ * or
+ * $ yarn deno:debug
  *
  * See compile.ts for instructions on how to produce executable from this file.
  */
@@ -24,12 +29,16 @@ await Deno.permissions.request({
 })
 
 const l = Deno.listen({ port: 10_000 })
-console.log(l.addr)
-console.log(Deno.build)
-console.log(Deno.version)
+console.log(
+  `\nOpen your browser at %chttp://localhost:${l.addr.port}%c to see the management console\n`,
+  'font-weight: bold; color: blue',
+  'font-weight: normal; color: initial',
+)
+
 function save(data: string) {
   Deno.writeTextFile('netvr-room.json', data)
 }
+
 const room = await Deno.readTextFile('netvr-room.json').then(
   (savedData) => createIdHandler(netvrRoomOptions, { save }, savedData),
   () => createIdHandler(netvrRoomOptions, { save }),
@@ -55,7 +64,17 @@ async function handleConnection(tcpConn: Deno.Conn) {
       })
     } else {
       const { pathname } = new URL(event.request.url)
-      if (pathname.startsWith('/assets')) {
+      if (pathname === '/api/info' && event.request.method === 'GET') {
+        event.respondWith(
+          new Response(
+            JSON.stringify({
+              intefaces: Deno.networkInterfaces(),
+              deno: { version: Deno.version, build: Deno.build },
+            }),
+            { headers: { 'content-type': 'application/json' } },
+          ),
+        )
+      } else if (pathname.startsWith('/assets')) {
         await serveFile(pathname, event)
       } else {
         await serveFile(
@@ -87,7 +106,7 @@ async function serveFile(
     const filepath = '../netvr-dashboard/dist' + pathname
     const fileContents = await Deno.readFile(filepath)
     const mime =
-      mimetypes[pathname.substr(pathname.lastIndexOf('.') + 1)] ??
+      mimetypes[pathname.substring(pathname.lastIndexOf('.') + 1)] ??
       mimetypes['bin']
 
     await event.respondWith(

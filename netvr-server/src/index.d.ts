@@ -25,6 +25,7 @@ declare const Deno: {
   upgradeWebSocket: any
   readFile: any
   args: string[]
+  networkInterfaces(): any[]
 }
 declare namespace Deno {
   export type Conn = any
