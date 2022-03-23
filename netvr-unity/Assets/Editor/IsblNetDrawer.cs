@@ -3,6 +3,7 @@ using UnityEditor;
 using System.Text.Json;
 using System.Linq;
 using System.Collections.Generic;
+using System.Text.RegularExpressions;
 
 [CustomPropertyDrawer(typeof(IsblNetComponent.SelfPropertyAttribute))]
 public class IsblNetDrawer : PropertyDrawer
@@ -83,12 +84,12 @@ public class IsblNetDrawer : PropertyDrawer
         List<KeyValuePair<string, string>> val = new();
         if (net == null) return val;
 
-        var json = JsonSerializer.Serialize(net.ServerState, new JsonSerializerOptions
-        {
-            WriteIndented = true,
-        }).Split(System.Environment.NewLine);
+        var jsonString = JsonSerializer.Serialize(net.ServerState, new JsonSerializerOptions { WriteIndented = true });
 
-        foreach (var line in json)
+        var regex = new Regex(@"{\s*(""[xyz]"":\s*[0-9]+(\.[0-9]+)?),\s*(""[xyz]"":\s*[0-9]+(\.[0-9]+)?),\s*(""[xyz]"":\s*[0-9]+(\.[0-9]+)?)\s*}");
+        jsonString = regex.Replace(jsonString, "{ $1, $3, $5 }");
+
+        foreach (var line in jsonString.Split(System.Environment.NewLine))
         {
             var index = line.IndexOf(":");
             if (line.Trim() == "}," || line.Trim() == "}" || line == "{") continue;
