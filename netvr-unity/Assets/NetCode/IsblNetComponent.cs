@@ -1,6 +1,3 @@
-using System.Collections;
-using System.Collections.Generic;
-using System.Diagnostics.CodeAnalysis;
 using UnityEngine;
 
 /// <summary>
@@ -14,55 +11,34 @@ using UnityEngine;
 public class IsblNetComponent : MonoBehaviour
 {
     public bool PrintDebug;
-    static IsblNetComponent _instance;
-    /// <summary>
-    /// Unity part of IsblNet singleton scheme.
-    /// </summary>
-    public static IsblNet Instance
-    {
-        get { return _instance._net; }
-        set
-        {
-            if (_instance == null) _instance = FindObjectOfType<IsblNetComponent>();
 
-            if (_instance == null)
-            {
-                GameObject go = new("IsblNet");
-                _instance = go.AddComponent<IsblNetComponent>();
-            }
-
-            if (_instance._net != value)
-            {
-                _instance._net?.Dispose();
-            }
-            _instance._net = value;
-        }
-    }
-    public static bool InstanceExists { get { return _instance?._net != null; } }
-    void Start()
+    void OnEnable()
     {
-        if (_instance == null)
+        if (IsblNet.Instance != null)
         {
-            _instance = this;
-            IsblNet.EnsureInstanceExists();
-        }
-        else if (_instance != this)
-        {
+            gameObject.SetActive(false);
+            this.enabled = false;
             Destroy(gameObject);
-            Debug.LogWarning("Only one instance of IsblNet could be in same scene");
             return;
         }
-
-        DontDestroyOnLoad(gameObject); // only explicit destroying
+        _net = new();
+        IsblNet.Instance = _net;
 
 #if UNITY_EDITOR
         if (_net != null) _net.UnityEditorOnlyDebug.PrintDebug = PrintDebug;
 #endif
     }
 
+    void OnDisable()
+    {
+        if (IsblNet.Instance == _net) IsblNet.Instance = null;
+        _net?.Dispose();
+        _net = null;
+    }
+
     void FixedUpdate()
     {
-        _net?.Tick();
+        _net.Tick();
 
 #if UNITY_EDITOR
         if (_net != null) _net.UnityEditorOnlyDebug.PrintDebug = PrintDebug;
@@ -70,16 +46,13 @@ public class IsblNetComponent : MonoBehaviour
 #endif
     }
 
-    void OnDestroy()
-    {
-        _net?.Dispose();
-        _net = null;
-    }
-
 #if UNITY_EDITOR
+    /// <summary>
+    /// Used from IsblNetDrawer to attach here without requiring to have properties
+    /// </summary>
     public class SelfPropertyAttribute : PropertyAttribute { };
     [SelfProperty]
     public GameObject Hack;
 #endif
-    IsblNet _net;
+    private IsblNet _net;
 }

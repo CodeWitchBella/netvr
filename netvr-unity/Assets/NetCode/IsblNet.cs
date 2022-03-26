@@ -15,19 +15,21 @@ public sealed class IsblNet : IDisposable
 {
     public const int ProtocolVersion = 2;
 
+    static IsblNet _instance;
     /// <summary>
-    /// Makes sure that there is existing instance of IsblNet. This is usually
-    /// not necessary to call directly because .Instance already does that.
+    /// Utility to not require every component to have to search for IsblNet on Start()
     /// </summary>
-    /// This method is used in Singleton instantiation scheme and is the only
-    /// place where IsblNet constructor is called.
-    public static void EnsureInstanceExists() { if (!IsblNetComponent.InstanceExists) IsblNetComponent.Instance = new(); }
-
-    /// <summary>
-    /// When you need to send or receive message via network use this to access
-    /// primary IsblNet instance
-    /// </summary>
-    public static IsblNet Instance { get { EnsureInstanceExists(); return IsblNetComponent.Instance; } }
+    /// Also makes guards against accidental replacements.
+    public static IsblNet Instance
+    {
+        get { return _instance; }
+        set
+        {
+            if (value == null) _instance = value;
+            else if (_instance != null) throw new Exception("Can't set multiple IsblNets");
+            else _instance = value;
+        }
+    }
 
     ReconnectingClientWebSocket _socket;
 
@@ -66,10 +68,7 @@ public sealed class IsblNet : IDisposable
         }
     }
 
-    /// <summary>Private constructor. Only place where this is called is from
-    /// EnsureInstanceExists and that only happens if other instance does not
-    /// exist already.</summary>
-    IsblNet()
+    public IsblNet()
     {
         var data = IsblPersistentData.Instance.GetLatestConnection();
         SocketUrl = data.SocketUrl;
@@ -291,6 +290,7 @@ public sealed class IsblNet : IDisposable
     public void Dispose()
     {
         _socket?.Dispose();
+        if (Instance == this) Instance = null;
     }
 
 #if UNITY_EDITOR

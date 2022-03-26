@@ -1,9 +1,6 @@
 using UnityEngine;
 using UnityEditor;
-using System.Text.Json;
-using System.Linq;
 using System.Collections.Generic;
-using System.Text.RegularExpressions;
 
 [CustomPropertyDrawer(typeof(IsblNetComponent.SelfPropertyAttribute))]
 public class IsblNetDrawer : PropertyDrawer
@@ -13,13 +10,13 @@ public class IsblNetDrawer : PropertyDrawer
 
     public override float GetPropertyHeight(SerializedProperty property, GUIContent label)
     {
-        var net = IsblNetComponent.InstanceExists ? IsblNetComponent.Instance : null;
+        var net = IsblNet.Instance;
         return LineHeight * (24 + SerializeIsblNet(net).Count);
     }
 
     public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
     {
-        var net = IsblNetComponent.InstanceExists ? IsblNetComponent.Instance : null;
+        var net = IsblNet.Instance;
 
         var y = position.y;
         void DrawLine(string text, string text2 = "")
