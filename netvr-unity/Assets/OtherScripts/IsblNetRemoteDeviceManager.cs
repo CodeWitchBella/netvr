@@ -45,15 +45,15 @@ public class IsblNetRemoteDeviceManager : MonoBehaviour
 
     static void SyncClient(IsblNet net, UInt16 id, Isbl.NetServerState.Client netState, IsblNetRemoteClient remoteClient)
     {
-        if (!net.FastState.Clients.TryGetValue(id, out var devices))
+        if (!net.FastState.Clients.TryGetValue(id, out var fastStateDevices))
         {
-            devices = new();
-            net.FastState.Clients.Add(id, devices);
+            fastStateDevices = new();
+            net.FastState.Clients.Add(id, fastStateDevices);
         }
 
         var toRemove = remoteClient.Devices.Where(device =>
         {
-            if (!devices.ContainsKey(device.Key))
+            if (!fastStateDevices.ContainsKey(device.Key))
             {
                 Destroy(device.Value.gameObject);
                 return true;
@@ -62,7 +62,7 @@ public class IsblNetRemoteDeviceManager : MonoBehaviour
         }).Select(c => c.Key).ToArray();
         foreach (var key in toRemove) remoteClient.Devices.Remove(key);
 
-        foreach (var iter in devices)
+        foreach (var iter in fastStateDevices)
         {
             IsblNetRemoteDevice device;
             if (remoteClient.Devices.ContainsKey(iter.Key))

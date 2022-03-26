@@ -150,6 +150,7 @@ public sealed class IsblNet : IDisposable
                     var result = patch.Apply(_serverStateJson);
                     _serverStateJson = result.Result;
                     ServerState = JsonSerializer.Deserialize<Isbl.NetServerState>(JsonSerializer.Serialize(_serverStateJson));
+                    UpdateFastStateStructure();
                 }
                 else if (action == "full state reset")
                 {
@@ -157,6 +158,7 @@ public sealed class IsblNet : IDisposable
                     _serverStateJson = node.GetProperty("state");
                     ServerState = JsonSerializer.Deserialize<Isbl.NetServerState>(JsonSerializer.Serialize(_serverStateJson));
                     Debug.Log($"ServerState: {JsonSerializer.Serialize(ServerState, new JsonSerializerOptions { WriteIndented = true })}\njson: {_serverStateJson}");
+                    UpdateFastStateStructure();
                 }
                 else if (!string.IsNullOrEmpty(action))
                 {
@@ -201,6 +203,41 @@ public sealed class IsblNet : IDisposable
                     Debug.LogWarning($"Unknown binary message type {messageType}");
                 }
             };
+    }
+
+    /**
+     * Takes data from server state and updates fast state's structure accordingly
+     */
+    void UpdateFastStateStructure()
+    {
+        var outdated = FastState.Clients.Keys.Where(fastStateClientId => !ServerState.Clients.ContainsKey(fastStateClientId)).ToArray();
+        foreach (var key in outdated) FastState.Clients.Remove(key);
+
+        foreach (var serverStateClientEntry in ServerState.Clients)
+        {
+            if (!FastState.Clients.TryGetValue(serverStateClientEntry.Key, out var fastClient))
+            {
+                fastClient = new();
+                FastState.Clients.Add(serverStateClientEntry.Key, fastClient);
+            }
+
+            if (serverStateClientEntry.Value.Devices != null)
+            {
+                foreach (var deviceJson in serverStateClientEntry.Value.Devices)
+                {
+                    var id = deviceJson.GetProperty("localId").GetUInt16();
+                    if (!fastClient.TryGetValue(id, out var fastDevice))
+                    {
+                        fastDevice = new() { DeviceData = new() };
+                        fastClient.Add(id, fastDevice);
+                    }
+
+                    // TODO: remove Newtonsoft.Json here
+                    var newtonsoftJson = Newtonsoft.Json.Linq.JObject.Parse(JsonSerializer.Serialize(deviceJson));
+                    fastDevice.DeviceData.DeSerializeConfiguration(newtonsoftJson);
+                }
+            }
+        }
     }
 
     void HandleHapticRequest(byte[] data, int offset)

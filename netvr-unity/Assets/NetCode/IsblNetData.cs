@@ -44,6 +44,10 @@ namespace Isbl
             [JsonInclude]
             [JsonPropertyName("calibration")]
             public Calibration Calibration;
+
+            [JsonInclude]
+            [JsonPropertyName("devices")]
+            public List<JsonElement> Devices;
         }
 
         [JsonInclude]
@@ -59,7 +63,6 @@ namespace Isbl
     {
         public struct RemoteDevice
         {
-            public IsblNetRemoteDevice Device;
             public IsblStaticXRDevice DeviceData;
         }
         public readonly Dictionary<UInt16, Dictionary<UInt16, RemoteDevice>> Clients = new();
