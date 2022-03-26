@@ -69,7 +69,17 @@ public class IsblNetDrawer : PropertyDrawer
             DrawLineI("    Gzip Size", net.Stats.MessageSizeGzip);
             DrawLineI("    Brotli Size", net.Stats.MessageSizeBrotli);
             DrawLineI("    Max Brotli", net.Stats.MessageSizeBrotliMax);
-            foreach (var line in SerializeIsblNet(net)) DrawLine(line.Key, line.Value);
+            var lastIndent = 0;
+            foreach (var line in SerializeIsblNet(net))
+            {
+                var key = line.Key.TrimStart();
+                var indent = line.Key.Length - key.Length;
+                for (; lastIndent < indent; lastIndent++) EditorGUI.indentLevel++;
+                for (; lastIndent > indent; lastIndent--) EditorGUI.indentLevel--;
+                DrawLine(line.Key, line.Value);
+            }
+            for (; lastIndent > 0; lastIndent--) EditorGUI.indentLevel--;
+
             DrawLine("Last Redraw", System.DateTime.Now.ToLongTimeString());
         }
         EditorGUI.EndProperty();
@@ -84,34 +94,26 @@ public class IsblNetDrawer : PropertyDrawer
         List<KeyValuePair<string, string>> val = new();
         if (net == null) return val;
 
-        var jsonString = JsonSerializer.Serialize(net.ServerState, new JsonSerializerOptions { WriteIndented = true });
+        static string Vec3ToString(Vector3 v) { return $"{{ x: {v.x}, y: {v.y}, z: {v.z} }}"; }
 
-        var regex = new Regex(@"{\s*(""[xyz]"":\s*[0-9]+(\.[0-9]+)?),\s*(""[xyz]"":\s*[0-9]+(\.[0-9]+)?),\s*(""[xyz]"":\s*[0-9]+(\.[0-9]+)?)\s*}");
-        jsonString = regex.Replace(jsonString, "{ $1, $3, $5 }");
-
-        foreach (var line in jsonString.Split(System.Environment.NewLine))
+        val.Add(new("ServerState.Clients", ""));
+        int disconnectedCount = 0;
+        foreach (var client in net.ServerState.Clients)
         {
-            var index = line.IndexOf(":");
-            if (line.Trim() == "}," || line.Trim() == "}" || line == "{") continue;
-            if (index < 0)
+            if (!client.Value.Connected)
             {
-                val.Add(new(line, ""));
+                disconnectedCount++;
+                continue;
             }
-            else
-            {
-                var key = line[..index];
-                var value = line[(index + 2)..];
-                var trimmedKey = key.TrimStart();
-                var indent = key.Length - trimmedKey.Length;
-                if (trimmedKey.StartsWith("\"") && key.EndsWith("\""))
-                {
-                    key = key[(key.Length - trimmedKey.Length + 1)..(key.Length - 1)];
-                }
-                if (value.EndsWith(",")) value = value[0..(value.Length - 1)];
-                if (value == "{") value = "";
-                val.Add(new(string.Concat(Enumerable.Repeat(" |  ", indent / 2 - 1)) + key, value));
-            }
+            val.Add(new(" " + client.Key, ""));
+            val.Add(new("  Translate", Vec3ToString(client.Value.Calibration.Translate)));
+            val.Add(new("  Rotate", Vec3ToString(client.Value.Calibration.Rotate.eulerAngles)));
+            val.Add(new("  Scale", Vec3ToString(client.Value.Calibration.Scale)));
+            if (client.Value.Devices != null)
+                val.Add(new("  Devices", $"array of length {client.Value.Devices.Count}"));
         }
+        val.Add(new($" + {disconnectedCount} disconnected clients", ""));
         return val;
     }
+
 }
