@@ -209,12 +209,12 @@ function DashboardInner() {
                 const binaryClient = clients.find(
                   (c) => c.clientId === clientId,
                 )
-                if (!binaryClient) return null
+                if (!clientConfiguration.connected) return null
                 return (
                   <Client
                     key={clientId}
                     client={clientConfiguration}
-                    binaryClient={binaryClient}
+                    binaryClient={binaryClient ?? { clientId }}
                     socket={socket}
                   />
                 )
@@ -265,7 +265,7 @@ function Client({
   client,
   socket,
 }: {
-  binaryClient: ClientBinaryData
+  binaryClient: ClientBinaryData | { clientId: number; devices?: undefined }
   client: ClientConfiguration
   socket: PWebSocket
 }) {
@@ -273,17 +273,20 @@ function Client({
   return (
     <Pane>
       <div>id: {binaryClient.clientId}</div>
+      <div>ip: {client.connectionInfo.ip}</div>
+      <div>connected: {client.connected ? '✅' : '❌'}</div>
       <Button type="button" onClick={toggleShowJson}>
         {showJson ? 'Hide JSON' : 'Show JSON'}
       </Button>
-      {binaryClient.devices.map((data) => {
-        const info = client.devices?.find((d) => d.localId === data.deviceId)
-        if (!info) return null
+      {client.devices?.map((info) => {
+        const data = binaryClient.devices?.find(
+          (d) => d.deviceId === info.localId,
+        )
         return (
           <Device
-            device={data}
+            device={data ?? null}
             configuration={info}
-            key={data.deviceId}
+            key={info.localId}
             clientId={binaryClient.clientId}
             socket={socket}
           />
@@ -321,23 +324,22 @@ function Device({
   socket,
   clientId,
 }: {
-  device: DeviceBinaryData
+  device: DeviceBinaryData | null
   configuration: DeviceConfiguration
   socket: PWebSocket
   clientId: number
 }) {
-  const { data, unknown } = mapData(device, configuration)
   const [showDetails, toggleShowDetails] = useReducer(
     (prev: boolean) => !prev,
     false,
   )
 
-  function identify() {
+  function identify(deviceId: number) {
     const buffer = new ArrayBuffer(21)
     const view = new DataView(buffer)
     view.setUint8(0, 2) // message type
     view.setUint32(1, clientId, true)
-    view.setUint32(5, device.deviceId, true)
+    view.setUint32(5, deviceId, true)
     view.setUint32(9, 0, true) // channel
     view.setFloat32(13, 0.25, true) // amplitude
     view.setFloat32(17, 0.1, true) // time (oculus-only)
@@ -353,51 +355,70 @@ function Device({
       }}
     >
       <div style={{ display: 'flex', justifyContent: 'space-between' }}>
-        <div>Device: {device.deviceId}</div>
-        <Button
-          type="button"
-          onClick={identify}
-          disabled={!configuration.haptics?.supportsImpulse}
-        >
-          Identify
-        </Button>
+        <div>Device: {configuration.localId}</div>
+        {device ? (
+          <Button
+            type="button"
+            onClick={() => identify(device.deviceId)}
+            disabled={!configuration.haptics?.supportsImpulse}
+          >
+            Identify
+          </Button>
+        ) : null}
       </div>
       <div>Name: {configuration.name}</div>
       <div>Characteristics: {configuration.characteristics.join(', ')}</div>
-      <Button type="button" onClick={toggleShowDetails}>
-        {showDetails ? 'Hide details' : 'Show details'}
-      </Button>
-      {showDetails ? (
+      {device ? (
         <>
-          {Object.entries(data).map(([key, o]) => (
-            <div key={key}>
-              {key}:{' '}
-              {o.type === 'quaternion' || o.type === 'vector3'
-                ? `${o.value.x.toFixed(2)}, ${o.value.y.toFixed(
-                    2,
-                  )}, ${o.value.z.toFixed(2)}`
-                : o.type === 'vector2'
-                ? `${o.value.x.toFixed(2)}, ${o.value.y.toFixed(2)} `
-                : o.type === 'float'
-                ? o.value.toFixed(2)
-                : o.type === 'uint32'
-                ? o.value.toFixed(0)
-                : o.type === 'bool'
-                ? o.value === 'fail'
-                  ? 'fail'
-                  : o.value
-                  ? '✅'
-                  : '❌'
-                : null}
-            </div>
-          ))}
-          <div>
-            <b>Unkown:</b>
-            {unknown ? <pre>{JSON.stringify(unknown, null, 2)}</pre> : ' none'}
-          </div>
+          <Button type="button" onClick={toggleShowDetails}>
+            {showDetails ? 'Hide details' : 'Show details'}
+          </Button>
+          {showDetails ? (
+            <DeviceDetails device={device} configuration={configuration} />
+          ) : null}
         </>
       ) : null}
     </div>
+  )
+}
+
+function DeviceDetails({
+  device,
+  configuration,
+}: {
+  device: DeviceBinaryData
+  configuration: DeviceConfiguration
+}) {
+  const { data, unknown } = mapData(device, configuration)
+  return (
+    <>
+      {Object.entries(data).map(([key, o]) => (
+        <div key={key}>
+          {key}:{' '}
+          {o.type === 'quaternion' || o.type === 'vector3'
+            ? `${o.value.x.toFixed(2)}, ${o.value.y.toFixed(
+                2,
+              )}, ${o.value.z.toFixed(2)}`
+            : o.type === 'vector2'
+            ? `${o.value.x.toFixed(2)}, ${o.value.y.toFixed(2)} `
+            : o.type === 'float'
+            ? o.value.toFixed(2)
+            : o.type === 'uint32'
+            ? o.value.toFixed(0)
+            : o.type === 'bool'
+            ? o.value === 'fail'
+              ? 'fail'
+              : o.value
+              ? '✅'
+              : '❌'
+            : null}
+        </div>
+      ))}
+      <div>
+        <b>Unkown:</b>
+        {unknown ? <pre>{JSON.stringify(unknown, null, 2)}</pre> : ' none'}
+      </div>
+    </>
   )
 }
 

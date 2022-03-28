@@ -43,6 +43,13 @@ export function Button(
         fontSize: '1rem',
         color: theme.resolved.base07,
         background: theme.resolved.base01,
+        ...(props.disabled
+          ? {
+              color: theme.resolved.base04,
+              borderColor: 'transparent',
+              cursor: 'pointer',
+            }
+          : {}),
         ...props.style,
       }}
     />
