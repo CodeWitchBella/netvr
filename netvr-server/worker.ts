@@ -3,8 +3,6 @@
  * entrypoint intended for running on cloudflare workers.
  *
  * Run using:
- * $ yarn miniflare --watch --debug --port 10000
- * or
  * $ yarn dev
  */
 

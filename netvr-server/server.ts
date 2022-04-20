@@ -2,14 +2,10 @@
  * Server used for relaying messages between multiple users.
  *
  * Example invocation:
- * $ deno run --watch --import-map ./vendor/import_map.json --allow-net --allow-read=../netvr-dashboard/dist,./netvr-room.json --allow-write=./netvr-room.json --no-check --unstable --allow-env server.ts
- * or
- * $ yarn deno:run
+ * $ yarn task run
  *
  * To run in debug mode:
- * $ deno run --inspect-brk --import-map ./vendor/import_map.json --allow-net --allow-read=../netvr-dashboard/dist,./netvr-room.json --allow-write=./netvr-room.json --no-check --unstable --allow-env server.ts
- * or
- * $ yarn deno:debug
+ * $ yarn task debug
  *
  * See compile.ts for instructions on how to produce executable from this file.
  */

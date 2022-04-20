@@ -2,9 +2,7 @@
  * Creates single executable to run server which includes all the assets required
  *
  * Run using:
- * $ deno run --unstable --allow-read --allow-write --allow-run --allow-net ./scripts/compile.ts
- * Or
- * $ yarn deno:compile
+ * $ deno task compile
  */
 //@ts-ignore
 import { Leaf } from '../vendor-patched/leaf.ts'

@@ -2,9 +2,7 @@
  * Simple wrapper around deno vendor which also updates the resulting import map
  *
  * Run using:
- * $ deno run --allow-read --allow-write --allow-run scripts/vendor.ts
- * or
- * $ yarn deno:vendor
+ * $ deno task vendor
  */
 
 await Deno.run({
