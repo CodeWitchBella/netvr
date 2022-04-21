@@ -13,3 +13,5 @@ vrlab
 golem
 brotli
 Deno
+nodejs
+corepack

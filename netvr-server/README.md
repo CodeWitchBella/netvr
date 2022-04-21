@@ -16,12 +16,23 @@ Go to [actions/netvr-server on github](https://github.com/CodeWitchBella/netvr/a
 
 Install [deno](https://deno.land).
 
-If you have `yarn` you can then run `yarn deno:compile`, otherwise look in `package.json` and run the command specified in `scripts/deno:compile`. This will produce executable file which you can use to run local server.
+Run `deno task compile`. This will produce executable file which you can use to run local server.
+
+Also to have dashboard available you need to have dashboard built first. See README.md in netvr-dashboard folder for instructions on how to do that.
 
 ## Deploying server to cloudflare
 
-You'll need [wrangler](https://developers.cloudflare.com/workers/cli-wrangler), and [yarn](https://classic.yarnpkg.com/lang/en/). Install both and run `yarn` followed by `wrangler publish`. You might need to update `wrangler.toml` with your account_id and/or login to cloudflare. See wrangler's documentation.
+You'll need [nodejs 16][nodejs] (later might also work, but I did not test that), and [yarn classic][yarn]. To install nodejs use the LTS download button on their [home page][nodejs]. To install yarn I recommend running `corepack enable yarn` as admin (corepack is installed by default with recent nodejs versions). Then you can run `yarn` to install dependencies followed by `yarn publish` to do the deployment in this folder (netvr-server). You might need to update `wrangler.toml` with your account_id and/or login to cloudflare. See wrangler's documentation.
+
+Also to have dashboard available you need to have dashboard built first. See README.md in netvr-dashboard folder for instructions on how to do that.
+
+[nodejs]: https://nodejs.org/en/
+[yarn]: https://classic.yarnpkg.com/lang/en/
 
 ## Developing locally
 
-If you have deno and yarn (see above), you can just run `yarn deno:run`.
+If you have deno (see above), you can just run `deno task run`.
+
+If you want to simulate the cloudflare version run `yarn` to install dependencies followed by `yarn dev` to run the dev server.
+
+If you have dashboard build the local dev server will serve that, but if you want to make changes you can also access the dashboard from its development server. It will connect to same server.

@@ -3,12 +3,14 @@ netvr-room.json
 netvr-unity-build*
 netvr-windows
 netvr-unity-win
+netvr-android
 /netvr-unity/user-data
 node_modules
 dist
 deno-dist
 *.exe
 /netvr-server/server
+yarn-error.log
 
 # This .gitignore file should be placed at the root of your Unity project directory
 #
