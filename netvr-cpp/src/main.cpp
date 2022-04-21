@@ -16,14 +16,14 @@ XrResult my_get_instance_proc_addr(XrInstance instance, const char *name, PFN_xr
     return orig_get_instance_proc_addr(instance, name, function);
 }
 
-ISBL_NETVR_EXPORT void *isbl_netvr_hook_get_instance_proc_addr(void *func)
+ISBL_NETVR_FUNC void *isbl_netvr_hook_get_instance_proc_addr(void *func)
 {
     unity_log("isbl_netvr_hook_get_instance_proc_addr");
     orig_get_instance_proc_addr = (PFN_xrGetInstanceProcAddr)func;
     return (void *)my_get_instance_proc_addr;
 }
 
-ISBL_NETVR_EXPORT int isbl_netvr_on_system_change(uint64_t xrSystem, uint64_t xrInstance, void *xrGetInstanceProcAddrPtr)
+ISBL_NETVR_FUNC int isbl_netvr_on_system_change(uint64_t xrSystem, uint64_t xrInstance, void *xrGetInstanceProcAddrPtr)
 {
     unity_log("On system change");
 
@@ -33,7 +33,7 @@ ISBL_NETVR_EXPORT int isbl_netvr_on_system_change(uint64_t xrSystem, uint64_t xr
     return m.determinant();
 }
 
-ISBL_NETVR_EXPORT void isbl_netvr_set_logger(void (*callback)(const char *))
+ISBL_NETVR_FUNC void isbl_netvr_set_logger(void (*callback)(const char *))
 {
     unity_log = callback;
 }

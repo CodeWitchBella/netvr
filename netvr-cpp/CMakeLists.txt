@@ -3,7 +3,7 @@ project(isbl_netvr LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 
-add_library(${PROJECT_NAME} SHARED src/main.cpp src/calibration.cpp)
+add_library(${PROJECT_NAME} SHARED src/main.cpp src/calibration.cpp src/calibration-eigen.cpp)
 
 if(WIN32)
     target_compile_definitions(${PROJECT_NAME} PRIVATE WIN_EXPORT)
@@ -20,6 +20,10 @@ elseif(ANDROID)
         ${CMAKE_CURRENT_SOURCE_DIR}/../netvr-unity/Assets/Plugins/Android/${CMAKE_ANDROID_ARCH_ABI}/$<TARGET_FILE_NAME:${PROJECT_NAME}>
     )
 endif()
+
+if (MSVC)
+  add_definitions(/bigobj)
+endif ()
 
 message(STATUS ${CMAKE_CURRENT_BINARY_DIR})
 message(STATUS ${ANDROID_ARCH})
