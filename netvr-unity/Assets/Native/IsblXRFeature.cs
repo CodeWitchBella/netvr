@@ -27,7 +27,7 @@ public class IsblXRFeature : OpenXRFeature
     public const string FeatureId = "cz.isbl.netvr";
 
     ulong _xrInstance;
-    IsblDynamicLibrary _lib;
+    internal IsblDynamicLibrary Lib { get; private set; }
 
     static string _log = "";
     static Timer _timer;
@@ -54,10 +54,10 @@ public class IsblXRFeature : OpenXRFeature
     {
         Debug.Log("OnInstanceCreate");
         _xrInstance = xrInstance;
-        if (_lib == null)
+        if (Lib == null)
         {
-            _lib = new();
-            _lib.SetLogger(Logger);
+            Lib = new();
+            Lib.SetLogger(Logger);
         }
         return true;
     }
@@ -65,8 +65,8 @@ public class IsblXRFeature : OpenXRFeature
     protected override void OnInstanceDestroy(ulong xrInstance)
     {
         Debug.Log("OnInstanceDestroy");
-        _lib?.Dispose();
-        _lib = null;
+        Lib?.Dispose();
+        Lib = null;
         _xrInstance = 0;
     }
 
@@ -76,7 +76,7 @@ public class IsblXRFeature : OpenXRFeature
         {
             if (OpenXRRuntime.IsExtensionEnabled(ExtHandTracking))
             {
-                var status = _lib.OnSystemChange(xrSystem, _xrInstance, xrGetInstanceProcAddr);
+                var status = Lib.OnSystemChange(xrSystem, _xrInstance, xrGetInstanceProcAddr);
                 Debug.Log($"_onSystemChange: {status}");
             }
         }
@@ -88,10 +88,12 @@ public class IsblXRFeature : OpenXRFeature
 
     protected override IntPtr HookGetInstanceProcAddr(IntPtr func)
     {
-        _lib?.Dispose();
-        _lib = new();
-        _lib.SetLogger(Logger);
-        return _lib.HookGetInstanceProcAddr(func);
+        if (Lib == null)
+        {
+            Lib = new();
+            Lib.SetLogger(Logger);
+        }
+        return Lib.HookGetInstanceProcAddr(func);
     }
 
     protected override void OnSessionCreate(ulong xrSession)
