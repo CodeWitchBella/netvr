@@ -22,8 +22,8 @@ jobs:
                   yarn build
                   cd ../netvr-server
                   yarn
-                  deno task compile --target x86_64-pc-windows-msvc
-                  deno task compile --target x86_64-unknown-linux-gnu
+                  deno task compile -- --target x86_64-pc-windows-msvc
+                  deno task compile -- --target x86_64-unknown-linux-gnu
                   cd ..
             - name: Upload server.exe
               uses: actions/upload-artifact@v2
