@@ -1267,10 +1267,6 @@
   resolved "https://registry.yarnpkg.com/@humanwhocodes/object-schema/-/object-schema-1.2.1.tgz#b520529ec21d8e5945a1851dfd1c32e94e39ff45"
   integrity sha512-ZnQMnLV4e7hDlUvw8H+U8ASL02SS2Gn6+9Ac3wGGLIe7+je2AeAOxPY+izIPJDfFDb7eDjev0Us8MO1iFRN8hA==
 
-"@isbl/thesis@link:../isbl-thesis":
-  version "0.0.0"
-  uid ""
-
 "@isbl/ts-utils@^1.0.1":
   version "1.0.1"
   resolved "https://registry.yarnpkg.com/@isbl/ts-utils/-/ts-utils-1.0.1.tgz#dcb2668cca3c356bfe0f6d91e9dd2d079b82be68"

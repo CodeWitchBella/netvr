@@ -17,16 +17,13 @@ jobs:
                   deno-version: v1.x
             - name: Build
               run: |
-                  cd isbl-thesis
-                  yarn
-                  yarn vite build
-                  cd ../netvr-dashboard
+                  cd netvr-dashboard
                   yarn
                   yarn build
                   cd ../netvr-server
                   yarn
-                  yarn deno:compile --target x86_64-pc-windows-msvc
-                  yarn deno:compile --target x86_64-unknown-linux-gnu
+                  deno task compile --target x86_64-pc-windows-msvc
+                  deno task compile --target x86_64-unknown-linux-gnu
                   cd ..
             - name: Upload server.exe
               uses: actions/upload-artifact@v2
