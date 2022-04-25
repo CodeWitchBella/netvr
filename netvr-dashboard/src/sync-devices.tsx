@@ -1,13 +1,15 @@
 import { notNull } from '@isbl/ts-utils'
 import { useState } from 'react'
-import { ClientBinaryData, mapData } from './data'
+import { ClientBinaryData, mapData, ServerState } from './data'
 import { Button, Pane } from './design'
 
 export function SyncDevicesButton({
   clients,
+  serverState,
   sendMessage,
 }: {
-  clients: ClientBinaryData[]
+  clients: readonly ClientBinaryData[]
+  serverState: ServerState
   sendMessage: (message: any) => void
 }) {
   const [message, setMessage] = useState('')
@@ -19,14 +21,18 @@ export function SyncDevicesButton({
           setMessage('')
           const headsets = clients
             .map((c) => {
-              const head = c.info?.find(
+              const headInfo = serverState.clients[c.clientId]?.devices?.find(
                 (d) =>
                   d.characteristics.includes('HeadMounted') &&
                   d.characteristics.includes('TrackedDevice') &&
                   d.data,
               )
-              if (!head) return null
-              const data = mapData(head).data
+              if (!headInfo) return null
+              const headData = c.devices.find(
+                (d) => d.deviceId === headInfo.localId,
+              )
+              if (!headData) return null
+              const data = mapData(headData, headInfo).data
               const posRotMask = 3 /* position 1 | rotation 2 */
               if (
                 data.trackingState &&
@@ -38,14 +44,14 @@ export function SyncDevicesButton({
               }
               if (data.centerEyeRotation && data.centerEyePosition) {
                 return {
-                  clientId: c.id,
+                  clientId: c.clientId,
                   position: data.centerEyePosition.value,
                   rotation: data.centerEyeRotation.value,
                 }
               }
               if (data.deviceRotation && data.devicePosition) {
                 return {
-                  clientId: c.id,
+                  clientId: c.clientId,
                   position: data.devicePosition.value,
                   rotation: data.deviceRotation.value,
                 }
@@ -59,24 +65,27 @@ export function SyncDevicesButton({
             return
           }
           sendMessage({
-            action: 'set calibration',
-            calibrations: headsets.map((headset) => {
-              const x = headset.position[0]
-              const z = headset.position[2]
-              const angle = headset.rotation[1]
+            action: 'multiset',
+            data: headsets.map((headset) => {
+              const x = headset.position.x
+              const z = headset.position.z
+              const angle = headset.rotation.y
               return {
-                id: headset.clientId,
-                translate: {
-                  x: -Math.cos(angle) * x + Math.sin(angle) * z,
-                  y: 0,
-                  z: -Math.sin(angle) * x - Math.cos(angle) * z,
+                field: 'calibration',
+                client: headset.clientId,
+                value: {
+                  translate: {
+                    x: -Math.cos(angle) * x + Math.sin(angle) * z,
+                    y: 0,
+                    z: -Math.sin(angle) * x - Math.cos(angle) * z,
+                  },
+                  rotate: {
+                    x: 0,
+                    y: -angle,
+                    z: 0,
+                  },
+                  scale: { x: 1, y: 1, z: 1 },
                 },
-                rotate: {
-                  x: 0,
-                  y: -angle,
-                  z: 0,
-                },
-                scale: { x: 1, y: 1, z: 1 },
                 //...invertAndDecompose(headset.position, headset.rotation),
               }
             }),

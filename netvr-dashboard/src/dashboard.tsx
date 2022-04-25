@@ -196,10 +196,17 @@ function DashboardInner() {
               </Button>
             </Pane>
             <ErrorBoundary>
-              <SyncDevicesButton sendMessage={sendMessage} clients={clients} />
+              <SyncDevicesButton
+                sendMessage={sendMessage}
+                clients={clients}
+                serverState={serverState}
+              />
             </ErrorBoundary>
             <ErrorBoundary>
-              <Calibration sendMessage={sendMessage} />
+              <Calibration
+                sendMessage={sendMessage}
+                serverState={serverState}
+              />
             </ErrorBoundary>
             <StatePane data={serverState} />
 

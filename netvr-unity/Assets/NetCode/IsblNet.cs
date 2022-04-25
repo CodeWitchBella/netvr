@@ -6,6 +6,7 @@ using System.IO;
 using System.IO.Compression;
 using Json.Patch;
 using System.Text.Json;
+using System.Collections.Generic;
 
 /// <summary>
 /// Main implementation of network interface
@@ -31,7 +32,7 @@ public sealed class IsblNet : IDisposable
         }
     }
 
-    ReconnectingClientWebSocket _socket;
+    public ReconnectingClientWebSocket Socket;
 
     JsonElement _serverStateJson;
     public Isbl.NetServerState ServerState = new();
@@ -44,26 +45,26 @@ public sealed class IsblNet : IDisposable
     /// UNITY_EDITOR-only getter for _socket so that I don't have to implement
     /// readonly getter for everything I want to access from Editor GUI
     /// </summary>
-    public ReconnectingClientWebSocket UnityEditorOnlyDebug { get { return _socket; } }
+    public ReconnectingClientWebSocket UnityEditorOnlyDebug { get { return Socket; } }
 #endif
 
     public string SocketUrl
     {
-        get { return _socket?.Uri.ToString() ?? ""; }
+        get { return Socket?.Uri.ToString() ?? ""; }
         set
         {
             if (SocketUrl == value) return;
-            if (_socket != null)
+            if (Socket != null)
             {
                 // simulate disconnect
-                _socket.OnDisconnect?.Invoke();
-                _socket.OnDisconnect = null;
+                Socket.OnDisconnect?.Invoke();
+                Socket.OnDisconnect = null;
                 // clean up
-                _socket.Dispose();
+                Socket.Dispose();
             }
             // re-init
             Debug.Log($"Connecting to: {value}");
-            _socket = new(value);
+            Socket = new(value);
             InitializeSocket();
         }
     }
@@ -74,18 +75,25 @@ public sealed class IsblNet : IDisposable
         SocketUrl = data.SocketUrl;
     }
 
+    readonly Dictionary<string, IIsblNetFeature> _features = new() {
+        { CalibrationFeature.FeatureId, new CalibrationFeature() }
+    };
+
     void InitializeSocket()
     {
-        _socket.OnConnect += () =>
+        Socket.OnConnect += () =>
         {
+
             var conn = IsblPersistentData.Instance.GetConnection(SocketUrl);
             if (conn?.PeerId > 0)
-                _socket.SendAsync(new { action = "i already has id", id = conn.PeerId, token = conn.PeerIdToken, protocolVersion = ProtocolVersion });
+                Socket.SendAsync(new { action = "i already has id", id = conn.PeerId, token = conn.PeerIdToken, protocolVersion = ProtocolVersion });
             else
-                _socket.SendAsync(new { action = "gimme id", protocolVersion = ProtocolVersion });
+                Socket.SendAsync(new { action = "gimme id", protocolVersion = ProtocolVersion });
+
+            foreach (var feature in _features.Values) feature.Reset();
         };
 
-        _socket.OnDisconnect += () =>
+        Socket.OnDisconnect += () =>
         {
             SelfId = 0;
 
@@ -93,16 +101,81 @@ public sealed class IsblNet : IDisposable
             FastState = new();
         };
 
-        _socket.OnTextMessage += (text) =>
+        Socket.OnTextMessage += (text) =>
         {
             Debug.Log($"message: {text}");
             try
             {
                 var obj = Newtonsoft.Json.Linq.JObject.Parse(text);
-                var action = obj.Value<string>("action");
-                if (action == null)
+                var node = JsonDocument.Parse(text).RootElement;
+                if (node.TryGetProperty("feature", out var featureElement))
                 {
-                    var node = JsonDocument.Parse(text).RootElement;
+                    var featureId = featureElement.GetString();
+                    if (String.IsNullOrEmpty(featureId)) throw new Exception("Expected feature to be string");
+                    if (_features.TryGetValue(featureId, out var featureObject))
+                    {
+                        featureObject.OnMessage(this, node);
+                    }
+                    else
+                    {
+                        Debug.LogWarning($"Received message with unknown feature: \"{featureId}\"");
+                    }
+                }
+                else if (node.TryGetProperty("action", out var actionElement))
+                {
+                    var action = actionElement.GetString();
+                    if (action == "id's here" || action == "id ack")
+                    {
+                        var serverVersion = obj.Value<int>("protocolVersion");
+                        if (serverVersion != ProtocolVersion)
+                        {
+                            throw new Exception($"Protocol version mismatch. Client: {ProtocolVersion}, Server: {serverVersion}.");
+                        }
+
+                        if (action == "id's here")
+                        {
+                            SelfId = obj.Value<UInt16>("intValue");
+                            var idToken = obj.Value<string>("stringValue");
+                            IsblPersistentData.Update((data) => data.AddConnection(
+                                socketUrl: SocketUrl,
+                                peerId: SelfId,
+                                peerIdToken: idToken
+                            ));
+                        }
+                        else
+                        {
+                            var conn = IsblPersistentData.Instance.GetConnection(SocketUrl);
+                            SelfId = conn.PeerId;
+                        }
+
+                        SendDeviceInfo();
+                    }
+                    else if (action == "patch")
+                    {
+                        var patchString = Newtonsoft.Json.JsonConvert.SerializeObject(obj.Value<Newtonsoft.Json.Linq.JArray>("patches"));
+                        var patch = JsonSerializer.Deserialize<JsonPatch>(patchString);
+                        if (_serverStateJson.ValueKind != JsonValueKind.Object)
+                            _serverStateJson = Isbl.NetUtils.JsonFromObject(ServerState); ;
+
+                        var result = patch.Apply(_serverStateJson);
+                        _serverStateJson = result.Result;
+                        ServerState = JsonSerializer.Deserialize<Isbl.NetServerState>(JsonSerializer.Serialize(_serverStateJson));
+                        UpdateFastStateStructure();
+                    }
+                    else if (action == "full state reset")
+                    {
+                        _serverStateJson = node.GetProperty("state");
+                        ServerState = JsonSerializer.Deserialize<Isbl.NetServerState>(JsonSerializer.Serialize(_serverStateJson));
+                        Debug.Log($"ServerState: {JsonSerializer.Serialize(ServerState, new JsonSerializerOptions { WriteIndented = true })}\njson: {_serverStateJson}");
+                        UpdateFastStateStructure();
+                    }
+                    else
+                    {
+                        Debug.Log($"Unknown action \"{actionElement}\"");
+                    }
+                }
+                else
+                {
                     if (node.TryGetProperty("error", out var error))
                     {
                         Debug.LogError($"Server reported error: {error.GetString()}");
@@ -113,56 +186,6 @@ public sealed class IsblNet : IDisposable
                         Debug.LogWarning($"Unknown message: {json}");
                     }
                 }
-                else if (action == "id's here" || action == "id ack")
-                {
-                    var serverVersion = obj.Value<int>("protocolVersion");
-                    if (serverVersion != ProtocolVersion)
-                    {
-                        throw new Exception($"Protocol version mismatch. Client: {ProtocolVersion}, Server: {serverVersion}.");
-                    }
-
-                    if (action == "id's here")
-                    {
-                        SelfId = obj.Value<UInt16>("intValue");
-                        var idToken = obj.Value<string>("stringValue");
-                        IsblPersistentData.Update((data) => data.AddConnection(
-                            socketUrl: SocketUrl,
-                            peerId: SelfId,
-                            peerIdToken: idToken
-                        ));
-                    }
-                    else
-                    {
-                        var conn = IsblPersistentData.Instance.GetConnection(SocketUrl);
-                        SelfId = conn.PeerId;
-                    }
-
-                    SendDeviceInfo();
-                }
-                else if (action == "patch")
-                {
-                    var patchString = Newtonsoft.Json.JsonConvert.SerializeObject(obj.Value<Newtonsoft.Json.Linq.JArray>("patches"));
-                    var patch = JsonSerializer.Deserialize<JsonPatch>(patchString);
-                    if (_serverStateJson.ValueKind != JsonValueKind.Object)
-                        _serverStateJson = Isbl.NetUtils.JsonFromObject(ServerState); ;
-
-                    var result = patch.Apply(_serverStateJson);
-                    _serverStateJson = result.Result;
-                    ServerState = JsonSerializer.Deserialize<Isbl.NetServerState>(JsonSerializer.Serialize(_serverStateJson));
-                    UpdateFastStateStructure();
-                }
-                else if (action == "full state reset")
-                {
-                    var node = JsonDocument.Parse(text).RootElement;
-                    _serverStateJson = node.GetProperty("state");
-                    ServerState = JsonSerializer.Deserialize<Isbl.NetServerState>(JsonSerializer.Serialize(_serverStateJson));
-                    Debug.Log($"ServerState: {JsonSerializer.Serialize(ServerState, new JsonSerializerOptions { WriteIndented = true })}\njson: {_serverStateJson}");
-                    UpdateFastStateStructure();
-                }
-                else if (!string.IsNullOrEmpty(action))
-                {
-                    Debug.Log($"Unknown action \"{action}\"");
-                }
             }
             catch (Exception e)
             {
@@ -170,7 +193,7 @@ public sealed class IsblNet : IDisposable
                 Debug.LogException(e);
             }
         };
-        _socket.OnBinaryMessage += (data) =>
+        Socket.OnBinaryMessage += (data) =>
             {
                 if (data.Length < 1) return;
                 byte messageType = data[0];
@@ -277,7 +300,7 @@ public sealed class IsblNet : IDisposable
 
     void SendDeviceInfo()
     {
-        _ = _socket.SendAsync(new
+        _ = Socket.SendAsync(new
         {
             action = "set",
             client = SelfId,
@@ -289,7 +312,7 @@ public sealed class IsblNet : IDisposable
 
     public void Dispose()
     {
-        _socket?.Dispose();
+        Socket?.Dispose();
         if (Instance == this) Instance = null;
     }
 
@@ -326,7 +349,7 @@ public sealed class IsblNet : IDisposable
     /// </summary>
     public void Tick()
     {
-        if (SelfId < 1 || _socket == null) return;
+        if (SelfId < 1 || Socket == null) return;
         var bytes = new byte[DeviceManager.CalculateSerializationSize() + 1];
         var span = bytes.AsSpan();
         span[0] = 1;
@@ -350,7 +373,9 @@ public sealed class IsblNet : IDisposable
         Stats.MessageSizeBrotliMax = Math.Max(Stats.MessageSizeBrotliMax, Stats.MessageSizeBrotli);
 #endif
 
-        _ = _socket.SendAsync(bytes, System.Net.WebSockets.WebSocketMessageType.Binary);
+        _ = Socket.SendAsync(bytes, System.Net.WebSockets.WebSocketMessageType.Binary);
         if (DeviceManager.DeviceInfoChanged) SendDeviceInfo();
+
+        foreach (var feature in _features.Values) feature.Tick(this);
     }
 }

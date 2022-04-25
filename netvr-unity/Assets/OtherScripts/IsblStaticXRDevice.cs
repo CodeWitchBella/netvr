@@ -108,6 +108,14 @@ public class IsblStaticXRDevice
     public bool IsLocal;
     public InputDeviceCharacteristics Characteristics { get; private set; }
     public StaticHaptics Haptics;
+    /**
+     * When was this device last updated. Only works for local devices.
+     */
+    public double LastUpdateTime { get; private set; }
+    /**
+     * Returns time in the same format as is used for LastUpdateTime
+     */
+    public static double GetTimeNow() => Time.realtimeSinceStartupAsDouble;
     Locations _locations = new();
 
     /// <summary>
@@ -843,6 +851,7 @@ public class IsblStaticXRDevice
                 _dataEyes = null; // EYES_NETCODE: already implemented
 
                 _locations = new();
+                LastUpdateTime = 0;
             }
             return;
         }
@@ -1005,5 +1014,6 @@ public class IsblStaticXRDevice
         for (var i = 0; i < _dataUint.Length; ++i) device.Device.TryGetFeatureValue(device.Uint[i], out _dataUint[i]);
         for (var i = 0; i < _dataHand.Length; ++i) device.Device.TryGetFeatureValue(device.Hand[i], out _dataHand[i]); // HAND_NETCODE: already implemented
         for (var i = 0; i < _dataEyes.Length; ++i) device.Device.TryGetFeatureValue(device.Eyes[i], out _dataEyes[i]); // EYES_NETCODE: already implemented
+        LastUpdateTime = GetTimeNow();
     }
 }

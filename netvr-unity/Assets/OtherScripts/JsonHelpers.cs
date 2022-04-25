@@ -18,7 +18,6 @@ namespace Isbl.Json
             return (float)reader.GetDouble();
         }
 
-
         public static Vector3 StaticRead(ref Utf8JsonReader reader)
         {
             if (reader.TokenType != JsonTokenType.StartObject) throw new Exception("Expected object start");

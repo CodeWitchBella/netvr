@@ -142,7 +142,36 @@ export function netvrRoomOptions(
         utils.triggerSave()
       },
       onJson(message) {
-        if (message.action === 'set') {
+        if (message.feature === 'calibration') {
+          if (message.action === 'begin') {
+            utils.send(message.leader, message)
+            utils.send(message.follower, message)
+          } else if (message.action === 'samples') {
+            utils.send(message.leader, message)
+          } else {
+            throw new Error('Unknown message for calibration feature')
+          }
+        } else if (message.action === 'multiset') {
+          const data = message.data
+          if (Array.isArray(data)) {
+            store.update((draft) => {
+              for (const item of data) {
+                if (
+                  typeof item.client === 'number' &&
+                  typeof item.field === 'string' &&
+                  item.field in sampleClient &&
+                  item.value &&
+                  draft.clients.has(item.client)
+                ) {
+                  var client = draft.clients.get(item.client)
+                  ;(client as any)[item.field] = item.value
+                } else {
+                  throw new Error('Invalid multiset item')
+                }
+              }
+            })
+          }
+        } else if (message.action === 'set') {
           if (
             typeof message.client === 'number' &&
             typeof message.field === 'string' &&
