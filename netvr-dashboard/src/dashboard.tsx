@@ -110,6 +110,7 @@ function DashboardInner() {
   const lastAcceptedBinaryTimestamps = useRef(new Map<number, number>()).current
 
   const theme = useTheme()
+  const fullscreen = useFullscreen()
   return (
     <div style={{ flexGrow: 1, background: theme.resolved.base01 }}>
       <ErrorBoundary>
@@ -235,6 +236,16 @@ function DashboardInner() {
                 </Button>
                 <Button type="button" onClick={() => setStopped((v) => !v)}>
                   {stopped ? 'Resume' : 'Pause'}
+                </Button>
+                <div style={{ flexGrow: 1 }} />
+                <Button
+                  type="button"
+                  onClick={() => {
+                    if (fullscreen.enabled) fullscreen.exit()
+                    else fullscreen.request()
+                  }}
+                >
+                  {fullscreen.enabled ? 'Exit fullscreen' : 'Fullscreen'}
                 </Button>
               </div>
             </Pane>
@@ -476,4 +487,25 @@ function BinaryMessage({ raw, parsed }: { raw: ArrayBuffer; parsed: any }) {
       </div>
     </>
   )
+}
+
+function useFullscreen() {
+  const [enabled, setEnabled] = useState(!!document.fullscreenElement)
+  useEffect(() => {
+    document.addEventListener('fullscreenchange', handler)
+    return () => void document.removeEventListener('fullscreenchange', handler)
+    function handler() {
+      setEnabled(!!document.fullscreenElement)
+    }
+  })
+
+  return {
+    enabled,
+    exit: () => {
+      document.exitFullscreen()
+    },
+    request: () => {
+      document.documentElement.requestFullscreen({ navigationUI: 'hide' })
+    },
+  }
 }
