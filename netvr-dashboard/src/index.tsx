@@ -1,4 +1,4 @@
-import ReactDOM from 'react-dom'
+import ReactDOM from 'react-dom/client'
 import { Dashboard } from './dashboard'
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
 import { NotFound } from './not-found'
@@ -9,7 +9,8 @@ export async function run() {
   const events = document.querySelector('#events')!
   if (!events) throw new Error('Cant find #events')
 
-  ReactDOM.render(
+  const root = ReactDOM.createRoot(events)
+  root.render(
     <ThemeProvider>
       <ErrorBoundary>
         <BrowserRouter>
@@ -20,7 +21,6 @@ export async function run() {
         </BrowserRouter>
       </ErrorBoundary>
     </ThemeProvider>,
-    events,
   )
 }
 
