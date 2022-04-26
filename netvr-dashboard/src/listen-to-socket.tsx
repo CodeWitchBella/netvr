@@ -8,62 +8,33 @@ import {
   createContext,
   useContext,
 } from 'react'
-import { promisifyWebsocket, PWebSocket } from './utils'
-
-function cancellableAsyncIterable<Data>(
-  signal: AbortSignal,
-  iterable: AsyncIterable<Data>,
-): AsyncIterable<Data> {
-  const iterator = iterable[Symbol.asyncIterator]()
-  const rejectedOnAbort = new Promise<never>((resolve, reject) => {
-    signal.addEventListener('abort', () => {
-      reject(new DOMException('Aborted', 'AbortError'))
-    })
-  })
-  return {
-    [Symbol.asyncIterator](): AsyncIterator<Data> {
-      return {
-        next() {
-          return Promise.race([iterator.next(), rejectedOnAbort])
-        },
-      }
-    },
-  }
-}
 
 function useListenToSocket(
-  socket: PWebSocket,
+  socket: WebSocket,
   onMessage: (event: string | ArrayBuffer) => void,
 ) {
-  const [error, setError] = useState(null)
   const lastOnMessage = useRef(onMessage)
   useEffect(() => {
     lastOnMessage.current = onMessage
   })
   useEffect(() => {
-    const controller = new AbortController()
-
-    ;(async () => {
-      for await (const message of cancellableAsyncIterable(
-        controller.signal,
-        socket,
-      )) {
-        lastOnMessage?.current(message.data as any)
-      }
-    })().catch((err) => setError(err))
+    socket.addEventListener('message', onMessage)
 
     return () => {
-      controller.abort()
+      socket.removeEventListener('message', onMessage)
+    }
+
+    function onMessage({ data }: MessageEvent) {
+      lastOnMessage?.current(data)
     }
   }, [socket])
-  if (error) throw error
 }
 
 export const ListenToSocket = memo(function ListenToSocket({
   socket,
   onMessage,
 }: {
-  socket: PWebSocket
+  socket: WebSocket
   onMessage: (event: string | ArrayBuffer) => void
 }) {
   useListenToSocket(socket, onMessage)
@@ -72,12 +43,12 @@ export const ListenToSocket = memo(function ListenToSocket({
 
 function useSocketState(url: string) {
   type SocketState =
-    | { socket: PWebSocket; status: 'connected' }
+    | { socket: WebSocket; status: 'connected' }
     | { status: 'connecting' | 'disconnected' }
   const [state, setSocket] = useReducer(
     (
       state: SocketState,
-      action: { socket: PWebSocket | null; url: string },
+      action: { socket: WebSocket | null; url: string },
     ): SocketState =>
       action.url !== url
         ? state
@@ -86,28 +57,93 @@ function useSocketState(url: string) {
         : { status: 'disconnected' },
     { status: 'connecting' as const },
   )
+  const [error, setError] = useState<Error | null>(null)
 
   useEffect(() => {
-    const socketRaw = new WebSocket(url)
-    socketRaw.binaryType = 'arraybuffer'
-    const socket = promisifyWebsocket(socketRaw)
-    socket.opened.then(
-      () => void setSocket({ url, socket }),
-      () => void setSocket({ url, socket: null }),
-    )
-    return () => {
-      socketRaw.close()
+    let isOpen = false
+    let connectionTimeout = -1
+    let socket = connect()
+    return () => void cleanup(socket)
+
+    function cleanup(target: WebSocket) {
+      clearTimeout(connectionTimeout)
+      target.removeEventListener('open', onOpen)
+      target.removeEventListener('close', onClose)
+      target.removeEventListener('error', onError)
+
+      if (target.readyState < 2 /* open or connecting */) {
+        target.close()
+      }
+    }
+
+    function connect() {
+      const ret = new WebSocket(url)
+      isOpen = false
+      ret.binaryType = 'arraybuffer'
+
+      ret.addEventListener('open', onOpen)
+      ret.addEventListener('close', onClose)
+      ret.addEventListener('error', onError)
+
+      connectionTimeout = setTimeout(() => {
+        console.log('WebSocket:connectionTimeout')
+        cleanup(socket)
+        socket = connect()
+      }, 5000)
+      return ret
+    }
+
+    function onOpen(event: Event) {
+      const target = event.currentTarget as WebSocket
+      if (target !== socket) return
+
+      console.log('WebSocket:open')
+      clearTimeout(connectionTimeout)
+      isOpen = true
+      setSocket({ url: target.url, socket: target })
+    }
+
+    function onClose(event: Event) {
+      const target = event.currentTarget as WebSocket
+      if (target !== socket) return
+
+      console.log('WebSocket:close')
+      setSocket({ url, socket: null })
+    }
+
+    function onError(event: Event) {
+      const target = event.currentTarget as WebSocket
+      if (target !== socket) return
+
+      console.log('WebSocket:error')
+      if (!isOpen) {
+        // reconnect
+        cleanup(socket)
+        socket = connect()
+      } else if (
+        event &&
+        typeof event === 'object' &&
+        'message' in event &&
+        typeof (event as any).message === 'string'
+      ) {
+        setError(new Error((event as any).message))
+      } else {
+        console.error(event)
+        setError(new Error('Error in websocket'))
+      }
     }
   }, [url])
+  if (error) throw error
   return state
 }
 
-const ctx = createContext<PWebSocket | null>(null)
+const ctx = createContext<WebSocket | null>(null)
 export function SocketProvider({
   children,
   url,
 }: PropsWithChildren<{ url: string }>) {
   const state = useSocketState(url)
+  console.log(state)
   useEffect(() => {
     if (state.status === 'disconnected') window.location.reload()
   })

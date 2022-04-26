@@ -1,6 +1,5 @@
 import { useCallback, useEffect, useState } from 'react'
 
-export type PWebSocket = ReturnType<typeof promisifyWebsocket>
 type Message = ArrayBuffer | string
 
 export function promisifyWebsocket(socket: WebSocket) {
@@ -124,7 +123,7 @@ export function useLocalStorage<Value extends string = string>(
       ? state.value
       : defaultValue,
     useCallback(
-      (value) => {
+      (value: string) => {
         if (validate(value)) {
           localStorage.setItem(key, value)
           setState({ key, value })

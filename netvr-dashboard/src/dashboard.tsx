@@ -1,7 +1,6 @@
 import { memo, useEffect, useMemo, useReducer, useRef, useState } from 'react'
 import { useLog } from './log'
 import { ListenToSocket, SocketProvider, useSocket } from './listen-to-socket'
-import type { PWebSocket } from './utils'
 import { ErrorBoundary } from './error-boundary'
 import {
   ClientBinaryData,
@@ -25,7 +24,7 @@ import { Button, Pane } from './design'
 enableMapSet()
 enablePatches()
 
-function useSendKeepAlive(socket: PWebSocket) {
+function useSendKeepAlive(socket: WebSocket) {
   useEffect(() => {
     const interval = setInterval(() => {
       socket.send(JSON.stringify({ action: 'keep alive' }))
@@ -274,7 +273,7 @@ function Client({
 }: {
   binaryClient: ClientBinaryData | { clientId: number; devices?: undefined }
   client: ClientConfiguration
-  socket: PWebSocket
+  socket: WebSocket
 }) {
   const [showJson, toggleShowJson] = useReducer((prev: boolean) => !prev, false)
   return (
@@ -333,7 +332,7 @@ function Device({
 }: {
   device: DeviceBinaryData | null
   configuration: DeviceConfiguration
-  socket: PWebSocket
+  socket: WebSocket
   clientId: number
 }) {
   const [showDetails, toggleShowDetails] = useReducer(

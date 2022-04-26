@@ -3,6 +3,7 @@ import { Dashboard } from './dashboard'
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
 import { NotFound } from './not-found'
 import { ThemeProvider } from './use-theme'
+import { ErrorBoundary } from './error-boundary'
 
 export async function run() {
   const events = document.querySelector('#events')!
@@ -10,12 +11,14 @@ export async function run() {
 
   ReactDOM.render(
     <ThemeProvider>
-      <BrowserRouter>
-        <Routes>
-          <Route index element={<Dashboard socketUrl={getSocketUrl()} />} />
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </BrowserRouter>
+      <ErrorBoundary>
+        <BrowserRouter>
+          <Routes>
+            <Route index element={<Dashboard socketUrl={getSocketUrl()} />} />
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </BrowserRouter>
+      </ErrorBoundary>
     </ThemeProvider>,
     events,
   )

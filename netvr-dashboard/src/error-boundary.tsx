@@ -1,4 +1,4 @@
-import { Component } from 'react'
+import React, { Component } from 'react'
 import { Button } from './design'
 
 const showErrorOverlay = (err: Error) => {
@@ -24,7 +24,10 @@ const showErrorOverlay = (err: Error) => {
 }
 
 type State = { hasError: boolean }
-export class ErrorBoundary extends Component<{}, State> {
+export class ErrorBoundary extends Component<
+  { children: React.ReactNode },
+  State
+> {
   state: State = { hasError: false }
 
   static getDerivedStateFromError(error: any): State {
