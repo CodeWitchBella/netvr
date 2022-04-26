@@ -1,5 +1,5 @@
 import { useState } from 'react'
-import type { ServerState } from './data'
+import { sendHapticImpulse, ServerState } from './data'
 import { Button, Pane } from './design'
 
 export function Calibration({
@@ -45,12 +45,14 @@ export function Calibration({
           serverState={serverState}
           onClientSelect={setClient1Id}
           type="leader"
+          sendMessage={sendMessage}
         />
         {true ? (
           <DeviceSelect
             serverState={serverState}
             exceptClient={client1Id}
             type="follower"
+            sendMessage={sendMessage}
           />
         ) : null}
         <Button type="submit">Trigger Calibration</Button>
@@ -65,13 +67,16 @@ function DeviceSelect({
   onClientSelect,
   exceptClient,
   type,
+  sendMessage,
 }: {
   serverState: ServerState
   onClientSelect?: (id: number) => void
   exceptClient?: number
   type: 'leader' | 'follower'
+  sendMessage: (data: ArrayBuffer) => void
 }) {
   const [clientId, setClientId] = useState(0)
+  const [deviceId, setDeviceId] = useState(0)
   return (
     <div
       style={{
@@ -107,30 +112,48 @@ function DeviceSelect({
             ))}
         </select>
       </label>
-      <label>
-        Device
-        <select
-          style={{ marginInlineStart: 4 }}
-          required
-          name={type + 'Device'}
-          autoComplete="off"
+      <div>
+        <label>
+          Device
+          <select
+            style={{ marginInline: 4 }}
+            required
+            name={type + 'Device'}
+            autoComplete="off"
+            disabled={
+              !(
+                clientId > 0 &&
+                clientId !== exceptClient &&
+                serverState.clients[clientId]
+              )
+            }
+            onChange={(evt) => {
+              setDeviceId(+evt.currentTarget.value ?? 0)
+            }}
+          >
+            <option value="">Select device</option>
+            {serverState.clients[clientId]?.devices?.map((device) => (
+              <option key={device.localId} value={device.localId}>
+                #{device.localId}: {device.name}{' '}
+                {device.characteristics.join(',')}
+              </option>
+            ))}
+          </select>
+        </label>
+        <Button
+          type="button"
+          onClick={() =>
+            void sendHapticImpulse(sendMessage, clientId, deviceId)
+          }
           disabled={
-            !(
-              clientId > 0 &&
-              clientId !== exceptClient &&
-              serverState.clients[clientId]
-            )
+            !serverState.clients[clientId]?.devices?.find(
+              (d) => d.localId === deviceId,
+            )?.haptics?.supportsImpulse
           }
         >
-          <option value="">Select device</option>
-          {serverState.clients[clientId]?.devices?.map((device) => (
-            <option key={device.localId} value={device.localId}>
-              #{device.localId}: {device.name}{' '}
-              {device.characteristics.join(',')}
-            </option>
-          ))}
-        </select>
-      </label>
+          Identify
+        </Button>
+      </div>
     </div>
   )
 }

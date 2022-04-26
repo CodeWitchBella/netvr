@@ -10,6 +10,7 @@ import {
   mapData,
   parseBinaryMessage,
   protocolVersion,
+  sendHapticImpulse,
   ServerState,
 } from './data'
 import { SyncDevicesButton } from './sync-devices'
@@ -103,6 +104,10 @@ function DashboardInner() {
   useSendKeepAlive(socket)
 
   function sendMessage(data: any) {
+    if (data instanceof ArrayBuffer) {
+      socket.send(data)
+      return
+    }
     const message = JSON.stringify(data)
     dispatchLog({ direction: 'up', message, type: 'text', parsed: data })
     socket.send(message)
@@ -351,17 +356,6 @@ function Device({
     false,
   )
 
-  function identify(deviceId: number) {
-    const buffer = new ArrayBuffer(21)
-    const view = new DataView(buffer)
-    view.setUint8(0, 2) // message type
-    view.setUint32(1, clientId, true)
-    view.setUint32(5, deviceId, true)
-    view.setUint32(9, 0, true) // channel
-    view.setFloat32(13, 0.25, true) // amplitude
-    view.setFloat32(17, 0.1, true) // time (oculus-only)
-    socket.send(buffer)
-  }
   return (
     <div
       style={{
@@ -376,7 +370,13 @@ function Device({
         {device ? (
           <Button
             type="button"
-            onClick={() => identify(device.deviceId)}
+            onClick={() =>
+              void sendHapticImpulse(
+                (buf) => socket.send(buf),
+                clientId,
+                device.deviceId,
+              )
+            }
             disabled={!configuration.haptics?.supportsImpulse}
           >
             Identify
