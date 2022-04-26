@@ -234,6 +234,10 @@ function idHandlerInternal<RestoreData>(
           return res
         } else {
           // can't use client-provided ID, give a new one.
+          console.log("can't use client-provided ID", {
+            oldClient,
+            setupMessage,
+          })
         }
       }
 

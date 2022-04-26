@@ -21,14 +21,18 @@ public sealed class IsblPersistentData : IIsblPersistentData
 {
     public class Connection
     {
+        [JsonInclude]
         [JsonPropertyName("peerId")]
         public UInt16 PeerId = 0;
+        [JsonInclude]
         [JsonPropertyName("peerIdToken")]
         public string PeerIdToken = "";
+        [JsonInclude]
         [JsonPropertyName("socketUrl")]
         public string SocketUrl = "";
     }
 
+    [JsonInclude]
     [JsonPropertyName("connections")]
     public List<Connection> Connections = new();
 
@@ -53,6 +57,7 @@ public sealed class IsblPersistentData : IIsblPersistentData
         Connections.Add(new Connection { SocketUrl = socketUrl, PeerId = peerId, PeerIdToken = peerIdToken });
     }
 
+    [JsonInclude]
     [JsonPropertyName("logLocalData")]
     public bool LogLocalData;
 
