@@ -39,6 +39,9 @@ public class IsblNetRemoteDeviceManager : MonoBehaviour
                 var go = new GameObject($"Client {iter.Key}");
                 go.transform.parent = transform;
                 client = go.AddComponent<IsblNetRemoteClient>();
+#if UNITY_EDITOR
+                client.Id = iter.Key;
+#endif
                 _remoteClients.Add(iter.Key, client);
             }
 
