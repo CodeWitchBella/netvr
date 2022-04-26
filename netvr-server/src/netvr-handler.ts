@@ -142,6 +142,11 @@ export function netvrRoomOptions(
         utils.triggerSave()
       },
       onJson(message) {
+        if (message.action === 'keep alive') {
+          sendPatches()
+          return
+        }
+        console.log('message', id, message)
         if (message.feature === 'calibration') {
           if (message.action === 'begin') {
             utils.send(message.leader, message)
@@ -185,8 +190,6 @@ export function netvrRoomOptions(
           } else {
             throw new Error('Invalid action:set message')
           }
-        } else if (message.action === 'keep alive') {
-          sendPatches()
         } else {
           throw new Error(
             'Unknown message action ' + JSON.stringify(message.action),
