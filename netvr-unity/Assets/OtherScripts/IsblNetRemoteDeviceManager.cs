@@ -14,7 +14,7 @@ public class IsblNetRemoteDeviceManager : MonoBehaviour
 
         var toRemove = _remoteClients.Where(client =>
         {
-            if (!net.ServerState.Clients.ContainsKey(client.Key))
+            if (!net.ServerState.Clients.TryGetValue(client.Key, out var serverClient) || !serverClient.Connected)
             {
                 Destroy(client.Value.gameObject);
                 return true;
@@ -26,6 +26,9 @@ public class IsblNetRemoteDeviceManager : MonoBehaviour
 
         foreach (var iter in net.ServerState.Clients)
         {
+            if (!iter.Value.Connected) continue;
+            if (iter.Key == net.SelfId) continue;
+
             IsblNetRemoteClient client;
             if (_remoteClients.ContainsKey(iter.Key))
             {
