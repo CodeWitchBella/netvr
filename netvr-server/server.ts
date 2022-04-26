@@ -87,7 +87,11 @@ async function serveSocket(
   event: Deno.RequestEvent,
   connectionInfo: ConnectionInfo,
 ) {
-  const { socket, response } = Deno.upgradeWebSocket(event.request)
+  const { socket, response } = Deno.upgradeWebSocket(event.request, {
+    // there is a bug in deno which causes unrecoverable crash if this is enabled
+    // https://github.com/denoland/deno/issues/14280
+    idleTimeout: 0,
+  })
   room.onWebSocket(wrapWebSocket(socket), connectionInfo)
 
   event.respondWith(response)
