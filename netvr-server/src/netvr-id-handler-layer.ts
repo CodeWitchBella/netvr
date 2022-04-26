@@ -3,8 +3,8 @@ import {
   awaitMesageWithAction,
   ExpectedError,
   assertMessageResult,
+  messageLoop,
 } from './message-utils.js'
-import type { WebSocketStream } from './websocketstream.js'
 
 export interface NetvrHandler {
   onJson(message: { action: string; [key: string]: any }): void
@@ -14,7 +14,7 @@ export interface NetvrHandler {
 export type ConnectionInfo = { [key: string]: unknown }
 
 export interface NetvrIdHandlerLayer {
-  onWebSocket(socket: WebSocketStream, connectionInfo: ConnectionInfo): void
+  onWebSocket(socket: WebSocket, connectionInfo: ConnectionInfo): void
 }
 
 export type NetvrRoomOptions<RestoreData> = {
@@ -50,9 +50,7 @@ type Client = {
 } & (
   | {
       handler: NetvrHandler
-      reader: ReadableStreamDefaultReader
-      writer: WritableStreamDefaultWriter
-      socket: WebSocketStream
+      socket: WebSocket
     }
   | {}
 )
@@ -86,7 +84,6 @@ export function createIdHandler<RestoreData>(
     for (const client of state.clients.values()) {
       if ('socket' in client) {
         console.log('Closing socket')
-        client.writer.close()
         client.socket.close()
       }
     }
@@ -124,23 +121,20 @@ function idHandlerInternal<RestoreData>(
 ) {
   return {
     constructTime: new Date().toISOString(),
-    onWebSocket(socket: WebSocketStream, connectionInfo: ConnectionInfo) {
+    onWebSocket(socket: WebSocket, connectionInfo: ConnectionInfo) {
       ;(async () => {
-        const connection = await socket.connection
-        const reader = connection.readable.getReader()
-        const writer = connection.writable.getWriter()
         let isClosed = false
-        writer.closed.then(() => {
+        socket.addEventListener('close', () => {
           isClosed = true
         })
 
-        await handleConnection({ reader, writer, socket, connectionInfo })
+        await handleConnection({ socket, connectionInfo })
           .catch(async (e: any) => {
             if (e instanceof ExpectedError) {
               if (!e.clientMessage) {
                 // do nothing
               } else if (!isClosed) {
-                await writer.write(e.clientMessage)
+                socket.send(e.clientMessage)
               } else {
                 console.warn(
                   "Can't send ExpectedError.clientMessage because connection is already closed",
@@ -149,11 +143,11 @@ function idHandlerInternal<RestoreData>(
             } else if (!isClosed) {
               // notify this client of error thrown in the server
               if (typeof e === 'object' && e && e.message) {
-                await writer.write(
+                socket.send(
                   JSON.stringify({ message: e.message, stack: e.stack }),
                 )
               } else {
-                await writer.write(JSON.stringify({ message: 'unknown error' }))
+                socket.send(JSON.stringify({ message: 'unknown error' }))
               }
             } else {
               console.error('Error occured after connection was closed')
@@ -165,7 +159,7 @@ function idHandlerInternal<RestoreData>(
             console.error(e)
           })
           .then(() => {
-            if (!isClosed) return writer.close()
+            if (!isClosed) socket.close()
           })
       })()
         .catch((e) => {
@@ -188,128 +182,116 @@ function idHandlerInternal<RestoreData>(
    * @returns
    */
   async function handleConnection({
-    reader,
-    writer,
     socket,
     connectionInfo,
   }: {
-    reader: ReadableStreamDefaultReader
-    writer: WritableStreamDefaultWriter
-    socket: WebSocketStream
+    socket: WebSocket
     connectionInfo: ConnectionInfo
   }) {
-    const setupMessage = await awaitMesageWithAction(reader, {
+    const setupMessage = await awaitMesageWithAction(socket, {
       timeout: 15000,
       actions: ['i already has id', 'gimme id'],
     })
     assertMessageResult(setupMessage)
     assertProtocolVersion(opts.protocolVersion, setupMessage)
 
-    let client: Client | null = null
-    if (setupMessage.action === 'i already has id') {
-      const requestedId = setupMessage.id
-      const oldClient = state.clients.get(requestedId)
-      if (
-        oldClient &&
-        !('handler' in oldClient) &&
-        oldClient.token === setupMessage.token
-      ) {
-        // If unconnected client with id exists and token matches.
-        // This takes care of many situations at once:
-        //  - malicious client. Not important since I do not really handle it in
-        //    different parts.
-        //  - accidental impersonation. This might happen in multiple situations
-        //    examples are in following bullet points.
-        //  - server lost data, but client did not. Client will try to reconnect
-        //    but since the token does not match, the ID will get reset.
-        //  - file with token got copied to different machine and both machines
-        //    are trying to connect. The second machine will get new ID, instead
-        //    of breaking the whole thing in unpredictable ways.
-        // For those reasons I decided to handle the case of duplicate IDs
-        // transparently by just assigning new ID instead of throwing and error.
-        writer.write(
-          JSON.stringify({
-            action: 'id ack',
-            protocolVersion: opts.protocolVersion,
-          }),
-        )
-        client = {
-          handler: opts.restoreConnection(oldClient.id, connectionInfo),
-          id: requestedId,
-          token: oldClient.token,
-          reader,
-          writer,
-          socket,
+    const client = (function handleClientSetup() {
+      if (setupMessage.action === 'i already has id') {
+        const requestedId = setupMessage.id
+        const oldClient = state.clients.get(requestedId)
+        if (
+          oldClient &&
+          !('handler' in oldClient) &&
+          oldClient.token === setupMessage.token
+        ) {
+          // If unconnected client with id exists and token matches.
+          // This takes care of many situations at once:
+          //  - malicious client. Not important since I do not really handle it in
+          //    different parts.
+          //  - accidental impersonation. This might happen in multiple situations
+          //    examples are in following bullet points.
+          //  - server lost data, but client did not. Client will try to reconnect
+          //    but since the token does not match, the ID will get reset.
+          //  - file with token got copied to different machine and both machines
+          //    are trying to connect. The second machine will get new ID, instead
+          //    of breaking the whole thing in unpredictable ways.
+          // For those reasons I decided to handle the case of duplicate IDs
+          // transparently by just assigning new ID instead of throwing and error.
+          socket.send(
+            JSON.stringify({
+              action: 'id ack',
+              protocolVersion: opts.protocolVersion,
+            }),
+          )
+          const res = {
+            handler: opts.restoreConnection(oldClient.id, connectionInfo),
+            id: requestedId,
+            token: oldClient.token,
+            socket,
+          }
+          state.clients.set(res.id, res)
+          handleSaveTrigger()
+          return res
+        } else {
+          // can't use client-provided ID, give a new one.
         }
-        state.clients.set(client.id, client)
-        handleSaveTrigger()
-      } else {
-        // can't use client-provided ID, give a new one.
       }
-    }
-    if (!client) {
+
       const id = ++state.idGen
-      client = {
+      const res = {
         handler: opts.newConnection(id, connectionInfo),
         id,
         token: getRandomString(64),
-        reader,
-        writer,
         socket,
       }
-      state.clients.set(id, client)
+      state.clients.set(id, res)
       save()
-      writer.write(
+      socket.send(
         JSON.stringify({
           action: "id's here",
           intValue: id,
-          stringValue: client.token,
+          stringValue: res.token,
           protocolVersion: opts.protocolVersion,
         }),
       )
-    }
+      return res
+    })()
 
     try {
-      while (true) {
-        const result = await reader.read()
-        if (result.done) return
-        try {
-          if (typeof result.value === 'string') {
-            const data = safeJsonParse(result.value)
+      await messageLoop(
+        {
+          socket,
+          identifier: connectionInfo.ip + '',
+          clientTimeoutMs: 30_000,
+          handlerTimeoutMs: 100,
+        },
+        async ({ data }) => {
+          if (typeof data === 'string') {
+            const parsedData = safeJsonParse(data)
             if (
-              typeof data === 'object' &&
-              data &&
-              typeof data.action === 'string'
+              typeof parsedData === 'object' &&
+              parsedData &&
+              typeof parsedData.action === 'string'
             ) {
-              if (data.action === 'reset room') {
+              if (parsedData.action === 'reset room') {
                 reset()
               } else {
-                client.handler.onJson(data)
+                client?.handler.onJson(parsedData)
                 handleSaveTrigger()
               }
             } else {
-              writer.write(
+              socket.send(
                 JSON.stringify({
                   error: 'Invalid message recieved',
                 }),
               )
             }
           } else {
-            client.handler.onBinary(result.value)
+            client.handler.onBinary(data)
             handleSaveTrigger()
           }
-        } catch (e: any) {
-          if (typeof e === 'object' && e) {
-            console.error(e)
-            writer.write(
-              JSON.stringify({
-                error: e.message,
-                stack: e.stack,
-              }),
-            )
-          }
-        }
-      }
+        },
+      )
     } finally {
       state.clients.set(client.id, {
         id: client.id,
@@ -377,8 +359,8 @@ function createUtils(
       const client = clients.get(id)
       if (!client) {
         throw new Error(`Client ${id} not found`)
-      } else if ('writer' in client) {
-        client.writer.write(message)
+      } else if ('socket' in client) {
+        client.socket.send(message)
       } else {
         throw new Error(`Client ${id} is currently disconnected`)
       }
@@ -391,7 +373,7 @@ function createUtils(
     const omit = broadcastOptions?.omit
     for (const client of clients.values()) {
       if ('handler' in client && client.id !== omit) {
-        client.writer.write(message)
+        client.socket.send(message)
       }
     }
   }

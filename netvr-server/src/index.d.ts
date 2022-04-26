@@ -26,6 +26,7 @@ declare const Deno: {
   readFile: any
   args: string[]
   networkInterfaces(): any[]
+  errors: { InvalidData: any }
 }
 declare namespace Deno {
   export type Conn = any

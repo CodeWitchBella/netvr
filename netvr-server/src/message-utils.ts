@@ -29,30 +29,108 @@ export function assertMessageResult<T>(
  * Ignores valid messages which do not match any action.
  */
 export async function awaitMesageWithAction<T extends string>(
-  reader: ReadableStreamDefaultReader,
+  socket: WebSocket,
   options: { actions: readonly T[]; timeout: number },
-): Promise<
-  'closed' | 'timeout' | 'invalid message' | { type: T; [key: string]: any }
-> {
-  const timeout = new Promise<void>(
-    (res) => void setTimeout(res, options.timeout),
-  )
-
+) {
   const actions = new Set(options.actions)
-  while (true) {
-    const result = await Promise.race([reader.read(), timeout])
-    if (!result) return 'timeout'
-    if (result.done) return 'closed'
+  return new Promise<
+    'closed' | 'timeout' | 'invalid message' | { type: T; [key: string]: any }
+  >((resolve, reject) => {
+    const timeout = setTimeout(() => {
+      resolve('timeout')
+      socket.removeEventListener('message', onMessage)
+    }, options.timeout)
 
-    if (typeof result.value !== 'string') continue
-    try {
-      const obj = JSON.parse(result.value)
-      if (typeof obj === 'object' && obj && actions.has(obj.action)) {
-        return obj
+    socket.addEventListener('message', onMessage)
+
+    function onMessage(event: MessageEvent) {
+      if (typeof event.data !== 'string') return
+      try {
+        const obj = JSON.parse(event.data)
+        if (typeof obj === 'object' && obj && actions.has(obj.action)) {
+          resolve(obj)
+          socket.removeEventListener('message', onMessage)
+          clearTimeout(timeout)
+        }
+      } catch (e) {
+        reject('invalid message')
+        socket.removeEventListener('message', onMessage)
+        clearTimeout(timeout)
       }
-    } catch (e) {
-      return 'invalid message'
     }
+  })
+}
+
+/**
+ * wrapper around socket.onMessage which
+ * - waits for previous message to finish processing before dispatching next one
+ * - returns Promise which resolves on websocket close, resolves on websocket
+ *   error and rejects on callback error
+ * - also resolves on client timeout (same as close) and rejects on handler timeout
+ */
+export async function messageLoop(
+  {
+    socket,
+    clientTimeoutMs,
+    handlerTimeoutMs,
+    identifier,
+  }: {
+    socket: WebSocket
+    clientTimeoutMs: number
+    handlerTimeoutMs: number
+    identifier: string
+  },
+  onMessageIn: (event: MessageEvent) => Promise<any>,
+): Promise<void> {
+  let queue = Promise.resolve()
+  let reject = (error: any) => {}
+  let recieveTimeout = setTimeout(onTimeout, clientTimeoutMs)
+  const timedOut = Symbol('timed out')
+  try {
+    return await new Promise<void>((resolve, realReject) => {
+      reject = realReject
+      socket.addEventListener('message', onMessage)
+      socket.addEventListener('close', () => {
+        console.log('WebSocket:close', identifier)
+        resolve()
+      })
+      socket.addEventListener('error', (event) => {
+        console.error(
+          'WebSocket:error',
+          identifier,
+          event && 'message' in event ? (event as any).message : event,
+        )
+        resolve()
+      })
+    })
+  } finally {
+    clearTimeout(recieveTimeout)
+    socket.removeEventListener('message', onMessage)
+  }
+  function onMessage(event: MessageEvent) {
+    resetClientTimer()
+    queue = queue
+      .then(() => Promise.race([onMessageIn(event), recieveTimeoutPromise()]))
+      .then((result) => {
+        if (result === timedOut) {
+          throw new Error('Server did not handle the message in specified time')
+        }
+      })
+      .catch(reject)
+  }
+
+  function recieveTimeoutPromise() {
+    return new Promise<typeof timedOut>(
+      (resolve) => void setTimeout(resolve, handlerTimeoutMs, timedOut),
+    )
+  }
+  function resetClientTimer() {
+    clearTimeout(recieveTimeout)
+    recieveTimeout = setTimeout(onTimeout, clientTimeoutMs)
+  }
+  function onTimeout() {
+    console.log('WebSocket:timeout', identifier)
+    socket.close()
   }
 }
 

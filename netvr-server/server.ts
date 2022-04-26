@@ -16,7 +16,6 @@ import {
   type ConnectionInfo,
   createIdHandler,
 } from './src/netvr-id-handler-layer.js'
-import { wrapWebSocket } from './src/websocketstream.js'
 
 await Deno.permissions.request({ name: 'net' })
 await Deno.permissions.request({
@@ -92,7 +91,7 @@ async function serveSocket(
     // https://github.com/denoland/deno/issues/14280
     idleTimeout: 0,
   })
-  room.onWebSocket(wrapWebSocket(socket), connectionInfo)
+  room.onWebSocket(socket, connectionInfo)
 
   event.respondWith(response)
 }

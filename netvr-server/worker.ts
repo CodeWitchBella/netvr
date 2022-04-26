@@ -14,7 +14,6 @@ import {
   createIdHandler,
   type NetvrIdHandlerLayer,
 } from './src/netvr-id-handler-layer.js'
-import { wrapWebSocket } from './src/websocketstream.js'
 const manifest = JSON.parse(manifestJSON)
 
 export default {
@@ -69,7 +68,7 @@ export class DurableObjectWebSocket {
 
     const [client, server] = Object.values(new WebSocketPair())
 
-    this.room.onWebSocket(wrapWebSocket(server), { ip })
+    this.room.onWebSocket(server, { ip })
     server.accept()
 
     return new Response(null, {
