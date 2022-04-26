@@ -21,6 +21,7 @@ public class IsblLocalXRDeviceManager : MonoBehaviour
         var currentDevices = new List<InputDevice>();
         InputDevices.GetDevices(currentDevices);
         foreach (var device in currentDevices) DeviceConnected(device);
+        DeviceInfoChanged = true;
 
         List<SubsystemDescriptor> subsystemDescriptors = new();
         SubsystemManager.GetSubsystemDescriptors(subsystemDescriptors);
@@ -58,8 +59,14 @@ public class IsblLocalXRDeviceManager : MonoBehaviour
         }
         if (driver == null) return null;
         driver.LocalDevice = new IsblXRDevice(device);
+        driver.NetDevice.DeviceInfoChanged += OnDeviceInfoChanged;
 
         return driver;
+    }
+
+    void OnDeviceInfoChanged()
+    {
+        DeviceInfoChanged = true;
     }
 
     void OnDisable()
@@ -86,7 +93,8 @@ public class IsblLocalXRDeviceManager : MonoBehaviour
 
     void DeviceConfigChanged(InputDevice device)
     {
-        DeviceInfoChanged = true;
+        DeviceDisconnected(device);
+        DeviceConnected(device);
     }
 
     void DeviceConnected(InputDevice obj)

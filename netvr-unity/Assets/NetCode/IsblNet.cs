@@ -300,6 +300,7 @@ public sealed class IsblNet : IDisposable
 
     void SendDeviceInfo()
     {
+        Debug.Log("Sending device info");
         _ = Socket.SendAsync(new
         {
             action = "set",

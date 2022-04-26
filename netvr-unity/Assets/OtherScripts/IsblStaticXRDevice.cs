@@ -123,7 +123,7 @@ public class IsblStaticXRDevice
     /// </summary>
     ///
     /// True means that the data needs to be transmitted to the server.
-    public bool DeviceInfoChanged;
+    public Action DeviceInfoChanged;
     #endregion
 
     // HAND_NETCODE: increment by one
@@ -837,7 +837,7 @@ public class IsblStaticXRDevice
                 Characteristics = 0;
                 LocallyUniqueId = 0;
                 Haptics = null;
-                DeviceInfoChanged = true;
+                DeviceInfoChanged?.Invoke();
 
                 // ADDING_NEW_TYPE:
                 // add if branch here
@@ -863,7 +863,7 @@ public class IsblStaticXRDevice
             Characteristics = device.Characteristics;
             Name = device.Name;
             Haptics = device.Haptics.HasValue ? new(device.Haptics.Value) : null;
-            DeviceInfoChanged = true;
+            DeviceInfoChanged?.Invoke();
 
             // ADDING_NEW_TYPE:
             // add if branch here

@@ -35,8 +35,6 @@ public class IsblTrackedPoseDriver : MonoBehaviour
         CleanUp();
         InitializeModelIfNeeded();
         Devices.Add(this);
-
-        NetDevice.DeviceInfoChanged = true; // it's a new device
     }
 
     void CleanUpFile()
