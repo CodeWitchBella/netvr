@@ -301,6 +301,7 @@ public sealed class IsblNet : IDisposable
     void SendDeviceInfo()
     {
         Debug.Log("Sending device info");
+        DeviceManager.DeviceInfoChanged = false;
         _ = Socket.SendAsync(new
         {
             action = "set",
@@ -308,7 +309,6 @@ public sealed class IsblNet : IDisposable
             field = "devices",
             value = (from d in DeviceManager.Devices where d.NetDevice.HasData select d.NetDevice.SerializeConfiguration()).ToArray(),
         });
-        DeviceManager.DeviceInfoChanged = false;
     }
 
     public void Dispose()
