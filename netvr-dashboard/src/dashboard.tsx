@@ -1,4 +1,11 @@
-import { memo, useEffect, useMemo, useReducer, useRef, useState } from 'react'
+import React, {
+  memo,
+  useEffect,
+  useMemo,
+  useReducer,
+  useRef,
+  useState,
+} from 'react'
 import { useLog } from './log'
 import { ListenToSocket, SocketProvider, useSocket } from './listen-to-socket'
 import { ErrorBoundary } from './error-boundary'
@@ -61,10 +68,19 @@ function deviceReducer(
 }
 
 export function Dashboard({ socketUrl }: { socketUrl: string }) {
+  const theme = useTheme()
   return (
-    <SocketProvider url={socketUrl}>
-      <DashboardInner />
-    </SocketProvider>
+    <div
+      style={{
+        flexGrow: 1,
+        background: theme.resolved.base01,
+        color: theme.resolved.base05,
+      }}
+    >
+      <SocketProvider url={socketUrl}>
+        <DashboardInner />
+      </SocketProvider>
+    </div>
   )
 }
 
@@ -114,159 +130,151 @@ function DashboardInner() {
   }
   const lastAcceptedBinaryTimestamps = useRef(new Map<number, number>()).current
 
-  const theme = useTheme()
   const fullscreen = useFullscreen()
   return (
-    <div style={{ flexGrow: 1, background: theme.resolved.base01 }}>
-      <ErrorBoundary>
-        <ListenToSocket
-          socket={socket}
-          onMessage={(message) => {
-            if (stopped) return
-            if (typeof message !== 'string') {
-              const parsed = parseBinaryMessage(message)
-              const now = Date.now()
-              const skippable = (client: { clientId: number }) => {
-                const last = lastAcceptedBinaryTimestamps.get(client.clientId)
-                return last && last + 100 > now
-              }
-              if (parsed.clients?.every(skippable)) {
-                return
-              }
-              for (const client of parsed.clients || []) {
-                lastAcceptedBinaryTimestamps.set(client.clientId, now)
-              }
-              dispatchLog({
-                direction: 'down',
-                type: 'binary',
-                message,
-                parsed,
-              })
-              dispatchDevices({ type: 'binary', message: parsed })
-            } else {
-              const msg = JSON.parse(message)
-              dispatchLog({
-                direction: 'down',
-                type: 'text',
-                message,
-                parsed: msg,
-              })
-              dispatchDevices({ type: 'text', message: msg })
-              if (msg.action === "id's here") {
-                localStorage.setItem(
-                  'reconnection',
-                  JSON.stringify({
-                    id: msg.intValue,
-                    token: msg.stringValue,
-                  }),
-                )
-              } else if (msg.action === 'full state reset') {
-                setServerState(msg.state)
-              } else if (msg.action === 'patch') {
-                setServerState((draft) => {
-                  applyPatches(
-                    draft,
-                    msg.patches.map((p: any) => ({
-                      ...p,
-                      path: p.path.substring(1).split('/'),
-                    })),
-                  )
-                })
-              }
+    <ErrorBoundary>
+      <ListenToSocket
+        socket={socket}
+        onMessage={(message) => {
+          if (stopped) return
+          if (typeof message !== 'string') {
+            const parsed = parseBinaryMessage(message)
+            const now = Date.now()
+            const skippable = (client: { clientId: number }) => {
+              const last = lastAcceptedBinaryTimestamps.get(client.clientId)
+              return last && last + 100 > now
             }
-          }}
-        />
+            if (parsed.clients?.every(skippable)) {
+              return
+            }
+            for (const client of parsed.clients || []) {
+              lastAcceptedBinaryTimestamps.set(client.clientId, now)
+            }
+            dispatchLog({
+              direction: 'down',
+              type: 'binary',
+              message,
+              parsed,
+            })
+            dispatchDevices({ type: 'binary', message: parsed })
+          } else {
+            const msg = JSON.parse(message)
+            dispatchLog({
+              direction: 'down',
+              type: 'text',
+              message,
+              parsed: msg,
+            })
+            dispatchDevices({ type: 'text', message: msg })
+            if (msg.action === "id's here") {
+              localStorage.setItem(
+                'reconnection',
+                JSON.stringify({
+                  id: msg.intValue,
+                  token: msg.stringValue,
+                }),
+              )
+            } else if (msg.action === 'full state reset') {
+              setServerState(msg.state)
+            } else if (msg.action === 'patch') {
+              setServerState((draft) => {
+                applyPatches(
+                  draft,
+                  msg.patches.map((p: any) => ({
+                    ...p,
+                    path: p.path.substring(1).split('/'),
+                  })),
+                )
+              })
+            }
+          }
+        }}
+      />
 
-        <div
-          style={{
-            display: 'flex',
-            flexDirection: 'row',
-            flexWrap: 'wrap',
-            justifyContent: 'space-between',
-          }}
-        >
-          <div className="clients" style={{ width: 'auto', flexGrow: 1 }}>
-            <ThemeSelector />
-            <Pane>
+      <div
+        style={{
+          display: 'flex',
+          flexDirection: 'row',
+          flexWrap: 'wrap',
+          justifyContent: 'space-between',
+        }}
+      >
+        <div className="clients" style={{ width: 'auto', flexGrow: 1 }}>
+          <ThemeSelector />
+          <Pane>
+            <Button
+              type="button"
+              onClick={() => {
+                sendMessage({ action: 'reset room' })
+                setTimeout(() => {
+                  window.location.reload()
+                }, 100)
+              }}
+            >
+              Reset room
+            </Button>
+          </Pane>
+          <ErrorBoundary>
+            <SyncDevicesButton
+              sendMessage={sendMessage}
+              clients={clients}
+              serverState={serverState}
+            />
+          </ErrorBoundary>
+          <ErrorBoundary>
+            <Calibration sendMessage={sendMessage} serverState={serverState} />
+          </ErrorBoundary>
+          <StatePane data={serverState} />
+
+          {Object.entries(serverState.clients).map(
+            ([key, clientConfiguration]) => {
+              const clientId = Number.parseInt(key, 10)
+              const binaryClient = clients.find((c) => c.clientId === clientId)
+              if (!clientConfiguration.connected) return null
+              return (
+                <Client
+                  key={clientId}
+                  client={clientConfiguration}
+                  binaryClient={binaryClient ?? { clientId }}
+                  socket={socket}
+                />
+              )
+            },
+          )}
+        </div>
+        <div style={{ flexGrow: 1 }}>
+          <Pane>
+            <div style={{ flexDirection: 'row', gap: 8, display: 'flex' }}>
+              <Button type="button" onClick={toggleShowBinary}>
+                {showBinary ? 'Hide binary' : 'Show binary'}
+              </Button>
+              <Button type="button" onClick={() => setStopped((v) => !v)}>
+                {stopped ? 'Resume' : 'Pause'}
+              </Button>
+              <div style={{ flexGrow: 1 }} />
               <Button
                 type="button"
                 onClick={() => {
-                  sendMessage({ action: 'reset room' })
-                  setTimeout(() => {
-                    window.location.reload()
-                  }, 100)
+                  if (fullscreen.enabled) fullscreen.exit()
+                  else fullscreen.request()
                 }}
               >
-                Reset room
+                {fullscreen.enabled ? 'Exit fullscreen' : 'Fullscreen'}
               </Button>
-            </Pane>
-            <ErrorBoundary>
-              <SyncDevicesButton
-                sendMessage={sendMessage}
-                clients={clients}
-                serverState={serverState}
-              />
-            </ErrorBoundary>
-            <ErrorBoundary>
-              <Calibration
-                sendMessage={sendMessage}
-                serverState={serverState}
-              />
-            </ErrorBoundary>
-            <StatePane data={serverState} />
-
-            {Object.entries(serverState.clients).map(
-              ([key, clientConfiguration]) => {
-                const clientId = Number.parseInt(key, 10)
-                const binaryClient = clients.find(
-                  (c) => c.clientId === clientId,
-                )
-                if (!clientConfiguration.connected) return null
-                return (
-                  <Client
-                    key={clientId}
-                    client={clientConfiguration}
-                    binaryClient={binaryClient ?? { clientId }}
-                    socket={socket}
-                  />
-                )
-              },
-            )}
-          </div>
-          <div style={{ flexGrow: 1 }}>
-            <Pane>
-              <div style={{ flexDirection: 'row', gap: 8, display: 'flex' }}>
-                <Button type="button" onClick={toggleShowBinary}>
-                  {showBinary ? 'Hide binary' : 'Show binary'}
-                </Button>
-                <Button type="button" onClick={() => setStopped((v) => !v)}>
-                  {stopped ? 'Resume' : 'Pause'}
-                </Button>
-                <div style={{ flexGrow: 1 }} />
-                <Button
-                  type="button"
-                  onClick={() => {
-                    if (fullscreen.enabled) fullscreen.exit()
-                    else fullscreen.request()
-                  }}
-                >
-                  {fullscreen.enabled ? 'Exit fullscreen' : 'Fullscreen'}
-                </Button>
-              </div>
-            </Pane>
-            {log.map((event) => (
-              <Message
-                message={event.message}
-                key={event.key}
-                timestamp={event.timestamp}
-                type={event.type}
-                direction={event.direction}
-              />
-            ))}
-          </div>
+            </div>
+          </Pane>
+          {log.map((event) => (
+            <Message
+              message={event.message}
+              key={event.key}
+              timestamp={event.timestamp}
+              type={event.type}
+              direction={event.direction}
+            />
+          ))}
         </div>
-      </ErrorBoundary>
-    </div>
+      </div>
+    </ErrorBoundary>
   )
 }
 
