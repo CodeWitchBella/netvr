@@ -120,13 +120,15 @@ public class IsblTrackedPoseDriver : MonoBehaviour
             }
             gltf.InstantiateMainScene(_modelWrapper.transform);
             var model = _modelWrapper.transform.GetChild(0);
+            model.localEulerAngles = new Vector3(0f, 180f, 0f);
             var root = model.Find(builder.RootNode);
             root.parent = _modelWrapper.transform;
             Destroy(model.gameObject);
 
-            root.localPosition = builder.Position;
-            root.localEulerAngles = builder.Rotation;
-            root.localScale = Vector3.one * builder.Scale;
+            if (builder.Position != null) root.localPosition = builder.Position ?? Vector3.zero;
+            root.localPosition += builder.PositionOffset;
+            if (builder.Rotation != null) root.localEulerAngles = builder.Rotation ?? Vector3.zero;
+            if (builder.Scale != null) root.localScale = Vector3.one * (builder.Scale ?? 1f);
 
             ConnectAxes(_modelWrapper.transform);
         }
@@ -146,30 +148,57 @@ public class IsblTrackedPoseDriver : MonoBehaviour
         primitive.transform.localPosition = Vector3.zero;
         primitive.transform.localScale = Vector3.one * 0.005f; // 5mm
         var synchronizer = child.gameObject.AddComponent<AxisSynchronizer>();
-        synchronizer.VisibilityGetter = () => NetDevice.Primary2DAxisTouch;
+        if (NetDevice.Secondary2DAxisAvailable) synchronizer.VisibilityGetter = () => NetDevice.Secondary2DAxisTouch;
+        else synchronizer.VisibilityGetter = () => NetDevice.Primary2DAxisTouch;
     }
 
     void ConnectAxes(Transform parent)
     {
+#pragma warning disable RCS1003 // this would get very long if we had brackets around every if-else
+
         if (parent.name == "xr_standard_trigger_pressed_value") ConnectAxisSync(parent, () => NetDevice.Trigger);
         else if (parent.name == "xr_standard_squeeze_pressed_value") ConnectAxisSync(parent, () => NetDevice.Grip);
         else if (parent.name == "xr_standard_squeeze_pressed_mirror_value") ConnectAxisSync(parent, () => NetDevice.Grip);
-        else if (parent.name == "xr_standard_touchpad_pressed_value" || parent.name == "xr_standard_thumbstick_pressed_min")
-            ConnectAxisSync(parent, () => NetDevice.Primary2DAxisClick ? 1 : 0);
+
         else if (parent.name == "menu_pressed_value") ConnectAxisSync(parent, () => NetDevice.MenuButton ? 1 : 0);
         else if (parent.name == "xr_standard_touchpad_axes_touched_value") ConnectTouchpoint(parent);
         // cSpell:ignore xaxis, yaxis
-        else if (parent.name == "xr_standard_touchpad_xaxis_touched_value" || parent.name == "xr_standard_thumbstick_xaxis_pressed_value")
+        else if (parent.name == "xr_standard_touchpad_xaxis_touched_value")
+        {
+            // touchpad is secondary 2D axis if present
+            if (NetDevice.Secondary2DAxisAvailable) ConnectAxisSync(parent, () => Convert2DAxisValue(NetDevice.Secondary2DAxis.x));
+            else ConnectAxisSync(parent, () => Convert2DAxisValue(NetDevice.Primary2DAxis.x));
+        }
+        else if (parent.name == "xr_standard_touchpad_yaxis_touched_value")
+        {
+            if (NetDevice.Secondary2DAxisAvailable) ConnectAxisSync(parent, () => Convert2DAxisValue(-NetDevice.Secondary2DAxis.y));
+            else ConnectAxisSync(parent, () => Convert2DAxisValue(-NetDevice.Primary2DAxis.y));
+        }
+        else if (parent.name == "xr_standard_touchpad_pressed_value")
+        {
+            if (NetDevice.Secondary2DAxisAvailable) ConnectAxisSync(parent, () => NetDevice.Secondary2DAxisClick ? 1 : 0);
+            else ConnectAxisSync(parent, () => NetDevice.Primary2DAxisClick ? 1 : 0);
+        }
+        else if (parent.name == "xr_standard_thumbstick_pressed_min")
+            ConnectAxisSync(parent, () => NetDevice.Primary2DAxisClick ? 1 : 0);
+        else if (parent.name == "xr_standard_thumbstick_xaxis_pressed_value")
             ConnectAxisSync(parent, () => (NetDevice.Primary2DAxis.x + 1) * .5f);
-        else if (parent.name == "xr_standard_touchpad_yaxis_touched_value" || parent.name == "xr_standard_thumbstick_yaxis_pressed_value")
+        else if (parent.name == "xr_standard_thumbstick_yaxis_pressed_value")
             ConnectAxisSync(parent, () => 1 - (NetDevice.Primary2DAxis.y + 1) * .5f);
         else if (parent.name == "x_button_pressed_value" || parent.name == "a_button_pressed_value")
             ConnectAxisSync(parent, () => NetDevice.PrimaryButton ? 1 : 0);
         else if (parent.name == "y_button_pressed_value" || parent.name == "b_button_pressed_value")
             ConnectAxisSync(parent, () => NetDevice.SecondaryButton ? 1 : 0);
 
+#pragma warning restore RCS1003
+
         foreach (Transform child in parent) ConnectAxes(child);
     }
+
+    /**
+     * Converts from range [-1:1] to [0:1]
+     */
+    float Convert2DAxisValue(float value) => (value + 1) * .5f;
 
     FileStream _file;
     GZipStream _gzip;
