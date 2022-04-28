@@ -264,7 +264,7 @@ public sealed class IsblNet : IDisposable
 
     void HandleHapticRequest(byte[] data, int offset)
     {
-        Debug.Log($"HandleHapticRequest {string.Join(" ", data)}");
+        Utils.Log($"HandleHapticRequest {string.Join(" ", data)}");
         while (offset < data.Length)
         {
             var deviceId = BinaryPrimitives.ReadUInt16LittleEndian(data[offset..]);
@@ -279,7 +279,7 @@ public sealed class IsblNet : IDisposable
             float duration = reader.ReadSingle();
             float amplitude = reader.ReadSingle();
             offset += 8;
-            //Debug.Log($"Net Haptic. deviceId: {deviceId}, channel: {channel}, amplitude: {amplitude}, duration: {duration}.");
+            Utils.Log($"Net Haptic. deviceId: {deviceId}, channel: {channel}, amplitude: {amplitude}, duration: {duration}.");
             if (DeviceManager.TryFindDevice(deviceId, out var device))
             {
                 device.LocalDevice.Device.SendHapticImpulse(channel, amplitude, duration);

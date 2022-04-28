@@ -118,6 +118,7 @@ class CalibrationFeature : IIsblNetFeature
             var cal = _calibrationsLocal.Find(c => c.FollowerId == followerId && c.FollowerDeviceId == followerDeviceId);
             if (cal == null) throw new Exception("Received samples for unknown calibration");
             var samples = JsonElementToObject<Sample[]>(node.GetProperty("samples"));
+            Utils.Log($"Received {samples.Length} sample{(samples.Length > 1 ? "s" : "")}");
             cal.FollowerSamples.AddRange(samples);
         }
     }
@@ -148,12 +149,25 @@ class CalibrationFeature : IIsblNetFeature
     public void Tick(IsblNet net)
     {
         var now = IsblStaticXRDevice.GetTimeNow();
-        _calibrationsRemote.RemoveAll(c => c.StartTimeStamp + Timeout > now);
+        _calibrationsRemote.RemoveAll(c =>
+        {
+            var res = c.StartTimeStamp + Timeout > now;
+            if (res) Utils.Log($"Remote calibration timeout. leader: {c.LeaderId}, localDevice: {c.LocalDeviceId}");
+            return res;
+        });
+
+        _calibrationsLocal.RemoveAll(c =>
+        {
+            var res = c.StartTimeStamp + Timeout > now;
+            if (res) Utils.Log($"Local calibration timeout. follower: {c.FollowerId}, followerDevice: {c.FollowerDeviceId}, localDevice: {c.LocalDeviceId}");
+            return res;
+        });
 
         foreach (var c in _calibrationsRemote)
         {
             if (!TryCollectLocalSample(net, c.LocalDeviceId, c.StartTimeStamp, out var sample))
             {
+                Utils.Log($"Sending a sample: {sample.Position} {sample.Rotation}");
                 net.Socket.SendAsync(new
                 {
                     feature = FeatureId,
@@ -171,6 +185,7 @@ class CalibrationFeature : IIsblNetFeature
         {
             if (TryCollectLocalSample(net, c.LocalDeviceId, c.StartTimeStamp, out var sample))
             {
+                Utils.Log($"Collected local sample: {sample.Position} {sample.Rotation}");
                 c.LeaderSamples.Add(sample);
             }
         }
@@ -180,6 +195,7 @@ class CalibrationFeature : IIsblNetFeature
         _calibrationsLocal.RemoveAll(ReadyPredicate);
         foreach (var cal in ready)
         {
+            Utils.Log("Calibration ready, computing...");
             // Potentially run this in thread if it is too slow
             IsblCalibration calculation = new();
             for (int i = 0; i < RequiredSamples; ++i)
@@ -189,6 +205,10 @@ class CalibrationFeature : IIsblNetFeature
                 calculation.AddPair(leaderSample.Position, leaderSample.Rotation, followerSample.Position, followerSample.Rotation);
             }
             var result = calculation.Compute();
+            var rotate = new Quaternion((float)result.Qx, (float)result.Qy, (float)result.Qz, (float)result.Qw);
+            var translate = new Vector3((float)result.X, (float)result.Y, (float)result.Z);
+
+            Utils.Log("Calibration result: ({translate.x}, {translate.y}, {translate.z}) ({rotate.eulerAngles.x}, {rotate.eulerAngles.y}, rotate.eulerAngles.z)");
             /*
             net.Socket.SendAsync(new
             {
@@ -198,9 +218,9 @@ class CalibrationFeature : IIsblNetFeature
                         op = "replace",
                         path = $"/clients/{net.SelfId}/calibration",
                         value = new Isbl.NetServerState.Calibration() {
-                            Rotate = new Quaternion((float)result.Qx, (float)result.Qy, (float)result.Qz, (float)result.Qw),
+                            Rotate = rotate,
                             Scale = Vector3.one,
-                            Translate = new Vector3((float)result.X, (float)result.Y, (float)result.Z),
+                            Translate = translate,
                         }
                     },
                 },
@@ -214,9 +234,9 @@ class CalibrationFeature : IIsblNetFeature
                         field = "calibration",
                         client = net.SelfId,
                         value = new Isbl.NetServerState.Calibration() {
-                            Rotate = new Quaternion((float)result.Qx, (float)result.Qy, (float)result.Qz, (float)result.Qw),
+                            Rotate = rotate,
                             Scale = Vector3.one,
-                            Translate = new Vector3((float)result.X, (float)result.Y, (float)result.Z),
+                            Translate = translate,
                         }
                     },
                 },

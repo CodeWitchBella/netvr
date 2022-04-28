@@ -182,8 +182,9 @@ public class ReconnectingClientWebSocket : IDisposable
                 }
             }
         }
-        catch (WebSocketException)
+        catch (WebSocketException e)
         {
+            Debug.LogError(e);
             if (PrintDebug) Debug.Log("Connection failed, reconnecting");
             _ = Connect();
         }
