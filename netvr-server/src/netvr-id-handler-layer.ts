@@ -44,16 +44,20 @@ export type Utils = {
   readonly clients: Iterable<number>
 }
 
-type Client = {
+type DisconnectedClient = {
   token: string
   id: number
-} & (
-  | {
-      handler: NetvrHandler
-      socket: WebSocket
-    }
-  | {}
-)
+}
+
+type ConnectedClient = DisconnectedClient & {
+  socket: WebSocket
+  handler?: NetvrHandler
+}
+type HandledClient = ConnectedClient & {
+  handler: NetvrHandler
+}
+
+type Client = ConnectedClient | DisconnectedClient
 
 export type NetvrServerImpl = {
   save(data: string): void
@@ -141,6 +145,7 @@ function idHandlerInternal<RestoreData>(
                 )
               }
             } else if (!isClosed) {
+              console.error(e)
               // notify this client of error thrown in the server
               if (typeof e === 'object' && e && e.message) {
                 socket.send(
@@ -195,7 +200,7 @@ function idHandlerInternal<RestoreData>(
     assertMessageResult(setupMessage)
     assertProtocolVersion(opts.protocolVersion, setupMessage)
 
-    const client = (function handleClientSetup() {
+    const client = (function handleClientSetup(): HandledClient {
       if (setupMessage.action === 'i already has id') {
         const requestedId = setupMessage.id
         const oldClient = state.clients.get(requestedId)
@@ -223,32 +228,34 @@ function idHandlerInternal<RestoreData>(
               protocolVersion: opts.protocolVersion,
             }),
           )
-          const res = {
-            handler: opts.restoreConnection(oldClient.id, connectionInfo),
+          const res: ConnectedClient = {
             id: requestedId,
             token: oldClient.token,
             socket,
           }
           state.clients.set(res.id, res)
+          const handler = opts.restoreConnection(oldClient.id, connectionInfo)
+          res.handler = handler
           handleSaveTrigger()
-          return res
+          return { ...res, handler }
         } else {
           // can't use client-provided ID, give a new one.
           console.log("can't use client-provided ID", {
             oldClient,
             setupMessage,
+            'clients.size': state.clients.size,
           })
         }
       }
-
       const id = ++state.idGen
-      const res = {
-        handler: opts.newConnection(id, connectionInfo),
+      const res: ConnectedClient = {
         id,
         token: getRandomString(64),
         socket,
       }
       state.clients.set(id, res)
+      const handler = opts.newConnection(id, connectionInfo)
+      res.handler = handler
       save()
       socket.send(
         JSON.stringify({
@@ -258,7 +265,7 @@ function idHandlerInternal<RestoreData>(
           protocolVersion: opts.protocolVersion,
         }),
       )
-      return res
+      return { ...res, handler }
     })()
 
     try {
@@ -359,16 +366,14 @@ function createUtils(
   saveTriggered: { current: boolean },
 ): Utils {
   function sendRaw(id: number, message: ArrayBuffer | string) {
-    Promise.resolve().then(() => {
-      const client = clients.get(id)
-      if (!client) {
-        throw new Error(`Client ${id} not found`)
-      } else if ('socket' in client) {
-        client.socket.send(message)
-      } else {
-        throw new Error(`Client ${id} is currently disconnected`)
-      }
-    })
+    const client = clients.get(id)
+    if (!client) {
+      throw new Error(`Client ${id} not found`)
+    } else if ('socket' in client) {
+      client.socket.send(message)
+    } else {
+      throw new Error(`Client ${id} is currently disconnected`)
+    }
   }
   function broadcastRaw(
     message: ArrayBuffer | string,
