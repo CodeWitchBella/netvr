@@ -75,11 +75,10 @@ public class IsblLocalXRDeviceManager : MonoBehaviour
         InputDevices.deviceDisconnected -= DeviceDisconnected;
         InputDevices.deviceConfigChanged -= DeviceConfigChanged;
 
-        var net = IsblNet.Instance;
         while (Devices.Count > 0)
             DeviceDisconnected(Devices[0].LocalDevice.Device);
 
-        if (IsblNet.Instance.DeviceManager == this) IsblNet.Instance.DeviceManager = null;
+        if (IsblNet.Instance?.DeviceManager == this) IsblNet.Instance.DeviceManager = null;
     }
 
     void DeviceDisconnected(InputDevice obj)
