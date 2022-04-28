@@ -1,11 +1,7 @@
 using System;
-using System.Collections;
-using System.Collections.Generic;
 using System.IO;
 using System.Runtime.InteropServices;
 using UnityEngine;
-using UnityEngine.XR.OpenXR;
-using UnityEngine.XR.OpenXR.Features;
 
 /// <summary>
 /// Wrapper around my native dynamic library managing its loading and unloading
@@ -107,6 +103,39 @@ class IsblDynamicLibrary : IDisposable
     // ADD_FUNC: add static extern above this line
 #endif // !UNITY_EDITOR_WIN
 
+    /**
+     * Same as File.OpenRead but returns null if file was not found instead of
+     * throwing exception.
+     */
+    static FileStream SafeOpenRead(string path)
+    {
+        try { return File.OpenRead(path); }
+        catch (FileNotFoundException) { return null; }
+    }
+
+    /**
+     * Compares contents of given files.
+     */
+    static bool AreFilesIdentical(string path1, string path2)
+    {
+        using var fs1 = SafeOpenRead(path1);
+        using var fs2 = SafeOpenRead(path2);
+        if (fs1 == null || fs2 == null) return fs1 == fs2;
+
+        if (fs1.Length != fs2.Length) return false;
+
+        var fs1buf = new BufferedStream(fs1);
+        var fs2buf = new BufferedStream(fs2);
+        while (true)
+        {
+            // Read one byte from each file.
+            var file1byte = fs1buf.ReadByte();
+            var file2byte = fs2buf.ReadByte();
+            if (file1byte == -1) return true;
+            if (file1byte != file2byte) return false;
+        }
+    }
+
     public IsblDynamicLibrary()
     {
 #if UNITY_EDITOR_WIN
@@ -115,6 +144,8 @@ class IsblDynamicLibrary : IDisposable
             _fullPath = Prefix + LibraryName + $"{i}.dll";
             try
             {
+                using (var watch = new IsblStopwatch("AreFilesIdentical:.dll"))
+                    if (AreFilesIdentical(Prefix + LibraryName + ".dll", _fullPath)) break;
                 // copy to new file so that original is still writeable
                 File.Copy(Prefix + LibraryName + ".dll", _fullPath, true);
                 break;
@@ -162,8 +193,12 @@ class IsblDynamicLibrary : IDisposable
             Debug.Log("IsblDynamicLibrary.Dispose()");
             SystemLibrary.FreeLibrary(_library);
             _library = default;
-            File.Delete(_fullPath);
-            try { File.Delete(_fullPath + ".meta"); } catch (FileNotFoundException) { }
+            try
+            {
+                File.Delete(_fullPath);
+                File.Delete(_fullPath + ".meta");
+            }
+            catch (IOException e) { Debug.LogError(e); }
         }
 #endif
     }
