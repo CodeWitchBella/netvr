@@ -1,6 +1,7 @@
 using UnityEngine;
 using UnityEditor;
 using UnityEngine.XR;
+using System.Collections.Generic;
 
 [CustomPropertyDrawer(typeof(IsblTrackedPoseDriver.SelfPropertyAttribute))]
 public class IsblXRDeviceDrawer : PropertyDrawer
@@ -8,7 +9,8 @@ public class IsblXRDeviceDrawer : PropertyDrawer
     const float LineHeight = 20;
     public override float GetPropertyHeight(SerializedProperty property, GUIContent label)
     {
-        return LineHeight * 31;
+        var go = property.objectReferenceValue as IsblTrackedPoseDriver;
+        return GetDescription(go?.GetComponent<IsblTrackedPoseDriver>()?.NetDevice).Count * LineHeight;
     }
 
     public override void OnGUI(Rect position, SerializedProperty property, GUIContent label)
@@ -18,23 +20,42 @@ public class IsblXRDeviceDrawer : PropertyDrawer
         IsblStaticXRDevice device = driver?.NetDevice;
         var localDevice = driver?.LocalDevice;
 
+        EditorGUI.BeginProperty(position, label, property);
         var y = position.y;
+        foreach (var line in GetDescription(device))
+        {
+            if (line.Key == "Haptics")
+            {
+                const int TextWidth = 75;
+                if (device?.Haptics?.SupportsImpulse == true && localDevice != null)
+                {
+                    if (GUI.Button(new Rect(TextWidth + 10, y, 75, 20), "test"))
+                    {
+                        localDevice.Device.SendHapticImpulse(0, 0.25f, 0.1f);
+                    }
+                }
+            }
+
+            EditorGUI.LabelField(new Rect(position.x, y, position.width, LineHeight), line.Key, line.Value);
+            y += LineHeight;
+        }
+        EditorGUI.EndProperty();
+    }
+
+    static List<KeyValuePair<string, string>> GetDescription(IsblStaticXRDevice device)
+    {
+
+        List<KeyValuePair<string, string>> result = new();
         void DrawLine(string text, string text2 = "")
         {
-            EditorGUI.LabelField(new Rect(position.x, y, position.width, LineHeight), text, text2);
-            y += LineHeight;
+            result.Add(new(text, text2));
         }
         void DrawField<T>(string name, T value, bool native = true)
         {
             DrawLine(name, $"{value}{(native ? "" : " (emulated)")}");
         }
 
-        EditorGUI.BeginProperty(position, label, property);
-        if (go == null)
-        {
-            DrawLine("Could not get game object.");
-        }
-        else if (device == null)
+        if (device == null)
         {
             DrawLine("No device attached.");
         }
@@ -58,16 +79,7 @@ public class IsblXRDeviceDrawer : PropertyDrawer
             var haptics = device.Haptics;
             if (haptics != null)
             {
-                const int TextWidth = 75;
-                EditorGUI.LabelField(new Rect(position.x, y, TextWidth, 20), "Haptics");
-                if (haptics.SupportsImpulse && localDevice != null)
-                {
-                    if (GUI.Button(new Rect(TextWidth + 10, y, 75, 20), "test"))
-                    {
-                        localDevice.Device.SendHapticImpulse(0, 0.25f, 0.1f);
-                    }
-                }
-                y += LineHeight;
+                DrawLine("Haptics");
                 DrawLine("    NumChannels", haptics.NumChannels.ToString());
                 DrawLine("    SupportsImpulse", haptics.SupportsImpulse.ToString());
                 DrawLine("    SupportsBuffer", haptics.SupportsBuffer.ToString());
@@ -80,7 +92,7 @@ public class IsblXRDeviceDrawer : PropertyDrawer
                 DrawLine("Haptics", "none");
             }
         }
-        EditorGUI.EndProperty();
+        return result;
     }
 
     static string SerializeCharacteristics(InputDeviceCharacteristics c)
