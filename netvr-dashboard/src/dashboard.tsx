@@ -75,6 +75,7 @@ export function Dashboard({ socketUrl }: { socketUrl: string }) {
       document.documentElement.style.background = ''
     }
   }, [theme])
+  const [key, setKey] = useState(0)
   return (
     <div
       style={{
@@ -82,7 +83,15 @@ export function Dashboard({ socketUrl }: { socketUrl: string }) {
         color: theme.resolved.base05,
       }}
     >
-      <SocketProvider url={socketUrl}>
+      <SocketProvider
+        url={socketUrl}
+        key={key}
+        onDisconnected={() => {
+          setTimeout(() => {
+            setKey((v) => v + 1)
+          }, 200)
+        }}
+      >
         <DashboardInner />
       </SocketProvider>
     </div>
@@ -216,9 +225,6 @@ function DashboardInner() {
                 type="button"
                 onClick={() => {
                   sendMessage({ action: 'reset room' })
-                  setTimeout(() => {
-                    window.location.reload()
-                  }, 100)
                 }}
               >
                 Reset room

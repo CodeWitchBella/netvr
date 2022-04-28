@@ -41,7 +41,7 @@ export const ListenToSocket = memo(function ListenToSocket({
   return null
 })
 
-function useSocketState(url: string) {
+function useSocketState(url: string, onDisconnected: () => void) {
   type SocketState =
     | { socket: WebSocket; status: 'connected' }
     | { status: 'connecting' | 'disconnected' }
@@ -58,6 +58,11 @@ function useSocketState(url: string) {
     { status: 'connecting' as const },
   )
   const [error, setError] = useState<Error | null>(null)
+
+  const onDisconnectedRef = useRef(onDisconnected)
+  useEffect(() => {
+    onDisconnectedRef.current = onDisconnected
+  })
 
   useEffect(() => {
     let isOpen = false
@@ -109,6 +114,7 @@ function useSocketState(url: string) {
 
       console.log('WebSocket:close')
       setSocket({ url, socket: null })
+      onDisconnectedRef.current?.()
     }
 
     function onError(event: Event) {
@@ -141,12 +147,11 @@ const ctx = createContext<WebSocket | null>(null)
 export function SocketProvider({
   children,
   url,
-}: PropsWithChildren<{ url: string }>) {
-  const state = useSocketState(url)
+  onDisconnected,
+}: PropsWithChildren<{ url: string; onDisconnected: () => void }>) {
+  const state = useSocketState(url, onDisconnected)
   console.log(state)
-  useEffect(() => {
-    if (state.status === 'disconnected') window.location.reload()
-  })
+  if (state.status === 'disconnected') return <div>Disconnected.</div>
   if (state.status === 'connected')
     return <ctx.Provider value={state.socket}>{children}</ctx.Provider>
   if (state.status === 'connecting') return <div>Connecting...</div>
