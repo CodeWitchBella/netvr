@@ -85,6 +85,7 @@ export function Button(
         fontSize: '1rem',
         color: theme.resolved.base07,
         background: theme.resolved.base01,
+        userSelect: 'none',
         ...(props.disabled
           ? {
               color: theme.resolved.base04,

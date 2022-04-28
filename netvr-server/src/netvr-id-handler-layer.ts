@@ -279,11 +279,7 @@ function idHandlerInternal<RestoreData>(
         async ({ data }) => {
           if (typeof data === 'string') {
             const parsedData = safeJsonParse(data)
-            if (
-              typeof parsedData === 'object' &&
-              parsedData &&
-              typeof parsedData.action === 'string'
-            ) {
+            if (typeof parsedData === 'object' && parsedData) {
               if (parsedData.action === 'reset room') {
                 reset()
               } else {
@@ -291,6 +287,7 @@ function idHandlerInternal<RestoreData>(
                 handleSaveTrigger()
               }
             } else {
+              console.log('Invalid message received', data)
               socket.send(
                 JSON.stringify({
                   error: 'Invalid message received',

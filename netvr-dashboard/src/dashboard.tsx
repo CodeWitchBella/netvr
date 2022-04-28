@@ -219,7 +219,7 @@ function DashboardInner() {
       >
         <div className="clients" style={{ width: 'auto', flexGrow: 1 }}>
           <ThemeSelector />
-          <Pane>
+          <Pane title="Quick actions" id="quick-actions">
             <div style={{ display: 'flex', gap: 6 }}>
               <Button
                 type="button"
@@ -323,12 +323,38 @@ function Client({
   const [showJson, toggleShowJson] = useReducer((prev: boolean) => !prev, false)
   return (
     <Pane>
-      <div>
-        id: {binaryClient.clientId}
-        {selfId === binaryClient.clientId ? ' (this browser)' : null}
+      <div
+        style={{
+          display: 'flex',
+          justifyContent: 'space-between',
+          alignItems: 'flex-start',
+        }}
+      >
+        <div>
+          <div>
+            id: {binaryClient.clientId}
+            {selfId === binaryClient.clientId ? ' (this browser)' : null}
+          </div>
+          <div>ip: {client.connectionInfo.ip}</div>
+          <div>connected: {client.connected ? '✅' : '❌'}</div>
+        </div>
+        {selfId === binaryClient.clientId ? null : (
+          <Button
+            type="button"
+            onClick={() => {
+              socket.send(
+                JSON.stringify({
+                  action: 'quit',
+                  client: binaryClient.clientId,
+                }),
+              )
+            }}
+          >
+            Quit
+          </Button>
+        )}
       </div>
-      <div>ip: {client.connectionInfo.ip}</div>
-      <div>connected: {client.connected ? '✅' : '❌'}</div>
+
       <Button type="button" onClick={toggleShowJson}>
         {showJson ? 'Hide JSON' : 'Show JSON'}
       </Button>

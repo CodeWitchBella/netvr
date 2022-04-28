@@ -103,7 +103,7 @@ public sealed class IsblNet : IDisposable
 
         Socket.OnTextMessage += (text) =>
         {
-            Debug.Log($"message: {text}");
+            Utils.Log($"Received message: {text}");
             try
             {
                 var obj = Newtonsoft.Json.Linq.JObject.Parse(text);
@@ -168,6 +168,14 @@ public sealed class IsblNet : IDisposable
                         ServerState = JsonSerializer.Deserialize<Isbl.NetServerState>(JsonSerializer.Serialize(_serverStateJson));
                         Debug.Log($"ServerState: {JsonSerializer.Serialize(ServerState, new JsonSerializerOptions { WriteIndented = true })}\njson: {_serverStateJson}");
                         UpdateFastStateStructure();
+                    }
+                    else if (action == "quit")
+                    {
+                        Utils.Log("Received quit message, quitting.");
+                        Application.Quit();
+#if UNITY_EDITOR
+                        UnityEditor.EditorApplication.ExitPlaymode();
+#endif
                     }
                     else
                     {
@@ -300,14 +308,15 @@ public sealed class IsblNet : IDisposable
 
     void SendDeviceInfo()
     {
-        Debug.Log("Sending device info");
+        var value = (from d in DeviceManager.Devices where d.NetDevice.HasData select d.NetDevice.SerializeConfiguration()).ToArray();
+        Utils.Log($"Sending device info with {value.Length} device{(value.Length == 1 ? "" : "s")}");
         DeviceManager.DeviceInfoChanged = false;
         _ = Socket.SendAsync(new
         {
             action = "set",
             client = SelfId,
             field = "devices",
-            value = (from d in DeviceManager.Devices where d.NetDevice.HasData select d.NetDevice.SerializeConfiguration()).ToArray(),
+            value,
         });
     }
 
