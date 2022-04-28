@@ -123,6 +123,10 @@ class IsblDynamicLibrary : IDisposable
             {
                 // retry
             }
+            catch (IOException e)
+            {
+                Debug.LogError(e);
+            }
         }
 
         // load
