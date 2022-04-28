@@ -69,11 +69,16 @@ function deviceReducer(
 
 export function Dashboard({ socketUrl }: { socketUrl: string }) {
   const theme = useTheme()
+  useEffect(() => {
+    document.documentElement.style.background = theme.resolved.base01
+    return () => {
+      document.documentElement.style.background = ''
+    }
+  }, [theme])
   return (
     <div
       style={{
         flexGrow: 1,
-        background: theme.resolved.base01,
         color: theme.resolved.base05,
       }}
     >
@@ -86,6 +91,7 @@ export function Dashboard({ socketUrl }: { socketUrl: string }) {
 
 function DashboardInner() {
   const socket = useSocket()
+  const [selfId, setSelfId] = useState(-1)
   useEffect(() => {
     let sent = false
     try {
@@ -98,6 +104,8 @@ function DashboardInner() {
           ...data,
         }),
       )
+      console.log(data)
+      setSelfId(data.id)
       sent = true
     } catch (e) {
       console.log(e)
@@ -174,6 +182,7 @@ function DashboardInner() {
                   token: msg.stringValue,
                 }),
               )
+              setSelfId(msg.intValue)
             } else if (msg.action === 'full state reset') {
               setServerState(msg.state)
             } else if (msg.action === 'patch') {
@@ -237,6 +246,7 @@ function DashboardInner() {
                   client={clientConfiguration}
                   binaryClient={binaryClient ?? { clientId }}
                   socket={socket}
+                  selfId={selfId}
                 />
               )
             },
@@ -294,15 +304,20 @@ function Client({
   binaryClient,
   client,
   socket,
+  selfId,
 }: {
   binaryClient: ClientBinaryData | { clientId: number; devices?: undefined }
   client: ClientConfiguration
   socket: WebSocket
+  selfId: number
 }) {
   const [showJson, toggleShowJson] = useReducer((prev: boolean) => !prev, false)
   return (
     <Pane>
-      <div>id: {binaryClient.clientId}</div>
+      <div>
+        id: {binaryClient.clientId}
+        {selfId === binaryClient.clientId ? ' (this browser)' : null}
+      </div>
       <div>ip: {client.connectionInfo.ip}</div>
       <div>connected: {client.connected ? '✅' : '❌'}</div>
       <Button type="button" onClick={toggleShowJson}>
