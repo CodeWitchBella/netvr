@@ -23,64 +23,67 @@ using UnityEngine.XR;
 /// | Usage                                   |Vive |Quest2|Vive   | Valve |
 /// |                                         |Wand |Touch |HeadSet| Index |
 /// |-----------------------------------------|-----|------|-------|-------|
-/// | DeviceAngularVelocity(Vector3)          | ✅ |  ✅  |  ✅   |      |
-/// | DevicePosition(Vector3)                 | ✅ |  ✅  |  ✅   |      |
-/// | DeviceRotation(Quaternion)              | ✅ |  ✅  |  ✅   |      |
-/// | DeviceVelocity(Vector3)                 | ✅ |  ✅  |  ✅   |      |
-/// | Grip(float)                             | ✅ |  ✅  |  ❌   |      |
-/// | GripButton(bool)                        | ✅ |  ✅  |  ❌   |      |
-/// | IsTracked(bool)                         | ✅ |  ✅  |  ✅   |      |
-/// | Menu(bool)                              | ❌ |  ✅  |  ❌   |      |
-/// | MenuButton(bool)                        | ✅ |  ❌  |  ❌   |      |
-/// | PointerAngularVelocity(Vector3)         | ✅ |  ✅  |  ❌   |      |
-/// | PointerPosition(Vector3)                | ✅ |  ✅  |  ❌   |      |
-/// | PointerRotation(Quaternion)             | ✅ |  ✅  |  ❌   |      |
-/// | PointerVelocity(Vector3)                | ✅ |  ✅  |  ❌   |      |
-/// | Primary2DAxis(Vector2)                  | ✅ |  ✅  |  ❌   |      |
-/// | Primary2DAxisClick(bool)                | ✅ |  ✅  |  ❌   |      |
-/// | Primary2DAxisTouch(bool)                | ✅ |  ✅  |  ❌   |      |
-/// | PrimaryButton(bool)                     | ❌ |  ✅  |  ❌   |      |
-/// | PrimaryTouch(bool)                      | ❌ |  ✅  |  ❌   |      |
-/// | SecondaryButton(bool)                   | ❌ |  ✅  |  ❌   |      |
-/// | SecondaryTouch(bool)                    | ❌ |  ✅  |  ❌   |      |
-/// | SystemButton(bool)                      | ✅ |  ❌  |  ❌   |      |
-/// | TrackingState(uint)                     | ✅ |  ✅  |  ✅   |      |
-/// | Trigger(float)                          | ✅ |  ✅  |  ❌   |      |
-/// | TriggerButton(bool)                     | ✅ |  ✅  |  ❌   |      |
-/// | TriggerTouch(bool)                      | ❌ |  ✅  |  ❌   |      |
-/// | CenterEyeRotation(Quaternion)           | ❌ |  ❌  |  ✅   |      |
-/// | ColorCameraRotation(Quaternion)         | ❌ |  ❌  |  ❌   |      |
-/// | LeftEyeRotation(Quaternion)             | ❌ |  ❌  |  ✅   |      |
-/// | RightEyeRotation(Quaternion)            | ❌ |  ❌  |  ✅   |      |
-/// | CenterEyeAcceleration(Vector3)          | ❌ |  ❌  |  ❌   |      |
-/// | CenterEyeAngularAcceleration(Vector3)   | ❌ |  ❌  |  ❌   |      |
-/// | CenterEyeAngularVelocity(Vector3)       | ❌ |  ❌  |  ✅   |      |
-/// | CenterEyePosition(Vector3)              | ❌ |  ❌  |  ✅   |      |
-/// | CenterEyeVelocity(Vector3)              | ❌ |  ❌  |  ✅   |      |
-/// | ColorCameraAcceleration(Vector3)        | ❌ |  ❌  |  ❌   |      |
-/// | ColorCameraAngularAcceleration(Vector3) | ❌ |  ❌  |  ❌   |      |
-/// | ColorCameraAngularVelocity(Vector3)     | ❌ |  ❌  |  ❌   |      |
-/// | ColorCameraPosition(Vector3)            | ❌ |  ❌  |  ❌   |      |
-/// | ColorCameraVelocity(Vector3)            | ❌ |  ❌  |  ❌   |      |
-/// | DeviceAcceleration(Vector3)             | ❌ |  ❌  |  ❌   |      |
-/// | DeviceAngularAcceleration(Vector3)      | ❌ |  ❌  |  ❌   |      |
-/// | LeftEyeAcceleration(Vector3)            | ❌ |  ❌  |  ❌   |      |
-/// | LeftEyeAngularAcceleration(Vector3)     | ❌ |  ❌  |  ❌   |      |
-/// | LeftEyeAngularVelocity(Vector3)         | ❌ |  ❌  |  ✅   |      |
-/// | LeftEyePosition(Vector3)                | ❌ |  ❌  |  ✅   |      |
-/// | LeftEyeVelocity(Vector3)                | ❌ |  ❌  |  ✅   |      |
-/// | RightEyeAcceleration(Vector3)           | ❌ |  ❌  |  ❌   |      |
-/// | RightEyeAngularAcceleration(Vector3)    | ❌ |  ❌  |  ❌   |      |
-/// | RightEyeAngularVelocity(Vector3)        | ❌ |  ❌  |  ✅   |      |
-/// | RightEyePosition(Vector3)               | ❌ |  ❌  |  ✅   |      |
-/// | RightEyeVelocity(Vector3)               | ❌ |  ❌  |  ✅   |      |
-/// | Secondary2DAxis(Vector2)                | ❌ |  ❌  |  ❌   |      |
-/// | BatteryLevel(float)                     | ❌ |  ❌  |  ❌   |      |
-/// | Secondary2DAxisClick(bool)              | ❌ |  ❌  |  ❌   |      |
-/// | Secondary2DAxisTouch(bool)              | ❌ |  ❌  |  ❌   |      |
-/// | UserPresence(bool)                      | ❌ |  ❌  |  ✅   |      |
-/// | HandData(Hand)                          | ❌ |  ❌  |  ❌   |      |
-/// | EyesData(Eyes)                          | ❌ |  ❌  |  ❌   |      |
+/// | DeviceAngularVelocity(Vector3)          | ✅ |  ✅  |  ✅   |  ✅  |
+/// | DevicePosition(Vector3)                 | ✅ |  ✅  |  ✅   |  ✅  |
+/// | DeviceRotation(Quaternion)              | ✅ |  ✅  |  ✅   |  ✅  |
+/// | DeviceVelocity(Vector3)                 | ✅ |  ✅  |  ✅   |  ✅  |
+/// | Grip(float)                             | ✅ |  ✅  |  ❌   |  ✅  |
+/// | GripForce(float)                        | ❌ |  ❌  |  ❌   |  ✅  |
+/// | Secondary2DAxisForce(float)             | ❌ |  ❌  |  ❌   |  ✅  |
+/// | GripButton(bool)                        | ✅ |  ✅  |  ❌   |  ✅  |
+/// | IsTracked(bool)                         | ✅ |  ✅  |  ✅   |  ✅  |
+/// | Menu(bool)                              | ❌ |  ✅  |  ❌   |  ❌  |
+/// | MenuButton(bool)                        | ✅ |  ❌  |  ❌   |  ✅  |
+/// | MenuTouch(bool)                         | ❌ |  ❌  |  ❌   |  ✅  |
+/// | PointerAngularVelocity(Vector3)         | ✅ |  ✅  |  ❌   |  ✅  |
+/// | PointerPosition(Vector3)                | ✅ |  ✅  |  ❌   |  ✅  |
+/// | PointerRotation(Quaternion)             | ✅ |  ✅  |  ❌   |  ✅  |
+/// | PointerVelocity(Vector3)                | ✅ |  ✅  |  ❌   |  ✅  |
+/// | Primary2DAxis(Vector2)                  | ✅ |  ✅  |  ❌   |  ✅  |
+/// | Primary2DAxisClick(bool)                | ✅ |  ✅  |  ❌   |  ✅  |
+/// | Primary2DAxisTouch(bool)                | ✅ |  ✅  |  ❌   |  ✅  |
+/// | PrimaryButton(bool)                     | ❌ |  ✅  |  ❌   |  ✅  |
+/// | PrimaryTouch(bool)                      | ❌ |  ✅  |  ❌   |  ✅  |
+/// | SecondaryButton(bool)                   | ❌ |  ✅  |  ❌   |  ✅  |
+/// | SecondaryTouch(bool)                    | ❌ |  ✅  |  ❌   |  ✅  |
+/// | SystemButton(bool)                      | ✅ |  ❌  |  ❌   |  ❌  |
+/// | TrackingState(uint)                     | ✅ |  ✅  |  ✅   |  ✅  |
+/// | Trigger(float)                          | ✅ |  ✅  |  ❌   |  ✅  |
+/// | TriggerButton(bool)                     | ✅ |  ✅  |  ❌   |  ✅  |
+/// | TriggerTouch(bool)                      | ❌ |  ✅  |  ❌   |  ✅  |
+/// | CenterEyeRotation(Quaternion)           | ❌ |  ❌  |  ✅   |  ❌  |
+/// | ColorCameraRotation(Quaternion)         | ❌ |  ❌  |  ❌   |  ❌  |
+/// | LeftEyeRotation(Quaternion)             | ❌ |  ❌  |  ✅   |  ❌  |
+/// | RightEyeRotation(Quaternion)            | ❌ |  ❌  |  ✅   |  ❌  |
+/// | CenterEyeAcceleration(Vector3)          | ❌ |  ❌  |  ❌   |  ❌  |
+/// | CenterEyeAngularAcceleration(Vector3)   | ❌ |  ❌  |  ❌   |  ❌  |
+/// | CenterEyeAngularVelocity(Vector3)       | ❌ |  ❌  |  ✅   |  ❌  |
+/// | CenterEyePosition(Vector3)              | ❌ |  ❌  |  ✅   |  ❌  |
+/// | CenterEyeVelocity(Vector3)              | ❌ |  ❌  |  ✅   |  ❌  |
+/// | ColorCameraAcceleration(Vector3)        | ❌ |  ❌  |  ❌   |  ❌  |
+/// | ColorCameraAngularAcceleration(Vector3) | ❌ |  ❌  |  ❌   |  ❌  |
+/// | ColorCameraAngularVelocity(Vector3)     | ❌ |  ❌  |  ❌   |  ❌  |
+/// | ColorCameraPosition(Vector3)            | ❌ |  ❌  |  ❌   |  ❌  |
+/// | ColorCameraVelocity(Vector3)            | ❌ |  ❌  |  ❌   |  ❌  |
+/// | DeviceAcceleration(Vector3)             | ❌ |  ❌  |  ❌   |  ❌  |
+/// | DeviceAngularAcceleration(Vector3)      | ❌ |  ❌  |  ❌   |  ❌  |
+/// | LeftEyeAcceleration(Vector3)            | ❌ |  ❌  |  ❌   |  ❌  |
+/// | LeftEyeAngularAcceleration(Vector3)     | ❌ |  ❌  |  ❌   |  ❌  |
+/// | LeftEyeAngularVelocity(Vector3)         | ❌ |  ❌  |  ✅   |  ❌  |
+/// | LeftEyePosition(Vector3)                | ❌ |  ❌  |  ✅   |  ❌  |
+/// | LeftEyeVelocity(Vector3)                | ❌ |  ❌  |  ✅   |  ❌  |
+/// | RightEyeAcceleration(Vector3)           | ❌ |  ❌  |  ❌   |  ❌  |
+/// | RightEyeAngularAcceleration(Vector3)    | ❌ |  ❌  |  ❌   |  ❌  |
+/// | RightEyeAngularVelocity(Vector3)        | ❌ |  ❌  |  ✅   |  ❌  |
+/// | RightEyePosition(Vector3)               | ❌ |  ❌  |  ✅   |  ❌  |
+/// | RightEyeVelocity(Vector3)               | ❌ |  ❌  |  ✅   |  ❌  |
+/// | Secondary2DAxis(Vector2)                | ❌ |  ❌  |  ❌   |  ✅  |
+/// | BatteryLevel(float)                     | ❌ |  ❌  |  ❌   |  ❌  |
+/// | Secondary2DAxisClick(bool)              | ❌ |  ❌  |  ❌   |  ✅  |
+/// | Secondary2DAxisTouch(bool)              | ❌ |  ❌  |  ❌   |  ✅  |
+/// | UserPresence(bool)                      | ❌ |  ❌  |  ✅   |  ❌  |
+/// | HandData(Hand)                          | ❌ |  ❌  |  ❌   |  ❌  |
+/// | EyesData(Eyes)                          | ❌ |  ❌  |  ❌   |  ❌  |
 // ADDING_NEW_USAGE: update this table
 public class IsblStaticXRDevice
 {
@@ -469,12 +472,15 @@ public class IsblStaticXRDevice
         public int Primary2DAxis = -1;//Vector2
         public int Secondary2DAxis = -1;//Vector2
         public int Grip = -1;//float
+        public int GripForce = -1;//float
         public int Trigger = -1;//float
         public int BatteryLevel = -1;//float
+        public int Secondary2DAxisForce = -1;//float
         public int TrackingState = -1;//uint
         public int GripButton = -1;//bool
         public int IsTracked = -1;//bool
         public int MenuButton = -1;//bool
+        public int MenuTouch = -1;//bool
         public int Primary2DAxisClick = -1;//bool
         public int Primary2DAxisTouch = -1;//bool
         public int PrimaryButton = -1;//bool
@@ -696,6 +702,11 @@ public class IsblStaticXRDevice
     /// <summary>Returns whether the Grip is available</summary>
     public bool GripAvailable => _locations.Grip >= 0;
 
+    /// <summary>How much force is applied to the grip.</summary>
+    public float GripForce => _locations.GripForce >= 0 ? _dataFloat[_locations.GripForce] : 0;
+    /// <summary>Returns whether the GripForce is available</summary>
+    public bool GripForceAvailable => _locations.GripForce >= 0;
+
     /// <summary>Returns how much is the trigger button pressed</summary>
     /// 0 means not at all, 1 means fully, 0.5 means half way
     ///
@@ -709,6 +720,11 @@ public class IsblStaticXRDevice
     public float BatteryLevel => _locations.BatteryLevel >= 0 ? _dataFloat[_locations.BatteryLevel] : 0.5f;
     /// <summary>Returns whether the Trigger is available</summary>
     public bool BatteryLevelAvailable => _locations.BatteryLevel >= 0;
+
+    /// <summary>How much force is applied to Secondary2DAxis</summary>
+    public float Secondary2DAxisForce => _locations.Secondary2DAxisForce >= 0 ? _dataFloat[_locations.Secondary2DAxisForce] : 0f;
+    /// <summary>Returns whether the Secondary2DAxisForce is available</summary>
+    public bool Secondary2DAxisForceAvailable => _locations.Secondary2DAxisForce >= 0;
 
     /// <summary>Returns raw tracking state with more detail than IsTracked</summary>
     /// I did not research details of this field and therefore am unsure of how
@@ -736,6 +752,11 @@ public class IsblStaticXRDevice
     public bool MenuButton => _locations.MenuButton >= 0 && _dataBool[_locations.MenuButton];
     /// <summary>Returns whether the MenuButton is available</summary>
     public bool MenuButtonAvailable => _locations.MenuButton >= 0;
+
+    /// <summary>Whether the app menu button is touched.</summary>
+    public bool MenuTouch => _locations.MenuTouch >= 0 && _dataBool[_locations.MenuTouch];
+    /// <summary>Returns whether the MenuTouch is available</summary>
+    public bool MenuTouchAvailable => _locations.MenuTouch >= 0;
 
     /// <summary>Whether or not is primary joystick/touchpad pressed in</summary>
     public bool Primary2DAxisClick => _locations.Primary2DAxisClick >= 0 && _dataBool[_locations.Primary2DAxisClick];
@@ -940,6 +961,8 @@ public class IsblStaticXRDevice
                 if (name == "Grip") _locations.Grip = i;
                 else if (name == "Trigger") _locations.Trigger = i;
                 else if (name == "BatteryLevel") _locations.BatteryLevel = i;
+                else if (name == "GripForce") _locations.GripForce = i;
+                else if (name == "Secondary2DAxisForce") _locations.Secondary2DAxisForce = i;
                 else Debug.Log($"Unknown usage device of type float with name {name} on device {device.Name}");
                 CSVHeader += $"f.{name};";
             }
@@ -950,6 +973,7 @@ public class IsblStaticXRDevice
                 else if (name == "IsTracked") _locations.IsTracked = i;
                 // Note: I merged Oculus Touch's MenuButton and Vive's Menu into MenuButton only
                 else if (name == "Menu" || name == "MenuButton") _locations.MenuButton = i;
+                else if (name == "MenuTouch") _locations.MenuTouch = i;
                 else if (name == "Primary2DAxisClick") _locations.Primary2DAxisClick = i;
                 else if (name == "Primary2DAxisTouch") _locations.Primary2DAxisTouch = i;
                 else if (name == "PrimaryButton") _locations.PrimaryButton = i;
