@@ -34,16 +34,15 @@ export function Pane({
           style={{
             all: 'unset',
             cursor: 'pointer',
+            margin: -8,
             ...(open
               ? {
                   borderBlockEnd: '1px solid ' + theme.resolved.base02,
-                  marginBlockEnd: 8,
-                  paddingBlockEnd: 8,
+                  marginBlockEnd: 0,
                 }
               : {}),
 
-            marginInline: -8,
-            paddingInline: 8,
+            padding: 8,
             display: 'flex',
             justifyContent: 'space-between',
             alignItems: 'center',

@@ -68,7 +68,7 @@ export function JSONPane({
 }: Props & { title?: string; id?: string }) {
   return (
     <Pane title={title} id={id}>
-      <div style={{ marginTop: -16 }}>
+      <div style={{ marginTop: -8 }}>
         <JSONView {...props} />
       </div>
     </Pane>
