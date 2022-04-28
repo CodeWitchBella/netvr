@@ -211,25 +211,26 @@ function DashboardInner() {
         <div className="clients" style={{ width: 'auto', flexGrow: 1 }}>
           <ThemeSelector />
           <Pane>
-            <Button
-              type="button"
-              onClick={() => {
-                sendMessage({ action: 'reset room' })
-                setTimeout(() => {
-                  window.location.reload()
-                }, 100)
-              }}
-            >
-              Reset room
-            </Button>
+            <div style={{ display: 'flex', gap: 6 }}>
+              <Button
+                type="button"
+                onClick={() => {
+                  sendMessage({ action: 'reset room' })
+                  setTimeout(() => {
+                    window.location.reload()
+                  }, 100)
+                }}
+              >
+                Reset room
+              </Button>
+              <SyncDevicesButton
+                sendMessage={sendMessage}
+                clients={clients}
+                serverState={serverState}
+              />
+            </div>
           </Pane>
-          <ErrorBoundary>
-            <SyncDevicesButton
-              sendMessage={sendMessage}
-              clients={clients}
-              serverState={serverState}
-            />
-          </ErrorBoundary>
+
           <ErrorBoundary>
             <Calibration sendMessage={sendMessage} serverState={serverState} />
           </ErrorBoundary>
@@ -291,6 +292,8 @@ function DashboardInner() {
 const StatePane = memo<{ data: ServerState }>(function StatePane({ data }) {
   return (
     <JSONPane
+      title="State"
+      id="state"
       name="state"
       data={data}
       shouldExpandNode={(keyPath, data, level) =>

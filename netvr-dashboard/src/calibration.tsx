@@ -12,7 +12,7 @@ export function Calibration({
   const [message, setMessage] = useState('')
   const [client1Id, setClient1Id] = useState(0)
   return (
-    <Pane>
+    <Pane title="Calibration" id="calibration">
       <form
         onSubmit={(evt) => {
           evt.preventDefault()

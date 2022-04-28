@@ -85,7 +85,7 @@ export function useTheme() {
 export const ThemeSelector = memo(function ThemeSelector() {
   const theme = useTheme()
   return (
-    <Pane>
+    <Pane title="Visual settings" id="theme">
       <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
         <label>
           Theme:{' '}

@@ -14,7 +14,7 @@ export function SyncDevicesButton({
 }) {
   const [message, setMessage] = useState('')
   return (
-    <Pane>
+    <>
       <Button
         type="button"
         onClick={() => {
@@ -96,7 +96,7 @@ export function SyncDevicesButton({
         Sync Devices by headset position
       </Button>
       {message}
-    </Pane>
+    </>
   )
 }
 

@@ -61,10 +61,14 @@ export function JSONView({ data, shouldExpandNode, name }: Props) {
   )
 }
 
-export function JSONPane(props: Props) {
+export function JSONPane({
+  title,
+  id,
+  ...props
+}: Props & { title?: string; id?: string }) {
   return (
-    <Pane>
-      <div style={{ marginTop: -8 }}>
+    <Pane title={title} id={id}>
+      <div style={{ marginTop: -16 }}>
         <JSONView {...props} />
       </div>
     </Pane>
