@@ -84,7 +84,7 @@ export async function messageLoop(
 ): Promise<void> {
   let queue = Promise.resolve()
   let reject = (error: any) => {}
-  let recieveTimeout = setTimeout(onTimeout, clientTimeoutMs)
+  let receiveTimeout = setTimeout(onTimeout, clientTimeoutMs)
   const timedOut = Symbol('timed out')
   try {
     return await new Promise<void>((resolve, realReject) => {
@@ -104,13 +104,13 @@ export async function messageLoop(
       })
     })
   } finally {
-    clearTimeout(recieveTimeout)
+    clearTimeout(receiveTimeout)
     socket.removeEventListener('message', onMessage)
   }
   function onMessage(event: MessageEvent) {
     resetClientTimer()
     queue = queue
-      .then(() => Promise.race([onMessageIn(event), recieveTimeoutPromise()]))
+      .then(() => Promise.race([onMessageIn(event), receiveTimeoutPromise()]))
       .then((result) => {
         if (result === timedOut) {
           throw new Error('Server did not handle the message in specified time')
@@ -119,14 +119,14 @@ export async function messageLoop(
       .catch(reject)
   }
 
-  function recieveTimeoutPromise() {
+  function receiveTimeoutPromise() {
     return new Promise<typeof timedOut>(
       (resolve) => void setTimeout(resolve, handlerTimeoutMs, timedOut),
     )
   }
   function resetClientTimer() {
-    clearTimeout(recieveTimeout)
-    recieveTimeout = setTimeout(onTimeout, clientTimeoutMs)
+    clearTimeout(receiveTimeout)
+    receiveTimeout = setTimeout(onTimeout, clientTimeoutMs)
   }
   function onTimeout() {
     console.log('WebSocket:timeout', identifier)

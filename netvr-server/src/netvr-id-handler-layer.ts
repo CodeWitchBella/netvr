@@ -286,7 +286,7 @@ function idHandlerInternal<RestoreData>(
             } else {
               socket.send(
                 JSON.stringify({
-                  error: 'Invalid message recieved',
+                  error: 'Invalid message received',
                 }),
               )
             }
