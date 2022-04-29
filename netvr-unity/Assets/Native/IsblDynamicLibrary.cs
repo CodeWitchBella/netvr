@@ -34,7 +34,7 @@ class IsblDynamicLibrary : IDisposable
             var addr = GetProcAddress(lib, name);
             if (addr == default)
             {
-                Debug.LogWarning($"Can't retrieve address of {name}");
+                Utils.LogWarning($"Can't retrieve address of {name}");
                 val = default;
             }
             else
@@ -156,14 +156,14 @@ class IsblDynamicLibrary : IDisposable
             }
             catch (IOException e)
             {
-                Debug.LogError(e);
+                Utils.LogException(e);
             }
         }
 
         // load
-        Debug.Log($"Loading library from {_fullPath}");
+        Utils.Log($"Loading library from {_fullPath}");
         _library = SystemLibrary.LoadLibrary(_fullPath);
-        if (_library == default) Debug.LogWarning($"Failed to load {_fullPath}");
+        if (_library == default) Utils.LogWarning($"Failed to load {_fullPath}");
         // get function pointers converted to delegates
         SystemLibrary.GetDelegate(_library, "isbl_netvr_on_system_change", out OnSystemChange);
         SystemLibrary.GetDelegate(_library, "isbl_netvr_set_logger", out SetLogger);
@@ -190,7 +190,7 @@ class IsblDynamicLibrary : IDisposable
 #if UNITY_EDITOR_WIN
         if (_library != default)
         {
-            Debug.Log("IsblDynamicLibrary.Dispose()");
+            Utils.Log("IsblDynamicLibrary.Dispose()");
             SystemLibrary.FreeLibrary(_library);
             _library = default;
             try
@@ -198,7 +198,7 @@ class IsblDynamicLibrary : IDisposable
                 File.Delete(_fullPath);
                 File.Delete(_fullPath + ".meta");
             }
-            catch (IOException e) { Debug.LogError(e); }
+            catch (IOException e) { Utils.LogException(e); }
         }
 #endif
     }

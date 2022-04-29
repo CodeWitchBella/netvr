@@ -27,7 +27,7 @@ public class ServerSelector : MonoBehaviour
 
     void ProximityButtonClicked(string name)
     {
-        Debug.Log($"ProximityButtonClicked {name}");
+        Utils.Log($"ProximityButtonClicked {name}");
         if (name == "Next")
         {
             _nextId++;

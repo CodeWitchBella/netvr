@@ -63,7 +63,7 @@ public sealed class IsblNet : IDisposable
                 Socket.Dispose();
             }
             // re-init
-            Debug.Log($"Connecting to: {value}");
+            Utils.Log($"Connecting to: {value}");
             Socket = new(value);
             InitializeSocket();
         }
@@ -130,7 +130,7 @@ public sealed class IsblNet : IDisposable
                     }
                     else
                     {
-                        Debug.LogWarning($"Received message with unknown feature: \"{featureId}\"");
+                        Utils.LogWarning($"Received message with unknown feature: \"{featureId}\"");
                     }
                 }
                 else if (node.TryGetProperty("action", out var actionElement))

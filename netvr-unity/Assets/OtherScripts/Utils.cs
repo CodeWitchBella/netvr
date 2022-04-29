@@ -1,3 +1,4 @@
+using System;
 using System.Collections.Generic;
 using UnityEngine;
 
@@ -24,11 +25,7 @@ static class Utils
         return res;
     }
 
-    /**
-     * Like Debug.Log but only appends stacktrace if in editor so that plaintext
-     * logs are readable.
-     */
-    public static void Log(string text)
+    private static void AppendLines(string text)
     {
         var lines = text.Split("\n");
         for (int i = 0; i < lines.Length; ++i)
@@ -41,12 +38,54 @@ static class Utils
                 _wrapped = false;
             }
         }
+    }
 
+    /**
+     * Like Debug.Log but only appends stacktrace if in editor so that plaintext
+     * logs are readable. Also appends to senable log.
+     */
+    public static void Log(string text)
+    {
         text = text.Replace("\n", "\n    ");
+        AppendLines(text);
+
 #if UNITY_EDITOR
-        Debug.Log(text);
+        Debug.LogFormat(LogType.Log, LogOption.None, null, "{0}", text);
 #else
         Debug.LogFormat(LogType.Log, LogOption.NoStacktrace, null, "{0}", text);
+#endif
+    }
+
+    /**
+     * Like Debug.LogException but also appends to sendable log.
+     */
+    public static void LogException(Exception error)
+    {
+        var text = error.Message + "\n" + error.StackTrace;
+        text = text.Replace("\n", "\n    ");
+        AppendLines(text);
+
+#if UNITY_EDITOR
+        Debug.LogException(error);
+#else
+        Debug.LogFormat(LogType.Exception, LogOption.NoStacktrace, null, "{0}", text);
+#endif
+    }
+
+
+    /**
+    * Like Debug.LogWarning but only appends stacktrace if in editor so that
+    * plaintext logs are readable. Also appends to senable log.
+    */
+    public static void LogWarning(string text)
+    {
+        text = text.Replace("\n", "\n    ");
+        AppendLines(text);
+
+#if UNITY_EDITOR
+        Debug.LogWarning(text);
+#else
+        Debug.LogFormat(LogType.Exception, LogOption.NoStacktrace, null, "{0}", text);
 #endif
     }
 }

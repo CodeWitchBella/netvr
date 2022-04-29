@@ -41,7 +41,7 @@ public class IsblXRFeature : OpenXRFeature
             _timer = new Timer(1000);
             _timer.Elapsed += (source, evt) =>
             {
-                Debug.LogFormat(LogType.Log, LogOption.NoStacktrace, null, "From C++:{0}\nEND", _log.Replace("\n", "\n  "));
+                Utils.Log($"From C++:{_log}\nEND");
                 _log = "";
                 _timer.Dispose();
                 _timer = null;
@@ -52,7 +52,7 @@ public class IsblXRFeature : OpenXRFeature
 
     protected override bool OnInstanceCreate(ulong xrInstance)
     {
-        Debug.Log("OnInstanceCreate");
+        Utils.Log("OnInstanceCreate");
         _xrInstance = xrInstance;
         if (Lib == null)
         {
@@ -64,7 +64,7 @@ public class IsblXRFeature : OpenXRFeature
 
     protected override void OnInstanceDestroy(ulong xrInstance)
     {
-        Debug.Log("OnInstanceDestroy");
+        Utils.Log("OnInstanceDestroy");
         Lib?.Dispose();
         Lib = null;
         _xrInstance = 0;
@@ -77,12 +77,12 @@ public class IsblXRFeature : OpenXRFeature
             if (OpenXRRuntime.IsExtensionEnabled(ExtHandTracking))
             {
                 var status = Lib.OnSystemChange(xrSystem, _xrInstance, xrGetInstanceProcAddr);
-                Debug.Log($"_onSystemChange: {status}");
+                Utils.Log($"_onSystemChange: {status}");
             }
         }
         catch (Exception e)
         {
-            Debug.LogError(e);
+            Utils.LogException(e);
         }
     }
 
