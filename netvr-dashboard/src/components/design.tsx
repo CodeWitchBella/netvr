@@ -1,6 +1,6 @@
 import { PropsWithChildren, useState } from 'react'
 import { ErrorBoundary } from './error-boundary'
-import { useTheme } from './use-theme'
+import { useTheme } from './theme'
 
 export const fontFamily = 'Inter, sans-serif'
 
@@ -21,8 +21,8 @@ export function Pane({
         margin: 8,
         borderRadius: 4,
         border: '1px solid gray',
-        background: theme.resolved.base00,
-        color: theme.resolved.base06,
+        background: theme.base00,
+        color: theme.base06,
 
         display: 'flex',
         flexDirection: 'column',
@@ -37,7 +37,7 @@ export function Pane({
             margin: -8,
             ...(open
               ? {
-                  borderBlockEnd: '1px solid ' + theme.resolved.base02,
+                  borderBlockEnd: '1px solid ' + theme.base02,
                   marginBlockEnd: 0,
                 }
               : {}),
@@ -78,17 +78,17 @@ export function Button(
       style={{
         all: 'unset',
         cursor: 'pointer',
-        border: `1px solid ${theme.resolved.base03}`,
+        border: `1px solid ${theme.base03}`,
         padding: '4px 8px',
         borderRadius: 4,
         fontFamily,
         fontSize: '1rem',
-        color: theme.resolved.base07,
-        background: theme.resolved.base01,
+        color: theme.base07,
+        background: theme.base01,
         userSelect: 'none',
         ...(props.disabled
           ? {
-              color: theme.resolved.base04,
+              color: theme.base04,
               borderColor: 'transparent',
               cursor: 'pointer',
             }
@@ -110,13 +110,13 @@ export function Select(
     <select
       {...props}
       style={{
-        border: `1px solid ${theme.resolved.base03}`,
+        border: `1px solid ${theme.base03}`,
         padding: '2px 4px',
         borderRadius: 4,
         fontFamily,
         fontSize: '1rem',
-        color: theme.resolved.base07,
-        background: theme.resolved.base01,
+        color: theme.base07,
+        background: theme.base01,
         position: 'relative',
         ...props.style,
       }}

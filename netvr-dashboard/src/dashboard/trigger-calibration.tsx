@@ -1,9 +1,10 @@
 import { useState } from 'react'
-import { sendHapticImpulse, ServerState } from './data'
-import { Button, Pane } from './design'
-import { getName } from './utils'
+import type { ServerState } from '../protocol/data'
+import { Button, Pane } from '../components/design'
+import { getName } from '../utils'
+import * as sentMessages from '../protocol/sent-messages'
 
-export function Calibration({
+export function TriggerCalibration({
   sendMessage,
   serverState,
 }: {
@@ -27,7 +28,7 @@ export function Calibration({
           } = Object.fromEntries(
             Array.from(formData.entries(), ([k, v]) => [k, +v]),
           ) as any
-          sendMessage({ feature: 'calibration', action: 'begin', ...data })
+          sendMessage(sentMessages.beginCalibration(data))
 
           const msg = 'Calibration triggered ' + JSON.stringify(data)
           setMessage(msg)
@@ -144,7 +145,7 @@ function DeviceSelect({
         <Button
           type="button"
           onClick={() =>
-            void sendHapticImpulse(sendMessage, clientId, deviceId)
+            void sendMessage(sentMessages.hapticImpulse({ clientId, deviceId }))
           }
           disabled={
             !serverState.clients[clientId]?.devices?.find(

@@ -9,7 +9,7 @@ import {
   useMemo,
   memo,
 } from 'react'
-import { useLocalStorage } from './utils'
+import { useLocalStorage } from '../utils'
 import { useContext } from 'react'
 import { Pane, Select } from './design'
 
@@ -76,14 +76,18 @@ export function ThemeProvider({ children }: PropsWithChildren<{}>) {
   return <ctx.Provider value={useThemeData()}>{children}</ctx.Provider>
 }
 
-export function useTheme() {
+function useThemeInternal() {
   const theme = useContext(ctx)
   if (!theme) throw new Error('No theme context')
   return theme
 }
 
+export function useTheme() {
+  return useThemeInternal().resolved
+}
+
 export const ThemeSelector = memo(function ThemeSelector() {
-  const theme = useTheme()
+  const theme = useThemeInternal()
   return (
     <Pane title="Visual settings" id="theme">
       <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>

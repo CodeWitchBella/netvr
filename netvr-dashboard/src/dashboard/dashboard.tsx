@@ -6,9 +6,13 @@ import React, {
   useRef,
   useState,
 } from 'react'
-import { useLog } from './log'
-import { ListenToSocket, SocketProvider, useSocket } from './listen-to-socket'
-import { ErrorBoundary } from './error-boundary'
+import { useLog } from './message-log'
+import {
+  ListenToSocket,
+  SocketProvider,
+  useSocket,
+} from '../components/listen-to-socket'
+import { ErrorBoundary } from '../components/error-boundary'
 import {
   ClientBinaryData,
   ClientConfiguration,
@@ -16,19 +20,18 @@ import {
   DeviceConfiguration,
   mapData,
   parseBinaryMessage,
-  protocolVersion,
-  sendHapticImpulse,
   ServerState,
-} from './data'
-import { SyncDevicesButton } from './sync-devices'
-import { Calibration } from './calibration'
+} from '../protocol/data'
+import { SyncDevicesButton } from './use-sync-clients-by-headset'
+import { TriggerCalibration } from './trigger-calibration'
 import { useImmer } from 'use-immer'
 import { applyPatches, enableMapSet, enablePatches } from 'immer'
 
-import { ThemeSelector, useTheme } from './use-theme'
-import { JSONPane, JSONView } from './json-view'
-import { Button, Pane } from './design'
-import { getName } from './utils'
+import { ThemeSelector, useTheme } from '../components/theme'
+import { JSONPane, JSONView } from '../components/json-view'
+import { Button, Pane } from '../components/design'
+import { getName } from '../utils'
+import * as sentMessages from '../protocol/sent-messages'
 
 enableMapSet()
 enablePatches()
@@ -71,13 +74,13 @@ function deviceReducer(
 export function Dashboard({ socketUrl }: { socketUrl: string }) {
   const theme = useTheme()
   useEffect(() => {
-    document.documentElement.style.background = theme.resolved.base01
-    document.documentElement.style.color = theme.resolved.base07
+    document.documentElement.style.background = theme.base01
+    document.documentElement.style.color = theme.base07
     const dialog: any = document.querySelector('#fullscreen-logs')
-    dialog.style.background = theme.resolved.base01
-    dialog.style.color = theme.resolved.base07
+    dialog.style.background = theme.base01
+    dialog.style.color = theme.base07
     const button: any = document.querySelector('#fullscreen-logs button')
-    button.style.background = theme.resolved.base01
+    button.style.background = theme.base01
     return () => {
       document.documentElement.style.background = ''
       document.documentElement.style.color = ''
@@ -91,7 +94,7 @@ export function Dashboard({ socketUrl }: { socketUrl: string }) {
     <div
       style={{
         flexGrow: 1,
-        color: theme.resolved.base05,
+        color: theme.base05,
       }}
     >
       <SocketProvider
@@ -124,21 +127,11 @@ function DashboardInner() {
   const [selfId, setSelfId] = useState(-1)
   useEffect(() => {
     let sent = false
-    const info = {
-      deviceName: localStorage.getItem('deviceName'),
-      isBrowser: true,
-    }
+    const deviceName = localStorage.getItem('deviceName')
     try {
       const reconnection = localStorage.getItem('reconnection')
       const data = JSON.parse(reconnection || 'invalid')
-      socket.send(
-        JSON.stringify({
-          action: 'i already has id',
-          protocolVersion,
-          info,
-          ...data,
-        }),
-      )
+      socket.send(sentMessages.restoreConnectionFromBrowser(deviceName, data))
       console.log(data)
       setSelfId(data.id)
       sent = true
@@ -147,13 +140,7 @@ function DashboardInner() {
     }
 
     if (!sent) {
-      socket.send(
-        JSON.stringify({
-          action: 'gimme id',
-          protocolVersion,
-          info,
-        }),
-      )
+      socket.send(sentMessages.establishNewConnectionFromBrowser(deviceName))
     }
   }, [socket])
 
@@ -177,7 +164,7 @@ function DashboardInner() {
       socket.send(data)
       return
     }
-    const message = JSON.stringify(data)
+    const message = typeof data === 'string' ? data : JSON.stringify(data)
     dispatchLog({ direction: 'up', message, type: 'text', parsed: data })
     socket.send(message)
   }
@@ -278,7 +265,7 @@ function DashboardInner() {
               <Button
                 type="button"
                 onClick={() => {
-                  sendMessage({ action: 'reset room' })
+                  sendMessage(sentMessages.resetRoom())
                 }}
               >
                 Reset room
@@ -312,7 +299,10 @@ function DashboardInner() {
           </Pane>
 
           <ErrorBoundary>
-            <Calibration sendMessage={sendMessage} serverState={serverState} />
+            <TriggerCalibration
+              sendMessage={sendMessage}
+              serverState={serverState}
+            />
           </ErrorBoundary>
           <StatePane data={serverState} />
 
@@ -424,12 +414,7 @@ function Client({
             <Button
               type="button"
               onClick={() => {
-                socket.send(
-                  JSON.stringify({
-                    action: 'request logs',
-                    client: binaryClient.clientId,
-                  }),
-                )
+                socket.send(sentMessages.requestLogs(binaryClient.clientId))
               }}
             >
               Request logs
@@ -437,12 +422,7 @@ function Client({
             <Button
               type="button"
               onClick={() => {
-                socket.send(
-                  JSON.stringify({
-                    action: 'quit',
-                    client: binaryClient.clientId,
-                  }),
-                )
+                socket.send(sentMessages.quit(binaryClient.clientId))
               }}
             >
               Quit
@@ -556,10 +536,11 @@ function Device({
           <Button
             type="button"
             onClick={() =>
-              void sendHapticImpulse(
-                (buf) => socket.send(buf),
-                clientId,
-                device.deviceId,
+              void socket.send(
+                sentMessages.hapticImpulse({
+                  clientId,
+                  deviceId: device.deviceId,
+                }),
               )
             }
             disabled={!configuration.haptics?.supportsImpulse}

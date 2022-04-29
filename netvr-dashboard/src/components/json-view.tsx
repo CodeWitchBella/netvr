@@ -1,6 +1,6 @@
 import { JSONTree } from 'react-json-tree'
 import { Pane } from './design'
-import { useTheme } from './use-theme'
+import { useTheme } from './theme'
 
 type Props = {
   data: any
@@ -17,8 +17,8 @@ export function JSONView({ data, shouldExpandNode, name }: Props) {
   return (
     <JSONTree
       data={data}
-      theme={theme.name}
-      invertTheme={theme.inverted}
+      theme={theme}
+      invertTheme={false}
       shouldExpandNode={shouldExpandNode}
       keyPath={name ? [name] : undefined}
       isCustomNode={(value) => {
@@ -40,17 +40,14 @@ export function JSONView({ data, shouldExpandNode, name }: Props) {
           if (Array.isArray(value))
             return (
               <span
-                style={{ color: theme.resolved.base09 }}
+                style={{ color: theme.base09 }}
                 title={JSON.stringify(value)}
               >
                 {value.join(', ')}
               </span>
             )
           return (
-            <span
-              style={{ color: theme.resolved.base09 }}
-              title={JSON.stringify(value)}
-            >
+            <span style={{ color: theme.base09 }} title={JSON.stringify(value)}>
               Vector3[{value.x}, {value.y}, {value.z}]
             </span>
           )

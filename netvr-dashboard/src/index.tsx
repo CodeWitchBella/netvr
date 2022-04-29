@@ -1,9 +1,8 @@
 import ReactDOM from 'react-dom/client'
-import { Dashboard } from './dashboard'
+import { Dashboard } from './dashboard/dashboard'
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
-import { NotFound } from './not-found'
-import { ThemeProvider } from './use-theme'
-import { ErrorBoundary } from './error-boundary'
+import { ThemeProvider } from './components/theme'
+import { ErrorBoundary } from './components/error-boundary'
 
 export async function run() {
   const events = document.querySelector('#events')!
@@ -30,4 +29,8 @@ function getSocketUrl() {
   socketUrl.protocol = socketUrl.protocol === 'https:' ? 'wss:' : 'ws:'
   if (socketUrl.port === '3000') socketUrl.port = '10000'
   return socketUrl.toString()
+}
+
+function NotFound() {
+  return <h3 style={{ margin: 8 }}>404: Not found</h3>
 }
