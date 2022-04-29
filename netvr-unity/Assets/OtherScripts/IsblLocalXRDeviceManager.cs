@@ -96,16 +96,12 @@ public class IsblLocalXRDeviceManager : MonoBehaviour
         DeviceConnected(device);
     }
 
-    void DeviceConnected(InputDevice obj)
+    static string TrackingOriginModeFlagsToString(TrackingOriginModeFlags flags)
     {
-        List<InputFeatureUsage> usages = new();
-        obj.TryGetFeatureUsages(usages);
-        var text = string.Join("\n", from u in usages select $"    {u.name}: {u.type}");
         var supportedModesString = "";
-        var supportedModes = obj.subsystem.GetSupportedTrackingOriginModes();
         void CheckMode(TrackingOriginModeFlags flag)
         {
-            if ((supportedModes & flag) != 0)
+            if ((flags & flag) != 0)
             {
                 if (supportedModesString != "") supportedModesString += ", ";
                 supportedModesString += flag;
@@ -115,9 +111,18 @@ public class IsblLocalXRDeviceManager : MonoBehaviour
         CheckMode(TrackingOriginModeFlags.Floor);
         CheckMode(TrackingOriginModeFlags.TrackingReference);
         CheckMode(TrackingOriginModeFlags.Unbounded);
-        if (supportedModes == TrackingOriginModeFlags.Unknown) supportedModesString = "Unknown";
+        if (flags == TrackingOriginModeFlags.Unknown) supportedModesString = "Unknown";
+        return supportedModesString;
+    }
 
-        Utils.Log($"Input device connected {obj.name}\n    {obj.characteristics}\n{text}\n    TrackingOriginMode: {obj.subsystem.GetTrackingOriginMode()}\n    SupportedModes: {obj.subsystem.GetSupportedTrackingOriginModes()}");
+    void DeviceConnected(InputDevice obj)
+    {
+        List<InputFeatureUsage> usages = new();
+        obj.TryGetFeatureUsages(usages);
+        var text = string.Join("\n", from u in usages select $"    {u.name}: {u.type}");
+        var supportedModesString = TrackingOriginModeFlagsToString(obj.subsystem.GetSupportedTrackingOriginModes());
+
+        Utils.Log($"Input device connected {obj.name}\n    {obj.characteristics}\n{text}\n    TrackingOriginMode: {obj.subsystem.GetTrackingOriginMode()}\n    SupportedModes: {TrackingOriginModeFlagsToString(obj.subsystem.GetSupportedTrackingOriginModes())}");
 
         var driver = CreateDriver(obj);
         if (driver != null) Devices.Add(driver);

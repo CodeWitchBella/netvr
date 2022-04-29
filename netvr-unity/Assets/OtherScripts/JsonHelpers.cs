@@ -96,4 +96,46 @@ namespace Isbl.Json
             Vector3Converter.StaticWrite(writer, value.eulerAngles * (MathF.PI / 180f), options);
         }
     }
+
+    public class EnumToStringConverter : JsonConverterFactory
+    {
+        public override bool CanConvert(Type typeToConvert)
+        {
+            return typeToConvert.IsEnum;
+        }
+
+        public override JsonConverter CreateConverter(
+            Type type,
+            JsonSerializerOptions options)
+        {
+            return new EnumToStringConverterInner(type);
+        }
+
+        private class EnumToStringConverterInner : JsonConverter<object>
+        {
+            private readonly Type _type;
+
+            public EnumToStringConverterInner(Type type)
+            {
+                _type = type;
+            }
+
+            public override object Read(
+                ref Utf8JsonReader reader,
+                Type typeToConvert,
+                JsonSerializerOptions options)
+            {
+                throw new NotImplementedException();
+            }
+
+            public override void Write(
+                Utf8JsonWriter writer,
+                object value,
+                JsonSerializerOptions options)
+            {
+                string name = Enum.GetName(_type, value);
+                writer.WriteStringValue(name[0..1].ToLower() + name[1..]);
+            }
+        }
+    }
 }

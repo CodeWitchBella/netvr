@@ -32,6 +32,11 @@ import { JSONPane, JSONView } from '../components/json-view'
 import { Button, Pane } from '../components/design'
 import { getName, useLocalStorage } from '../utils'
 import * as sentMessages from '../protocol/sent-messages'
+import {
+  MessageTransmitLogs,
+  RecievedMessage,
+} from '../protocol/recieved-messages'
+import { LogsModalDialog } from './logs-modal-dialog'
 
 enableMapSet()
 enablePatches()
@@ -76,17 +81,10 @@ export function Dashboard({ socketUrl }: { socketUrl: string }) {
   useEffect(() => {
     document.documentElement.style.background = theme.base01
     document.documentElement.style.color = theme.base07
-    const dialog: any = document.querySelector('#fullscreen-logs')
-    dialog.style.background = theme.base01
-    dialog.style.color = theme.base07
-    const button: any = document.querySelector('#fullscreen-logs button')
-    button.style.background = theme.base01
+
     return () => {
       document.documentElement.style.background = ''
       document.documentElement.style.color = ''
-      dialog.style.background = ''
-      dialog.style.color = ''
-      button.style.background = ''
     }
   }, [theme])
   const [key, setKey] = useState(0)
@@ -113,9 +111,9 @@ export function Dashboard({ socketUrl }: { socketUrl: string }) {
 }
 
 function clientLogsReducer(
-  state: { [key: number]: string },
-  action: [number, string],
-): { [key: number]: string } {
+  state: { [key: number]: MessageTransmitLogs['logs'] },
+  action: [number, MessageTransmitLogs['logs']],
+): { [key: number]: MessageTransmitLogs['logs'] } {
   return {
     ...state,
     [action[0]]: action[1],
@@ -172,9 +170,24 @@ function DashboardInner() {
   }
   const lastAcceptedBinaryTimestamps = useRef(new Map<number, number>()).current
 
+  const [logsModal, setLogsModal] = useState<{
+    key: number
+    logs: MessageTransmitLogs['logs']
+  } | null>(null)
+
   const fullscreen = useFullscreen()
   return (
     <ErrorBoundary>
+      {logsModal ? (
+        <LogsModalDialog
+          key={logsModal.key}
+          logs={logsModal.logs}
+          onClose={() => {
+            setLogsModal((v) => (v?.key === logsModal.key ? null : v))
+            document.documentElement.style.overflow = ''
+          }}
+        />
+      ) : null}
       <ListenToSocket
         socket={socket}
         onMessage={(message) => {
@@ -200,23 +213,12 @@ function DashboardInner() {
             })
             dispatchDevices({ type: 'binary', message: parsed })
           } else {
-            const msg = JSON.parse(message)
+            const msg: RecievedMessage = JSON.parse(message)
             if (msg.action === 'transmit logs') {
+              setLogsModal((v) => ({ key: (v?.key ?? 0) + 1, logs: msg.logs }))
               dispatchClientLogs([msg.client, msg.logs])
-              const modal: any = document.querySelector('#fullscreen-logs')
-              modal.showModal()
-              modal.scrollTo(0, 0)
-              document.documentElement.style.overflow = 'hidden'
               document.documentElement.scrollTo(0, 0)
-              function onClose() {
-                document.documentElement.style.overflow = ''
-                modal.removeEventListener('close', onClose)
-              }
-              modal.addEventListener('close', onClose)
-              const content: any = document.querySelector(
-                '#fullscreen-logs pre',
-              )
-              content.innerText = msg.logs
+              document.documentElement.style.overflow = 'hidden'
               return
             }
             dispatchLog({
@@ -241,7 +243,7 @@ function DashboardInner() {
               setServerState((draft) => {
                 applyPatches(
                   draft,
-                  msg.patches.map((p: any) => ({
+                  msg.patches.map((p) => ({
                     ...p,
                     path: p.path.substring(1).split('/'),
                   })),
@@ -390,7 +392,7 @@ function Client({
   client: ClientConfiguration
   socket: WebSocket
   selfId: number
-  logs?: string
+  logs?: MessageTransmitLogs['logs']
 }) {
   const [show, setShow] = useState<'none' | 'json' | 'logs'>('none')
   return (
@@ -486,7 +488,7 @@ function Client({
             }}
           >
             {show === 'logs'
-              ? logs
+              ? logs?.map((v) => v.text).join('\n') || ''
               : JSON.stringify(
                   binaryClient,
                   (key, value) => {

@@ -1,42 +1,53 @@
 using System;
 using System.Collections.Generic;
+using System.Text.Json.Serialization;
 using UnityEngine;
 
 static class Utils
 {
+    struct LogEntry
+    {
+        [JsonInclude]
+        [JsonPropertyName("text")]
+        public string Text;
+
+        [JsonInclude]
+        [JsonPropertyName("type")]
+        [JsonConverter(typeof(Isbl.Json.EnumToStringConverter))]
+        public LogType Type;
+    }
+
     const int Length = 1024;
-    static readonly string[] _log = new string[Length];
+    static readonly LogEntry[] _log = new LogEntry[Length];
     static int _index = 0;
     static bool _wrapped = false;
 
-    public static string ReadLog()
+    public static object ReadLog()
     {
-        string res = "";
-        if (_wrapped)
+        if (!_wrapped)
         {
-            for (int i = 0; i < Length; ++i)
-                res += _log[(i + _index) % Length] + "\n";
+            LogEntry[] res = new LogEntry[_index];
+            for (int i = 0; i < _index; ++i)
+                res[i] = _log[i];
+            return res;
         }
         else
         {
-            for (int i = 0; i < _index; ++i)
-                res += _log[i] + "\n";
+            LogEntry[] res = new LogEntry[Length];
+            for (int i = 0; i < Length; ++i)
+                res[i] = _log[(i + _index) % Length];
+            return res;
         }
-        return res;
     }
 
-    private static void AppendLines(string text)
+    private static void AppendEntry(LogEntry entry)
     {
-        var lines = text.Split("\n");
-        for (int i = 0; i < lines.Length; ++i)
+        _log[_index] = entry;
+        ++_index;
+        if (_index >= Length)
         {
-            _log[_index] = lines[i];
-            ++_index;
-            if (_index >= Length)
-            {
-                _index = 0;
-                _wrapped = false;
-            }
+            _index = 0;
+            _wrapped = false;
         }
     }
 
@@ -47,7 +58,7 @@ static class Utils
     public static void Log(string text)
     {
         text = text.Replace("\n", "\n    ");
-        AppendLines(text);
+        AppendEntry(new LogEntry() { Text = text, Type = LogType.Log });
 
 #if UNITY_EDITOR
         Debug.LogFormat(LogType.Log, LogOption.None, null, "{0}", text);
@@ -63,7 +74,7 @@ static class Utils
     {
         var text = error.Message + "\n" + error.StackTrace;
         text = text.Replace("\n", "\n    ");
-        AppendLines(text);
+        AppendEntry(new LogEntry() { Text = text, Type = LogType.Exception });
 
 #if UNITY_EDITOR
         Debug.LogException(error);
@@ -80,12 +91,12 @@ static class Utils
     public static void LogWarning(string text)
     {
         text = text.Replace("\n", "\n    ");
-        AppendLines(text);
+        AppendEntry(new LogEntry() { Text = text, Type = LogType.Warning });
 
 #if UNITY_EDITOR
         Debug.LogWarning(text);
 #else
-        Debug.LogFormat(LogType.Exception, LogOption.NoStacktrace, null, "{0}", text);
+        Debug.LogFormat(LogType.Warning, LogOption.NoStacktrace, null, "{0}", text);
 #endif
     }
 }

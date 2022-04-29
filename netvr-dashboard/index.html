@@ -37,35 +37,10 @@
       }
       window.Buffer = Buffer
     </script>
-    <dialog
-      id="fullscreen-logs"
-      style="border-width: 0px; scrollbar-width: thin"
-    >
-      <form method="dialog" style="position: fixed; right: 24px; top: 16px">
-        <button
-          style="
-            all: unset;
-            cursor: pointer;
-            font-size: 16px;
-            border: 1px solid currentColor;
-            border-radius: 4px;
-            padding: 8px;
-          "
-        >
-          Close
-        </button>
-      </form>
-      <code><pre></pre></code>
-    </dialog>
+
     <script type="module">
       import { run } from '/src/index.tsx'
       run()
-
-      document
-        .querySelector('#fullscreen-logs')
-        .addEventListener('click', (event) => {
-          if (event.target === event.currentTarget) event.target.close()
-        })
     </script>
   </body>
 </html>
