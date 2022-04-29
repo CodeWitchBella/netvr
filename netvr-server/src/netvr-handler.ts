@@ -192,6 +192,10 @@ export function netvrRoomOptions(
           }
         } else if (message.action === 'quit') {
           utils.send(message.client, message)
+        } else if (message.action === 'request logs') {
+          utils.send(message.client, { ...message, client: id })
+        } else if (message.action === 'transmit logs') {
+          utils.send(message.client, { ...message, client: id })
         } else {
           throw new Error(
             'Unknown message action ' + JSON.stringify(message.action),

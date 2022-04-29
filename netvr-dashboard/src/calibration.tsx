@@ -1,6 +1,7 @@
 import { useState } from 'react'
 import { sendHapticImpulse, ServerState } from './data'
 import { Button, Pane } from './design'
+import { getName } from './utils'
 
 export function Calibration({
   sendMessage,
@@ -107,7 +108,7 @@ function DeviceSelect({
             )
             .map(([id, client]) => (
               <option key={id} value={id}>
-                #{id}: {client.connectionInfo.ip}
+                {getName({ clientId: id }, client.connectionInfo)}
               </option>
             ))}
         </select>

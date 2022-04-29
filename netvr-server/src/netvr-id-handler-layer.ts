@@ -188,7 +188,7 @@ function idHandlerInternal<RestoreData>(
    */
   async function handleConnection({
     socket,
-    connectionInfo,
+    connectionInfo: connectionInfoIn,
   }: {
     socket: WebSocket
     connectionInfo: ConnectionInfo
@@ -198,6 +198,7 @@ function idHandlerInternal<RestoreData>(
       actions: ['i already has id', 'gimme id'],
     })
     assertMessageResult(setupMessage)
+    const connectionInfo = { ...setupMessage.info, ...connectionInfoIn }
     assertProtocolVersion(opts.protocolVersion, setupMessage)
 
     const client = (function handleClientSetup(): HandledClient {

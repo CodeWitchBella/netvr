@@ -28,6 +28,7 @@ import { applyPatches, enableMapSet, enablePatches } from 'immer'
 import { ThemeSelector, useTheme } from './use-theme'
 import { JSONPane, JSONView } from './json-view'
 import { Button, Pane } from './design'
+import { getName } from './utils'
 
 enableMapSet()
 enablePatches()
@@ -71,8 +72,18 @@ export function Dashboard({ socketUrl }: { socketUrl: string }) {
   const theme = useTheme()
   useEffect(() => {
     document.documentElement.style.background = theme.resolved.base01
+    document.documentElement.style.color = theme.resolved.base07
+    const dialog: any = document.querySelector('#fullscreen-logs')
+    dialog.style.background = theme.resolved.base01
+    dialog.style.color = theme.resolved.base07
+    const button: any = document.querySelector('#fullscreen-logs button')
+    button.style.background = theme.resolved.base01
     return () => {
       document.documentElement.style.background = ''
+      document.documentElement.style.color = ''
+      dialog.style.background = ''
+      dialog.style.color = ''
+      button.style.background = ''
     }
   }, [theme])
   const [key, setKey] = useState(0)
@@ -98,11 +109,24 @@ export function Dashboard({ socketUrl }: { socketUrl: string }) {
   )
 }
 
+function clientLogsReducer(
+  state: { [key: number]: string },
+  action: [number, string],
+): { [key: number]: string } {
+  return {
+    ...state,
+    [action[0]]: action[1],
+  }
+}
+
 function DashboardInner() {
   const socket = useSocket()
   const [selfId, setSelfId] = useState(-1)
   useEffect(() => {
     let sent = false
+    const info = {
+      deviceName: localStorage.getItem('deviceName'),
+    }
     try {
       const reconnection = localStorage.getItem('reconnection')
       const data = JSON.parse(reconnection || 'invalid')
@@ -110,6 +134,7 @@ function DashboardInner() {
         JSON.stringify({
           action: 'i already has id',
           protocolVersion,
+          info,
           ...data,
         }),
       )
@@ -121,7 +146,13 @@ function DashboardInner() {
     }
 
     if (!sent) {
-      socket.send(JSON.stringify({ action: 'gimme id', protocolVersion }))
+      socket.send(
+        JSON.stringify({
+          action: 'gimme id',
+          protocolVersion,
+          info,
+        }),
+      )
     }
   }, [socket])
 
@@ -134,6 +165,10 @@ function DashboardInner() {
   const [serverState, setServerState] = useImmer<ServerState>({ clients: {} })
 
   const [log, dispatchLog] = useLog({ showBinary })
+  const [clientLogs, dispatchClientLogs] = useReducer(
+    clientLogsReducer,
+    Object.create(null),
+  )
   useSendKeepAlive(socket)
 
   function sendMessage(data: any) {
@@ -176,6 +211,24 @@ function DashboardInner() {
             dispatchDevices({ type: 'binary', message: parsed })
           } else {
             const msg = JSON.parse(message)
+            if (msg.action === 'transmit logs') {
+              dispatchClientLogs([msg.client, msg.logs])
+              const modal: any = document.querySelector('#fullscreen-logs')
+              modal.showModal()
+              modal.scrollTo(0, 0)
+              document.documentElement.style.overflow = 'hidden'
+              document.documentElement.scrollTo(0, 0)
+              function onClose() {
+                document.documentElement.style.overflow = ''
+                modal.removeEventListener('close', onClose)
+              }
+              modal.addEventListener('close', onClose)
+              const content: any = document.querySelector(
+                '#fullscreen-logs pre',
+              )
+              content.innerText = msg.logs
+              return
+            }
             dispatchLog({
               direction: 'down',
               type: 'text',
@@ -235,6 +288,26 @@ function DashboardInner() {
                 serverState={serverState}
               />
             </div>
+            <form
+              onSubmit={(evt) => {
+                evt.preventDefault()
+                const name: string = new FormData(evt.currentTarget).get(
+                  'name',
+                ) as any
+                if (name) localStorage.setItem('deviceName', name)
+                else localStorage.removeItem('deviceName')
+                socket.close()
+              }}
+            >
+              <label>
+                deviceName:{' '}
+                <input
+                  defaultValue={localStorage.getItem('deviceName') ?? ''}
+                  name="name"
+                />
+              </label>
+              <button>set</button>
+            </form>
           </Pane>
 
           <ErrorBoundary>
@@ -254,6 +327,7 @@ function DashboardInner() {
                   binaryClient={binaryClient ?? { clientId }}
                   socket={socket}
                   selfId={selfId}
+                  logs={clientLogs[clientId]}
                 />
               )
             },
@@ -314,15 +388,17 @@ function Client({
   client,
   socket,
   selfId,
+  logs,
 }: {
   binaryClient: ClientBinaryData | { clientId: number; devices?: undefined }
   client: ClientConfiguration
   socket: WebSocket
   selfId: number
+  logs?: string
 }) {
-  const [showJson, toggleShowJson] = useReducer((prev: boolean) => !prev, false)
+  const [show, setShow] = useState<'none' | 'json' | 'logs'>('none')
   return (
-    <Pane>
+    <Pane title={`Client ${getName(binaryClient, client.connectionInfo)}`}>
       <div
         style={{
           display: 'flex',
@@ -339,25 +415,37 @@ function Client({
           <div>connected: {client.connected ? '✅' : '❌'}</div>
         </div>
         {selfId === binaryClient.clientId ? null : (
-          <Button
-            type="button"
-            onClick={() => {
-              socket.send(
-                JSON.stringify({
-                  action: 'quit',
-                  client: binaryClient.clientId,
-                }),
-              )
-            }}
-          >
-            Quit
-          </Button>
+          <div style={{ display: 'flex', gap: 6 }}>
+            <Button
+              type="button"
+              onClick={() => {
+                socket.send(
+                  JSON.stringify({
+                    action: 'request logs',
+                    client: binaryClient.clientId,
+                  }),
+                )
+              }}
+            >
+              Request logs
+            </Button>
+            <Button
+              type="button"
+              onClick={() => {
+                socket.send(
+                  JSON.stringify({
+                    action: 'quit',
+                    client: binaryClient.clientId,
+                  }),
+                )
+              }}
+            >
+              Quit
+            </Button>
+          </div>
         )}
       </div>
 
-      <Button type="button" onClick={toggleShowJson}>
-        {showJson ? 'Hide JSON' : 'Show JSON'}
-      </Button>
       {client.devices?.map((info) => {
         const data = binaryClient.devices?.find(
           (d) => d.deviceId === info.localId,
@@ -372,28 +460,62 @@ function Client({
           />
         )
       }) ?? null}
-      {showJson ? (
-        <code>
-          <pre style={{ whiteSpace: 'pre-wrap', width: 500 }}>
-            {JSON.stringify(
-              binaryClient,
-              (key, value) => {
-                if (
-                  Array.isArray(value) &&
-                  value.length >= 2 &&
-                  value.length <= 3 &&
-                  typeof value[0] === 'number' &&
-                  !Number.isInteger(value[0])
-                ) {
-                  return `(${value.map((v) => v.toFixed(2)).join(', ')})`
-                }
-                return value
-              },
-              2,
-            )}
+      <div style={{ display: 'flex', gap: 6 }}>
+        <Button
+          type="button"
+          onClick={() => void setShow(show === 'json' ? 'none' : 'json')}
+        >
+          {show === 'json' ? 'Hide JSON' : 'Show JSON'}
+        </Button>
+        {logs ? (
+          <Button
+            type="button"
+            onClick={() => void setShow(show === 'logs' ? 'none' : 'logs')}
+          >
+            {show === 'logs' ? 'Hide logs' : 'Show logs'}
+          </Button>
+        ) : null}
+      </div>
+      {show === 'none' ? null : (
+        <code
+          style={{
+            position: 'relative',
+            width: '100%',
+            height: 500,
+          }}
+        >
+          <pre
+            style={{
+              whiteSpace: show === 'json' ? 'pre-wrap' : undefined,
+              overflow: 'auto',
+              position: 'absolute',
+              left: 0,
+              right: 0,
+              top: 0,
+              bottom: 0,
+            }}
+          >
+            {show === 'logs'
+              ? logs
+              : JSON.stringify(
+                  binaryClient,
+                  (key, value) => {
+                    if (
+                      Array.isArray(value) &&
+                      value.length >= 2 &&
+                      value.length <= 3 &&
+                      typeof value[0] === 'number' &&
+                      !Number.isInteger(value[0])
+                    ) {
+                      return `(${value.map((v) => v.toFixed(2)).join(', ')})`
+                    }
+                    return value
+                  },
+                  2,
+                )}
           </pre>
         </code>
-      ) : null}
+      )}
     </Pane>
   )
 }

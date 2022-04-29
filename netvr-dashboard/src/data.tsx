@@ -37,7 +37,15 @@ export type DeviceConfiguration = {
 
 export type ClientConfiguration = {
   connected: boolean
-  connectionInfo: { ip: string }
+  connectionInfo: {
+    ip: string
+    deviceName?: string
+    deviceModel?: string
+    deviceUniqueIdentifier?: string
+    graphicsDeviceName?: string
+    operatingSystem?: string
+    userName?: string
+  }
   calibration: {
     translate: { x: number; y: number; z: number }
     rotate: { x: number; y: number; z: number }

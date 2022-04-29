@@ -79,16 +79,28 @@ public sealed class IsblNet : IDisposable
         { CalibrationFeature.FeatureId, new CalibrationFeature() }
     };
 
+    /**
+     * Returns info about device to help with identifying devices on the dashboard
+     */
+    object GetInfo() => new
+    {
+        SystemInfo.deviceName,
+        SystemInfo.deviceModel,
+        SystemInfo.deviceUniqueIdentifier,
+        SystemInfo.graphicsDeviceName,
+        SystemInfo.operatingSystem,
+        userName = Environment.UserName,
+    };
+
     void InitializeSocket()
     {
         Socket.OnConnect += () =>
         {
-
             var conn = IsblPersistentData.Instance.GetConnection(SocketUrl);
             if (conn?.PeerId > 0)
-                Socket.SendAsync(new { action = "i already has id", id = conn.PeerId, token = conn.PeerIdToken, protocolVersion = ProtocolVersion });
+                Socket.SendAsync(new { action = "i already has id", id = conn.PeerId, token = conn.PeerIdToken, protocolVersion = ProtocolVersion, info = GetInfo() });
             else
-                Socket.SendAsync(new { action = "gimme id", protocolVersion = ProtocolVersion });
+                Socket.SendAsync(new { action = "gimme id", protocolVersion = ProtocolVersion, info = GetInfo() });
 
             foreach (var feature in _features.Values) feature.Reset();
         };
@@ -176,6 +188,12 @@ public sealed class IsblNet : IDisposable
 #if UNITY_EDITOR
                         UnityEditor.EditorApplication.ExitPlaymode();
 #endif
+                    }
+                    else if (action == "request logs")
+                    {
+                        Utils.Log("Sending logs...");
+                        var logs = Utils.ReadLog();
+                        Socket.SendAsync(new { action = "transmit logs", client = node.GetProperty("client"), logs });
                     }
                     else
                     {

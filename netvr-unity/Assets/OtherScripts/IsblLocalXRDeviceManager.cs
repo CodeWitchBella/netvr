@@ -83,7 +83,7 @@ public class IsblLocalXRDeviceManager : MonoBehaviour
 
     void DeviceDisconnected(InputDevice obj)
     {
-        Debug.Log($"Input device disconnected {obj.name}\n{obj.characteristics}");
+        Utils.Log($"Input device disconnected {obj.name}\n{obj.characteristics}");
         var index = Devices.FindIndex(d => d.LocalDevice.Device == obj);
         if (index >= 0) Devices.RemoveAt(index);
 
@@ -100,7 +100,7 @@ public class IsblLocalXRDeviceManager : MonoBehaviour
     {
         List<InputFeatureUsage> usages = new();
         obj.TryGetFeatureUsages(usages);
-        var text = string.Join("\n", from u in usages select $"{u.name}: {u.type}");
+        var text = string.Join("\n", from u in usages select $"    {u.name}: {u.type}");
         var supportedModesString = "";
         var supportedModes = obj.subsystem.GetSupportedTrackingOriginModes();
         void CheckMode(TrackingOriginModeFlags flag)
@@ -117,7 +117,7 @@ public class IsblLocalXRDeviceManager : MonoBehaviour
         CheckMode(TrackingOriginModeFlags.Unbounded);
         if (supportedModes == TrackingOriginModeFlags.Unknown) supportedModesString = "Unknown";
 
-        Debug.Log($"Input device connected {obj.name}\n{obj.characteristics}\n{text}\nTrackingOriginMode: {obj.subsystem.GetTrackingOriginMode()}\n  SupportedModes: {obj.subsystem.GetSupportedTrackingOriginModes()}");
+        Utils.Log($"Input device connected {obj.name}\n    {obj.characteristics}\n{text}\n    TrackingOriginMode: {obj.subsystem.GetTrackingOriginMode()}\n    SupportedModes: {obj.subsystem.GetSupportedTrackingOriginModes()}");
 
         var driver = CreateDriver(obj);
         if (driver != null) Devices.Add(driver);

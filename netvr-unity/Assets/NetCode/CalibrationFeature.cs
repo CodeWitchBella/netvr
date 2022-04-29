@@ -151,14 +151,14 @@ class CalibrationFeature : IIsblNetFeature
         var now = IsblStaticXRDevice.GetTimeNow();
         _calibrationsRemote.RemoveAll(c =>
         {
-            var res = c.StartTimeStamp + Timeout > now;
-            if (res) Utils.Log($"Remote calibration timeout. leader: {c.LeaderId}, localDevice: {c.LocalDeviceId}");
+            var res = c.StartTimeStamp + Timeout < now;
+            if (res) Utils.Log($"Remote calibration timeout. leader: {c.LeaderId}, localDevice: {c.LocalDeviceId}, start + timeout < now: {c.StartTimeStamp} + {Timeout} < {now}");
             return res;
         });
 
         _calibrationsLocal.RemoveAll(c =>
         {
-            var res = c.StartTimeStamp + Timeout > now;
+            var res = c.StartTimeStamp + Timeout < now;
             if (res) Utils.Log($"Local calibration timeout. follower: {c.FollowerId}, followerDevice: {c.FollowerDeviceId}, localDevice: {c.LocalDeviceId}");
             return res;
         });
@@ -174,6 +174,7 @@ class CalibrationFeature : IIsblNetFeature
                     action = "samples",
                     deviceId = c.LocalDeviceId,
                     clientId = net.SelfId,
+                    leader = c.LeaderId,
                     samples = new Sample[] { sample }
                 });
             }
@@ -187,6 +188,10 @@ class CalibrationFeature : IIsblNetFeature
             {
                 Utils.Log($"Collected local sample: {sample.Position} {sample.Rotation}");
                 c.LeaderSamples.Add(sample);
+            }
+            else
+            {
+                Utils.Log($"Local sample collect failed. DeviceId: {c.LocalDeviceId}. Devices: {string.Join(", ", net.DeviceManager.Devices.Select(d => d.LocalDevice.LocallyUniqueId))}");
             }
         }
 
