@@ -30,7 +30,7 @@ import { applyPatches, enableMapSet, enablePatches } from 'immer'
 import { ThemeSelector, useTheme } from '../components/theme'
 import { JSONPane, JSONView } from '../components/json-view'
 import { Button, Pane } from '../components/design'
-import { getName } from '../utils'
+import { getName, useLocalStorage } from '../utils'
 import * as sentMessages from '../protocol/sent-messages'
 
 enableMapSet()
@@ -145,10 +145,12 @@ function DashboardInner() {
   }, [socket])
 
   const [stopped, setStopped] = useState(false)
-  const [showBinary, toggleShowBinary] = useReducer(
-    (state: boolean) => !state,
-    true,
+  const [showBinaryRaw, setShowBinary] = useLocalStorage(
+    'show-binary',
+    'true',
+    (v): v is 'true' | 'false' => v === 'true' || v === 'false',
   )
+  const showBinary = showBinaryRaw === 'true'
   const [clients, dispatchDevices] = useReducer(deviceReducer, [])
   const [serverState, setServerState] = useImmer<ServerState>({ clients: {} })
 
@@ -327,7 +329,10 @@ function DashboardInner() {
         <div style={{ flexGrow: 1 }}>
           <Pane>
             <div style={{ flexDirection: 'row', gap: 8, display: 'flex' }}>
-              <Button type="button" onClick={toggleShowBinary}>
+              <Button
+                type="button"
+                onClick={() => setShowBinary(showBinary ? 'false' : 'true')}
+              >
                 {showBinary ? 'Hide binary' : 'Show binary'}
               </Button>
               <Button type="button" onClick={() => setStopped((v) => !v)}>

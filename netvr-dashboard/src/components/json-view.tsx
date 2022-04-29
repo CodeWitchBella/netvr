@@ -35,7 +35,7 @@ export function JSONView({ data, shouldExpandNode, name }: Props) {
             value.every((v) => typeof v === 'string'))
         )
       }}
-      valueRenderer={(valueAsString, value) => {
+      valueRenderer={(valueAsString, value, key) => {
         if (typeof value === 'object' && value) {
           if (Array.isArray(value))
             return (
@@ -52,6 +52,12 @@ export function JSONView({ data, shouldExpandNode, name }: Props) {
             </span>
           )
         }
+        if (key === 'operatingSystem')
+          return (
+            <span title={valueAsString}>
+              {valueAsString.substring(0, 35) + '…'}
+            </span>
+          )
         return valueAsString
       }}
     />
