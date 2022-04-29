@@ -126,6 +126,7 @@ function DashboardInner() {
     let sent = false
     const info = {
       deviceName: localStorage.getItem('deviceName'),
+      isBrowser: true,
     }
     try {
       const reconnection = localStorage.getItem('reconnection')
@@ -398,7 +399,10 @@ function Client({
 }) {
   const [show, setShow] = useState<'none' | 'json' | 'logs'>('none')
   return (
-    <Pane title={`Client ${getName(binaryClient, client.connectionInfo)}`}>
+    <Pane
+      id={'client-' + binaryClient.clientId}
+      title={`Client ${getName(binaryClient, client.connectionInfo)}`}
+    >
       <div
         style={{
           display: 'flex',
@@ -414,7 +418,8 @@ function Client({
           <div>ip: {client.connectionInfo.ip}</div>
           <div>connected: {client.connected ? '✅' : '❌'}</div>
         </div>
-        {selfId === binaryClient.clientId ? null : (
+        {selfId === binaryClient.clientId ||
+        client.connectionInfo.isBrowser ? null : (
           <div style={{ display: 'flex', gap: 6 }}>
             <Button
               type="button"

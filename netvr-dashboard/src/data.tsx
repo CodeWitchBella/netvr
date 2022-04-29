@@ -45,6 +45,7 @@ export type ClientConfiguration = {
     graphicsDeviceName?: string
     operatingSystem?: string
     userName?: string
+    isBrowser?: boolean
   }
   calibration: {
     translate: { x: number; y: number; z: number }
