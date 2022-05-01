@@ -115,7 +115,7 @@ public sealed class IsblNet : IDisposable
 
         Socket.OnTextMessage += (text) =>
         {
-            Utils.Log($"Received message: {text}");
+            Utils.LogJson("Received message", text);
             try
             {
                 var obj = Newtonsoft.Json.Linq.JObject.Parse(text);

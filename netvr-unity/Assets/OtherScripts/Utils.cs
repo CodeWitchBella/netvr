@@ -12,6 +12,10 @@ static class Utils
         public string Text;
 
         [JsonInclude]
+        [JsonPropertyName("json")]
+        public string Json;
+
+        [JsonInclude]
         [JsonPropertyName("type")]
         [JsonConverter(typeof(Isbl.Json.EnumToStringConverter))]
         public LogType Type;
@@ -65,6 +69,29 @@ static class Utils
 #else
         Debug.LogFormat(LogType.Log, LogOption.NoStacktrace, null, "{0}", text);
 #endif
+    }
+
+    /**
+     * Logs json in such a way that it could be syntax haighlighted in the GUI
+     */
+    public static void LogJson(string label, string json)
+    {
+        AppendEntry(new LogEntry() { Text = label, Json = json, Type = LogType.Log });
+
+#if UNITY_EDITOR
+        Debug.LogFormat(LogType.Log, LogOption.None, null, "{0} {1}", label, json);
+#else
+        Debug.LogFormat(LogType.Log, LogOption.NoStacktrace, null, "{0} {1}", label, json);
+#endif
+    }
+
+    /**
+    * Logs json in such a way that it could be syntax haighlighted in the GUI
+    */
+    public static void LogJson(string label, object obj)
+    {
+        string json = System.Text.Json.JsonSerializer.Serialize(obj);
+        LogJson(label, json);
     }
 
     /**

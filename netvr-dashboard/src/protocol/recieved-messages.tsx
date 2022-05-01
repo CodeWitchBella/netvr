@@ -6,6 +6,7 @@ export type MessageTransmitLogs = {
   client: number
   logs: readonly {
     text: string
+    json?: string
     type: 'error' | 'assert' | 'warning' | 'log' | 'exception'
   }[]
 }

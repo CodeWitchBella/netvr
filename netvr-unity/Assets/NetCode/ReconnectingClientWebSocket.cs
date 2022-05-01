@@ -50,6 +50,7 @@ public class ReconnectingClientWebSocket : IDisposable
     public Task SendAsync(object obj)
     {
         var text = System.Text.Json.JsonSerializer.Serialize(obj);
+        Utils.LogJson("Sending message", obj);
         // Debug.Log($"Sending: {text}");
         return SendAsync(Encoding.UTF8.GetBytes(text), WebSocketMessageType.Text);
     }

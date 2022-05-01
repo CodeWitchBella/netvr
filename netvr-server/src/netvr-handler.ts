@@ -42,6 +42,7 @@ const emptyClient = immer.freeze<ClientState>(
 
 const sampleClient = {
   devices: [],
+  calibration: {},
 }
 const sendToSelfAsDebug = false
 export function netvrRoomOptions(
@@ -153,6 +154,8 @@ export function netvrRoomOptions(
             utils.send(message.follower, message)
           } else if (message.action === 'samples') {
             utils.send(message.leader, message)
+          } else if (message.action === 'end') {
+            utils.send(message.follower, message)
           } else {
             throw new Error('Unknown message for calibration feature')
           }

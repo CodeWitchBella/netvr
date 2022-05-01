@@ -18,7 +18,7 @@ export function Pane({
 
         margin: 8,
         borderRadius: 4,
-        border: '1px solid gray',
+        border: '1px solid var(--base-3)',
         background: 'var(--base-0)',
         color: 'var(--base-6)',
 
