@@ -1,3 +1,4 @@
+/** @jsxImportSource @emotion/react */
 import { PropsWithChildren, useState } from 'react'
 import { ErrorBoundary } from './error-boundary'
 import { useTheme } from './theme'
@@ -75,7 +76,7 @@ export function Button(
   return (
     <button
       {...props}
-      style={{
+      css={{
         all: 'unset',
         cursor: 'pointer',
         border: `1px solid ${theme.base03}`,
@@ -89,7 +90,7 @@ export function Button(
         ...(props.disabled
           ? {
               color: theme.base04,
-              borderColor: 'transparent',
+              borderColor: theme.base02,
               cursor: 'pointer',
             }
           : {}),

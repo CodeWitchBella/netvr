@@ -1,3 +1,7 @@
 {
-    "extends": ["react-app", "prettier"]
+    "extends": ["react-app", "prettier"],
+    "plugins": ["@emotion"],
+    "rules": {
+        "@emotion/jsx-import": [2, { "runtime": "automatic" }]
+    }
 }
