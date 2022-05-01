@@ -10,3 +10,5 @@
 #define ISBL_NETVR_FUNC_NO_UNDEF
 
 #include "../includes/netvr.h"
+
+extern void (*unity_log)(const char *);

@@ -52,6 +52,14 @@ ISBL_NETVR_FUNC void isbl_netvr_calibration_compute(int handle, double *output)
 
     auto &ctx = map[handle];
     auto result = calibrate(ctx->samples);
+    std::string log("isbl_netvr_calibration_compute");
+    log += " " + std::to_string(result.rx);
+    log += " " + std::to_string(result.ry);
+    log += " " + std::to_string(result.rz);
+    log += " " + std::to_string(result.tx);
+    log += " " + std::to_string(result.ty);
+    log += " " + std::to_string(result.tz);
+    unity_log(log.c_str());
     static_assert(sizeof(double) * 6 == sizeof(decltype(result)));
     memcpy(output, &result, sizeof(double) * 6);
 }

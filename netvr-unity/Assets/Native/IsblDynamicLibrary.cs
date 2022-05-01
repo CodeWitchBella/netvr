@@ -73,7 +73,7 @@ class IsblDynamicLibrary : IDisposable
     [StructLayout(LayoutKind.Sequential)]
     public struct CalibrationComputeResult
     {
-        public double X, Y, Z, Qx, Qy, Qz, Qw;
+        public double X, Y, Z, Rx, Ry, Rz;
     }
 
     public delegate int CalibrationCompute_Delegate(int handle, out CalibrationComputeResult output);

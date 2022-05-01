@@ -108,6 +108,7 @@ class CalibrationFeature : IIsblNetFeature
                     FollowerDeviceId = node.GetProperty("followerDevice").GetUInt16(),
                     LocalDeviceId = node.GetProperty("leaderDevice").GetUInt16(),
                     FollowerId = node.GetProperty("follower").GetUInt16(),
+                    StartTimeStamp = IsblStaticXRDevice.GetTimeNow(),
                 });
             }
             else
@@ -208,7 +209,7 @@ class CalibrationFeature : IIsblNetFeature
         _calibrationsLocal.RemoveAll(c =>
         {
             var res = c.StartTimeStamp + Timeout < now && c.FinishedTimeStamp < 1;
-            if (res) Utils.Log($"Local calibration timeout. follower: {c.FollowerId}, followerDevice: {c.FollowerDeviceId}, localDevice: {c.LocalDeviceId}");
+            if (res) Utils.Log($"Local calibration timeout.\nfollower: {c.FollowerId}, followerDevice: {c.FollowerDeviceId}, localDevice: {c.LocalDeviceId}\nstart + timeout < now: {c.StartTimeStamp} + {Timeout} < {now}");
             return res;
         });
 
@@ -282,10 +283,15 @@ class CalibrationFeature : IIsblNetFeature
                 calculation.AddPair(leaderSample.Position, leaderSample.Rotation, followerSample.Position, followerSample.Rotation);
             }
             var result = calculation.Compute();
-            var rotate = new Quaternion((float)result.Qx, (float)result.Qy, (float)result.Qz, (float)result.Qw);
-            var translate = new Vector3((float)result.X, (float)result.Y, (float)result.Z);
+            var translate = new Vector3((float)result.X, (float)result.Y, (float)result.Z) / 100f;
+            var rotate = Quaternion.Euler(new Vector3((float)result.Rx, (float)result.Ry, (float)result.Rz) / 180f * Mathf.PI);
 
-            Utils.Log($"Calibration result: ({translate.x}, {translate.y}, {translate.z}) ({rotate.eulerAngles.x}, {rotate.eulerAngles.y}, {rotate.eulerAngles.z})");
+            Utils.Log($"Calibration result: ({result.X}, {result.Y}, {result.Z}) ({result.Rx}, {result.Ry}, {result.Rz})");
+            Utils.Log($"Calibration result converted: ({translate.x}, {translate.y}, {translate.z}) ({rotate.eulerAngles.x}, {rotate.eulerAngles.y}, {rotate.eulerAngles.z})");
+
+            translate = Vector3.zero;
+            Utils.Log("Zeroed out translate");
+
             net.Socket.SendAsync(new
             {
                 action = "multiset",

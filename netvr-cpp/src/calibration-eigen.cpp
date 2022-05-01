@@ -1,4 +1,5 @@
 #include "calibration-eigen.h"
+#include "netvr-internal.h"
 
 #include <string>
 #include <vector>
@@ -102,7 +103,6 @@ namespace
                     deltas.push_back(delta);
             }
         }
-        char buf[256];
 
         // Kabsch algorithm
 
@@ -142,7 +142,9 @@ namespace
         rot.transposeInPlace();
 
         Eigen::Vector3d euler = rot.eulerAngles(2, 1, 0); // * 180.0 / EIGEN_PI;
-
+        char buf[256];
+        snprintf(buf, sizeof buf, "Calibrated rotation x=%.2f y=%.2f z=%.2f\n", euler[0], euler[1], euler[2]);
+        unity_log(buf);
         return euler;
     }
 
@@ -185,6 +187,7 @@ namespace
 
         char buf[256];
         snprintf(buf, sizeof buf, "Calibrated translation x=%.2f y=%.2f z=%.2f\n", transcm[0], transcm[1], transcm[2]);
+        unity_log(buf);
         return transcm;
     }
 
@@ -222,8 +225,8 @@ CalibrationResult calibrate(const std::vector<Sample> &matches)
         translation.x(),
         translation.y(),
         translation.z(),
-        translation.x(),
-        translation.y(),
-        translation.z(),
+        rotation.x(),
+        rotation.y(),
+        rotation.z(),
     };
 }
