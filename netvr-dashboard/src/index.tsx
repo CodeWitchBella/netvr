@@ -1,7 +1,8 @@
+/** @jsxImportSource @emotion/react */
 import ReactDOM from 'react-dom/client'
 import { Dashboard } from './dashboard/dashboard'
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
-import { ThemeProvider } from './components/theme'
+import { ThemeRoot } from './components/theme'
 import { ErrorBoundary } from './components/error-boundary'
 
 export async function run() {
@@ -10,7 +11,7 @@ export async function run() {
 
   const root = ReactDOM.createRoot(events)
   root.render(
-    <ThemeProvider>
+    <ThemeRoot>
       <ErrorBoundary>
         <BrowserRouter>
           <Routes>
@@ -19,7 +20,7 @@ export async function run() {
           </Routes>
         </BrowserRouter>
       </ErrorBoundary>
-    </ThemeProvider>,
+    </ThemeRoot>,
   )
 }
 
@@ -32,5 +33,5 @@ function getSocketUrl() {
 }
 
 function NotFound() {
-  return <h3 style={{ margin: 8 }}>404: Not found</h3>
+  return <h3 css={{ margin: 8 }}>404: Not found</h3>
 }

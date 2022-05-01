@@ -1,29 +1,26 @@
 /** @jsxImportSource @emotion/react */
+import { css } from '@emotion/react'
 import { PropsWithChildren, useState } from 'react'
 import { ErrorBoundary } from './error-boundary'
-import { useTheme } from './theme'
-
-export const fontFamily = 'Inter, sans-serif'
 
 export function Pane({
   children,
   title,
   id,
 }: PropsWithChildren<{ title?: string; id?: string }>) {
-  const theme = useTheme()
   const [open, setOpen] = useState(
     id ? localStorage.getItem('pane-' + id) !== 'false' : true,
   )
   return (
     <div
-      style={{
+      css={{
         padding: 8,
 
         margin: 8,
         borderRadius: 4,
         border: '1px solid gray',
-        background: theme.base00,
-        color: theme.base06,
+        background: 'var(--base-0)',
+        color: 'var(--base-6)',
 
         display: 'flex',
         flexDirection: 'column',
@@ -32,22 +29,25 @@ export function Pane({
     >
       {title ? (
         <button
-          style={{
-            all: 'unset',
-            cursor: 'pointer',
-            margin: -8,
-            ...(open
-              ? {
-                  borderBlockEnd: '1px solid ' + theme.base02,
-                  marginBlockEnd: 0,
-                }
-              : {}),
+          css={[
+            {
+              all: 'unset',
+              cursor: 'pointer',
+              margin: '-8px',
+              userSelect: 'none',
 
-            padding: 8,
-            display: 'flex',
-            justifyContent: 'space-between',
-            alignItems: 'center',
-          }}
+              padding: 8,
+              display: 'flex',
+              justifyContent: 'space-between',
+              alignItems: 'center',
+            },
+            open
+              ? css({
+                  borderBlockEnd: '1px solid var(--base-2)',
+                  marginBlockEnd: 0,
+                })
+              : {},
+          ]}
           type="button"
           onClick={() => {
             setOpen(!open)
@@ -72,29 +72,25 @@ export function Button(
     HTMLButtonElement
   >,
 ) {
-  const theme = useTheme()
   return (
     <button
       {...props}
       css={{
         all: 'unset',
         cursor: 'pointer',
-        border: `1px solid ${theme.base03}`,
+        border: '1px solid var(--base-3)',
         padding: '4px 8px',
         borderRadius: 4,
-        fontFamily,
+        fontFamily: 'inherit',
         fontSize: '1rem',
-        color: theme.base07,
-        background: theme.base01,
+        color: 'var(--base-7)',
+        background: 'var(--base-1)',
         userSelect: 'none',
-        ...(props.disabled
-          ? {
-              color: theme.base04,
-              borderColor: theme.base02,
-              cursor: 'pointer',
-            }
-          : {}),
-        ...props.style,
+        '&[disabled]': {
+          color: 'var(--base-4)',
+          borderColor: 'var(--base-2)',
+          cursor: 'default',
+        },
       }}
     />
   )
@@ -106,20 +102,23 @@ export function Select(
     HTMLSelectElement
   >,
 ) {
-  const theme = useTheme()
   return (
     <select
       {...props}
-      style={{
-        border: `1px solid ${theme.base03}`,
-        padding: '2px 4px',
+      css={{
+        border: '1px solid var(--base-3)',
+        padding: '4px 8px',
         borderRadius: 4,
-        fontFamily,
+        fontFamily: 'inherit',
         fontSize: '1rem',
-        color: theme.base07,
-        background: theme.base01,
+        color: 'var(--base-7)',
+        background: 'var(--base-1)',
         position: 'relative',
-        ...props.style,
+        '&[disabled]': {
+          color: 'var(--base-4)',
+          borderColor: 'var(--base-2)',
+          cursor: 'default',
+        },
       }}
     >
       {props.children}

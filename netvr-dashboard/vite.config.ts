@@ -6,6 +6,9 @@ export default defineConfig({
   plugins: [
     react({
       exclude: /thesis\/[^/]+.tsx?$/,
+      babel: {
+        plugins: [['@emotion', { sourceMap: false, autoLabel: 'never' }]],
+      },
     }),
     shimReactPdf(),
     openerFixPlugin(),

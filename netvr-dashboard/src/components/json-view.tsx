@@ -1,6 +1,6 @@
+/** @jsxImportSource @emotion/react */
 import { JSONTree } from 'react-json-tree'
 import { Pane } from './design'
-import { useTheme } from './theme'
 
 type Props = {
   data: any
@@ -12,8 +12,12 @@ type Props = {
   name?: string
 }
 
+const theme = [...'0123456789ABCDEF'].reduce((object, l) => {
+  object['base0' + l] = `var(--base-${l})`.toLowerCase()
+  return object
+}, {} as any)
+
 export function JSONView({ data, shouldExpandNode, name }: Props) {
-  const theme = useTheme()
   return (
     <JSONTree
       data={data}
@@ -40,14 +44,17 @@ export function JSONView({ data, shouldExpandNode, name }: Props) {
           if (Array.isArray(value))
             return (
               <span
-                style={{ color: theme.base09 }}
+                css={{ color: 'var(--base-9)' }}
                 title={JSON.stringify(value)}
               >
                 {value.join(', ')}
               </span>
             )
           return (
-            <span style={{ color: theme.base09 }} title={JSON.stringify(value)}>
+            <span
+              css={{ color: 'var(--base-9)' }}
+              title={JSON.stringify(value)}
+            >
               Vector3[{value.x}, {value.y}, {value.z}]
             </span>
           )
@@ -71,7 +78,7 @@ export function JSONPane({
 }: Props & { title?: string; id?: string }) {
   return (
     <Pane title={title} id={id}>
-      <div style={{ marginTop: -8 }}>
+      <div css={{ marginTop: -8 }}>
         <JSONView {...props} />
       </div>
     </Pane>

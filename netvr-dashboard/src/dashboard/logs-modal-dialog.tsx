@@ -1,4 +1,5 @@
-import { useTheme } from '../components/theme'
+/** @jsxImportSource @emotion/react */
+import { css } from '@emotion/react'
 import { MessageTransmitLogs } from '../protocol/recieved-messages'
 
 export function LogsModalDialog({
@@ -8,7 +9,6 @@ export function LogsModalDialog({
   logs: MessageTransmitLogs['logs']
   onClose: () => void
 }) {
-  const theme = useTheme()
   return (
     <dialog
       ref={autoOpen}
@@ -21,11 +21,11 @@ export function LogsModalDialog({
         if (event.target === event.currentTarget) event.currentTarget.close()
       }}
       id="fullscreen-logs"
-      style={{ borderWidth: 0, scrollbarWidth: 'thin' }}
+      css={{ borderWidth: 0, scrollbarWidth: 'thin' }}
     >
-      <form method="dialog" style={{ position: 'fixed', right: 24, top: 16 }}>
+      <form method="dialog" css={{ position: 'fixed', right: 24, top: 16 }}>
         <button
-          style={{
+          css={{
             all: 'unset',
             cursor: 'pointer',
             fontSize: '16px',
@@ -40,7 +40,7 @@ export function LogsModalDialog({
       <code>
         <pre>
           {logs.map((v) => (
-            <div style={v.type !== 'log' ? { color: theme.base08 } : {}}>
+            <div css={v.type !== 'log' ? css({ color: 'var(--base-8)' }) : {}}>
               {v.text}
             </div>
           ))}

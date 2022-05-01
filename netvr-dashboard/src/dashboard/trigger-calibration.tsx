@@ -1,6 +1,7 @@
+/** @jsxImportSource @emotion/react */
 import { useState } from 'react'
 import type { ServerState } from '../protocol/data'
-import { Button, Pane } from '../components/design'
+import { Button, Pane, Select } from '../components/design'
 import { getName } from '../utils'
 import * as sentMessages from '../protocol/sent-messages'
 
@@ -36,7 +37,7 @@ export function TriggerCalibration({
             setMessage((prev) => (prev === msg ? '' : prev))
           }, 750)
         }}
-        style={{
+        css={{
           display: 'flex',
           flexDirection: 'column',
           alignItems: 'flex-start',
@@ -81,17 +82,18 @@ function DeviceSelect({
   const [deviceId, setDeviceId] = useState(0)
   return (
     <div
-      style={{
+      css={{
         display: 'flex',
         flexDirection: 'column',
         paddingInlineStart: 8,
+        gap: 4,
       }}
     >
-      <div style={{ marginInlineStart: -4, fontWeight: 'bold' }}>{type}</div>
+      <div css={{ marginInlineStart: -4, fontWeight: 'bold' }}>{type}</div>
       <label>
         Client
-        <select
-          style={{ marginInlineStart: 4 }}
+        <Select
+          css={{ marginInlineStart: 4 }}
           required
           name={type}
           autoComplete="off"
@@ -112,13 +114,13 @@ function DeviceSelect({
                 {getName({ clientId: id }, client.connectionInfo)}
               </option>
             ))}
-        </select>
+        </Select>
       </label>
       <div>
         <label>
           Device
-          <select
-            style={{ marginInline: 4 }}
+          <Select
+            css={{ marginInline: 4 }}
             required
             name={type + 'Device'}
             autoComplete="off"
@@ -140,7 +142,7 @@ function DeviceSelect({
                 {device.characteristics.join(',')}
               </option>
             ))}
-          </select>
+          </Select>
         </label>
         <Button
           type="button"

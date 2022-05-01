@@ -1,11 +1,5 @@
-import React, {
-  memo,
-  useEffect,
-  useMemo,
-  useReducer,
-  useRef,
-  useState,
-} from 'react'
+/** @jsxImportSource @emotion/react */
+import { memo, useEffect, useMemo, useReducer, useRef, useState } from 'react'
 import { useLog } from './message-log'
 import {
   ListenToSocket,
@@ -27,7 +21,7 @@ import { TriggerCalibration } from './trigger-calibration'
 import { useImmer } from 'use-immer'
 import { applyPatches, enableMapSet, enablePatches } from 'immer'
 
-import { ThemeSelector, useTheme } from '../components/theme'
+import { ThemeSelector } from '../components/theme'
 import { JSONPane, JSONView } from '../components/json-view'
 import { Button, Pane } from '../components/design'
 import { getName, useLocalStorage } from '../utils'
@@ -37,6 +31,7 @@ import {
   RecievedMessage,
 } from '../protocol/recieved-messages'
 import { LogsModalDialog } from './logs-modal-dialog'
+import { css } from '@emotion/react'
 
 enableMapSet()
 enablePatches()
@@ -77,22 +72,12 @@ function deviceReducer(
 }
 
 export function Dashboard({ socketUrl }: { socketUrl: string }) {
-  const theme = useTheme()
-  useEffect(() => {
-    document.documentElement.style.background = theme.base01
-    document.documentElement.style.color = theme.base07
-
-    return () => {
-      document.documentElement.style.background = ''
-      document.documentElement.style.color = ''
-    }
-  }, [theme])
   const [key, setKey] = useState(0)
   return (
     <div
-      style={{
+      css={{
         flexGrow: 1,
-        color: theme.base05,
+        color: 'var(--base-5)',
       }}
     >
       <SocketProvider
@@ -255,17 +240,17 @@ function DashboardInner() {
       />
 
       <div
-        style={{
+        css={{
           display: 'flex',
           flexDirection: 'row',
           flexWrap: 'wrap',
           justifyContent: 'space-between',
         }}
       >
-        <div className="clients" style={{ width: 'auto', flexGrow: 1 }}>
+        <div css={{ flexBasis: 512, flexGrow: 1 }}>
           <ThemeSelector />
           <Pane title="Quick actions" id="quick-actions">
-            <div style={{ display: 'flex', gap: 6 }}>
+            <div css={{ display: 'flex', gap: 6 }}>
               <Button
                 type="button"
                 onClick={() => {
@@ -328,9 +313,9 @@ function DashboardInner() {
             },
           )}
         </div>
-        <div style={{ flexGrow: 1 }}>
+        <div css={{ flexBasis: 512, flexGrow: 1 }}>
           <Pane>
-            <div style={{ flexDirection: 'row', gap: 8, display: 'flex' }}>
+            <div css={{ flexDirection: 'row', gap: 8, display: 'flex' }}>
               <Button
                 type="button"
                 onClick={() => setShowBinary(showBinary ? 'false' : 'true')}
@@ -340,7 +325,7 @@ function DashboardInner() {
               <Button type="button" onClick={() => setStopped((v) => !v)}>
                 {stopped ? 'Resume' : 'Pause'}
               </Button>
-              <div style={{ flexGrow: 1 }} />
+              <div css={{ flexGrow: 1 }} />
               <Button
                 type="button"
                 onClick={() => {
@@ -401,7 +386,7 @@ function Client({
       title={`Client ${getName(binaryClient, client.connectionInfo)}`}
     >
       <div
-        style={{
+        css={{
           display: 'flex',
           justifyContent: 'space-between',
           alignItems: 'flex-start',
@@ -417,7 +402,7 @@ function Client({
         </div>
         {selfId === binaryClient.clientId ||
         client.connectionInfo.isBrowser ? null : (
-          <div style={{ display: 'flex', gap: 6 }}>
+          <div css={{ display: 'flex', gap: 6 }}>
             <Button
               type="button"
               onClick={() => {
@@ -452,7 +437,7 @@ function Client({
           />
         )
       }) ?? null}
-      <div style={{ display: 'flex', gap: 6 }}>
+      <div css={{ display: 'flex', gap: 6 }}>
         <Button
           type="button"
           onClick={() => void setShow(show === 'json' ? 'none' : 'json')}
@@ -470,22 +455,24 @@ function Client({
       </div>
       {show === 'none' ? null : (
         <code
-          style={{
+          css={{
             position: 'relative',
             width: '100%',
             height: 500,
           }}
         >
           <pre
-            style={{
-              whiteSpace: show === 'json' ? 'pre-wrap' : undefined,
-              overflow: 'auto',
-              position: 'absolute',
-              left: 0,
-              right: 0,
-              top: 0,
-              bottom: 0,
-            }}
+            css={[
+              show === 'json' ? css({ whiteSpace: 'pre-wrap' }) : {},
+              {
+                overflow: 'auto',
+                position: 'absolute',
+                left: 0,
+                right: 0,
+                top: 0,
+                bottom: 0,
+              },
+            ]}
           >
             {show === 'logs'
               ? logs?.map((v) => v.text).join('\n') || ''
@@ -530,14 +517,14 @@ function Device({
 
   return (
     <div
-      style={{
+      css={{
         border: '1px solid gray',
         margin: 8,
         padding: 8,
         borderRadius: 4,
       }}
     >
-      <div style={{ display: 'flex', justifyContent: 'space-between' }}>
+      <div css={{ display: 'flex', justifyContent: 'space-between' }}>
         <div>Device: {configuration.localId}</div>
         {device ? (
           <Button
@@ -649,13 +636,13 @@ function BinaryMessage({ raw, parsed }: { raw: ArrayBuffer; parsed: any }) {
   )
   return (
     <>
-      <div style={{ whiteSpace: 'pre-wrap', width: 500 }}>
+      <div css={{ whiteSpace: 'pre-wrap', width: 500 }}>
         {'type  ___count_____   __client_id__  #d _#bytes'}
       </div>
-      <div style={{ whiteSpace: 'pre-wrap', width: 500 }}>
+      <div css={{ whiteSpace: 'pre-wrap', width: 500 }}>
         {rawText} ({raw.byteLength})
       </div>
-      <div style={{ whiteSpace: 'pre-wrap', width: 500 }}>
+      <div css={{ whiteSpace: 'pre-wrap', width: 500 }}>
         <JSONView data={parsed} shouldExpandNode={() => false} />
       </div>
     </>

@@ -1,3 +1,4 @@
+/** @jsxImportSource @emotion/react */
 import * as base16 from 'base16'
 import { invertTheme } from 'react-base16-styling'
 import type { Base16Theme } from 'react-base16-styling'
@@ -12,6 +13,7 @@ import {
 import { useLocalStorage } from '../utils'
 import { useContext } from 'react'
 import { Pane, Select } from './design'
+import { css, Global } from '@emotion/react'
 
 const isValidTheme = (v: unknown): v is keyof typeof base16 =>
   typeof v === 'string' && v in base16
@@ -72,25 +74,41 @@ function useThemeData() {
   ])
 }
 
-export function ThemeProvider({ children }: PropsWithChildren<{}>) {
-  return <ctx.Provider value={useThemeData()}>{children}</ctx.Provider>
+export function ThemeRoot({ children }: PropsWithChildren<{}>) {
+  const data = useThemeData()
+  return (
+    <>
+      <ctx.Provider value={data}>{children}</ctx.Provider>
+      <Global
+        styles={{
+          ':root': {
+            ...Object.fromEntries(
+              Object.entries(data.resolved).map(([k, v]) =>
+                k.startsWith('base')
+                  ? [`--base-${k.slice(5).toLowerCase()}`, v]
+                  : [],
+              ),
+            ),
+            background: data.resolved.base01,
+            color: data.resolved.base07,
+          },
+        }}
+      />
+    </>
+  )
 }
 
-function useThemeInternal() {
+function useTheme() {
   const theme = useContext(ctx)
   if (!theme) throw new Error('No theme context')
   return theme
 }
 
-export function useTheme() {
-  return useThemeInternal().resolved
-}
-
 export const ThemeSelector = memo(function ThemeSelector() {
-  const theme = useThemeInternal()
+  const theme = useTheme()
   return (
     <Pane title="Visual settings" id="theme">
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+      <div css={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
         <label>
           Theme:{' '}
           <Select
@@ -121,12 +139,12 @@ export const ThemeSelector = memo(function ThemeSelector() {
           </Select>
         </label>
         <div
-          style={{
+          css={{
             display: 'flex',
             marginTop: 4,
             borderRadius: 4,
             overflow: 'hidden',
-            borderColor: theme.resolved.base02,
+            borderColor: 'var(--base-2)',
             borderWidth: 1,
             borderStyle: 'solid',
           }}
@@ -134,32 +152,59 @@ export const ThemeSelector = memo(function ThemeSelector() {
           {Object.entries(theme.resolved)
             .filter(([k]) => k.startsWith('base'))
             .map(([k, v]) => (
-              <div key={k} style={{ background: v, flexGrow: 1 }}>
-                <div style={{ paddingBottom: '100%', position: 'relative' }}>
-                  <div
-                    style={{
-                      position: 'absolute',
-                      textAlign: 'center',
-                      left: 0,
-                      right: 0,
-                      top: '50%',
-                      transform: 'translateY(-50%)',
-                      color:
-                        Number.parseInt(v.substring(1, 3), 16) +
-                          Number.parseInt(v.substring(3, 5), 16) +
-                          Number.parseInt(v.substring(5, 7), 16) >
-                        128 * 3
-                          ? 'black'
-                          : 'white',
-                    }}
-                  >
-                    {k.slice(5)}
-                  </div>
-                </div>
-              </div>
+              <ThemeColorButton key={k} k={k} v={v} />
             ))}
         </div>
       </div>
     </Pane>
   )
 })
+
+function ThemeColorButton({ k, v }: { k: string; v: string }) {
+  const [check, setCheck] = useState(0)
+  useEffect(() => {
+    if (check) {
+      const tim = setTimeout(() => {
+        setCheck(0)
+      }, 1000)
+      return () => void clearTimeout(tim)
+    }
+  }, [check])
+  const variable = `var(--base-${k.slice(5).toLowerCase()})`
+  return (
+    <button
+      type="button"
+      onClick={() => {
+        // click twice to copy plain css, otherwise copy js string
+        if (check) navigator.clipboard.writeText(variable)
+        else navigator.clipboard.writeText(`'${variable}'`)
+        setCheck((v) => v + 1)
+      }}
+      css={{ all: 'unset', userSelect: 'none', flexGrow: 1, cursor: 'pointer' }}
+      style={{ background: variable }}
+    >
+      <div css={{ paddingBottom: '100%', position: 'relative' }}>
+        <div
+          css={[
+            {
+              position: 'absolute',
+              textAlign: 'center',
+              left: 0,
+              right: 0,
+              top: '50%',
+              transform: 'translateY(-50%)',
+            },
+            Number.parseInt(v.substring(1, 3), 16) +
+              Number.parseInt(v.substring(3, 5), 16) +
+              Number.parseInt(v.substring(5, 7), 16) >
+            128 * 3
+              ? css({ color: 'black' })
+              : css({ color: 'white' }),
+          ]}
+        >
+          {check ? (check > 1 ? '✔' : "'✔'") : k.slice(5)}
+        </div>
+      </div>
+    </button>
+  )
+}

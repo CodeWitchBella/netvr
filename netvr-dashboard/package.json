@@ -20,6 +20,7 @@
     "use-immer": "^0.7.0"
   },
   "devDependencies": {
+    "@emotion/babel-plugin": "^11.9.2",
     "@emotion/eslint-plugin": "^11.7.0",
     "@types/react": "^18.0.8",
     "@types/react-dom": "^18.0.3",
