@@ -12,7 +12,7 @@ import {
   parseBinaryMessage,
   ServerState,
 } from '../protocol/data'
-import { TriggerCalibration } from './trigger-calibration'
+import { CalibrationPane } from './calibration-pane'
 import { useImmer } from 'use-immer'
 import { applyPatches, enableMapSet, enablePatches } from 'immer'
 
@@ -237,7 +237,7 @@ function DashboardInner() {
             closeSocket={() => void socket.close()}
           />
           <ErrorBoundary>
-            <TriggerCalibration
+            <CalibrationPane
               sendMessage={sendMessage}
               serverState={serverState}
             />

@@ -5,7 +5,7 @@ import { Button, Pane, Select } from '../components/design'
 import { getName } from '../utils'
 import * as sentMessages from '../protocol/sent-messages'
 
-export function TriggerCalibration({
+export function CalibrationPane({
   sendMessage,
   serverState,
 }: {
