@@ -12,8 +12,9 @@ import {
 } from 'react'
 import { useLocalStorage } from '../utils'
 import { useContext } from 'react'
-import { Pane, Select } from './design'
+import { Pane, Select, selectionStyle } from './design'
 import { css, Global } from '@emotion/react'
+import { FullscreenButton } from '../dashboard/fullscreen-button'
 
 const isValidTheme = (v: unknown): v is keyof typeof base16 =>
   typeof v === 'string' && v in base16
@@ -80,19 +81,22 @@ export function ThemeRoot({ children }: PropsWithChildren<{}>) {
     <>
       <ctx.Provider value={data}>{children}</ctx.Provider>
       <Global
-        styles={{
-          ':root': {
-            ...Object.fromEntries(
-              Object.entries(data.resolved).map(([k, v]) =>
-                k.startsWith('base')
-                  ? [`--base-${k.slice(5).toLowerCase()}`, v]
-                  : [],
+        styles={[
+          {
+            ':root': {
+              ...Object.fromEntries(
+                Object.entries(data.resolved).map(([k, v]) =>
+                  k.startsWith('base')
+                    ? [`--base-${k.slice(5).toLowerCase()}`, v]
+                    : [],
+                ),
               ),
-            ),
-            background: data.resolved.base01,
-            color: data.resolved.base07,
+              background: data.resolved.base01,
+              color: data.resolved.base07,
+            },
           },
-        }}
+          selectionStyle,
+        ]}
       />
     </>
   )
@@ -107,7 +111,7 @@ function useTheme() {
 export const ThemeSelector = memo(function ThemeSelector() {
   const theme = useTheme()
   return (
-    <Pane title="Visual settings" id="theme">
+    <Pane title="Visual settings" id="theme" buttons={<FullscreenButton />}>
       <div css={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
         <label>
           Theme:{' '}

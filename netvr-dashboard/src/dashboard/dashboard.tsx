@@ -262,7 +262,7 @@ function DashboardInner() {
           )}
         </div>
         <div css={{ flexBasis: 512, flexGrow: 1 }}>
-          <Pane>
+          <Pane title="Local message log" id="messages">
             <div css={{ flexDirection: 'row', gap: 8, display: 'flex' }}>
               <Button
                 type="button"
@@ -273,19 +273,17 @@ function DashboardInner() {
               <Button type="button" onClick={() => setStopped((v) => !v)}>
                 {stopped ? 'Resume' : 'Pause'}
               </Button>
-              <div css={{ flexGrow: 1 }} />
-              <FullscreenButton />
             </div>
+            {log.map((event) => (
+              <Message
+                message={event.message}
+                key={event.key}
+                timestamp={event.timestamp}
+                type={event.type}
+                direction={event.direction}
+              />
+            ))}
           </Pane>
-          {log.map((event) => (
-            <Message
-              message={event.message}
-              key={event.key}
-              timestamp={event.timestamp}
-              type={event.type}
-              direction={event.direction}
-            />
-          ))}
         </div>
       </div>
     </ErrorBoundary>

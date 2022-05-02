@@ -1,5 +1,5 @@
 /** @jsxImportSource @emotion/react */
-import { Pane, Button } from '../components/design'
+import { Pane, Button, Input } from '../components/design'
 import { ClientBinaryData, ServerState } from '../protocol/data'
 import * as sentMessages from '../protocol/sent-messages'
 import { useSyncClientsByHeadset } from './use-sync-clients-by-headset'
@@ -30,6 +30,7 @@ export function QuickActionsPane(props: {
         {syncDevicesByHeadset.message}
       </div>
       <form
+        css={{ display: 'flex', gap: 4 }}
         onSubmit={(evt) => {
           evt.preventDefault()
           const name: string = new FormData(evt.currentTarget).get(
@@ -42,12 +43,12 @@ export function QuickActionsPane(props: {
       >
         <label>
           deviceName:{' '}
-          <input
+          <Input
             defaultValue={localStorage.getItem('deviceName') ?? ''}
             name="name"
           />
         </label>
-        <button>set</button>
+        <Button>set</Button>
       </form>
     </Pane>
   )
