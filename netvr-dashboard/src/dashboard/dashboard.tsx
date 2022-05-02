@@ -92,16 +92,6 @@ export function Dashboard({ socketUrl }: { socketUrl: string }) {
   )
 }
 
-function clientLogsReducer(
-  state: { [key: number]: MessageTransmitLogs['logs'] },
-  action: [number, MessageTransmitLogs['logs']],
-): { [key: number]: MessageTransmitLogs['logs'] } {
-  return {
-    ...state,
-    [action[0]]: action[1],
-  }
-}
-
 function DashboardInner() {
   const socket = useSocket()
   const [selfId, setSelfId] = useState(-1)
@@ -135,10 +125,6 @@ function DashboardInner() {
   const [serverState, setServerState] = useImmer<ServerState>({ clients: {} })
 
   const [log, dispatchLog] = useLog({ showBinary })
-  const [clientLogs, dispatchClientLogs] = useReducer(
-    clientLogsReducer,
-    Object.create(null),
-  )
   useSendKeepAlive(socket)
 
   function sendMessage(data: any) {
@@ -197,7 +183,6 @@ function DashboardInner() {
             const msg: RecievedMessage = JSON.parse(message)
             if (msg.action === 'transmit logs') {
               setLogsModal((v) => ({ key: (v?.key ?? 0) + 1, logs: msg.logs }))
-              dispatchClientLogs([msg.client, msg.logs])
               document.documentElement.scrollTo(0, 0)
               document.documentElement.style.overflow = 'hidden'
               return
@@ -269,9 +254,8 @@ function DashboardInner() {
                   key={clientId}
                   client={clientConfiguration}
                   binaryClient={binaryClient ?? { clientId }}
-                  socket={socket}
+                  sendMessage={sendMessage}
                   selfId={selfId}
-                  logs={clientLogs[clientId]}
                 />
               )
             },

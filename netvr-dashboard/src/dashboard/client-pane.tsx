@@ -1,6 +1,5 @@
 /** @jsxImportSource @emotion/react */
-import { css } from '@emotion/react'
-import { useReducer, useState } from 'react'
+import React, { useReducer } from 'react'
 import { Pane, Button } from '../components/design'
 import {
   ClientBinaryData,
@@ -9,65 +8,111 @@ import {
   DeviceConfiguration,
   mapData,
 } from '../protocol/data'
-import { MessageTransmitLogs } from '../protocol/recieved-messages'
 import * as sentMessages from '../protocol/sent-messages'
 import { getName } from '../utils'
 
 export function ClientPane({
   binaryClient,
   client,
-  socket,
+  sendMessage,
   selfId,
-  logs,
 }: {
   binaryClient: ClientBinaryData | { clientId: number; devices?: undefined }
   client: ClientConfiguration
-  socket: WebSocket
+  sendMessage: sentMessages.SendMessage
   selfId: number
-  logs?: MessageTransmitLogs['logs']
 }) {
-  const [show, setShow] = useState<'none' | 'json' | 'logs'>('none')
+  function resetCalibration() {
+    sendMessage(
+      sentMessages.setCalibration([
+        {
+          client: binaryClient.clientId,
+          value: {
+            rotate: { x: 0, y: 0, z: 0 },
+            translate: { x: 0, y: 0, z: 0 },
+            scale: { x: 1, y: 1, z: 1 },
+          },
+        },
+      ]),
+    )
+  }
+
   return (
     <Pane
       id={'client-' + binaryClient.clientId}
-      title={`Client ${getName(binaryClient, client.connectionInfo)}`}
+      title={`Client ${getName(binaryClient, client.connectionInfo)}${
+        selfId === binaryClient.clientId ? ' (this browser)' : ''
+      }`}
     >
       <div
         css={{
           display: 'flex',
-          justifyContent: 'space-between',
-          alignItems: 'flex-start',
+          flexDirection: 'row-reverse',
+          flexWrap: 'wrap',
+          gap: 8,
         }}
       >
         <div>
-          <div>
-            id: {binaryClient.clientId}
-            {selfId === binaryClient.clientId ? ' (this browser)' : null}
-          </div>
-          <div>ip: {client.connectionInfo.ip}</div>
-          <div>connected: {client.connected ? '✅' : '❌'}</div>
+          {selfId === binaryClient.clientId ||
+          client.connectionInfo.isBrowser ? null : (
+            <div css={{ display: 'flex', gap: 6 }}>
+              <Button
+                type="button"
+                onClick={() => {
+                  sendMessage(sentMessages.requestLogs(binaryClient.clientId))
+                }}
+              >
+                Request logs
+              </Button>
+              <Button
+                type="button"
+                onClick={() => {
+                  sendMessage(sentMessages.quit(binaryClient.clientId))
+                }}
+              >
+                Quit
+              </Button>
+            </div>
+          )}
         </div>
-        {selfId === binaryClient.clientId ||
-        client.connectionInfo.isBrowser ? null : (
-          <div css={{ display: 'flex', gap: 6 }}>
-            <Button
-              type="button"
-              onClick={() => {
-                socket.send(sentMessages.requestLogs(binaryClient.clientId))
+        <div
+          css={{
+            flexGrow: 1,
+            display: 'flex',
+            flexDirection: 'column',
+            gap: 4,
+          }}
+        >
+          <ClientContent>ip: {client.connectionInfo.ip}</ClientContent>
+
+          {isDefaultCalibration(client.calibration) ? null : (
+            <ClientContent
+              css={{
+                flexDirection: 'row',
+                alignItems: 'center',
               }}
             >
-              Request logs
-            </Button>
-            <Button
-              type="button"
-              onClick={() => {
-                socket.send(sentMessages.quit(binaryClient.clientId))
-              }}
-            >
-              Quit
-            </Button>
-          </div>
-        )}
+              <div>
+                <div>
+                  Translate: {vectorToString(client.calibration.translate, 'm')}
+                </div>
+                <div>
+                  Rotate:{' '}
+                  {vectorToString(
+                    client.calibration.rotate,
+                    '°',
+                    180 / Math.PI,
+                  )}
+                </div>
+              </div>
+              <div css={{ display: 'flex', alignItems: 'flex-end' }}>
+                <Button type="button" onClick={resetCalibration}>
+                  Reset
+                </Button>
+              </div>
+            </ClientContent>
+          )}
+        </div>
       </div>
 
       {client.devices?.map((info) => {
@@ -80,81 +125,71 @@ export function ClientPane({
             configuration={info}
             key={info.localId}
             clientId={binaryClient.clientId}
-            socket={socket}
+            sendMessage={sendMessage}
           />
         )
       }) ?? null}
-      <div css={{ display: 'flex', gap: 6 }}>
-        <Button
-          type="button"
-          onClick={() => void setShow(show === 'json' ? 'none' : 'json')}
-        >
-          {show === 'json' ? 'Hide JSON' : 'Show JSON'}
-        </Button>
-        {logs ? (
-          <Button
-            type="button"
-            onClick={() => void setShow(show === 'logs' ? 'none' : 'logs')}
-          >
-            {show === 'logs' ? 'Hide logs' : 'Show logs'}
-          </Button>
-        ) : null}
-      </div>
-      {show === 'none' ? null : (
-        <code
-          css={{
-            position: 'relative',
-            width: '100%',
-            height: 500,
-          }}
-        >
-          <pre
-            css={[
-              show === 'json' ? css({ whiteSpace: 'pre-wrap' }) : {},
-              {
-                overflow: 'auto',
-                position: 'absolute',
-                left: 0,
-                right: 0,
-                top: 0,
-                bottom: 0,
-              },
-            ]}
-          >
-            {show === 'logs'
-              ? logs?.map((v) => v.text).join('\n') || ''
-              : JSON.stringify(
-                  binaryClient,
-                  (key, value) => {
-                    if (
-                      Array.isArray(value) &&
-                      value.length >= 2 &&
-                      value.length <= 3 &&
-                      typeof value[0] === 'number' &&
-                      !Number.isInteger(value[0])
-                    ) {
-                      return `(${value.map((v) => v.toFixed(2)).join(', ')})`
-                    }
-                    return value
-                  },
-                  2,
-                )}
-          </pre>
-        </code>
-      )}
     </Pane>
   )
+}
+
+function ClientContent({
+  children,
+  className,
+}: {
+  children: React.ReactNode
+  className?: string
+}) {
+  return (
+    <div
+      css={{
+        display: 'flex',
+        flexDirection: 'column',
+        gap: 4,
+        paddingBlock: 4,
+        paddingInline: 8,
+        borderRadius: 4,
+      }}
+      className={className}
+    >
+      {children}
+    </div>
+  )
+}
+
+function isDefaultCalibration(calibration: ClientConfiguration['calibration']) {
+  return (
+    calibration.translate.x === 0 &&
+    calibration.translate.y === 0 &&
+    calibration.translate.z === 0 &&
+    calibration.rotate.x === 0 &&
+    calibration.rotate.y === 0 &&
+    calibration.rotate.z === 0 &&
+    calibration.scale.x === 1 &&
+    calibration.scale.y === 1 &&
+    calibration.scale.z === 1
+  )
+}
+
+function vectorToString(
+  vector: { x: number; y: number; z: number },
+  unit: string = '',
+  multiply: number = 1,
+) {
+  return `(${(vector.x * multiply).toFixed(2)}${unit}, ${(
+    vector.y * multiply
+  ).toFixed(2)}${unit}, ${(vector.z * multiply).toFixed(2)}${unit})`
 }
 
 function Device({
   device,
   configuration,
-  socket,
+  sendMessage,
   clientId,
 }: {
   device: DeviceBinaryData | null
   configuration: DeviceConfiguration
-  socket: WebSocket
+  sendMessage: sentMessages.SendMessage
   clientId: number
 }) {
   const [showDetails, toggleShowDetails] = useReducer(
@@ -163,12 +198,11 @@ function Device({
   )
 
   return (
-    <div
+    <ClientContent
       css={{
-        border: '1px solid gray',
-        margin: 8,
-        padding: 8,
-        borderRadius: 4,
+        border: '1px solid var(--base-2)',
+        paddingBlockStart: 8,
+        paddingBlockEnd: 8,
       }}
     >
       <div css={{ display: 'flex', justifyContent: 'space-between' }}>
@@ -176,14 +210,14 @@ function Device({
         {device ? (
           <Button
             type="button"
-            onClick={() =>
-              void socket.send(
+            onClick={() => {
+              sendMessage(
                 sentMessages.hapticImpulse({
                   clientId,
                   deviceId: device.deviceId,
                 }),
               )
-            }
+            }}
             disabled={!configuration.haptics?.supportsImpulse}
           >
             Identify
@@ -202,7 +236,7 @@ function Device({
           ) : null}
         </>
       ) : null}
-    </div>
+    </ClientContent>
   )
 }
 
