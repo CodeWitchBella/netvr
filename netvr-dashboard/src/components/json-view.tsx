@@ -59,12 +59,7 @@ export function JSONView({ data, shouldExpandNode, name }: Props) {
             </span>
           )
         }
-        if (key === 'operatingSystem')
-          return (
-            <span title={valueAsString}>
-              {valueAsString.substring(0, 35) + '…'}
-            </span>
-          )
+
         return valueAsString
       }}
     />

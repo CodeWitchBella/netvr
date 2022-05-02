@@ -1,7 +1,6 @@
 import { notNull } from '@isbl/ts-utils'
 import { useState } from 'react'
 import { ClientBinaryData, mapData, ServerState } from '../protocol/data'
-import { Button } from '../components/design'
 import * as sentMessages from '../protocol/sent-messages'
 
 type Props = {
@@ -10,19 +9,11 @@ type Props = {
   sendMessage: (message: any) => void
 }
 
-export function SyncDevicesButton(props: Props) {
-  const syncDevicesByHeadset = useSyncClientsByHeadset(props)
-  return (
-    <>
-      <Button type="button" onClick={syncDevicesByHeadset.onClick}>
-        Sync Devices by headset position
-      </Button>
-      {syncDevicesByHeadset.message}
-    </>
-  )
-}
-
-function useSyncClientsByHeadset({ clients, serverState, sendMessage }: Props) {
+export function useSyncClientsByHeadset({
+  clients,
+  serverState,
+  sendMessage,
+}: Props) {
   const [message, setMessage] = useState('')
   return { onClick: syncClientsByHeadset, message }
 

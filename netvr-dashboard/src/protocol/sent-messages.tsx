@@ -1,5 +1,7 @@
 import { protocolVersion } from './data'
 
+export type SendMessage = (message: string | ArrayBuffer) => void
+
 export function restoreConnectionFromBrowser(
   deviceName: string | null,
   data: { id: number; token: string },

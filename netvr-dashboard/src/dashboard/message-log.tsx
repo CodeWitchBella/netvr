@@ -1,4 +1,7 @@
-import { useReducer } from 'react'
+/** @jsxImportSource @emotion/react */
+import { memo, useMemo, useReducer } from 'react'
+import { Pane } from '../components/design'
+import { JSONView } from '../components/json-view'
 
 type MessageData<T extends 'binary' | 'json'> = {
   type: T
@@ -67,4 +70,54 @@ export function useLog({ showBinary }: { showBinary: boolean }) {
       .sort((a, b) => -a.timestamp.localeCompare(b.timestamp)),
     dispatch,
   ] as const
+}
+
+export const Message = memo(function Message({
+  message,
+  timestamp,
+  type,
+  direction,
+}: {
+  message: any
+  timestamp: string
+  type: 'binary' | 'json'
+  direction: 'up' | 'down'
+}) {
+  return (
+    <Pane>
+      <div>
+        {direction === 'down' ? '🔽' : '🔼'} {timestamp}
+      </div>
+      {type === 'binary' ? (
+        <pre>
+          <BinaryMessage raw={message.raw} parsed={message.parsed} />
+        </pre>
+      ) : (
+        <JSONView name="message" data={message} shouldExpandNode={() => true} />
+      )}
+    </Pane>
+  )
+})
+
+function BinaryMessage({ raw, parsed }: { raw: ArrayBuffer; parsed: any }) {
+  const rawText = useMemo(
+    () =>
+      Array.from(new Uint8Array(raw).values())
+        .map((v, i) => (v + '').padStart(3, ' ') + (i % 16 === 15 ? '\n' : ' '))
+        .join(''),
+    [raw],
+  )
+  return (
+    <>
+      <div css={{ whiteSpace: 'pre-wrap', width: 500 }}>
+        {'type  ___count_____   __client_id__  #d _#bytes'}
+      </div>
+      <div css={{ whiteSpace: 'pre-wrap', width: 500 }}>
+        {rawText} ({raw.byteLength})
+      </div>
+      <div css={{ whiteSpace: 'pre-wrap', width: 500 }}>
+        <JSONView data={parsed} shouldExpandNode={() => false} />
+      </div>
+    </>
+  )
 }
