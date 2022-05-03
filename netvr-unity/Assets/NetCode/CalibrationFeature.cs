@@ -40,7 +40,7 @@ using System.Linq;
  * { normal configuration patch message }
  */
 
-class CalibrationFeature : IIsblNetFeature
+public class CalibrationFeature : IIsblNetFeature
 {
     public const string FeatureId = "calibration";
     const double Timeout = 180.0;
@@ -53,7 +53,7 @@ class CalibrationFeature : IIsblNetFeature
         public double StartTimeStamp;
     }
 
-    struct Sample
+    public struct Sample
     {
         [JsonConverter(typeof(Isbl.Json.QuaternionAsEulerConverter))]
         [JsonInclude]
@@ -196,6 +196,8 @@ class CalibrationFeature : IIsblNetFeature
         return true;
     }
 
+    private bool _redoneCalibration = false;
+
     public void Tick(IsblNet net)
     {
         var now = IsblStaticXRDevice.GetTimeNow();
@@ -258,11 +260,49 @@ class CalibrationFeature : IIsblNetFeature
             }
         }
 
-        static bool ReadyPredicate(LocalCalibration c) => c.LeaderSamples.Count > RequiredSamples && c.FollowerSamples.Count > RequiredSamples && c.FinishedTimeStamp < 1;
+        static bool IsCalibrationReady(LocalCalibration c) => c.LeaderSamples.Count >= RequiredSamples && c.FollowerSamples.Count >= RequiredSamples && c.FinishedTimeStamp < 1;
 
-        foreach (var cal in _calibrationsLocal.Where(ReadyPredicate))
+        if (!_redoneCalibration)
         {
+            var cal = IsblPersistentData.Instance.LastCalibration;
+            if (cal == null) { _redoneCalibration = true; }
+            else if (net.SelfId != cal.LeaderId) { _redoneCalibration = true; }
+            else if (net.ServerState.Clients.ContainsKey(cal.FollowerId))
+            {
+                _redoneCalibration = true;
+                Utils.Log("Restoring last calibration...");
+                var result = new LocalCalibration { StartTimeStamp = now, FollowerDeviceId = cal.FollowerDeviceId, FollowerId = cal.FollowerId, FollowerSamples = new(), LeaderSamples = new(), LocalDeviceId = cal.LeaderDeviceId };
+                _calibrationsLocal.Add(result);
+                foreach (var sample in cal.Samples)
+                {
+                    result.FollowerSamples.Add(sample.Follower);
+                    result.LeaderSamples.Add(sample.Leader);
+                }
+            }
+        }
+
+        foreach (var cal in _calibrationsLocal)
+        {
+            if (!IsCalibrationReady(cal)) continue;
             Utils.Log("Calibration ready, computing...");
+            IsblPersistentData.Update(data =>
+            {
+                data.LastCalibration = new IsblPersistentData.Calibration()
+                {
+                    FollowerDeviceId = cal.FollowerDeviceId,
+                    FollowerId = cal.FollowerId,
+                    LeaderDeviceId = cal.LocalDeviceId,
+                    LeaderId = net.SelfId,
+                    Samples = new(),
+                };
+                for (int i = 0; i < RequiredSamples; ++i)
+                {
+                    var leaderSample = cal.LeaderSamples[i];
+                    var followerSample = cal.FollowerSamples[i];
+                    data.LastCalibration.Samples.Add(new IsblPersistentData.CalibrationSample { Leader = leaderSample, Follower = followerSample });
+                }
+            });
+
             cal.FinishedTimeStamp = now;
             _ = net.Socket.SendAsync(new
             {

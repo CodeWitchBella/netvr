@@ -36,6 +36,40 @@ public sealed class IsblPersistentData : IIsblPersistentData
     [JsonPropertyName("connections")]
     public List<Connection> Connections = new();
 
+    public class CalibrationSample
+    {
+        [JsonInclude]
+        [JsonPropertyName("leader")]
+        public CalibrationFeature.Sample Leader;
+
+        [JsonInclude]
+        [JsonPropertyName("follower")]
+        public CalibrationFeature.Sample Follower;
+    }
+
+    public class Calibration
+    {
+        [JsonInclude]
+        [JsonPropertyName("followerDevice")]
+        public ushort FollowerDeviceId;
+        [JsonInclude]
+        [JsonPropertyName("leaderDevice")]
+        public ushort LeaderDeviceId;
+        [JsonInclude]
+        [JsonPropertyName("follower")]
+        public ushort FollowerId;
+        [JsonInclude]
+        [JsonPropertyName("leader")]
+        public ushort LeaderId;
+        [JsonInclude]
+        [JsonPropertyName("samples")]
+        public List<CalibrationSample> Samples = new();
+    }
+
+    [JsonInclude]
+    [JsonPropertyName("lastCalibration")]
+    public Calibration LastCalibration;
+
     public Connection GetConnection(string socketUrl)
         => Connections.Find(c => c.SocketUrl == socketUrl);
 
