@@ -1,6 +1,6 @@
 /** @jsxImportSource @emotion/react */
 import { css } from '@emotion/react'
-import React, { PropsWithChildren, useRef, useState } from 'react'
+import React, { PropsWithChildren, useId, useState } from 'react'
 import { ErrorBoundary } from './error-boundary'
 
 export const focusableStyles = css({
@@ -31,14 +31,14 @@ export function Pane({
   )
   const onClick = (event: React.MouseEvent) => {
     event.stopPropagation()
-    buttonRef.current?.focus()
+
     setOpen(!open)
     if (id) {
       if (open) localStorage.setItem('pane-' + id, 'false')
       else localStorage.removeItem('pane-' + id)
     }
   }
-  const buttonRef = useRef<HTMLButtonElement>(null)
+  const htmlId = useId()
   return (
     <div
       css={{
@@ -68,6 +68,7 @@ export function Pane({
               display: 'flex',
               alignItems: 'center',
               gap: 8,
+              position: 'relative',
             },
             open
               ? css({
@@ -76,47 +77,87 @@ export function Pane({
                 })
               : {},
           ]}
-          onClick={onClick}
         >
           <button
-            ref={buttonRef}
             type="button"
             css={[
               {
                 all: 'unset',
                 border: '1px solid transparent',
                 borderRadius: 4,
-                margin: '-8px -4px',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+                padding: 4,
+                margin: -4,
               },
               focusableStyles,
             ]}
             onClick={onClick}
+            id={htmlId}
+            data-pane-header
+            aria-expanded={open}
+            aria-controls={htmlId + 'contents'}
+            onKeyDown={(event) => {
+              const selector = 'button[data-pane-header]'
+              if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
+                const headers = Array.from(
+                  document.querySelectorAll(selector),
+                ) as HTMLButtonElement[]
+                const selfIdx = headers.findIndex(
+                  (h) => h === event.currentTarget,
+                )
+                const diff = event.key === 'ArrowUp' ? -1 : 1
+
+                focus(
+                  headers[(selfIdx + diff + headers.length) % headers.length],
+                )
+              } else if (event.key === 'Home') {
+                focus(document.querySelector(selector))
+              } else if (event.key === 'End') {
+                const headers = document.querySelectorAll(selector)
+                focus(headers.item(headers.length - 1))
+              }
+
+              function focus(el: Element | undefined | null) {
+                ;(el as any)?.focus?.()
+              }
+            }}
           >
             <svg
               viewBox="0 0 24 24"
               width={24}
-              css={{ transition: 'transform 200ms ease-in-out' }}
+              css={{
+                transition: 'transform 200ms ease-in-out',
+                margin: '-8px -4px',
+              }}
               fill="currentColor"
               style={{
-                transform: open
-                  ? 'translateY(1px) rotate(0deg)'
-                  : 'translateY(1px) rotate(-180deg)',
+                transform: open ? 'rotate(0deg)' : 'rotate(-180deg)',
               }}
             >
               <path d="M16.59 8.59 12 13.17 7.41 8.59 6 10l6 6 6-6z" />
             </svg>
+            {title ?? 'Pane'}
           </button>
-          {title ?? 'Pane'}
+          <label
+            css={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0 }}
+            htmlFor={htmlId}
+          />
 
           {buttons ? (
             <>
               <div css={{ flexGrow: 1 }} />
-              <div>{buttons}</div>
+              <div css={{ position: 'relative' }}>{buttons}</div>
             </>
           ) : null}
         </div>
       ) : null}
-      {open || !title ? <ErrorBoundary>{children}</ErrorBoundary> : null}
+      {open || !title ? (
+        <ErrorBoundary>
+          <div id={htmlId + 'contents'}>{children}</div>
+        </ErrorBoundary>
+      ) : null}
     </div>
   )
 }

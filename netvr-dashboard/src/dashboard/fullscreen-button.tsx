@@ -33,6 +33,7 @@ export function FullscreenButton() {
         if (fullscreen.enabled) fullscreen.exit()
         else fullscreen.request()
       }}
+      aria-label="Full screen"
       css={[
         {
           all: 'unset',

@@ -15,7 +15,7 @@ export function QuickActionsPane(props: {
 
   return (
     <Pane title="Quick actions" id="quick-actions">
-      <div css={{ display: 'flex', gap: 6 }}>
+      <div css={{ display: 'flex', gap: 6, marginBlockEnd: 8 }}>
         <Button
           type="button"
           onClick={() => {
@@ -48,7 +48,7 @@ export function QuickActionsPane(props: {
             name="name"
           />
         </label>
-        <Button>set</Button>
+        <Button>Change</Button>
       </form>
     </Pane>
   )
