@@ -1,6 +1,6 @@
 /** @jsxImportSource @emotion/react */
 import { useState } from 'react'
-import type { ServerState } from '../protocol/data'
+import type { ClientConfiguration, ServerState } from '../protocol/data'
 import { Button, Pane, Select } from '../components/design'
 import { getName } from '../utils'
 import * as sentMessages from '../protocol/sent-messages'
@@ -12,8 +12,13 @@ export function CalibrationPane({
   sendMessage: (message: any) => void
   serverState: ServerState
 }) {
+  const client1 = useDeviceSelect({ serverState })
+  const client2 = useDeviceSelect({
+    serverState,
+    exceptClient: client1.clientId,
+  })
+
   const [message, setMessage] = useState('')
-  const [client1Id, setClient1Id] = useState(0)
   return (
     <Pane title="Calibration" id="calibration">
       <form
@@ -46,14 +51,14 @@ export function CalibrationPane({
       >
         <DeviceSelect
           serverState={serverState}
-          onClientSelect={setClient1Id}
+          data={client1}
           type="leader"
           sendMessage={sendMessage}
         />
         {true ? (
           <DeviceSelect
             serverState={serverState}
-            exceptClient={client1Id}
+            data={client2}
             type="follower"
             sendMessage={sendMessage}
           />
@@ -65,21 +70,91 @@ export function CalibrationPane({
   )
 }
 
+function isSelectableClient(
+  clientId: number | string,
+  client: ClientConfiguration | null,
+  exceptClient: number = 0,
+) {
+  return !!(
+    client &&
+    +clientId !== exceptClient &&
+    client.connected &&
+    !client.connectionInfo.isBrowser &&
+    client.devices &&
+    client.devices.length > 0
+  )
+}
+
+function useDeviceSelect({
+  exceptClient,
+  serverState,
+}: {
+  exceptClient?: number
+  serverState: ServerState
+}) {
+  const [clientIdState, setClientId] = useState(0)
+  const [deviceIdState, setDeviceId] = useState(0)
+
+  const [clientId, client] = getClient()
+  const devices = client?.devices?.filter((v) =>
+    v.characteristics.includes('TrackedDevice'),
+  )
+
+  return {
+    clientId,
+    client,
+    setClientId,
+    deviceId: getDeviceId(),
+    setDeviceId,
+    exceptClient,
+    devices,
+  }
+
+  function getClient(): readonly [number, ClientConfiguration | null] {
+    if (
+      isSelectableClient(
+        clientIdState,
+        serverState.clients[clientIdState],
+        exceptClient,
+      )
+    ) {
+      return [clientIdState, serverState.clients[clientIdState]]
+    }
+
+    const found = Object.entries(serverState.clients).find(([k, client]) =>
+      isSelectableClient(k, client, exceptClient),
+    )
+    if (!found) return [0, null]
+    return [+found[0], found[1]]
+  }
+
+  function getDeviceId() {
+    if (!devices) return deviceIdState
+    let device = devices.find((d) => d.localId === deviceIdState)
+    if (device) return device.localId
+    device = devices.find((d) => d.characteristics.includes('HeldInHand'))
+    if (device) return device.localId
+    return deviceIdState
+  }
+}
+
 function DeviceSelect({
   serverState,
-  onClientSelect,
-  exceptClient,
   type,
   sendMessage,
+  data,
 }: {
   serverState: ServerState
-  onClientSelect?: (id: number) => void
-  exceptClient?: number
   type: 'leader' | 'follower'
   sendMessage: (data: ArrayBuffer) => void
+  data: ReturnType<typeof useDeviceSelect>
 }) {
-  const [clientId, setClientId] = useState(0)
-  const [deviceId, setDeviceId] = useState(0)
+  const clients = Object.entries(serverState.clients).filter(
+    ([id, client]) =>
+      client.connected && client.devices && +id !== data.exceptClient,
+  )
+  const deviceSelectorDisabled =
+    !data.client || !data.devices || data.devices.length < 1
   return (
     <div
       css={{
@@ -97,23 +172,21 @@ function DeviceSelect({
           required
           name={type}
           autoComplete="off"
+          disabled={clients.length < 1}
+          value={data.clientId}
           onChange={(evt) => {
             const value = +evt.currentTarget.value ?? 0
-            setClientId(value)
-            onClientSelect?.(value)
+            data.setClientId(value)
           }}
         >
-          <option value="">Select client</option>
-          {Object.entries(serverState.clients)
-            .filter(
-              ([id, client]) =>
-                client.connected && client.devices && +id !== exceptClient,
-            )
-            .map(([id, client]) => (
-              <option key={id} value={id}>
-                {getName({ clientId: id }, client.connectionInfo)}
-              </option>
-            ))}
+          {clients.length < 1 ? (
+            <option value="">No client available</option>
+          ) : null}
+          {clients.map(([id, client]) => (
+            <option key={id} value={id}>
+              {getName({ clientId: id }, client.connectionInfo)}
+            </option>
+          ))}
         </Select>
       </label>
       <div>
@@ -124,21 +197,19 @@ function DeviceSelect({
             required
             name={type + 'Device'}
             autoComplete="off"
-            disabled={
-              !(
-                clientId > 0 &&
-                clientId !== exceptClient &&
-                serverState.clients[clientId]
-              )
-            }
+            value={data.deviceId}
+            disabled={deviceSelectorDisabled}
             onChange={(evt) => {
-              setDeviceId(+evt.currentTarget.value ?? 0)
+              data.setDeviceId(+evt.currentTarget.value ?? 0)
             }}
           >
-            <option value="">Select device</option>
-            {serverState.clients[clientId]?.devices?.map((device) => (
+            {deviceSelectorDisabled ? (
+              <option value="">Select client first</option>
+            ) : null}
+            {data.devices?.map((device) => (
               <option key={device.localId} value={device.localId}>
-                #{device.localId}: {device.name}{' '}
+                #{device.localId}: {device.name.replace(' OpenXR', '')}
+                {'\n'}
                 {device.characteristics.join(',')}
               </option>
             ))}
@@ -146,13 +217,17 @@ function DeviceSelect({
         </label>
         <Button
           type="button"
-          onClick={() =>
-            void sendMessage(sentMessages.hapticImpulse({ clientId, deviceId }))
-          }
+          onClick={() => {
+            sendMessage(
+              sentMessages.hapticImpulse({
+                clientId: data.clientId,
+                deviceId: data.deviceId,
+              }),
+            )
+          }}
           disabled={
-            !serverState.clients[clientId]?.devices?.find(
-              (d) => d.localId === deviceId,
-            )?.haptics?.supportsImpulse
+            !data.client?.devices?.find((d) => d.localId === data.deviceId)
+              ?.haptics?.supportsImpulse
           }
         >
           Identify
