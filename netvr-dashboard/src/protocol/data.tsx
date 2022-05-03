@@ -24,7 +24,6 @@ export type DeviceConfiguration = {
   characteristics: string[]
   localId: number
   lengths: { [key: string]: number }
-  data?: DeviceBinaryData
   haptics: null | {
     numChannels: 1
     supportsImpulse: true

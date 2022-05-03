@@ -21,11 +21,11 @@ export function useSyncClientsByHeadset({
     setMessage('')
     const headsets = clients
       .map((c) => {
+        console.log(c)
         const headInfo = serverState.clients[c.clientId]?.devices?.find(
           (d) =>
             d.characteristics.includes('HeadMounted') &&
-            d.characteristics.includes('TrackedDevice') &&
-            d.data,
+            d.characteristics.includes('TrackedDevice'),
         )
         if (!headInfo) return null
         const headData = c.devices.find((d) => d.deviceId === headInfo.localId)
