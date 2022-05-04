@@ -28,7 +28,7 @@ public class ToggleLog : MonoBehaviour
     {
         if (name == "ToggleLog")
         {
-            IsblPersistentData.Instance.LogLocalData = !IsblPersistentData.Instance.LogLocalData;
+            IsblConfig.Instance.LogLocalData = !IsblConfig.Instance.LogLocalData;
             ReText();
         }
     }
@@ -40,7 +40,7 @@ public class ToggleLog : MonoBehaviour
 
     void ReText()
     {
-        var data = IsblPersistentData.Instance;
+        var data = IsblConfig.Instance;
         TextMesh.text = _template
             .Replace("{log}", data.LogLocalData ? "yes" : "no");
     }

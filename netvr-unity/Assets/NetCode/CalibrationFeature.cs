@@ -271,7 +271,7 @@ public class CalibrationFeature : IIsblNetFeature
 
         if (!_redoneCalibration)
         {
-            var cal = IsblPersistentData.Instance.LastCalibration;
+            var cal = IsblConfig.Instance.LastCalibration;
             Utils.Log($"LastCalibration {cal != null}");
             _redoneCalibration = true;
             if (cal != null)
@@ -293,9 +293,9 @@ public class CalibrationFeature : IIsblNetFeature
         {
             if (!IsCalibrationReady(cal)) continue;
             Utils.Log("Calibration ready, computing...");
-            IsblPersistentData.Update(data =>
+            IsblConfig.Update(data =>
             {
-                data.LastCalibration = new IsblPersistentData.Calibration()
+                data.LastCalibration = new IsblConfig.Calibration()
                 {
                     FollowerDeviceId = cal.FollowerDeviceId,
                     FollowerId = cal.FollowerId,
@@ -307,7 +307,7 @@ public class CalibrationFeature : IIsblNetFeature
                 {
                     var leaderSample = cal.LeaderSamples[i];
                     var followerSample = cal.FollowerSamples[i];
-                    data.LastCalibration.Samples.Add(new IsblPersistentData.CalibrationSample { Leader = leaderSample, Follower = followerSample });
+                    data.LastCalibration.Samples.Add(new IsblConfig.CalibrationSample { Leader = leaderSample, Follower = followerSample });
                 }
             });
 

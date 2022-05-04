@@ -42,10 +42,10 @@ public class IsblNetDrawer : PropertyDrawer
             DrawLine("IsblNet is not active.");
             DrawLine("");
             DrawLine("IsblPersistentData");
-            DrawLine(".DataDirectory", IsblPersistentDataSaver<IsblPersistentData>.DataDirectory);
-            DrawLine(".LogLocalData", IsblPersistentData.Instance.LogLocalData.ToString());
+            DrawLine(".DataDirectory", Isbl.Persistent.DataDirectory.Name);
+            DrawLine(".LogLocalData", IsblConfig.Instance.LogLocalData.ToString());
             DrawLine(".GetLatestConnection()");
-            var data = IsblPersistentData.Instance.GetLatestConnection();
+            var data = IsblConfig.Instance.GetLatestConnection();
             DrawLine("    PeerId", data.PeerId.ToString());
             DrawLine("    PeerIdToken", $"({data.PeerIdToken.Length}){new string('•', data.PeerIdToken.Length)}");
             DrawLine("    SocketUrl", data.SocketUrl);

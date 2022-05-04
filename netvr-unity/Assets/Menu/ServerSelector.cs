@@ -31,12 +31,12 @@ public class ServerSelector : MonoBehaviour
         if (name == "Next")
         {
             _nextId++;
-            _nextId %= IsblPersistentData.Instance.GetConnectionCount();
+            _nextId %= IsblConfig.Instance.GetConnectionCount();
             ReText();
         }
         else if (name == "Switch")
         {
-            IsblNet.Instance.SocketUrl = IsblPersistentData.Instance.GetConnectionSocketUrl(_nextId);
+            IsblNet.Instance.SocketUrl = IsblConfig.Instance.GetConnectionSocketUrl(_nextId);
             _nextId = 0;
             ReText();
         }
@@ -49,7 +49,7 @@ public class ServerSelector : MonoBehaviour
 
     void ReText()
     {
-        var data = IsblPersistentData.Instance;
+        var data = IsblConfig.Instance;
         TextMesh.text = _template
             .Replace("{current}", IsblNet.Instance.SocketUrl)
             .Replace("{next}", data.GetConnectionSocketUrl(_nextId));

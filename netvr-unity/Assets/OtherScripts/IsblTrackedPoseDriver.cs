@@ -207,14 +207,14 @@ public class IsblTrackedPoseDriver : MonoBehaviour
         if (LocalDevice != null)
         {
             NetDevice.UpdateFromDevice(LocalDevice);
-            if (IsblPersistentData.Instance.LogLocalData)
+            if (IsblConfig.Instance.LogLocalData)
             {
                 if (_file == null)
                 {
-                    Directory.CreateDirectory(IsblPersistentDataSaver<IsblPersistentData>.DataDirectory);
+                    Directory.CreateDirectory(Isbl.Persistent.DataDirectory.Name);
                     string logDir = $"{DateTime.UtcNow:o}".Replace(":", "-")[..17];
-                    Directory.CreateDirectory(Path.Combine(IsblPersistentDataSaver<IsblPersistentData>.DataDirectory, logDir));
-                    _file = File.OpenWrite(Path.Combine(IsblPersistentDataSaver<IsblPersistentData>.DataDirectory, logDir, $"controller-{NetDevice.LocallyUniqueId}-{DateTime.UtcNow:o}.csv.gz".Replace(":", "-")));
+                    Directory.CreateDirectory(Path.Combine(Isbl.Persistent.DataDirectory.Name, logDir));
+                    _file = File.OpenWrite(Path.Combine(Isbl.Persistent.DataDirectory.Name, logDir, $"controller-{NetDevice.LocallyUniqueId}-{DateTime.UtcNow:o}.csv.gz".Replace(":", "-")));
                     _gzip = new(_file, System.IO.Compression.CompressionLevel.Optimal);
                     _gzip.Write(System.Text.Encoding.UTF8.GetBytes("#" + Newtonsoft.Json.JsonConvert.SerializeObject(NetDevice.SerializeConfiguration()) + "\n"));
                     _gzip.Write(System.Text.Encoding.UTF8.GetBytes("iso time;timestamp;" + NetDevice.CSVHeader + "\n"));

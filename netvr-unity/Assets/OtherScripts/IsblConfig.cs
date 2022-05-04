@@ -3,7 +3,6 @@ using System.Collections.Generic;
 using System.Linq;
 using System.Text.Json;
 using System.Text.Json.Serialization;
-using UnityEngine;
 
 /**
  * This class contains data to be saved between restarts of the app
@@ -17,7 +16,7 @@ using UnityEngine;
  *
  * Adding new fields: just add a public member at the start.
  */
-public sealed class IsblPersistentData : IIsblPersistentData
+public sealed class IsblConfig : Isbl.Persistent.IData
 {
     public class Connection
     {
@@ -108,8 +107,6 @@ public sealed class IsblPersistentData : IIsblPersistentData
     }
 
     #region data saving
-
-
     public string Serialize()
     {
         return JsonSerializer.Serialize(this, new JsonSerializerOptions
@@ -120,14 +117,14 @@ public sealed class IsblPersistentData : IIsblPersistentData
         });
     }
 
-    static readonly IsblPersistentDataSaver<IsblPersistentData> _saver = new("config.json");
-    public delegate void Updater(IsblPersistentData instance);
+    static readonly Isbl.Persistent.Saver<IsblConfig> _saver = new("config.json");
+    public delegate void Updater(IsblConfig instance);
     public static void Update(Updater updater)
     {
         updater(_saver.Instance);
         _saver.Save();
     }
 
-    public static IsblPersistentData Instance { get { return _saver.Instance; } }
+    public static IsblConfig Instance { get { return _saver.Instance; } }
     #endregion
 }

@@ -71,7 +71,7 @@ public sealed class IsblNet : IDisposable
 
     public IsblNet()
     {
-        var data = IsblPersistentData.Instance.GetLatestConnection();
+        var data = IsblConfig.Instance.GetLatestConnection();
         SocketUrl = data.SocketUrl;
     }
 
@@ -96,7 +96,7 @@ public sealed class IsblNet : IDisposable
     {
         Socket.OnConnect += () =>
         {
-            var conn = IsblPersistentData.Instance.GetConnection(SocketUrl);
+            var conn = IsblConfig.Instance.GetConnection(SocketUrl);
             if (conn?.PeerId > 0)
                 Socket.SendAsync(new { action = "i already has id", id = conn.PeerId, token = conn.PeerIdToken, protocolVersion = ProtocolVersion, info = GetInfo() });
             else
@@ -115,7 +115,7 @@ public sealed class IsblNet : IDisposable
 
         Socket.OnTextMessage += (text) =>
         {
-            Utils.LogJson("Received message", text);
+            //Utils.LogJson("Received message", text);
             try
             {
                 var obj = Newtonsoft.Json.Linq.JObject.Parse(text);
@@ -148,7 +148,7 @@ public sealed class IsblNet : IDisposable
                         {
                             SelfId = obj.Value<UInt16>("intValue");
                             var idToken = obj.Value<string>("stringValue");
-                            IsblPersistentData.Update((data) => data.AddConnection(
+                            IsblConfig.Update((data) => data.AddConnection(
                                 socketUrl: SocketUrl,
                                 peerId: SelfId,
                                 peerIdToken: idToken
@@ -156,7 +156,7 @@ public sealed class IsblNet : IDisposable
                         }
                         else
                         {
-                            var conn = IsblPersistentData.Instance.GetConnection(SocketUrl);
+                            var conn = IsblConfig.Instance.GetConnection(SocketUrl);
                             SelfId = conn.PeerId;
                         }
 
