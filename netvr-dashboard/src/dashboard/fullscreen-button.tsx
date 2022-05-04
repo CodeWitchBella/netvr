@@ -46,7 +46,6 @@ export function FullscreenButton() {
           justifyContent: 'center',
           background: 'transparent',
           border: '1px solid transparent',
-          cursor: 'pointer',
           borderRadius: 4,
           ':hover': {
             background: 'var(--base-1)',

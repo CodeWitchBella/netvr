@@ -204,10 +204,20 @@ function ThemeColorButton({ k, v }: { k: string; v: string }) {
         else navigator.clipboard.writeText(`'${variable}'`)
         setCheck((v) => v + 1)
       }}
-      css={{ all: 'unset', userSelect: 'none', flexGrow: 1, cursor: 'pointer' }}
+      css={{
+        all: 'unset',
+        userSelect: 'none',
+        flexGrow: 1,
+        '&:hover': { filter: 'brightness(0.8) contrast(1.2)' },
+      }}
       style={{ background: variable }}
     >
-      <div css={{ paddingBottom: '100%', position: 'relative' }}>
+      <div
+        css={{
+          paddingBottom: '100%',
+          position: 'relative',
+        }}
+      >
         <div
           css={[
             {

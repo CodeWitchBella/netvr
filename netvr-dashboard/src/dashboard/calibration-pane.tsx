@@ -59,7 +59,7 @@ export function CalibrationPane({
           gap: 8,
         }}
       >
-        <label>
+        <label title="Only useful for debugging. Allows selecting same client twice.">
           <input
             type="checkbox"
             name="self-calibration"

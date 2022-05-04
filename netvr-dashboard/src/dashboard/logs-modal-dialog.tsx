@@ -1,5 +1,6 @@
 /** @jsxImportSource @emotion/react */
 import { css } from '@emotion/react'
+import { focusableStyles } from '../components/design'
 import { JSONView } from '../components/json-view'
 import { MessageTransmitLogs } from '../protocol/recieved-messages'
 
@@ -50,17 +51,23 @@ export function LogsModalDialog({
         }}
       >
         <button
-          css={{
-            all: 'unset',
-            zIndex: 1,
-            position: 'fixed',
-            cursor: 'pointer',
-            fontSize: '16px',
-            border: '1px solid currentColor',
-            borderRadius: '4px',
-            padding: '8px',
-            backgroundColor: 'var(--base-0)',
-          }}
+          css={[
+            {
+              all: 'unset',
+              cursor: 'default',
+              zIndex: 1,
+              position: 'fixed',
+              fontSize: '16px',
+              border: '1px solid currentColor',
+              borderRadius: '4px',
+              padding: '8px',
+              backgroundColor: 'var(--base-0)',
+              ':hover': {
+                backgroundColor: 'var(--base-2)',
+              },
+            },
+            focusableStyles,
+          ]}
         >
           Close
         </button>

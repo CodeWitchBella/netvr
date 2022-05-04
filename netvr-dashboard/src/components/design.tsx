@@ -60,7 +60,6 @@ export function Pane({
           css={[
             {
               all: 'unset',
-              cursor: 'pointer',
               margin: '-8px',
               userSelect: 'none',
 
@@ -78,6 +77,16 @@ export function Pane({
               : {},
           ]}
         >
+          <label
+            css={{
+              position: 'absolute',
+              left: 0,
+              right: 0,
+              top: 0,
+              bottom: 0,
+            }}
+            htmlFor={htmlId}
+          />
           <button
             type="button"
             css={[
@@ -90,6 +99,9 @@ export function Pane({
                 gap: 8,
                 padding: 4,
                 margin: -4,
+                'label:hover + &': {
+                  textDecoration: 'underline',
+                },
               },
               focusableStyles,
             ]}
@@ -140,10 +152,6 @@ export function Pane({
             </svg>
             {title ?? 'Pane'}
           </button>
-          <label
-            css={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0 }}
-            htmlFor={htmlId}
-          />
 
           {buttons ? (
             <>
@@ -174,7 +182,6 @@ export function Button(
       css={[
         {
           all: 'unset',
-          cursor: 'pointer',
           border: '1px solid var(--base-3)',
           padding: '4px 8px',
           borderRadius: 4,
@@ -186,7 +193,9 @@ export function Button(
           '&[disabled]': {
             color: 'var(--base-4)',
             borderColor: 'var(--base-2)',
-            cursor: 'default',
+          },
+          ':not([disabled]):hover': {
+            backgroundColor: 'var(--base-2)',
           },
         },
         focusableStyles,
@@ -218,6 +227,9 @@ export function Select(
             color: 'var(--base-4)',
             borderColor: 'var(--base-2)',
             cursor: 'default',
+          },
+          ':not([disabled]):hover': {
+            backgroundColor: 'var(--base-2)',
           },
         },
         focusableStyles,
