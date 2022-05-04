@@ -68,9 +68,10 @@ function Scene({
   lastCalibration: LastCalibration | null
 }) {
   const theme = useTheme()
-  const { offset, angle } = useControls({
-    offset: [0.9869, 0.1152, 0.2842],
-    angle: -116.15,
+  const { offset, angle, unityAxes } = useControls({
+    offset: [-0.9754, 0.1466, -1.323],
+    angle: 116.15,
+    unityAxes: true,
     file: { editable: false, value: 'Drag and drop config.json to explore it' },
   })
 
@@ -87,14 +88,19 @@ function Scene({
 
   const transformedSamplesStep1 = useMemo(
     () =>
-      lastCalibration?.samples.map((sample) => {
-        const a: [number, number, number] = Object.values(
-          sample.leader.position,
-        ) as any
-        const b: [number, number, number] = Object.values(
-          sample.follower.position,
-        ) as any
-        return { leader: a, follower: b }
+      lastCalibration?.samples.map((sample, _, list) => {
+        return {
+          leader: [
+            sample.leader.position.x - list[0].leader.position.x,
+            sample.leader.position.y - list[0].leader.position.y,
+            -1 * (sample.leader.position.z - list[0].leader.position.z),
+          ],
+          follower: [
+            sample.follower.position.x - list[0].leader.position.x,
+            sample.follower.position.y - list[0].leader.position.y,
+            -1 * (sample.follower.position.z - list[0].leader.position.z),
+          ],
+        } as const
       }) ?? null,
     [lastCalibration?.samples],
   )
@@ -106,7 +112,7 @@ function Scene({
     () =>
       transformedSamplesStep1?.map(({ leader: a, follower: b }) => {
         b = [b[0] * cos - b[2] * sin, b[1], b[0] * sin + b[2] * cos]
-        b = [b[0] + offset[0], b[1] + offset[1], b[2] + offset[2]]
+        b = [b[0] + offset[0], b[1] + offset[1], b[2] - offset[2]]
         return { leader: a, follower: b }
       }) ?? null,
     [cos, offset, sin, transformedSamplesStep1],
@@ -157,6 +163,38 @@ function Scene({
             lineWidth={1}
             dashed={false}
           />
+          <group position={[-0.25, -0.25, unityAxes ? 0.25 : -0.25]}>
+            {/* @ts-expect-error */}
+            <Line
+              points={[
+                [0, 0, 0],
+                [1, 0, 0],
+              ]}
+              color="red"
+              lineWidth={0.5}
+              dashed={false}
+            />
+            {/* @ts-expect-error */}
+            <Line
+              points={[
+                [0, 0, 0],
+                [0, 1, 0],
+              ]}
+              color="green"
+              lineWidth={0.5}
+              dashed={false}
+            />
+            {/* @ts-expect-error */}
+            <Line
+              points={[
+                [0, 0, 0],
+                [0, 0, unityAxes ? -1 : 1],
+              ]}
+              color="blue"
+              lineWidth={0.5}
+              dashed={false}
+            />
+          </group>
           {transformedSamples.map((s, i) => (
             <SamplePair key={i} sample={s} />
           ))}
