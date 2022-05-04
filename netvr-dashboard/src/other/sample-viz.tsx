@@ -83,7 +83,7 @@ function Scene({
     if (lastCalibration) {
       set({
         offset: Object.values(lastCalibration.resultTranslate),
-        angle: (lastCalibration.resultRotate.y / Math.PI) * 180,
+        angle: lastCalibration.resultRotate.y,
       })
     }
   }, [lastCalibration, set])
@@ -96,42 +96,43 @@ function Scene({
     () =>
       lastCalibration?.leaderSamples
         .slice(0, lastCalibration.followerSamples.length)
-        .map((leader, i, list) => {
-          const mov = { x: 0, y: 0, z: 0 } || list[0].position
+        .map((leader, i) => {
           const follower = lastCalibration.followerSamples[i]
           return {
-            leader: [
-              leader.position.x - mov.x,
-              leader.position.y - mov.y,
-              leader.position.z - mov.z,
-            ],
-            follower: [
-              follower.position.x - mov.x,
-              follower.position.y - mov.y,
-              follower.position.z - mov.z,
-            ],
+            leader: objectToArray(leader.position),
+            follower: objectToArray(follower.position),
           } as const
         }) ?? null,
     [lastCalibration],
   )
 
-  const cos = Math.cos((angle / 180) * Math.PI)
-  const sin = Math.sin((angle / 180) * Math.PI)
-
   const transformedSamples = useMemo(() => {
-    if (!transformedSamplesStep1) return null
+    if (!transformedSamplesStep1 || !lastCalibration) return null
     const mov = transformedSamplesStep1[0].leader
+    const rotate = new THREE.Quaternion()
+    /*rotate.setFromEuler(
+      new THREE.Euler(
+        lastCalibration.resultRotate.x,
+        lastCalibration.resultRotate.y,
+        lastCalibration.resultRotate.z,
+        'XYZ',
+      ),
+    )*/
+    rotate.setFromAxisAngle(new THREE.Vector3(0, 1, 0), -angle)
+
     return transformedSamplesStep1.map(({ leader: a, follower: b }) => {
       // apply offset+angle
-      b = [b[0] * cos - b[2] * sin, b[1], b[0] * sin + b[2] * cos]
-      b = [b[0] + offset[0], b[1] + offset[1], b[2] + offset[2]]
+      b = objectToArray(
+        new THREE.Vector3(b[0], b[1], b[2]).applyQuaternion(rotate),
+      )
+      b = plus(b, offset)
 
       // recenter
       a = minus(a, mov)
       b = minus(b, mov)
       return { leader: a, follower: b }
     })
-  }, [cos, offset, sin, transformedSamplesStep1])
+  }, [angle, lastCalibration, offset, transformedSamplesStep1])
 
   useEffect(() => {
     if (!transformedSamples) return
@@ -177,41 +178,42 @@ function Scene({
             lineWidth={1}
             dashed={false}
           />
-          <group position={[-0.25, -0.25, unityAxes ? 0.25 : -0.25]}>
-            {/* @ts-expect-error */}
-            <Line
-              points={[
-                [0, 0, 0],
-                [1, 0, 0],
-              ]}
-              color="red"
-              lineWidth={0.5}
-              dashed={false}
-            />
-            {/* @ts-expect-error */}
-            <Line
-              points={[
-                [0, 0, 0],
-                [0, 1, 0],
-              ]}
-              color="green"
-              lineWidth={0.5}
-              dashed={false}
-            />
-            {/* @ts-expect-error */}
-            <Line
-              points={[
-                [0, 0, 0],
-                [0, 0, unityAxes ? -1 : 1],
-              ]}
-              color="blue"
-              lineWidth={0.5}
-              dashed={false}
-            />
-          </group>
+
           <Connections samples={transformedSamples} color={theme.base03} />
         </>
       ) : null}
+      <group position={[-0.25, -0.25, unityAxes ? 0.25 : -0.25]}>
+        {/* @ts-expect-error */}
+        <Line
+          points={[
+            [0, 0, 0],
+            [1, 0, 0],
+          ]}
+          color="red"
+          lineWidth={0.5}
+          dashed={false}
+        />
+        {/* @ts-expect-error */}
+        <Line
+          points={[
+            [0, 0, 0],
+            [0, 1, 0],
+          ]}
+          color="green"
+          lineWidth={0.5}
+          dashed={false}
+        />
+        {/* @ts-expect-error */}
+        <Line
+          points={[
+            [0, 0, 0],
+            [0, 0, unityAxes ? -1 : 1],
+          ]}
+          color="blue"
+          lineWidth={0.5}
+          dashed={false}
+        />
+      </group>
     </>
   )
 }
@@ -276,4 +278,19 @@ function minus(
   b: readonly [number, number, number],
 ): [number, number, number] {
   return [a[0] - b[0], a[1] - b[1], a[2] - b[2]]
+}
+
+function plus(
+  a: readonly [number, number, number],
+  b: readonly [number, number, number],
+): [number, number, number] {
+  return [a[0] + b[0], a[1] + b[1], a[2] + b[2]]
+}
+
+function objectToArray(v: {
+  x: number
+  y: number
+  z: number
+}): [number, number, number] {
+  return [v.x, v.y, v.z]
 }
