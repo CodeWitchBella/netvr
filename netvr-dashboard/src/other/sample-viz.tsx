@@ -2,8 +2,10 @@
 import { Line, OrbitControls } from '@react-three/drei'
 import { Canvas } from '@react-three/fiber'
 import { useControls } from 'leva'
-import { useEffect, useMemo, useState } from 'react'
+import { useEffect, useMemo, useRef, useState } from 'react'
 import { useDropzone } from 'react-dropzone'
+import * as THREE from 'three'
+import { InstancedMesh } from 'three'
 import {
   ReprovideTheme,
   useReprovideTheme,
@@ -121,13 +123,9 @@ function Scene({
   useEffect(() => {
     if (!transformedSamples) return
     const timeout = setTimeout(() => {
-      const dists = transformedSamples.map(({ leader, follower }) => {
-        const x = leader[0] - follower[0]
-        const y = leader[1] - follower[1]
-        const z = leader[2] - follower[2]
-
-        return Math.sqrt(x * x + y * y + z * z)
-      })
+      const dists = transformedSamples.map(({ leader, follower }) =>
+        dist(leader, follower),
+      )
       const mean = dists.reduce((a, b) => a + b, 0) / dists.length
       const variance =
         dists.reduce((acc, dist) => acc + (mean - dist) * (mean - dist), 0) /
@@ -195,9 +193,7 @@ function Scene({
               dashed={false}
             />
           </group>
-          {transformedSamples.map((s, i) => (
-            <SamplePair key={i} sample={s} />
-          ))}
+          <Connections samples={transformedSamples} color={theme.base03} />
         </>
       ) : null}
       {/* <mesh>
@@ -208,34 +204,51 @@ function Scene({
   )
 }
 
-function SamplePair({
-  sample,
+function Connections({
+  samples,
+  color,
 }: {
-  sample: {
+  samples: readonly {
     leader: readonly [number, number, number]
     follower: readonly [number, number, number]
-  }
+  }[]
+  color: any
 }) {
-  const theme = useTheme()
-  // Return the view, these are regular Threejs elements expressed in JSX
-
+  const ref = useRef<InstancedMesh | undefined>()
+  useEffect(() => {
+    const mesh = ref.current
+    if (!mesh) return
+    const temp = new THREE.Object3D()
+    let id = 0
+    for (const sample of samples) {
+      temp.position.set(...sample.leader)
+      const d = dist(sample.leader, sample.follower)
+      temp.scale.set(0.001, 0.001, d)
+      temp.lookAt(...sample.follower)
+      temp.translateZ(d / 2)
+      temp.updateMatrix()
+      mesh.setMatrixAt(id++, temp.matrix)
+    }
+    mesh.instanceMatrix.needsUpdate = true
+  }, [samples])
   return (
-    <>
-      <mesh position={sample.leader}>
-        <boxGeometry args={[0.01, 0.01, 0.01]} />
-        <meshStandardMaterial color={theme.base08} />
-      </mesh>
-      {/* @ts-expect-error */}
-      <Line
-        points={[sample.leader, sample.follower]}
-        color={theme.base03}
-        lineWidth={1}
-        dashed={false}
-      />
-      <mesh position={sample.follower}>
-        <boxGeometry args={[0.01, 0.01, 0.01]} />
-        <meshStandardMaterial color={theme.base0B} />
-      </mesh>
-    </>
+    <instancedMesh
+      ref={ref as any}
+      args={[undefined, undefined, samples.length]}
+    >
+      <boxGeometry />
+      <meshStandardMaterial color={color} />
+    </instancedMesh>
   )
+}
+
+function dist(
+  leader: readonly [number, number, number],
+  follower: readonly [number, number, number],
+) {
+  const x = leader[0] - follower[0]
+  const y = leader[1] - follower[1]
+  const z = leader[2] - follower[2]
+
+  return Math.sqrt(x * x + y * y + z * z)
 }
