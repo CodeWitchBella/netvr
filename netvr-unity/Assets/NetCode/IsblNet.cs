@@ -178,7 +178,7 @@ public sealed class IsblNet : IDisposable
                     {
                         _serverStateJson = node.GetProperty("state");
                         ServerState = JsonSerializer.Deserialize<Isbl.NetServerState>(JsonSerializer.Serialize(_serverStateJson));
-                        Debug.Log($"ServerState: {JsonSerializer.Serialize(ServerState, new JsonSerializerOptions { WriteIndented = true })}\njson: {_serverStateJson}");
+                        Utils.Log($"ServerState: {JsonSerializer.Serialize(ServerState, new JsonSerializerOptions { WriteIndented = true })}\njson: {_serverStateJson}");
                         UpdateFastStateStructure();
                     }
                     else if (action == "quit")

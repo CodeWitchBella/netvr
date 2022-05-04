@@ -77,6 +77,7 @@ function Scene({
   const [, set] = useControls(() => ({
     leader: { editable: false, value: theme.base08 },
     follower: { editable: false, value: theme.base0B },
+    meanDistance: { editable: false, value: '' },
     stdDev: { editable: false, value: '' },
   }))
 
@@ -126,7 +127,11 @@ function Scene({
         dists.reduce((acc, dist) => acc + (mean - dist) * (mean - dist), 0) /
         dists.length
       const stdDev = Math.sqrt(variance)
-      set({ stdDev: stdDev.toFixed(8) })
+      set({
+        stdDev:
+          stdDev.toFixed(8) + ' = ' + ((stdDev / mean) * 100).toFixed(0) + '%',
+        meanDistance: mean.toFixed(4),
+      })
     }, 15)
     return () => void clearTimeout(timeout)
   }, [set, transformedSamples])
@@ -136,9 +141,27 @@ function Scene({
       <OrbitControls />
       <ambientLight />
       <pointLight position={[10, 10, 10]} />
-      {transformedSamples
-        ? transformedSamples.map((s, i) => <SamplePair key={i} sample={s} />)
-        : null}
+      {transformedSamples ? (
+        <>
+          {/* @ts-expect-error */}
+          <Line
+            points={transformedSamples.map((v) => v.leader)}
+            color={theme.base08}
+            lineWidth={1}
+            dashed={false}
+          />
+          {/* @ts-expect-error */}
+          <Line
+            points={transformedSamples.map((v) => v.follower)}
+            color={theme.base0B}
+            lineWidth={1}
+            dashed={false}
+          />
+          {transformedSamples.map((s, i) => (
+            <SamplePair key={i} sample={s} />
+          ))}
+        </>
+      ) : null}
       {/* <mesh>
   <boxGeometry args={[1, 1, 1]} />
   <meshStandardMaterial color="hotpink" />

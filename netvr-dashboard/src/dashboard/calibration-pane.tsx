@@ -2,8 +2,12 @@
 import { useState } from 'react'
 import type { ClientConfiguration, ServerState } from '../protocol/data'
 import { Button, Pane, Select } from '../components/design'
-import { getName } from '../utils'
+import { getName, useLocalStorage } from '../utils'
 import * as sentMessages from '../protocol/sent-messages'
+
+function isTrueOrFalseString(v: string): v is 'true' | 'false' {
+  return v === 'true' || v === 'false'
+}
 
 export function CalibrationPane({
   sendMessage,
@@ -12,10 +16,16 @@ export function CalibrationPane({
   sendMessage: (message: any) => void
   serverState: ServerState
 }) {
+  const [selfCalRaw, setSelfCal] = useLocalStorage(
+    'self-calibration',
+    'false',
+    isTrueOrFalseString,
+  )
+  const selfCal = selfCalRaw === 'true'
   const client1 = useDeviceSelect({ serverState })
   const client2 = useDeviceSelect({
     serverState,
-    exceptClient: client1.clientId,
+    exceptClient: selfCal ? undefined : client1.clientId,
   })
 
   const [message, setMessage] = useState('')
@@ -49,6 +59,17 @@ export function CalibrationPane({
           gap: 8,
         }}
       >
+        <label>
+          <input
+            type="checkbox"
+            name="self-calibration"
+            checked={selfCal}
+            onChange={(evt) =>
+              void setSelfCal(evt.currentTarget.checked ? 'true' : 'false')
+            }
+          />{' '}
+          Allow self-calibration
+        </label>
         <DeviceSelect
           serverState={serverState}
           data={client1}

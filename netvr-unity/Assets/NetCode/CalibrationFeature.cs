@@ -103,8 +103,9 @@ public class CalibrationFeature : IIsblNetFeature
         if (action == "begin")
         {
             var leader = node.GetProperty("leader").GetUInt16();
-            if (leader == net.SelfId)
+            if (leader == net.SelfId && node.GetProperty("asLeader").GetBoolean())
             {
+                Utils.Log("Starting local calibration");
                 _calibrationsLocal.Add(new LocalCalibration()
                 {
                     FollowerDeviceId = node.GetProperty("followerDevice").GetUInt16(),
@@ -115,6 +116,7 @@ public class CalibrationFeature : IIsblNetFeature
             }
             else
             {
+                Utils.Log("Starting remote calibration");
                 _calibrationsRemote.Add(new RemoteCalibration()
                 {
                     LocalDeviceId = node.GetProperty("followerDevice").GetUInt16(),
@@ -159,7 +161,7 @@ public class CalibrationFeature : IIsblNetFeature
                     Utils.Log($"Tried to remove local calibration, but none was found. Did it finish already?\n{logInfo}");
                 }
             }
-            else
+            if (follower == net.SelfId)
             {
                 var indexRemote = _calibrationsRemote.FindIndex(c => c.LeaderId == leader && c.LocalDeviceId == followerDevice);
                 if (indexRemote >= 0)

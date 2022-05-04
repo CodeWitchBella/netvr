@@ -150,8 +150,8 @@ export function netvrRoomOptions(
         console.log('message from:', id, message)
         if (message.feature === 'calibration') {
           if (message.action === 'begin') {
-            utils.send(message.leader, message)
-            utils.send(message.follower, message)
+            utils.send(message.leader, { ...message, asLeader: true })
+            utils.send(message.follower, { ...message, asLeader: false })
           } else if (message.action === 'samples') {
             utils.send(message.leader, message)
           } else if (message.action === 'end') {
