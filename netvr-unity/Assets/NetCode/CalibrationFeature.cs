@@ -252,7 +252,6 @@ public class CalibrationFeature : IIsblNetFeature
                 // Disconnection (missing device) is handled by timeout.
                 Utils.Log($"Failed to collect sample to send. DeviceId: {c.LocalDeviceId}. Devices: {string.Join(", ", net.DeviceManager.Devices.Select(d => d.LocalDevice.LocallyUniqueId))}");
             }
-
         }
 
         foreach (var c in _calibrationsLocal)
@@ -277,7 +276,7 @@ public class CalibrationFeature : IIsblNetFeature
             _redoneCalibration = true;
             if (cal != null)
             {
-                Utils.Log("Restoring last calibration...");
+                Utils.Log($"Recomputing last calibration with {cal.Samples.Count} samples");
                 var toRedo = new LocalCalibration { StartTimeStamp = now, FollowerDeviceId = cal.FollowerDeviceId, FollowerId = cal.FollowerId, FollowerSamples = new(), LeaderSamples = new(), LocalDeviceId = cal.LeaderDeviceId };
                 foreach (var sample in cal.Samples)
                 {
@@ -351,6 +350,7 @@ public class CalibrationFeature : IIsblNetFeature
      */
     static void ComputeCalibration(LocalCalibration cal, out Vector3 translate, out Quaternion rotate)
     {
+        using var timer = new IsblStopwatch("ComputeCalibration");
         IsblCalibration calculation = new();
         for (int i = 0; i < RequiredSamples; ++i)
         {
@@ -363,7 +363,11 @@ public class CalibrationFeature : IIsblNetFeature
                 UnityToOVR(followerSample.Rotation)
             );
         }
-        var result = calculation.Compute();
+        IsblDynamicLibrary.CalibrationComputeResult result;
+        using (var timer2 = new IsblStopwatch("ComputeCalibration::compute only"))
+        {
+            result = calculation.Compute();
+        }
         translate = OVRToUnity(new Vector3((float)result.X, (float)result.Y, (float)result.Z));
         //var rotateRad = new Vector3((float)result.Rex, (float)result.Rey, (float)result.Rez);
         rotate = OVRToUnity(new Quaternion((float)result.Rqx, (float)result.Rqy, (float)result.Rqz, (float)result.Rqw));
@@ -372,11 +376,12 @@ public class CalibrationFeature : IIsblNetFeature
 
         Utils.Log("Calibration result:"
         + $"\n  Translate: ({result.X}, {result.Y}, {result.Z})"
-        + $"\n  Rotate euler: ({result.Rex}, {result.Rey}, {result.Rez})"
+        + $"\n  Rotate euler radians: ({result.Rex}, {result.Rey}, {result.Rez})"
+        + $"\n  Rotate euler degrees: ({result.Rex / Math.PI * 180d}, {result.Rey / Math.PI * 180d}, {result.Rez / Math.PI * 180d})"
         + $"\n  Rotate quaternion: ({result.Rqx}, {result.Rqy}, {result.Rqz}, {result.Rqw})"
         + "\nConverted:"
         + $"\n  Translate: ({translate.x}, {translate.y}, {translate.z})"
-        + $"\n  Rotate euler: ({rotate.eulerAngles.x}, {rotate.eulerAngles.y}, {rotate.eulerAngles.z})"
+        + $"\n  Rotate euler degrees: ({rotate.eulerAngles.x}, {rotate.eulerAngles.y}, {rotate.eulerAngles.z})"
         + $"\n  Rotate quaternion: ({rotate.x}, {rotate.y}, {rotate.z}, {rotate.w})"
         );
     }

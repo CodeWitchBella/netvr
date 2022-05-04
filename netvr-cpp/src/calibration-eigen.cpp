@@ -21,7 +21,7 @@ namespace
         EigenPose() {}
         EigenPose(const Pose &p)
         {
-            Eigen::Quaternion<double> q(p.qx, p.qy, p.qz, p.qw);
+            Eigen::Quaterniond q(p.qw, p.qx, p.qy, p.qz);
             rot = q.matrix();
             trans = Eigen::Vector3d(p.x, p.y, p.z);
         }
@@ -90,7 +90,7 @@ namespace
         return ds;
     }
 
-    std::pair<Eigen::Vector3d, Eigen::Quaterniond> CalibrateRotation(const std::vector<EigenSample> &samples)
+    Eigen::Vector3d CalibrateRotation(const std::vector<EigenSample> &samples)
     {
         std::vector<DSample> deltas;
 
@@ -145,12 +145,7 @@ namespace
         char buf[256];
         snprintf(buf, sizeof buf, "Calibrated rotation x=%.2f y=%.2f z=%.2f\n", euler[0], euler[1], euler[2]);
         unity_log(buf);
-        Eigen::Quaterniond q;
-        q = Eigen::AngleAxisd(euler(0), Eigen::Vector3d::UnitZ());
-        q = q * Eigen::AngleAxisd(euler(1), Eigen::Vector3d::UnitY());
-        q = q * Eigen::AngleAxisd(euler(2), Eigen::Vector3d::UnitX());
-
-        return {euler, q};
+        return euler;
     }
 
     Eigen::Vector3d CalibrateTranslation(const std::vector<EigenSample> &samples)
@@ -191,9 +186,26 @@ namespace
         auto transcm = trans * 100.0;
 
         char buf[256];
-        snprintf(buf, sizeof buf, "Calibrated translation x=%.2f y=%.2f z=%.2f\n", transcm[0], transcm[1], transcm[2]);
+        snprintf(buf, sizeof buf, "Calibrated translation x=%.2fcm y=%.2fcm z=%.2fcm\n", transcm[0], transcm[1], transcm[2]);
         unity_log(buf);
-        return transcm;
+        return trans;
+    }
+
+    // edited from: https://github.com/pushrax/OpenVR-SpaceCalibrator/blob/1cc0583a5ec5f18dc56c95716884529c05526d25/OpenVR-SpaceCalibratorDriver/ServerTrackedDeviceProvider.cpp
+    inline Eigen::Vector3d quaternionRotateVector(const Eigen::Quaterniond &quat, const Eigen::Vector3d &vector)
+    {
+        Eigen::Quaterniond vectorQuat(0.0, vector.x(), vector.y(), vector.z());
+        Eigen::Quaterniond conjugate = quat.conjugate();
+        auto rotatedVectorQuat = quat * vectorQuat * conjugate;
+        return {rotatedVectorQuat.x(), rotatedVectorQuat.y(), rotatedVectorQuat.z()};
+    }
+
+    // edited from: https://github.com/pushrax/OpenVR-SpaceCalibrator/blob/984b93ffff58d3af546d58f9dcfbfb97fed82337/OpenVR-SpaceCalibrator/Calibration.cpp#L236-L251
+    Eigen::Quaterniond RotationQuatFromEulerRadians(Eigen::Vector3d eulerRadians)
+    {
+        return Eigen::AngleAxisd(eulerRadians(0), Eigen::Vector3d::UnitZ()) *
+               Eigen::AngleAxisd(eulerRadians(1), Eigen::Vector3d::UnitY()) *
+               Eigen::AngleAxisd(eulerRadians(2), Eigen::Vector3d::UnitX());
     }
 
 } // anonymous namespace
@@ -206,6 +218,7 @@ CalibrationResult calibrate(const std::vector<Sample> &matches)
     // - it applies rotation right when it determines it
     // - it collects SampleCount for each phase
     // - it waits at least 20ms (0.05s) between samples
+
     std::vector<EigenSample> eigen_samples;
     int rot_samples = matches.size() / 2, pos_samples = matches.size() - rot_samples;
     eigen_samples.reserve(std::max(rot_samples, pos_samples));
@@ -215,13 +228,19 @@ CalibrationResult calibrate(const std::vector<Sample> &matches)
         eigen_samples.emplace_back(matches[i]);
     }
 
-    auto rotation = CalibrateRotation(eigen_samples);
+    auto rotationEuler = CalibrateRotation(eigen_samples);
+    auto rotationQuat = RotationQuatFromEulerRadians(rotationEuler);
 
-    // TODO: transform the following positions with the rotation?
     eigen_samples.clear();
     for (int i = 0; i < pos_samples; ++i)
     {
-        eigen_samples.emplace_back(matches[rot_samples + i]);
+        // first transform the samples as if they were taken after the rotation
+        // was already calibrated.
+        // inspired by: https://github.com/pushrax/OpenVR-SpaceCalibrator/blob/1cc0583a5ec5f18dc56c95716884529c05526d25/OpenVR-SpaceCalibratorDriver/ServerTrackedDeviceProvider.cpp#L57-L74
+        EigenSample sample(matches[rot_samples + i]);
+        sample.target.rot = rotationQuat * sample.target.rot;
+        sample.target.trans = quaternionRotateVector(rotationQuat, sample.target.trans);
+        eigen_samples.emplace_back(sample);
     }
 
     Eigen::Vector3d translation = CalibrateTranslation(eigen_samples);
@@ -230,12 +249,12 @@ CalibrationResult calibrate(const std::vector<Sample> &matches)
     result.tx = translation.x();
     result.ty = translation.y();
     result.tz = translation.z();
-    result.rex = rotation.first.x();
-    result.rey = rotation.first.y();
-    result.rez = rotation.first.z();
-    result.rqx = rotation.second.coeffs()[0];
-    result.rqy = rotation.second.coeffs()[1];
-    result.rqz = rotation.second.coeffs()[2];
-    result.rqw = rotation.second.coeffs()[3];
+    result.rex = rotationEuler.x();
+    result.rey = rotationEuler.y();
+    result.rez = rotationEuler.z();
+    result.rqx = rotationQuat.x();
+    result.rqy = rotationQuat.y();
+    result.rqz = rotationQuat.z();
+    result.rqw = rotationQuat.w();
     return result;
 }
