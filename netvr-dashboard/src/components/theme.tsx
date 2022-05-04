@@ -2,7 +2,7 @@
 import * as base16 from 'base16'
 import { invertTheme } from 'react-base16-styling'
 import type { Base16Theme } from 'react-base16-styling'
-import {
+import React, {
   useState,
   useEffect,
   createContext,
@@ -102,14 +102,34 @@ export function ThemeRoot({ children }: PropsWithChildren<{}>) {
   )
 }
 
-function useTheme() {
+const opaque = Symbol()
+
+export function useReprovideTheme() {
+  const theme = useThemeInternal()
+  return { [opaque]: theme }
+}
+
+export function ReprovideTheme(props: {
+  children: React.ReactNode
+  value: ReturnType<typeof useReprovideTheme>
+}) {
+  return (
+    <ctx.Provider value={props.value[opaque]}>{props.children}</ctx.Provider>
+  )
+}
+
+function useThemeInternal() {
   const theme = useContext(ctx)
   if (!theme) throw new Error('No theme context')
   return theme
 }
 
+export function useTheme() {
+  return useThemeInternal().resolved
+}
+
 export const ThemeSelector = memo(function ThemeSelector() {
-  const theme = useTheme()
+  const theme = useThemeInternal()
   return (
     <Pane title="Visual settings" id="theme" buttons={<FullscreenButton />}>
       <div css={{ display: 'flex', flexDirection: 'column', gap: 4 }}>

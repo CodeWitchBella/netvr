@@ -4,6 +4,9 @@ import { Dashboard } from './dashboard/dashboard'
 import { BrowserRouter, Route, Routes } from 'react-router-dom'
 import { ThemeRoot } from './components/theme'
 import { ErrorBoundary } from './components/error-boundary'
+import { lazy } from 'react'
+
+const SampleViz = lazy(() => import('./other/sample-viz'))
 
 export async function run() {
   const events = document.querySelector('#events')!
@@ -16,6 +19,7 @@ export async function run() {
         <BrowserRouter>
           <Routes>
             <Route index element={<Dashboard socketUrl={getSocketUrl()} />} />
+            <Route path="sample-viz" element={<SampleViz />} />
             <Route path="*" element={<NotFound />} />
           </Routes>
         </BrowserRouter>

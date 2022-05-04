@@ -17,7 +17,9 @@ struct Sample
 
 struct CalibrationResult
 {
-    double tx, ty, tz, rx, ry, rz;
+    double tx, ty, tz;
+    double rex, rey, rez;
+    double rqx, rqy, rqz, rqw;
 };
 
 CalibrationResult calibrate(const std::vector<Sample> &matches);

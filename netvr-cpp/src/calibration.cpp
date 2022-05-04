@@ -53,13 +53,17 @@ ISBL_NETVR_FUNC void isbl_netvr_calibration_compute(int handle, double *output)
     auto &ctx = map[handle];
     auto result = calibrate(ctx->samples);
     std::string log("isbl_netvr_calibration_compute");
-    log += " " + std::to_string(result.rx);
-    log += " " + std::to_string(result.ry);
-    log += " " + std::to_string(result.rz);
-    log += " " + std::to_string(result.tx);
+    log += "\nrot euler: " + std::to_string(result.rex);
+    log += " " + std::to_string(result.rey);
+    log += " " + std::to_string(result.rez);
+    log += "\ntranslate: " + std::to_string(result.tx);
     log += " " + std::to_string(result.ty);
     log += " " + std::to_string(result.tz);
+    log += "\nrot quaternion: " + std::to_string(result.rqx);
+    log += " " + std::to_string(result.rqy);
+    log += " " + std::to_string(result.rqz);
+    log += " " + std::to_string(result.rqw);
     unity_log(log.c_str());
-    static_assert(sizeof(double) * 6 == sizeof(decltype(result)));
-    memcpy(output, &result, sizeof(double) * 6);
+    static_assert(sizeof(double) * 10 == sizeof(decltype(result)));
+    memcpy(output, &result, sizeof(double) * 10);
 }

@@ -90,7 +90,7 @@ namespace
         return ds;
     }
 
-    Eigen::Vector3d CalibrateRotation(const std::vector<EigenSample> &samples)
+    std::pair<Eigen::Vector3d, Eigen::Quaterniond> CalibrateRotation(const std::vector<EigenSample> &samples)
     {
         std::vector<DSample> deltas;
 
@@ -145,7 +145,12 @@ namespace
         char buf[256];
         snprintf(buf, sizeof buf, "Calibrated rotation x=%.2f y=%.2f z=%.2f\n", euler[0], euler[1], euler[2]);
         unity_log(buf);
-        return euler;
+        Eigen::Quaterniond q;
+        q = Eigen::AngleAxisd(euler(0), Eigen::Vector3d::UnitZ());
+        q = q * Eigen::AngleAxisd(euler(1), Eigen::Vector3d::UnitY());
+        q = q * Eigen::AngleAxisd(euler(2), Eigen::Vector3d::UnitX());
+
+        return {euler, q};
     }
 
     Eigen::Vector3d CalibrateTranslation(const std::vector<EigenSample> &samples)
@@ -210,7 +215,7 @@ CalibrationResult calibrate(const std::vector<Sample> &matches)
         eigen_samples.emplace_back(matches[i]);
     }
 
-    Eigen::Vector3d rotation = CalibrateRotation(eigen_samples);
+    auto rotation = CalibrateRotation(eigen_samples);
 
     // TODO: transform the following positions with the rotation?
     eigen_samples.clear();
@@ -221,12 +226,16 @@ CalibrationResult calibrate(const std::vector<Sample> &matches)
 
     Eigen::Vector3d translation = CalibrateTranslation(eigen_samples);
 
-    return CalibrationResult{
-        translation.x(),
-        translation.y(),
-        translation.z(),
-        rotation.x(),
-        rotation.y(),
-        rotation.z(),
-    };
+    CalibrationResult result;
+    result.tx = translation.x();
+    result.ty = translation.y();
+    result.tz = translation.z();
+    result.rex = rotation.first.x();
+    result.rey = rotation.first.y();
+    result.rez = rotation.first.z();
+    result.rqx = rotation.second.coeffs()[0];
+    result.rqy = rotation.second.coeffs()[1];
+    result.rqz = rotation.second.coeffs()[2];
+    result.rqw = rotation.second.coeffs()[3];
+    return result;
 }

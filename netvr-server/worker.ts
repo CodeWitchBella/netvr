@@ -68,6 +68,29 @@ export class DurableObjectWebSocket {
 
     const [client, server] = Object.values(new WebSocketPair())
 
+    // Monkey-patch send method to make sure that we have proper stacktrace
+    const oldSend = server.send
+    function send(this: WebSocket, message: string | ArrayBuffer) {
+      try {
+        oldSend.call(this, message)
+      } catch (e) {
+        const message =
+          typeof e === 'string'
+            ? e
+            : typeof e === 'object' &&
+              e &&
+              'message' in e &&
+              typeof (e as any).message === 'string'
+            ? (e as any).message
+            : JSON.stringify(e)
+        const error = new Error(message)
+        // @ts-expect-error
+        Error.captureStackTrace(error, send)
+        throw error
+      }
+    }
+    server.send = send
+
     this.room.onWebSocket(server, { ip })
     server.accept()
 
