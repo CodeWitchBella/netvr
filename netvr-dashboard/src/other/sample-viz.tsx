@@ -17,12 +17,10 @@ type LastCalibration = {
   leaderDevice: number
   follower: number
   leader: number
-  samples: readonly SamplePairData[]
-}
-
-type SamplePairData = {
-  leader: Sample
-  follower: Sample
+  resultRotate: { x: number; y: number; z: number }
+  resultTranslate: { x: number; y: number; z: number }
+  leaderSamples: readonly Sample[]
+  followerSamples: readonly Sample[]
 }
 
 type Sample = {
@@ -39,7 +37,7 @@ export default function SampleVizRoute() {
     multiple: false,
     onDrop: ([file]) => {
       file.text().then((v) => {
-        setLastCalibration(JSON.parse(v).lastCalibration)
+        setLastCalibration(JSON.parse(v))
       })
     },
   })
@@ -70,14 +68,11 @@ function Scene({
   lastCalibration: LastCalibration | null
 }) {
   const theme = useTheme()
-  const { offset, angle, unityAxes } = useControls({
-    offset: [-0.9754, 0.1466, -1.323],
-    angle: 116.15,
+  const [{ offset, angle, unityAxes }, set] = useControls(() => ({
+    offset: [0, 0, 0],
+    angle: 0,
     unityAxes: true,
     file: { editable: false, value: 'Drag and drop config.json to explore it' },
-  })
-
-  const [, set] = useControls(() => ({
     leader: { editable: false, value: theme.base08 },
     follower: { editable: false, value: theme.base0B },
     meanDistance: { editable: false, value: '' },
@@ -85,59 +80,80 @@ function Scene({
   }))
 
   useEffect(() => {
+    if (lastCalibration) {
+      set({
+        offset: Object.values(lastCalibration.resultTranslate),
+        angle: (lastCalibration.resultRotate.y / Math.PI) * 180,
+      })
+    }
+  }, [lastCalibration, set])
+
+  useEffect(() => {
     set({ follower: theme.base08, leader: theme.base0B })
   }, [set, theme])
 
   const transformedSamplesStep1 = useMemo(
     () =>
-      lastCalibration?.samples.map((sample, _, list) => {
-        return {
-          leader: [
-            sample.leader.position.x - list[0].leader.position.x,
-            sample.leader.position.y - list[0].leader.position.y,
-            -1 * (sample.leader.position.z - list[0].leader.position.z),
-          ],
-          follower: [
-            sample.follower.position.x - list[0].leader.position.x,
-            sample.follower.position.y - list[0].leader.position.y,
-            -1 * (sample.follower.position.z - list[0].leader.position.z),
-          ],
-        } as const
-      }) ?? null,
-    [lastCalibration?.samples],
+      lastCalibration?.leaderSamples
+        .slice(0, lastCalibration.followerSamples.length)
+        .map((leader, i, list) => {
+          const mov = { x: 0, y: 0, z: 0 } || list[0].position
+          const follower = lastCalibration.followerSamples[i]
+          return {
+            leader: [
+              leader.position.x - mov.x,
+              leader.position.y - mov.y,
+              leader.position.z - mov.z,
+            ],
+            follower: [
+              follower.position.x - mov.x,
+              follower.position.y - mov.y,
+              follower.position.z - mov.z,
+            ],
+          } as const
+        }) ?? null,
+    [lastCalibration],
   )
 
   const cos = Math.cos((angle / 180) * Math.PI)
   const sin = Math.sin((angle / 180) * Math.PI)
 
-  const transformedSamples = useMemo(
-    () =>
-      transformedSamplesStep1?.map(({ leader: a, follower: b }) => {
-        b = [b[0] * cos - b[2] * sin, b[1], b[0] * sin + b[2] * cos]
-        b = [b[0] + offset[0], b[1] + offset[1], b[2] - offset[2]]
-        return { leader: a, follower: b }
-      }) ?? null,
-    [cos, offset, sin, transformedSamplesStep1],
-  )
+  const transformedSamples = useMemo(() => {
+    if (!transformedSamplesStep1) return null
+    const mov = transformedSamplesStep1[0].leader
+    return transformedSamplesStep1.map(({ leader: a, follower: b }) => {
+      // apply offset+angle
+      b = [b[0] * cos - b[2] * sin, b[1], b[0] * sin + b[2] * cos]
+      b = [b[0] + offset[0], b[1] + offset[1], b[2] + offset[2]]
+
+      // recenter
+      a = minus(a, mov)
+      b = minus(b, mov)
+      return { leader: a, follower: b }
+    })
+  }, [cos, offset, sin, transformedSamplesStep1])
 
   useEffect(() => {
     if (!transformedSamples) return
-    const timeout = setTimeout(() => {
-      const dists = transformedSamples.map(({ leader, follower }) =>
-        dist(leader, follower),
-      )
-      const mean = dists.reduce((a, b) => a + b, 0) / dists.length
-      const variance =
-        dists.reduce((acc, dist) => acc + (mean - dist) * (mean - dist), 0) /
-        dists.length
-      const stdDev = Math.sqrt(variance)
-      set({
-        stdDev:
-          stdDev.toFixed(8) + ' = ' + ((stdDev / mean) * 100).toFixed(0) + '%',
-        meanDistance: mean.toFixed(4),
-      })
-    }, 15)
-    return () => void clearTimeout(timeout)
+    //const timeout = setTimeout(() => {
+    const dists = transformedSamples.map(({ leader, follower }) =>
+      dist(leader, follower),
+    )
+    const mean = dists.reduce((a, b) => a + b, 0) / dists.length
+    const variance =
+      dists.reduce((acc, dist) => acc + (mean - dist) * (mean - dist), 0) /
+      dists.length
+    const stdDev = Math.sqrt(variance)
+    set({
+      stdDev:
+        (stdDev * 1000).toFixed(1) +
+        'mm = ' +
+        ((stdDev / mean) * 100).toFixed(0) +
+        '%',
+      meanDistance: (mean * 1000).toFixed(1) + 'mm',
+    })
+    //}, 15)
+    //return () => void clearTimeout(timeout)
   }, [set, transformedSamples])
 
   return (
@@ -149,14 +165,14 @@ function Scene({
         <>
           {/* @ts-expect-error */}
           <Line
-            points={transformedSamples.map((v) => v.leader)}
+            points={transformedSamples.map((v) => unityToGL(v.leader))}
             color={theme.base08}
             lineWidth={1}
             dashed={false}
           />
           {/* @ts-expect-error */}
           <Line
-            points={transformedSamples.map((v) => v.follower)}
+            points={transformedSamples.map((v) => unityToGL(v.follower))}
             color={theme.base0B}
             lineWidth={1}
             dashed={false}
@@ -196,10 +212,6 @@ function Scene({
           <Connections samples={transformedSamples} color={theme.base03} />
         </>
       ) : null}
-      {/* <mesh>
-  <boxGeometry args={[1, 1, 1]} />
-  <meshStandardMaterial color="hotpink" />
-</mesh> */}
     </>
   )
 }
@@ -221,10 +233,10 @@ function Connections({
     const temp = new THREE.Object3D()
     let id = 0
     for (const sample of samples) {
-      temp.position.set(...sample.leader)
+      temp.position.set(...unityToGL(sample.leader))
       const d = dist(sample.leader, sample.follower)
       temp.scale.set(0.001, 0.001, d)
-      temp.lookAt(...sample.follower)
+      temp.lookAt(...unityToGL(sample.follower))
       temp.translateZ(d / 2)
       temp.updateMatrix()
       mesh.setMatrixAt(id++, temp.matrix)
@@ -243,12 +255,25 @@ function Connections({
 }
 
 function dist(
-  leader: readonly [number, number, number],
-  follower: readonly [number, number, number],
+  a: readonly [number, number, number],
+  b: readonly [number, number, number],
 ) {
-  const x = leader[0] - follower[0]
-  const y = leader[1] - follower[1]
-  const z = leader[2] - follower[2]
+  const x = a[0] - b[0]
+  const y = a[1] - b[1]
+  const z = a[2] - b[2]
 
   return Math.sqrt(x * x + y * y + z * z)
+}
+
+function unityToGL(
+  v: readonly [number, number, number],
+): [number, number, number] {
+  return [v[0], v[1], -v[2]]
+}
+
+function minus(
+  a: readonly [number, number, number],
+  b: readonly [number, number, number],
+): [number, number, number] {
+  return [a[0] - b[0], a[1] - b[1], a[2] - b[2]]
 }

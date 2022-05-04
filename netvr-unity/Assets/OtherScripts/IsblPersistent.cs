@@ -23,14 +23,28 @@ namespace Isbl.Persistent
             }
         }
 
-        public static Task WriteFile(string fileName, object value)
+        public static void WriteFile(string fileName, object value)
         {
-            return WriteFile(fileName, JsonSerializer.Serialize(value, new JsonSerializerOptions
+            async Task Impl()
             {
-                IncludeFields = true,
-                IgnoreReadOnlyFields = false,
-                WriteIndented = true,
-            }));
+                try
+                {
+                    await WriteFile(
+                        fileName,
+                        JsonSerializer.Serialize(value, new JsonSerializerOptions
+                        {
+                            IncludeFields = true,
+                            IgnoreReadOnlyFields = false,
+                            WriteIndented = true,
+                        })
+                    );
+                }
+                catch (Exception e)
+                {
+                    Utils.LogException(e);
+                }
+            }
+            _ = Impl();
         }
 
         public async static Task WriteFile(string fileName, string value)
@@ -38,6 +52,7 @@ namespace Isbl.Persistent
             string dataDir = Name;
             string dataPath = Path.Combine(dataDir, fileName);
             await Task.Run(() => System.IO.Directory.CreateDirectory(dataDir));
+            Utils.Log($"Writing {value.Length}B to {dataPath}");
             using var writer = new StreamWriter(dataPath);
             await writer.WriteAsync(value);
         }
@@ -48,6 +63,19 @@ namespace Isbl.Persistent
             string dataPath = Path.Combine(dataDir, fileName);
             using var reader = new StreamReader(dataPath);
             return reader.ReadToEnd();
+        }
+
+        public static async Task<T> ReadFile<T>(string fileName)
+        {
+            string dataDir = Name;
+            string dataPath = Path.Combine(dataDir, fileName);
+            using var reader = new StreamReader(dataPath);
+            var data = await reader.ReadToEndAsync();
+            return JsonSerializer.Deserialize<T>(data, new JsonSerializerOptions
+            {
+                IncludeFields = true,
+                IgnoreReadOnlyFields = false,
+            });
         }
     }
 

@@ -48,7 +48,7 @@ public class CalibrationFeature : IIsblNetFeature
     const int RequiredSamples = 200; // OVR SpaceCal equivalents: FAST=200, SLOW=500, VERY_SLOW=1000
     const int SampleBatchSize = 10;
 
-    struct RemoteCalibration
+    struct FollowerCalibration
     {
         public ushort LeaderId, LocalDeviceId;
         public double StartTimeStamp;
@@ -72,17 +72,47 @@ public class CalibrationFeature : IIsblNetFeature
         public Vector3 Position;
     }
 
-    class LocalCalibration
+    class LeaderCalibration
     {
-        public ushort FollowerDeviceId, LocalDeviceId, FollowerId;
+        [JsonInclude]
+        [JsonPropertyName("followerDevice")]
+        public ushort FollowerDeviceId;
+        [JsonInclude]
+        [JsonPropertyName("leaderDevice")]
+        public ushort LeaderDeviceId;
+        [JsonInclude]
+        [JsonPropertyName("follower")]
+        public ushort FollowerId;
+        [JsonInclude]
+        [JsonPropertyName("leader")]
+        public ushort LeaderId;
+        [JsonInclude]
+        [JsonPropertyName("startTimeStamp")]
         public double StartTimeStamp;
+        [JsonInclude]
+        [JsonPropertyName("finishedTimeStamp")]
         public double FinishedTimeStamp = 0;
 
-        public List<Sample> LeaderSamples = new(), FollowerSamples = new();
+        [JsonConverter(typeof(Isbl.Json.QuaternionAsEulerConverter))]
+        [JsonInclude]
+        [JsonPropertyName("resultRotate")]
+        public Quaternion ResultRotate;
+
+        [JsonConverter(typeof(Isbl.Json.Vector3Converter))]
+        [JsonInclude]
+        [JsonPropertyName("resultTranslate")]
+        public Vector3 ResultTranslate;
+
+        [JsonInclude]
+        [JsonPropertyName("leaderSamples")]
+        public List<Sample> LeaderSamples = new();
+        [JsonInclude]
+        [JsonPropertyName("followerSamples")]
+        public List<Sample> FollowerSamples = new();
     }
 
-    List<LocalCalibration> _calibrationsLocal;
-    List<RemoteCalibration> _calibrationsRemote;
+    List<LeaderCalibration> _calibrationsLocal;
+    List<FollowerCalibration> _calibrationsRemote;
 
     /**
      * Deserializes JsonObject to T. Adapted from https://stackoverflow.com/a/59047063
@@ -106,18 +136,19 @@ public class CalibrationFeature : IIsblNetFeature
             if (leader == net.SelfId && node.GetProperty("asLeader").GetBoolean())
             {
                 Utils.Log("Starting local calibration");
-                _calibrationsLocal.Add(new LocalCalibration()
+                _calibrationsLocal.Add(new LeaderCalibration()
                 {
                     FollowerDeviceId = node.GetProperty("followerDevice").GetUInt16(),
-                    LocalDeviceId = node.GetProperty("leaderDevice").GetUInt16(),
+                    LeaderDeviceId = node.GetProperty("leaderDevice").GetUInt16(),
                     FollowerId = node.GetProperty("follower").GetUInt16(),
+                    LeaderId = leader,
                     StartTimeStamp = IsblStaticXRDevice.GetTimeNow(),
                 });
             }
             else
             {
                 Utils.Log("Starting remote calibration");
-                _calibrationsRemote.Add(new RemoteCalibration()
+                _calibrationsRemote.Add(new FollowerCalibration()
                 {
                     LocalDeviceId = node.GetProperty("followerDevice").GetUInt16(),
                     LeaderId = leader,
@@ -149,7 +180,7 @@ public class CalibrationFeature : IIsblNetFeature
             string logInfo = $"leader: {leader}\nleaderDevice: {leaderDevice}\nfollower: {follower}\nfollowerDevice: {followerDevice}";
             if (leader == net.SelfId)
             {
-                var indexLocal = _calibrationsLocal.FindIndex(c => c.FollowerDeviceId == followerDevice && c.FollowerId == follower && c.LocalDeviceId == leaderDevice);
+                var indexLocal = _calibrationsLocal.FindIndex(c => c.FollowerDeviceId == followerDevice && c.FollowerId == follower && c.LeaderDeviceId == leaderDevice);
                 if (indexLocal >= 0)
                 {
                     var startTimeStamp = _calibrationsLocal[indexLocal].StartTimeStamp;
@@ -216,14 +247,14 @@ public class CalibrationFeature : IIsblNetFeature
         _calibrationsLocal.RemoveAll(c =>
         {
             var res = c.StartTimeStamp + Timeout < now && c.FinishedTimeStamp < 1;
-            if (res) Utils.Log($"Local calibration timeout.\nfollower: {c.FollowerId}, followerDevice: {c.FollowerDeviceId}, localDevice: {c.LocalDeviceId}\nstart + timeout < now: {c.StartTimeStamp} + {Timeout} < {now}");
+            if (res) Utils.Log($"Local calibration timeout.\nfollower: {c.FollowerId}, followerDevice: {c.FollowerDeviceId}, localDevice: {c.LeaderDeviceId}\nstart + timeout < now: {c.StartTimeStamp} + {Timeout} < {now}");
             return res;
         });
 
         _calibrationsLocal.RemoveAll(c =>
         {
             var res = c.FinishedTimeStamp > 1 && c.FinishedTimeStamp + FinishedDeleteTimeout < now;
-            if (res) Utils.Log($"Clearing out finished local calibration. follower: {c.FollowerId}, followerDevice: {c.FollowerDeviceId}, localDevice: {c.LocalDeviceId}");
+            if (res) Utils.Log($"Clearing out finished local calibration. follower: {c.FollowerId}, followerDevice: {c.FollowerDeviceId}, localDevice: {c.LeaderDeviceId}");
             return res;
         });
 
@@ -258,58 +289,31 @@ public class CalibrationFeature : IIsblNetFeature
         {
             if (c.FinishedTimeStamp > 1) continue;
 
-            if (TryCollectLocalSample(net, c.LocalDeviceId, c.StartTimeStamp, out var sample))
+            if (TryCollectLocalSample(net, c.LeaderDeviceId, c.StartTimeStamp, out var sample))
             {
                 Utils.Log($"Collected local sample: {sample.Position} {sample.Rotation}");
                 c.LeaderSamples.Add(sample);
             }
             else
             {
-                Utils.Log($"Local sample collect failed. DeviceId: {c.LocalDeviceId}. Devices: {string.Join(", ", net.DeviceManager.Devices.Select(d => d.LocalDevice.LocallyUniqueId))}");
+                Utils.Log($"Local sample collect failed. DeviceId: {c.LeaderDeviceId}. Devices: {string.Join(", ", net.DeviceManager.Devices.Select(d => d.LocalDevice.LocallyUniqueId))}");
             }
         }
 
         if (!_redoneCalibration)
         {
-            var cal = IsblConfig.Instance.LastCalibration;
-            Utils.Log($"LastCalibration {cal != null}");
+            var calFileName = IsblConfig.Instance.LastCalibration;
             _redoneCalibration = true;
-            if (cal != null)
-            {
-                Utils.Log($"Recomputing last calibration with {cal.Samples.Count} samples");
-                var toRedo = new LocalCalibration { StartTimeStamp = now, FollowerDeviceId = cal.FollowerDeviceId, FollowerId = cal.FollowerId, FollowerSamples = new(), LeaderSamples = new(), LocalDeviceId = cal.LeaderDeviceId };
-                foreach (var sample in cal.Samples)
-                {
-                    toRedo.FollowerSamples.Add(sample.Follower);
-                    toRedo.LeaderSamples.Add(sample.Leader);
-                }
-                ComputeCalibration(toRedo, out var translate, out var rotate);
-            }
+            if (!string.IsNullOrEmpty(calFileName)) _ = ReadAndRecompute(calFileName);
         }
 
-        static bool IsCalibrationReady(LocalCalibration c) => c.LeaderSamples.Count >= RequiredSamples && c.FollowerSamples.Count >= RequiredSamples && c.FinishedTimeStamp < 1;
+        static bool IsCalibrationReady(LeaderCalibration c) => c.LeaderSamples.Count >= RequiredSamples && c.FollowerSamples.Count >= RequiredSamples && c.FinishedTimeStamp < 1;
 
         foreach (var cal in _calibrationsLocal)
         {
             if (!IsCalibrationReady(cal)) continue;
             Utils.Log("Calibration ready, computing...");
-            IsblConfig.Update(data =>
-            {
-                data.LastCalibration = new IsblConfig.Calibration()
-                {
-                    FollowerDeviceId = cal.FollowerDeviceId,
-                    FollowerId = cal.FollowerId,
-                    LeaderDeviceId = cal.LocalDeviceId,
-                    LeaderId = net.SelfId,
-                    Samples = new(),
-                };
-                for (int i = 0; i < RequiredSamples; ++i)
-                {
-                    var leaderSample = cal.LeaderSamples[i];
-                    var followerSample = cal.FollowerSamples[i];
-                    data.LastCalibration.Samples.Add(new IsblConfig.CalibrationSample { Leader = leaderSample, Follower = followerSample });
-                }
-            });
+            IsblConfig.Update((data) => data.LastCalibration = SaveCalibration(cal));
 
             cal.FinishedTimeStamp = now;
             _ = net.Socket.SendAsync(new
@@ -319,13 +323,11 @@ public class CalibrationFeature : IIsblNetFeature
                 follower = cal.FollowerId,
                 followerDevice = cal.FollowerDeviceId,
                 leader = net.SelfId,
-                leaderDevice = cal.LocalDeviceId,
+                leaderDevice = cal.LeaderDeviceId,
             });
 
             // TODO: Potentially run this in thread if it is too slow?
-            ComputeCalibration(cal, out var translate, out var rotate);
-            translate = Vector3.zero;
-            //Utils.Log("Zeroed out translate");
+            ComputeCalibration(cal);
 
             net.Socket.SendAsync(new
             {
@@ -335,9 +337,9 @@ public class CalibrationFeature : IIsblNetFeature
                         field = "calibration",
                         client = net.SelfId,
                         value = new Isbl.NetServerState.Calibration() {
-                            Rotate = rotate,
+                            Rotate = cal.ResultRotate,
                             Scale = Vector3.one,
-                            Translate = translate,
+                            Translate = cal.ResultTranslate,
                         }
                     },
                 },
@@ -345,10 +347,28 @@ public class CalibrationFeature : IIsblNetFeature
         }
     }
 
+    static async System.Threading.Tasks.Task ReadAndRecompute(string filename)
+    {
+        var cal = await Isbl.Persistent.DataDirectory.ReadFile<LeaderCalibration>(filename);
+        Utils.Log($"Recomputing last calibration with {cal.LeaderSamples.Count} leader and {cal.FollowerSamples.Count} follower samples");
+
+        ComputeCalibration(cal);
+        // SaveCalibration(cal, filename);
+    }
+
+    static string SaveCalibration(LeaderCalibration cal, string logFile = null)
+    {
+        if (logFile == null)
+            logFile = $"calibration-{$"{DateTime.UtcNow:o}".Replace(":", "-")[..19]}.json";
+        Utils.Log($"Saving Calibration {logFile}");
+        Isbl.Persistent.DataDirectory.WriteFile(logFile, cal);
+        return logFile;
+    }
+
     /**
      * Performs Unity to OVR data conversion, runs the calculation and converts back
      */
-    static void ComputeCalibration(LocalCalibration cal, out Vector3 translate, out Quaternion rotate)
+    static void ComputeCalibration(LeaderCalibration cal)
     {
         using var timer = new IsblStopwatch("ComputeCalibration");
         IsblCalibration calculation = new();
@@ -368,9 +388,11 @@ public class CalibrationFeature : IIsblNetFeature
         {
             result = calculation.Compute();
         }
-        translate = OVRToUnity(new Vector3((float)result.X, (float)result.Y, (float)result.Z));
+        cal.ResultTranslate = OVRToUnity((float)result.X, (float)result.Y, (float)result.Z);
         //var rotateRad = new Vector3((float)result.Rex, (float)result.Rey, (float)result.Rez);
-        rotate = OVRToUnity(new Quaternion((float)result.Rqx, (float)result.Rqy, (float)result.Rqz, (float)result.Rqw));
+        cal.ResultRotate = OVRToUnity((float)result.Rqx, (float)result.Rqy, (float)result.Rqz, (float)result.Rqw);
+        Utils.Log($"Hacking rotate conversion");
+        cal.ResultRotate = Quaternion.Euler(0, -cal.ResultRotate.eulerAngles.y, 0);
 
         //Quaternion rotate = Quaternion.Euler(rotateRad * (180f / MathF.PI));
 
@@ -380,9 +402,9 @@ public class CalibrationFeature : IIsblNetFeature
         + $"\n  Rotate euler degrees: ({result.Rex / Math.PI * 180d}, {result.Rey / Math.PI * 180d}, {result.Rez / Math.PI * 180d})"
         + $"\n  Rotate quaternion: ({result.Rqx}, {result.Rqy}, {result.Rqz}, {result.Rqw})"
         + "\nConverted:"
-        + $"\n  Translate: ({translate.x}, {translate.y}, {translate.z})"
-        + $"\n  Rotate euler degrees: ({rotate.eulerAngles.x}, {rotate.eulerAngles.y}, {rotate.eulerAngles.z})"
-        + $"\n  Rotate quaternion: ({rotate.x}, {rotate.y}, {rotate.z}, {rotate.w})"
+        + $"\n  Translate: ({cal.ResultTranslate.x}, {cal.ResultTranslate.y}, {cal.ResultTranslate.z})"
+        + $"\n  Rotate euler degrees: ({cal.ResultRotate.eulerAngles.x}, {cal.ResultRotate.eulerAngles.y}, {cal.ResultRotate.eulerAngles.z})"
+        + $"\n  Rotate quaternion: ({cal.ResultRotate.x}, {cal.ResultRotate.y}, {cal.ResultRotate.z}, {cal.ResultRotate.w})"
         );
     }
 
@@ -390,10 +412,7 @@ public class CalibrationFeature : IIsblNetFeature
      * Converts Vector3 from OVR's right-handed coordinate system to Unity's
      * left-handed coordinates.
      */
-    static Vector3 OVRToUnity(Vector3 rightHandedVector)
-    {
-        return new Vector3(rightHandedVector.x, rightHandedVector.y, -rightHandedVector.z);
-    }
+    static Vector3 OVRToUnity(float x, float y, float z) => new(x, y, -z);
 
     /**
      * Converts Vector3 from Unity's left-handed coordinate system to OVR's
@@ -401,20 +420,14 @@ public class CalibrationFeature : IIsblNetFeature
      */
     static Vector3 UnityToOVR(Vector3 leftHandedVector)
     {
-        return new Vector3(leftHandedVector.x, leftHandedVector.y, -leftHandedVector.z);
+        return new(leftHandedVector.x, leftHandedVector.y, -leftHandedVector.z);
     }
 
     /**
      * Converts Quaternion from OVR's right-handed coordinate system to Unity's
      * left-handed coordinates.
      */
-    static Quaternion OVRToUnity(Quaternion rightHandedQuaternion)
-    {
-        return new Quaternion(-rightHandedQuaternion.x,
-                              -rightHandedQuaternion.y,
-                              rightHandedQuaternion.z,
-                              rightHandedQuaternion.w);
-    }
+    static Quaternion OVRToUnity(float x, float y, float z, float w) => new(-x, -y, z, w);
 
     /**
      * Converts Quaternion from Unity's left-handed coordinate system to OVR's
@@ -422,9 +435,9 @@ public class CalibrationFeature : IIsblNetFeature
      */
     static Quaternion UnityToOVR(Quaternion leftHandedQuaternion)
     {
-        return new Quaternion(-leftHandedQuaternion.x,
-                              -leftHandedQuaternion.y,
-                              leftHandedQuaternion.z,
-                              leftHandedQuaternion.w);
+        return new(-leftHandedQuaternion.x,
+                   -leftHandedQuaternion.y,
+                   leftHandedQuaternion.z,
+                   leftHandedQuaternion.w);
     }
 }
