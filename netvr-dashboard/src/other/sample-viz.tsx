@@ -105,9 +105,8 @@ function Scene({
     [lastCalibration],
   )
 
-  const mov = transformedSamplesStep1?.[0].leader
   const transformedSamples = useMemo(() => {
-    if (!transformedSamplesStep1 || !lastCalibration || !mov) return null
+    if (!transformedSamplesStep1 || !lastCalibration) return null
     const rotateThree = new THREE.Quaternion()
     rotateThree.setFromEuler(new THREE.Euler(...multiply(rotate, -1), 'XYZ'))
 
@@ -118,12 +117,9 @@ function Scene({
       )
       b = plus(b, translate)
 
-      // recenter
-      a = minus(a, mov)
-      b = minus(b, mov)
       return { leader: a, follower: b }
     })
-  }, [lastCalibration, mov, rotate, transformedSamplesStep1, translate])
+  }, [lastCalibration, rotate, transformedSamplesStep1, translate])
 
   useEffect(() => {
     if (!transformedSamples) return
@@ -148,50 +144,40 @@ function Scene({
     //return () => void clearTimeout(timeout)
   }, [set, transformedSamples])
 
+  const mov = transformedSamplesStep1?.[0].leader
   return (
-    <>
-      <group scale={[1, 1, -1]}>
-        <pointLight position={[10, 10, 10]} />
-        <ambientLight />
-        <OrbitControls />
-        {transformedSamples ? (
-          <>
-            <PolyLine
-              points={transformedSamples.map((v) => v.leader)}
-              color={theme.base08}
-              thickness={0.002}
-            />
-            <PolyLine
-              points={transformedSamples.map((v) => v.follower)}
-              color={theme.base0B}
-              thickness={0.002}
-            />
+    <group
+      scale={[1, 1, -1]}
+      position={mov ? [-mov[0], -mov[1], mov[2]] : undefined}
+    >
+      <pointLight position={[10, 10, 10]} />
+      <ambientLight />
+      <OrbitControls />
+      {transformedSamples ? (
+        <>
+          <PolyLine
+            points={transformedSamples.map((v) => v.leader)}
+            color={theme.base08}
+            thickness={0.002}
+          />
+          <PolyLine
+            points={transformedSamples.map((v) => v.follower)}
+            color={theme.base0B}
+            thickness={0.002}
+          />
 
-            <Connections samples={transformedSamples} color={theme.base03} />
-          </>
-        ) : null}
-        <group position={mov ? multiply(mov, -1) : [-0.25, -0.25, -0.25]}>
-          <Segment
-            from={[0, 0, 0]}
-            to={[1, 0, 0]}
-            color="red"
-            thickness={0.004}
-          />
-          <Segment
-            from={[0, 0, 0]}
-            to={[0, 1, 0]}
-            color="green"
-            thickness={0.004}
-          />
-          <Segment
-            from={[0, 0, 0]}
-            to={[0, 0, 1]}
-            color="blue"
-            thickness={0.004}
-          />
-        </group>
-      </group>
-    </>
+          <Connections samples={transformedSamples} color={theme.base03} />
+        </>
+      ) : null}
+      <Segment from={[0, 0, 0]} to={[1, 0, 0]} color="red" thickness={0.004} />
+      <Segment
+        from={[0, 0, 0]}
+        to={[0, 1, 0]}
+        color="green"
+        thickness={0.004}
+      />
+      <Segment from={[0, 0, 0]} to={[0, 0, 1]} color="blue" thickness={0.004} />
+    </group>
   )
 }
 
@@ -292,13 +278,6 @@ function dist(
   const z = a[2] - b[2]
 
   return Math.sqrt(x * x + y * y + z * z)
-}
-
-function minus(
-  a: readonly [number, number, number],
-  b: readonly [number, number, number],
-): [number, number, number] {
-  return [a[0] - b[0], a[1] - b[1], a[2] - b[2]]
 }
 
 function plus(
