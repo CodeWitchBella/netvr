@@ -1,5 +1,5 @@
 /** @jsxImportSource @emotion/react */
-import { Line, OrbitControls } from '@react-three/drei'
+import { OrbitControls } from '@react-three/drei'
 import { Canvas } from '@react-three/fiber'
 import { useControls } from 'leva'
 import { useEffect, useMemo, useRef, useState } from 'react'
@@ -68,10 +68,9 @@ function Scene({
   lastCalibration: LastCalibration | null
 }) {
   const theme = useTheme()
-  const [{ offset, angle, unityAxes }, set] = useControls(() => ({
-    offset: [0, 0, 0],
-    angle: 0,
-    unityAxes: true,
+  const [{ translate, rotate }, set] = useControls(() => ({
+    translate: [0, 0, 0],
+    rotate: [0, 0, 0],
     file: { editable: false, value: 'Drag and drop config.json to explore it' },
     leader: { editable: false, value: theme.base08 },
     follower: { editable: false, value: theme.base0B },
@@ -82,8 +81,8 @@ function Scene({
   useEffect(() => {
     if (lastCalibration) {
       set({
-        offset: Object.values(lastCalibration.resultTranslate),
-        angle: lastCalibration.resultRotate.y,
+        translate: Object.values(lastCalibration.resultTranslate),
+        rotate: Object.values(lastCalibration.resultRotate),
       })
     }
   }, [lastCalibration, set])
@@ -106,33 +105,25 @@ function Scene({
     [lastCalibration],
   )
 
+  const mov = transformedSamplesStep1?.[0].leader
   const transformedSamples = useMemo(() => {
-    if (!transformedSamplesStep1 || !lastCalibration) return null
-    const mov = transformedSamplesStep1[0].leader
-    const rotate = new THREE.Quaternion()
-    /*rotate.setFromEuler(
-      new THREE.Euler(
-        lastCalibration.resultRotate.x,
-        lastCalibration.resultRotate.y,
-        lastCalibration.resultRotate.z,
-        'XYZ',
-      ),
-    )*/
-    rotate.setFromAxisAngle(new THREE.Vector3(0, 1, 0), -angle)
+    if (!transformedSamplesStep1 || !lastCalibration || !mov) return null
+    const rotateThree = new THREE.Quaternion()
+    rotateThree.setFromEuler(new THREE.Euler(...multiply(rotate, -1), 'XYZ'))
 
     return transformedSamplesStep1.map(({ leader: a, follower: b }) => {
       // apply offset+angle
       b = objectToArray(
-        new THREE.Vector3(b[0], b[1], b[2]).applyQuaternion(rotate),
+        new THREE.Vector3(b[0], b[1], b[2]).applyQuaternion(rotateThree),
       )
-      b = plus(b, offset)
+      b = plus(b, translate)
 
       // recenter
       a = minus(a, mov)
       b = minus(b, mov)
       return { leader: a, follower: b }
     })
-  }, [angle, lastCalibration, offset, transformedSamplesStep1])
+  }, [lastCalibration, mov, rotate, transformedSamplesStep1, translate])
 
   useEffect(() => {
     if (!transformedSamples) return
@@ -159,62 +150,98 @@ function Scene({
 
   return (
     <>
-      <OrbitControls />
-      <ambientLight />
-      <pointLight position={[10, 10, 10]} />
-      {transformedSamples ? (
-        <>
-          {/* @ts-expect-error */}
-          <Line
-            points={transformedSamples.map((v) => unityToGL(v.leader))}
-            color={theme.base08}
-            lineWidth={1}
-            dashed={false}
-          />
-          {/* @ts-expect-error */}
-          <Line
-            points={transformedSamples.map((v) => unityToGL(v.follower))}
-            color={theme.base0B}
-            lineWidth={1}
-            dashed={false}
-          />
+      <group scale={[1, 1, -1]}>
+        <pointLight position={[10, 10, 10]} />
+        <ambientLight />
+        <OrbitControls />
+        {transformedSamples ? (
+          <>
+            <PolyLine
+              points={transformedSamples.map((v) => v.leader)}
+              color={theme.base08}
+              thickness={0.002}
+            />
+            <PolyLine
+              points={transformedSamples.map((v) => v.follower)}
+              color={theme.base0B}
+              thickness={0.002}
+            />
 
-          <Connections samples={transformedSamples} color={theme.base03} />
-        </>
-      ) : null}
-      <group position={[-0.25, -0.25, unityAxes ? 0.25 : -0.25]}>
-        {/* @ts-expect-error */}
-        <Line
-          points={[
-            [0, 0, 0],
-            [1, 0, 0],
-          ]}
-          color="red"
-          lineWidth={0.5}
-          dashed={false}
-        />
-        {/* @ts-expect-error */}
-        <Line
-          points={[
-            [0, 0, 0],
-            [0, 1, 0],
-          ]}
-          color="green"
-          lineWidth={0.5}
-          dashed={false}
-        />
-        {/* @ts-expect-error */}
-        <Line
-          points={[
-            [0, 0, 0],
-            [0, 0, unityAxes ? -1 : 1],
-          ]}
-          color="blue"
-          lineWidth={0.5}
-          dashed={false}
-        />
+            <Connections samples={transformedSamples} color={theme.base03} />
+          </>
+        ) : null}
+        <group position={mov ? multiply(mov, -1) : [-0.25, -0.25, -0.25]}>
+          <Segment
+            from={[0, 0, 0]}
+            to={[1, 0, 0]}
+            color="red"
+            thickness={0.004}
+          />
+          <Segment
+            from={[0, 0, 0]}
+            to={[0, 1, 0]}
+            color="green"
+            thickness={0.004}
+          />
+          <Segment
+            from={[0, 0, 0]}
+            to={[0, 0, 1]}
+            color="blue"
+            thickness={0.004}
+          />
+        </group>
       </group>
     </>
+  )
+}
+
+function Segment({
+  from,
+  to,
+  color,
+  thickness,
+}: {
+  from: [number, number, number]
+  to: [number, number, number]
+  color: string
+  thickness?: number
+}) {
+  return <PolyLine points={[from, to]} color={color} thickness={thickness} />
+}
+
+function PolyLine({
+  points,
+  color,
+  thickness = 0.001,
+}: {
+  points: readonly (readonly [number, number, number])[]
+  color: any
+  thickness?: number
+}) {
+  const ref = useRef<InstancedMesh | undefined>()
+  useEffect(() => {
+    const mesh = ref.current
+    if (!mesh) return
+    const temp = new THREE.Object3D()
+    for (let id = 0; id < points.length - 1; ++id) {
+      temp.position.set(...points[id])
+      const d = dist(points[id], points[id + 1])
+      temp.scale.set(thickness, thickness, d)
+      temp.lookAt(...points[id + 1])
+      temp.translateZ(d / 2)
+      temp.updateMatrix()
+      mesh.setMatrixAt(id, temp.matrix)
+    }
+    mesh.instanceMatrix.needsUpdate = true
+  }, [points, thickness])
+  return (
+    <instancedMesh
+      ref={ref as any}
+      args={[undefined, undefined, points.length - 1]}
+    >
+      <boxGeometry />
+      <meshStandardMaterial color={color} />
+    </instancedMesh>
   )
 }
 
@@ -235,10 +262,10 @@ function Connections({
     const temp = new THREE.Object3D()
     let id = 0
     for (const sample of samples) {
-      temp.position.set(...unityToGL(sample.leader))
+      temp.position.set(...sample.leader)
       const d = dist(sample.leader, sample.follower)
       temp.scale.set(0.001, 0.001, d)
-      temp.lookAt(...unityToGL(sample.follower))
+      temp.lookAt(...sample.follower)
       temp.translateZ(d / 2)
       temp.updateMatrix()
       mesh.setMatrixAt(id++, temp.matrix)
@@ -267,12 +294,6 @@ function dist(
   return Math.sqrt(x * x + y * y + z * z)
 }
 
-function unityToGL(
-  v: readonly [number, number, number],
-): [number, number, number] {
-  return [v[0], v[1], -v[2]]
-}
-
 function minus(
   a: readonly [number, number, number],
   b: readonly [number, number, number],
@@ -293,4 +314,11 @@ function objectToArray(v: {
   z: number
 }): [number, number, number] {
   return [v.x, v.y, v.z]
+}
+
+function multiply(
+  v: readonly [number, number, number],
+  scalar: number,
+): [number, number, number] {
+  return [v[0] * scalar, v[1] * scalar, v[2] * scalar]
 }
