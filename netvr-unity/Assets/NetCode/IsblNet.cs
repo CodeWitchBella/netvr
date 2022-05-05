@@ -375,7 +375,7 @@ public sealed class IsblNet : IDisposable
     /// Periodically called from IsblNetComponent to upload current LocalState
     /// to server
     /// </summary>
-    public void Tick()
+    public void FixedUpdate()
     {
         if (SelfId < 1 || Socket == null) return;
         var bytes = new byte[DeviceManager.CalculateSerializationSize() + 1];
@@ -404,6 +404,15 @@ public sealed class IsblNet : IDisposable
         _ = Socket.SendAsync(bytes, System.Net.WebSockets.WebSocketMessageType.Binary);
         if (DeviceManager.DeviceInfoChanged) SendDeviceInfo();
 
-        foreach (var feature in _features.Values) feature.Tick(this);
+        foreach (var feature in _features.Values) feature.FixedUpdate(this);
+    }
+
+    /// <summary>
+    /// Periodically called from IsblNetComponent to upload current LocalState
+    /// to server
+    /// </summary>
+    public void Update()
+    {
+        foreach (var feature in _features.Values) feature.Update(this);
     }
 }

@@ -382,7 +382,11 @@ function createUtils(
     const omit = broadcastOptions?.omit
     for (const client of clients.values()) {
       if ('handler' in client && client.id !== omit) {
-        client.socket.send(message)
+        try {
+          client.socket.send(message)
+        } catch (e) {
+          console.error(e)
+        }
       }
     }
   }

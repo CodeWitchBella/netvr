@@ -45,13 +45,15 @@ public class CalibrationFeature : IIsblNetFeature
     public const string FeatureId = "calibration";
     const double Timeout = 180.0;
     const double FinishedDeleteTimeout = 10.0;
+    const double MinSamplingDelay = 0.05;
     const int RequiredSamples = 200; // OVR SpaceCal equivalents: FAST=200, SLOW=500, VERY_SLOW=1000
     const int SampleBatchSize = 10;
 
-    struct FollowerCalibration
+    class FollowerCalibration
     {
         public ushort LeaderId, LocalDeviceId;
         public double StartTimeStamp;
+        public double LastSampleTargetTimeStamp;
         public List<Sample> SampleBatch;
     }
 
@@ -92,6 +94,8 @@ public class CalibrationFeature : IIsblNetFeature
         [JsonInclude]
         [JsonPropertyName("finishedTimeStamp")]
         public double FinishedTimeStamp = 0;
+
+        public double LastSampleTargetTimeStamp;
 
         [JsonConverter(typeof(Isbl.Json.QuaternionAsEulerConverter))]
         [JsonInclude]
@@ -215,17 +219,25 @@ public class CalibrationFeature : IIsblNetFeature
         _calibrationsRemote = new();
     }
 
-    bool TryCollectLocalSample(IsblNet net, ushort deviceId, double startTimeStamp, out Sample sample)
+    bool TryCollectLocalSample(IsblNet net, ushort deviceId, double startTimeStamp, double lastSampleTimeStamp, out Sample sample)
     {
         var dev = net.DeviceManager.Devices.Find(d => d.LocalDevice.LocallyUniqueId == deviceId);
         if (!dev)
         {
             sample = new();
+            Utils.Log($"Failed to collect sample. DeviceId: {deviceId}. Devices: {string.Join(", ", net.DeviceManager.Devices.Select(d => d.LocalDevice.LocallyUniqueId))}");
             return false;
         }
+        var timestamp = dev.NetDevice.LastUpdateTime - startTimeStamp;
+        if (timestamp - lastSampleTimeStamp < MinSamplingDelay)
+        {
+            sample = new();
+            return false;
+        }
+
         sample = new Sample()
         {
-            Timestamp = dev.NetDevice.LastUpdateTime - startTimeStamp,
+            Timestamp = timestamp,
             Position = dev.NetDevice.DevicePosition,
             Rotation = dev.NetDevice.DeviceRotation,
         };
@@ -234,7 +246,45 @@ public class CalibrationFeature : IIsblNetFeature
 
     private bool _redoneCalibration = false;
 
-    public void Tick(IsblNet net)
+    public void Update(IsblNet net)
+    {
+        foreach (var c in _calibrationsRemote)
+        {
+            if (TryCollectLocalSample(net, c.LocalDeviceId, c.StartTimeStamp, c.LastSampleTargetTimeStamp, out var sample))
+            {
+                c.LastSampleTargetTimeStamp += MinSamplingDelay;
+                c.SampleBatch.Add(sample);
+                if (c.SampleBatch.Count >= SampleBatchSize)
+                {
+                    Utils.Log($"Sending {SampleBatchSize} samples: eg. {sample.Position} {sample.Rotation}");
+                    net.Socket.SendAsync(new
+                    {
+                        feature = FeatureId,
+                        action = "samples",
+                        deviceId = c.LocalDeviceId,
+                        clientId = net.SelfId,
+                        leader = c.LeaderId,
+                        samples = c.SampleBatch.ToArray(),
+                    });
+                    c.SampleBatch.Clear();
+                }
+            }
+        }
+
+        foreach (var c in _calibrationsLocal)
+        {
+            if (c.FinishedTimeStamp > 1) continue;
+
+            if (TryCollectLocalSample(net, c.LeaderDeviceId, c.StartTimeStamp, c.LastSampleTargetTimeStamp, out var sample))
+            {
+                c.LastSampleTargetTimeStamp += MinSamplingDelay;
+                Utils.Log($"Collected local sample: {sample.Position} {sample.Rotation}");
+                c.LeaderSamples.Add(sample);
+            }
+        }
+    }
+
+    public void FixedUpdate(IsblNet net)
     {
         var now = IsblStaticXRDevice.GetTimeNow();
         _calibrationsRemote.RemoveAll(c =>
@@ -257,48 +307,6 @@ public class CalibrationFeature : IIsblNetFeature
             if (res) Utils.Log($"Clearing out finished local calibration. follower: {c.FollowerId}, followerDevice: {c.FollowerDeviceId}, localDevice: {c.LeaderDeviceId}");
             return res;
         });
-
-        foreach (var c in _calibrationsRemote)
-        {
-            if (TryCollectLocalSample(net, c.LocalDeviceId, c.StartTimeStamp, out var sample))
-            {
-                c.SampleBatch.Add(sample);
-                if (c.SampleBatch.Count >= SampleBatchSize)
-                {
-                    Utils.Log($"Sending {SampleBatchSize} samples: eg. {sample.Position} {sample.Rotation}");
-                    net.Socket.SendAsync(new
-                    {
-                        feature = FeatureId,
-                        action = "samples",
-                        deviceId = c.LocalDeviceId,
-                        clientId = net.SelfId,
-                        leader = c.LeaderId,
-                        samples = c.SampleBatch.ToArray(),
-                    });
-                    c.SampleBatch.Clear();
-                }
-            }
-            else
-            {
-                // Disconnection (missing device) is handled by timeout.
-                Utils.Log($"Failed to collect sample to send. DeviceId: {c.LocalDeviceId}. Devices: {string.Join(", ", net.DeviceManager.Devices.Select(d => d.LocalDevice.LocallyUniqueId))}");
-            }
-        }
-
-        foreach (var c in _calibrationsLocal)
-        {
-            if (c.FinishedTimeStamp > 1) continue;
-
-            if (TryCollectLocalSample(net, c.LeaderDeviceId, c.StartTimeStamp, out var sample))
-            {
-                Utils.Log($"Collected local sample: {sample.Position} {sample.Rotation}");
-                c.LeaderSamples.Add(sample);
-            }
-            else
-            {
-                Utils.Log($"Local sample collect failed. DeviceId: {c.LeaderDeviceId}. Devices: {string.Join(", ", net.DeviceManager.Devices.Select(d => d.LocalDevice.LocallyUniqueId))}");
-            }
-        }
 
         if (!_redoneCalibration)
         {

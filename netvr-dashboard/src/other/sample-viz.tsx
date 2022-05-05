@@ -91,41 +91,39 @@ function Scene({
     set({ follower: theme.base08, leader: theme.base0B })
   }, [set, theme])
 
-  const transformedSamplesStep1 = useMemo(
-    () =>
-      lastCalibration?.leaderSamples
-        .slice(0, lastCalibration.followerSamples.length)
-        .map((leader, i) => {
-          const follower = lastCalibration.followerSamples[i]
-          return {
-            leader: objectToArray(leader.position),
-            follower: objectToArray(follower.position),
-          } as const
-        }) ?? null,
-    [lastCalibration],
-  )
-
   const transformedSamples = useMemo(() => {
-    if (!transformedSamplesStep1 || !lastCalibration) return null
+    if (!lastCalibration) return null
     const rotateThree = new THREE.Quaternion()
     rotateThree.setFromEuler(new THREE.Euler(...multiply(rotate, 1), 'XYZ'))
 
-    return transformedSamplesStep1.map(({ leader: a, follower: b }) => {
-      // apply offset+angle
-      b = objectToArray(
-        new THREE.Vector3(b[0], b[1], b[2]).applyQuaternion(rotateThree),
-      )
-      b = plus(b, translate)
+    return {
+      leader: lastCalibration.leaderSamples
+        .slice(0, lastCalibration.followerSamples.length)
+        .map((v) => objectToArray(v.position)),
+      follower: lastCalibration.followerSamples
+        .slice(0, lastCalibration.leaderSamples.length)
+        .map((v) => {
+          let position = objectToArray(v.position)
+          // apply offset+angle
+          position = objectToArray(
+            new THREE.Vector3(
+              position[0],
+              position[1],
+              position[2],
+            ).applyQuaternion(rotateThree),
+          )
+          position = plus(position, translate)
 
-      return { leader: a, follower: b }
-    })
-  }, [lastCalibration, rotate, transformedSamplesStep1, translate])
+          return position
+        }),
+    }
+  }, [lastCalibration, rotate, translate])
 
   useEffect(() => {
     if (!transformedSamples) return
     //const timeout = setTimeout(() => {
-    const dists = transformedSamples.map(({ leader, follower }) =>
-      dist(leader, follower),
+    const dists = transformedSamples.leader.map((leader, i) =>
+      dist(leader, transformedSamples.follower[i]),
     )
     const mean = dists.reduce((a, b) => a + b, 0) / dists.length
     const variance =
@@ -144,7 +142,24 @@ function Scene({
     //return () => void clearTimeout(timeout)
   }, [set, transformedSamples])
 
-  const mov = transformedSamplesStep1?.[0].leader
+  const timePointsLeader = lastCalibration?.leaderSamples.map(
+    (s, i, list) =>
+      [
+        0,
+        i === 0 ? 0 : s.timestamp - list[i - 1].timestamp,
+        s.timestamp,
+      ] as const,
+  )
+  const timePointsFollower = lastCalibration?.followerSamples.map(
+    (s, i, list) =>
+      [
+        0,
+        i === 0 ? 0 : s.timestamp - list[i - 1].timestamp + 0.05,
+        s.timestamp,
+      ] as const,
+  )
+
+  const mov = transformedSamples?.leader[0]
   return (
     <group
       scale={[1, 1, -1]}
@@ -156,17 +171,40 @@ function Scene({
       {transformedSamples ? (
         <>
           <PolyLine
-            points={transformedSamples.map((v) => v.leader)}
+            points={transformedSamples.leader}
             color={theme.base08}
             thickness={0.002}
           />
           <PolyLine
-            points={transformedSamples.map((v) => v.follower)}
+            points={transformedSamples.follower}
             color={theme.base0B}
             thickness={0.002}
           />
 
-          <Connections samples={transformedSamples} color={theme.base03} />
+          <Connections
+            points1={transformedSamples.leader}
+            points2={transformedSamples.follower}
+            color={theme.base03}
+          />
+        </>
+      ) : null}
+      {timePointsLeader && timePointsFollower ? (
+        <>
+          <PolyLine
+            points={timePointsLeader}
+            color={theme.base08}
+            thickness={0.002}
+          />
+          <PolyLine
+            points={timePointsFollower}
+            color={theme.base0B}
+            thickness={0.002}
+          />
+          <Connections
+            points1={timePointsLeader}
+            points2={timePointsFollower}
+            color={theme.base03}
+          />
         </>
       ) : null}
       <Segment from={[0, 0, 0]} to={[1, 0, 0]} color="red" thickness={0.004} />
@@ -232,37 +270,33 @@ function PolyLine({
 }
 
 function Connections({
-  samples,
+  points1,
+  points2,
   color,
 }: {
-  samples: readonly {
-    leader: readonly [number, number, number]
-    follower: readonly [number, number, number]
-  }[]
+  points1: readonly (readonly [number, number, number])[]
+  points2: readonly (readonly [number, number, number])[]
   color: any
 }) {
   const ref = useRef<InstancedMesh | undefined>()
+  const count = Math.min(points1.length, points2.length)
   useEffect(() => {
     const mesh = ref.current
     if (!mesh) return
     const temp = new THREE.Object3D()
-    let id = 0
-    for (const sample of samples) {
-      temp.position.set(...sample.leader)
-      const d = dist(sample.leader, sample.follower)
+    for (let id = 0; id < count; ++id) {
+      temp.position.set(...points1[id])
+      const d = dist(points1[id], points2[id])
       temp.scale.set(0.001, 0.001, d)
-      temp.lookAt(...sample.follower)
+      temp.lookAt(...points2[id])
       temp.translateZ(d / 2)
       temp.updateMatrix()
-      mesh.setMatrixAt(id++, temp.matrix)
+      mesh.setMatrixAt(id, temp.matrix)
     }
     mesh.instanceMatrix.needsUpdate = true
-  }, [samples])
+  }, [count, points1, points2])
   return (
-    <instancedMesh
-      ref={ref as any}
-      args={[undefined, undefined, samples.length]}
-    >
+    <instancedMesh ref={ref as any} args={[undefined, undefined, count]}>
       <boxGeometry />
       <meshStandardMaterial color={color} />
     </instancedMesh>

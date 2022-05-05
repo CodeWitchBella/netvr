@@ -217,7 +217,7 @@ CalibrationResult calibrate(const std::vector<Sample> &matches)
     // Notes from original code:
     // - it applies rotation right when it determines it
     // - it collects SampleCount for each phase
-    // - it waits at least 20ms (0.05s) between samples
+    // - it waits at least 50ms (0.05s) between samples
 
     std::vector<EigenSample> eigen_samples;
     int rot_samples = matches.size() / 2, pos_samples = matches.size() - rot_samples;

@@ -4,5 +4,6 @@ interface IIsblNetFeature
 {
     void OnMessage(IsblNet net, JsonElement node);
     void Reset();
-    void Tick(IsblNet net);
+    void FixedUpdate(IsblNet net);
+    void Update(IsblNet net);
 }

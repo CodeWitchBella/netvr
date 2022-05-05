@@ -38,12 +38,17 @@ public class IsblNetComponent : MonoBehaviour
 
     void FixedUpdate()
     {
-        _net.Tick();
+        _net.FixedUpdate();
 
 #if UNITY_EDITOR
         if (_net != null) _net.UnityEditorOnlyDebug.PrintDebug = PrintDebug;
         UnityEditor.EditorUtility.SetDirty(this);
 #endif
+    }
+
+    void Update()
+    {
+        _net.Update();
     }
 
 #if UNITY_EDITOR

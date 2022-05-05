@@ -82,6 +82,7 @@ function useSocketState(url: string, onDisconnected: () => void) {
     }
 
     function connect() {
+      console.log('Connecting to', url)
       const ret = new WebSocket(url)
       isOpen = false
       ret.binaryType = 'arraybuffer'

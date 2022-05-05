@@ -91,6 +91,30 @@ async function serveSocket(
     // https://github.com/denoland/deno/issues/14280
     idleTimeout: 0,
   })
+
+  // Monkey-patch send method to make sure that we have proper stacktrace
+  const oldSend = socket.send
+  function send(this: WebSocket, message: string | ArrayBuffer) {
+    try {
+      oldSend.call(this, message)
+    } catch (e) {
+      const message =
+        typeof e === 'string'
+          ? e
+          : typeof e === 'object' &&
+            e &&
+            'message' in e &&
+            typeof (e as any).message === 'string'
+          ? (e as any).message
+          : JSON.stringify(e)
+      const error = new Error(message)
+      // @ts-expect-error
+      Error.captureStackTrace(error, send)
+      throw error
+    }
+  }
+  socket.send = send
+
   room.onWebSocket(socket, connectionInfo)
 
   event.respondWith(response)
