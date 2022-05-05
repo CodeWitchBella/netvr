@@ -108,7 +108,7 @@ function Scene({
   const transformedSamples = useMemo(() => {
     if (!transformedSamplesStep1 || !lastCalibration) return null
     const rotateThree = new THREE.Quaternion()
-    rotateThree.setFromEuler(new THREE.Euler(...multiply(rotate, -1), 'XYZ'))
+    rotateThree.setFromEuler(new THREE.Euler(...multiply(rotate, 1), 'XYZ'))
 
     return transformedSamplesStep1.map(({ leader: a, follower: b }) => {
       // apply offset+angle

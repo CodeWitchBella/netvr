@@ -313,7 +313,6 @@ public class CalibrationFeature : IIsblNetFeature
         {
             if (!IsCalibrationReady(cal)) continue;
             Utils.Log("Calibration ready, computing...");
-            IsblConfig.Update((data) => data.LastCalibration = SaveCalibration(cal));
 
             cal.FinishedTimeStamp = now;
             _ = net.Socket.SendAsync(new
@@ -322,12 +321,13 @@ public class CalibrationFeature : IIsblNetFeature
                 action = "end",
                 follower = cal.FollowerId,
                 followerDevice = cal.FollowerDeviceId,
-                leader = net.SelfId,
+                leader = cal.LeaderId,
                 leaderDevice = cal.LeaderDeviceId,
             });
 
             // TODO: Potentially run this in thread if it is too slow?
             ComputeCalibration(cal);
+            IsblConfig.Update((data) => data.LastCalibration = SaveCalibration(cal));
 
             net.Socket.SendAsync(new
             {
@@ -335,7 +335,7 @@ public class CalibrationFeature : IIsblNetFeature
                 data = new object[] {
                     new {
                         field = "calibration",
-                        client = net.SelfId,
+                        client = cal.FollowerId,// net.SelfId,
                         value = new Isbl.NetServerState.Calibration() {
                             Rotate = cal.ResultRotate,
                             Scale = Vector3.one,
@@ -391,8 +391,8 @@ public class CalibrationFeature : IIsblNetFeature
         cal.ResultTranslate = OVRToUnity((float)result.X, (float)result.Y, (float)result.Z);
         //var rotateRad = new Vector3((float)result.Rex, (float)result.Rey, (float)result.Rez);
         cal.ResultRotate = OVRToUnity((float)result.Rqx, (float)result.Rqy, (float)result.Rqz, (float)result.Rqw);
-        Utils.Log($"Hacking rotate conversion");
-        cal.ResultRotate = Quaternion.Euler(0, -cal.ResultRotate.eulerAngles.y, 0);
+        //Utils.Log($"Hacking rotate conversion");
+        //cal.ResultRotate = Quaternion.Euler(0, cal.ResultRotate.eulerAngles.y, 0);
 
         //Quaternion rotate = Quaternion.Euler(rotateRad * (180f / MathF.PI));
 

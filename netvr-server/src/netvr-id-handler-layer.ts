@@ -301,6 +301,8 @@ function idHandlerInternal<RestoreData>(
           }
         },
       )
+    } catch (e) {
+      console.error('Connection ended with an error', e)
     } finally {
       state.clients.set(client.id, {
         id: client.id,
