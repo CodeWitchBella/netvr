@@ -3,7 +3,10 @@
 #include <stdint.h>
 
 // this macro is used to mark function as exported from dynamic library
-#if defined _WIN32 || defined _WIN64
+#ifdef __EMSCRIPTEN__
+#include <emscripten.h>
+#define ISBL_NETVR_FUNC EMSCRIPTEN_KEEPALIVE
+#elif defined _WIN32 || defined _WIN64
 #ifdef WIN_EXPORT
 #define ISBL_NETVR_FUNC __declspec(dllexport)
 #else

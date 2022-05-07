@@ -16,3 +16,4 @@ Deno
 nodejs
 corepack
 eigen
+emscripten

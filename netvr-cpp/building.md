@@ -67,3 +67,27 @@ cd C:\Source\netvr\netvr-cpp
 cmake . "-DCMAKE_TOOLCHAIN_FILE=$ANDROID_NDK\build\cmake\android.toolchain.cmake" -DCMAKE_SYSTEM_NAME="Android" "-DANDROID_NDK=$ANDROID_NDK" -DANDROID_PLATFORM=android-29 -DANDROID_ABI="arm64-v8a" -B Android -GNinja
 cmake --build Android
 ```
+
+## Web
+
+**Note:** You can also download the file from [GitHub Actions](#download-from-github-actions).
+
+To build netvr-cpp .wasm for use in visualizer you'll need CMake and emscripten.
+I used it under wsl, which allowed me to follow [installation instructions](https://emscripten.org/docs/getting_started/downloads.html) on their website.
+
+You'll also need cmake, which in WSL you can install using
+
+```bash
+sudo apt install cmake ninja-build
+```
+
+Open shell with emscripten loaded and run. I recommend running it somewhere in
+WSL home directory, because it becomes very slow when run on the mounted
+filesystem.
+
+```bash
+mkdir -p wasm
+cd wasm
+emcmake cmake -DCMAKE_BUILD_TYPE=Release /mnt/c/Source/netvr/netvr-cpp -G Ninja
+cmake --build .
+```

@@ -46,7 +46,7 @@ public class CalibrationFeature : IIsblNetFeature
     const double Timeout = 180.0;
     const double FinishedDeleteTimeout = 10.0;
     const double MinSamplingDelay = 0.05;
-    const int RequiredSamples = 200; // OVR SpaceCal equivalents: FAST=200, SLOW=500, VERY_SLOW=1000
+    const int RequiredSamples = 1000; // OVR SpaceCal equivalents: FAST=200, SLOW=500, VERY_SLOW=1000
     const int SampleBatchSize = 10;
 
     class FollowerCalibration
@@ -248,38 +248,44 @@ public class CalibrationFeature : IIsblNetFeature
 
     public void Update(IsblNet net)
     {
-        foreach (var c in _calibrationsRemote)
+        if (_calibrationsRemote != null)
         {
-            if (TryCollectLocalSample(net, c.LocalDeviceId, c.StartTimeStamp, c.LastSampleTargetTimeStamp, out var sample))
+            foreach (var c in _calibrationsRemote)
             {
-                c.LastSampleTargetTimeStamp += MinSamplingDelay;
-                c.SampleBatch.Add(sample);
-                if (c.SampleBatch.Count >= SampleBatchSize)
+                if (TryCollectLocalSample(net, c.LocalDeviceId, c.StartTimeStamp, c.LastSampleTargetTimeStamp, out var sample))
                 {
-                    Utils.Log($"Sending {SampleBatchSize} samples: eg. {sample.Position} {sample.Rotation}");
-                    net.Socket.SendAsync(new
+                    c.LastSampleTargetTimeStamp += MinSamplingDelay;
+                    c.SampleBatch.Add(sample);
+                    if (c.SampleBatch.Count >= SampleBatchSize)
                     {
-                        feature = FeatureId,
-                        action = "samples",
-                        deviceId = c.LocalDeviceId,
-                        clientId = net.SelfId,
-                        leader = c.LeaderId,
-                        samples = c.SampleBatch.ToArray(),
-                    });
-                    c.SampleBatch.Clear();
+                        Utils.Log($"Sending {SampleBatchSize} samples: eg. {sample.Position} {sample.Rotation}");
+                        net.Socket.SendAsync(new
+                        {
+                            feature = FeatureId,
+                            action = "samples",
+                            deviceId = c.LocalDeviceId,
+                            clientId = net.SelfId,
+                            leader = c.LeaderId,
+                            samples = c.SampleBatch.ToArray(),
+                        });
+                        c.SampleBatch.Clear();
+                    }
                 }
             }
         }
 
-        foreach (var c in _calibrationsLocal)
+        if (_calibrationsLocal != null)
         {
-            if (c.FinishedTimeStamp > 1) continue;
-
-            if (TryCollectLocalSample(net, c.LeaderDeviceId, c.StartTimeStamp, c.LastSampleTargetTimeStamp, out var sample))
+            foreach (var c in _calibrationsLocal)
             {
-                c.LastSampleTargetTimeStamp += MinSamplingDelay;
-                Utils.Log($"Collected local sample: {sample.Position} {sample.Rotation}");
-                c.LeaderSamples.Add(sample);
+                if (c.FinishedTimeStamp > 1) continue;
+
+                if (TryCollectLocalSample(net, c.LeaderDeviceId, c.StartTimeStamp, c.LastSampleTargetTimeStamp, out var sample))
+                {
+                    c.LastSampleTargetTimeStamp += MinSamplingDelay;
+                    Utils.Log($"Collected local sample: {sample.Position} {sample.Rotation}");
+                    c.LeaderSamples.Add(sample);
+                }
             }
         }
     }
@@ -360,7 +366,8 @@ public class CalibrationFeature : IIsblNetFeature
         var cal = await Isbl.Persistent.DataDirectory.ReadFile<LeaderCalibration>(filename);
         Utils.Log($"Recomputing last calibration with {cal.LeaderSamples.Count} leader and {cal.FollowerSamples.Count} follower samples");
 
-        ComputeCalibration(cal);
+        try { ComputeCalibration(cal); }
+        catch (Exception e) { Debug.LogException(e); }
         // SaveCalibration(cal, filename);
     }
 
@@ -380,16 +387,25 @@ public class CalibrationFeature : IIsblNetFeature
     {
         using var timer = new IsblStopwatch("ComputeCalibration");
         IsblCalibration calculation = new();
-        for (int i = 0; i < RequiredSamples; ++i)
+        var sampleCount = Math.Min(cal.LeaderSamples.Count, cal.FollowerSamples.Count);
+        for (int i = 0; i < sampleCount; ++i)
         {
             var leaderSample = cal.LeaderSamples[i];
             var followerSample = cal.FollowerSamples[i];
-            calculation.AddPair(
-                UnityToOVR(leaderSample.Position),
-                UnityToOVR(leaderSample.Rotation),
-                UnityToOVR(followerSample.Position),
-                UnityToOVR(followerSample.Rotation)
-            );
+            var p1 = UnityToOVR(leaderSample.Position);
+            var q1 = UnityToOVR(leaderSample.Rotation);
+            var p2 = UnityToOVR(followerSample.Position);
+            var q2 = UnityToOVR(followerSample.Rotation);
+            calculation.AddPair(p1, q1, p2, q2);
+            if (false)
+            {
+                Utils.Log($"Passing converted sample {i}:"
+                    + $"\np1: ({p1.x}, {p1.y}, {p1.z})"
+                    + $"\nq1: ({q1.x}, {q1.y}, {q1.z}, {q1.w})"
+                    + $"\np2: ({p2.x}, {p2.y}, {p2.z})"
+                    + $"\nq2: ({q2.x}, {q2.y}, {q2.z}, {q2.w})"
+                );
+            }
         }
         IsblDynamicLibrary.CalibrationComputeResult result;
         using (var timer2 = new IsblStopwatch("ComputeCalibration::compute only"))

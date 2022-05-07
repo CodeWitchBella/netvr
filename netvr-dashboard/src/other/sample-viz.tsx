@@ -1,8 +1,8 @@
 /** @jsxImportSource @emotion/react */
 import { OrbitControls } from '@react-three/drei'
-import { Canvas } from '@react-three/fiber'
+import { Canvas, useFrame } from '@react-three/fiber'
 import { useControls } from 'leva'
-import { useEffect, useMemo, useRef, useState } from 'react'
+import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
 import { useDropzone } from 'react-dropzone'
 import * as THREE from 'three'
 import { InstancedMesh } from 'three'
@@ -11,8 +11,9 @@ import {
   useReprovideTheme,
   useTheme,
 } from '../components/theme'
+import { useWasmSuspending, type WrappedWasm } from '../wasm/wasm-wrapper'
 
-type LastCalibration = {
+type SavedCalibration = {
   followerDevice: number
   leaderDevice: number
   follower: number
@@ -30,14 +31,14 @@ type Sample = {
 }
 
 export default function SampleVizRoute() {
-  const [lastCalibration, setLastCalibration] =
-    useState<LastCalibration | null>(null)
+  const [savedCalibration, setSavedCalibration] =
+    useState<SavedCalibration | null>(null)
   const dropzone = useDropzone({
     noClick: true,
     multiple: false,
     onDrop: ([file]) => {
       file.text().then((v) => {
-        setLastCalibration(JSON.parse(v))
+        setSavedCalibration(JSON.parse(v))
       })
     },
   })
@@ -55,18 +56,43 @@ export default function SampleVizRoute() {
       <input {...dropzone.getInputProps()} css={{ display: 'none' }} />
       <Canvas style={{ height: 'auto' }}>
         <ReprovideTheme value={useReprovideTheme()}>
-          <Scene lastCalibration={lastCalibration} />
+          <Suspense fallback={<SpinningCube />}>
+            <Scene data={savedCalibration} />
+          </Suspense>
         </ReprovideTheme>
       </Canvas>
     </div>
   )
 }
 
-function Scene({
-  lastCalibration,
-}: {
-  lastCalibration: LastCalibration | null
-}) {
+function SpinningCube() {
+  const theme = useTheme()
+  const boxRef = useRef<THREE.Mesh>(null)
+  const startTime = useRef(Date.now())
+
+  useFrame(() => {
+    const now = Date.now()
+    if (now - startTime.current < 100) return
+    boxRef.current!.rotation.y = ((now / 1000) * Math.PI) % (Math.PI * 2)
+    boxRef.current!.position.y = Math.sin((now / 500) * Math.PI) / 2
+  })
+  return (
+    <>
+      <pointLight position={[0, 0, 10]} />
+      <mesh
+        ref={boxRef}
+        position-y={-1000}
+        rotation-x={Math.PI * 0.125}
+        rotation-y={Math.PI * 0.25}
+      >
+        <boxBufferGeometry args={[2, 2, 2]} />
+        <meshStandardMaterial color={theme.base08} />
+      </mesh>
+    </>
+  )
+}
+
+function Scene({ data }: { data: SavedCalibration | null }) {
   const theme = useTheme()
   const [{ translate, rotate }, set] = useControls(() => ({
     translate: [0, 0, 0],
@@ -78,30 +104,38 @@ function Scene({
     stdDev: { editable: false, value: '' },
   }))
 
+  const wasm = useWasmSuspending()
+  const recomputed = useMemo(() => {
+    if (!wasm || !data) return
+    return computeCalibration(wasm, data)
+  }, [data, wasm])
+
   useEffect(() => {
-    if (lastCalibration) {
+    if (recomputed && data) {
+      set(recomputed)
+    } else if (data) {
       set({
-        translate: Object.values(lastCalibration.resultTranslate),
-        rotate: Object.values(lastCalibration.resultRotate),
+        translate: Object.values(data.resultTranslate),
+        rotate: Object.values(data.resultRotate),
       })
     }
-  }, [lastCalibration, set])
+  }, [data, recomputed, set])
 
   useEffect(() => {
     set({ follower: theme.base08, leader: theme.base0B })
   }, [set, theme])
 
   const transformedSamples = useMemo(() => {
-    if (!lastCalibration) return null
+    if (!data) return null
     const rotateThree = new THREE.Quaternion()
     rotateThree.setFromEuler(new THREE.Euler(...multiply(rotate, 1), 'XYZ'))
 
     return {
-      leader: lastCalibration.leaderSamples
-        .slice(0, lastCalibration.followerSamples.length)
+      leader: data.leaderSamples
+        .slice(0, data.followerSamples.length)
         .map((v) => objectToArray(v.position)),
-      follower: lastCalibration.followerSamples
-        .slice(0, lastCalibration.leaderSamples.length)
+      follower: data.followerSamples
+        .slice(0, data.leaderSamples.length)
         .map((v) => {
           let position = objectToArray(v.position)
           // apply offset+angle
@@ -117,7 +151,7 @@ function Scene({
           return position
         }),
     }
-  }, [lastCalibration, rotate, translate])
+  }, [data, rotate, translate])
 
   useEffect(() => {
     if (!transformedSamples) return
@@ -142,7 +176,7 @@ function Scene({
     //return () => void clearTimeout(timeout)
   }, [set, transformedSamples])
 
-  const timePointsLeader = lastCalibration?.leaderSamples.map(
+  const timePointsLeader = data?.leaderSamples.map(
     (s, i, list) =>
       [
         0,
@@ -150,7 +184,7 @@ function Scene({
         s.timestamp,
       ] as const,
   )
-  const timePointsFollower = lastCalibration?.followerSamples.map(
+  const timePointsFollower = data?.followerSamples.map(
     (s, i, list) =>
       [
         0,
@@ -334,4 +368,73 @@ function multiply(
   scalar: number,
 ): [number, number, number] {
   return [v[0] * scalar, v[1] * scalar, v[2] * scalar]
+}
+
+/**
+ * Converts Vector3 from Unity's left-handed coordinate system to OVR's
+ * right-handed coordinates.
+ */
+function createOVRVector3FromUnity({
+  x,
+  y,
+  z,
+}: {
+  x: number
+  y: number
+  z: number
+}): [x: number, y: number, z: number] {
+  return [x, y, -z]
+}
+
+function minus(
+  a: readonly [x: number, y: number, z: number],
+  b: readonly [x: number, y: number, z: number],
+): [x: number, y: number, z: number] {
+  return [a[0] - b[0], a[1] - b[1], a[2] - b[2]]
+}
+
+function createOVRQuaternionFromUnityEuler(rotation: {
+  x: number
+  y: number
+  z: number
+}): readonly [x: number, y: number, z: number, w: number] {
+  const quaternion = new THREE.Quaternion().setFromEuler(
+    new THREE.Euler(rotation.y, rotation.x, -rotation.z, 'XYZ'),
+  )
+
+  return [-quaternion.y, -quaternion.x, -quaternion.z, quaternion.w]
+}
+
+function computeCalibration(wasm: WrappedWasm, data: SavedCalibration) {
+  const calibration = wasm.calibration()
+  try {
+    const count = Math.min(
+      data.leaderSamples.length,
+      data.followerSamples.length,
+    )
+    for (let i = 0; i < count; ++i) {
+      calibration.addPair(
+        createOVRVector3FromUnity(data.leaderSamples[i].position),
+        createOVRQuaternionFromUnityEuler(data.leaderSamples[i].rotation),
+        createOVRVector3FromUnity(data.followerSamples[i].position),
+        createOVRQuaternionFromUnityEuler(data.followerSamples[i].rotation),
+      )
+    }
+    const result = calibration.compute()
+    return {
+      translate: [result.tx, result.ty, -result.tz] as const,
+      rotate: objectToArray(
+        new THREE.Euler().setFromQuaternion(
+          new THREE.Quaternion(
+            -result.rqx,
+            -result.rqy,
+            result.rqz,
+            result.rqw,
+          ),
+        ),
+      ),
+    }
+  } finally {
+    calibration.destroy()
+  }
 }
