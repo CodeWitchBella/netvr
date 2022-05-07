@@ -95,17 +95,33 @@ function SpinningCube() {
 
 const defaultFileName = 'Drag and drop calibration.json to explore it'
 
-function Scene({ data }: { data: SavedCalibration | null }) {
+const preprocessors: { [key: string]: typeof preprocessFixedTimeStep } = {
+  none: (v) => v,
+  'Fixed TimeStep': preprocessFixedTimeStep,
+  'Use Follower Time': preprocessUseFollowerTime,
+  'Use Leader Time': preprocessUseLeaderTime,
+}
+
+function Scene({ data: dataIn }: { data: SavedCalibration | null }) {
   const theme = useTheme()
-  const [{ translate, rotate }, set] = useControls(() => ({
+  const [{ translate, rotate, preprocess }, set] = useControls(() => ({
     translate: [0, 0, 0],
     rotate: [0, 0, 0],
     file: { editable: false, value: defaultFileName },
+    preprocess: {
+      value: 'none',
+      options: Object.keys(preprocessors),
+    },
     leader: { editable: false, value: theme.base08 },
     follower: { editable: false, value: theme.base0B },
     meanDistance: { editable: false, value: '' },
     stdDev: { editable: false, value: '' },
   }))
+
+  const data = useMemo(
+    () => (!dataIn ? null : (preprocessors[preprocess] ?? ((v) => v))(dataIn)),
+    [dataIn, preprocess],
+  )
 
   const wasm = useWasmSuspending()
   const recomputed = useMemo(() => {
@@ -118,18 +134,11 @@ function Scene({ data }: { data: SavedCalibration | null }) {
   }, [data?.fileName, set])
 
   useEffect(() => {
-    if (recomputed && data) {
-      set(recomputed)
-    } else if (data) {
-      set({
-        translate: Object.values(data.resultTranslate),
-        rotate: Object.values(data.resultRotate),
-      })
-    }
-  }, [data, recomputed, set])
+    if (recomputed) set(recomputed)
+  }, [recomputed, set])
 
   useEffect(() => {
-    set({ follower: theme.base08, leader: theme.base0B })
+    set({ follower: theme.base0B, leader: theme.base08 })
   }, [set, theme])
 
   const transformedSamples = useMemo(() => {
@@ -183,21 +192,26 @@ function Scene({ data }: { data: SavedCalibration | null }) {
     //return () => void clearTimeout(timeout)
   }, [set, transformedSamples])
 
-  const timePointsLeader = data?.leaderSamples.map(
-    (s, i, list) =>
-      [
-        0,
-        i === 0 ? 0 : s.timestamp - list[i - 1].timestamp,
-        s.timestamp,
-      ] as const,
-  )
-  const timePointsFollower = data?.followerSamples.map(
-    (s, i, list) =>
-      [
-        0,
-        i === 0 ? 0 : s.timestamp - list[i - 1].timestamp + 0.05,
-        s.timestamp,
-      ] as const,
+  const { timePointsFollower, timePointsLeader } = useMemo(
+    () => ({
+      timePointsFollower: data?.followerSamples.map(
+        (s, i, list) =>
+          [
+            0,
+            i === 0 ? 0 : s.timestamp - list[i - 1].timestamp + 0.05,
+            s.timestamp,
+          ] as const,
+      ),
+      timePointsLeader: data?.leaderSamples.map(
+        (s, i, list) =>
+          [
+            0,
+            i === 0 ? 0 : s.timestamp - list[i - 1].timestamp,
+            s.timestamp,
+          ] as const,
+      ),
+    }),
+    [data],
   )
 
   const mov = transformedSamples?.leader[0]
@@ -393,13 +407,6 @@ function createOVRVector3FromUnity({
   return [x, y, -z]
 }
 
-function minus(
-  a: readonly [x: number, y: number, z: number],
-  b: readonly [x: number, y: number, z: number],
-): [x: number, y: number, z: number] {
-  return [a[0] - b[0], a[1] - b[1], a[2] - b[2]]
-}
-
 function createOVRQuaternionFromUnityEuler(rotation: {
   x: number
   y: number
@@ -410,6 +417,149 @@ function createOVRQuaternionFromUnityEuler(rotation: {
   )
 
   return [-quaternion.y, -quaternion.x, -quaternion.z, quaternion.w]
+}
+
+function preprocessUseFollowerTime(data: SavedCalibration): SavedCalibration {
+  const res = {
+    ...data,
+    leaderSamples: [] as Sample[],
+    followerSamples: [] as Sample[],
+  }
+
+  let leaderI = 0,
+    followerI = 0
+  while (
+    leaderI < data.followerSamples.length &&
+    followerI < data.leaderSamples.length
+  ) {
+    const followerSample = data.followerSamples[leaderI]
+    const leaderSample = data.leaderSamples[followerI]
+    const leaderSample2 = data.leaderSamples[followerI + 1]
+    if (!leaderSample2) break
+    if (followerSample.timestamp < leaderSample2.timestamp) {
+      res.followerSamples.push(followerSample)
+
+      res.leaderSamples.push(
+        mixSamples(followerSample.timestamp, leaderSample, leaderSample2),
+      )
+
+      leaderI++
+    } else {
+      followerI++
+    }
+  }
+
+  return res
+}
+
+function preprocessUseLeaderTime(data: SavedCalibration): SavedCalibration {
+  const res = preprocessUseFollowerTime({
+    ...data,
+    leaderSamples: data.followerSamples,
+    followerSamples: data.leaderSamples,
+  })
+
+  return {
+    ...res,
+    leaderSamples: res.followerSamples,
+    followerSamples: res.leaderSamples,
+  }
+}
+
+function preprocessFixedTimeStep(data: SavedCalibration): SavedCalibration {
+  const timestepAverageFollower =
+    (data.followerSamples[data.followerSamples.length - 1].timestamp -
+      data.followerSamples[0].timestamp) /
+    (data.followerSamples.length - 1)
+  const timestepAverageLeader =
+    (data.leaderSamples[data.leaderSamples.length - 1].timestamp -
+      data.leaderSamples[0].timestamp) /
+    (data.leaderSamples.length - 1)
+  const timestep = (timestepAverageFollower + timestepAverageLeader) / 2
+  const res = {
+    ...data,
+    leaderSamples: [] as Sample[],
+    followerSamples: [] as Sample[],
+  }
+
+  let time = Math.max(
+    data.followerSamples[0].timestamp,
+    data.leaderSamples[0].timestamp,
+  )
+  let endTime = Math.min(
+    data.followerSamples[data.followerSamples.length - 1].timestamp,
+    data.leaderSamples[data.leaderSamples.length - 1].timestamp,
+  )
+  let leaderI = 0
+  let followerI = 0
+  while (time < endTime) {
+    const leaderSample1 = data.leaderSamples[leaderI]
+    const leaderSample2 = data.leaderSamples[leaderI + 1]
+    const followerSample1 = data.followerSamples[followerI]
+    const followerSample2 = data.followerSamples[followerI + 1]
+    if (
+      !leaderSample1 ||
+      !leaderSample2 ||
+      !followerSample1 ||
+      !followerSample2
+    ) {
+      break
+    }
+
+    if (leaderSample2.timestamp < time) {
+      leaderI++
+      continue
+    }
+    if (followerSample2.timestamp < time) {
+      followerI++
+      continue
+    }
+
+    res.leaderSamples.push(mixSamples(time, leaderSample1, leaderSample2))
+    res.followerSamples.push(mixSamples(time, followerSample1, followerSample2))
+    time += timestep
+  }
+
+  return res
+}
+
+function mixSamples(time: number, sample1: Sample, sample2: Sample): Sample {
+  const period = sample2.timestamp - sample1.timestamp
+  const timeSinceSample1 = time - sample1.timestamp
+  const portion = timeSinceSample1 / period
+  return {
+    timestamp: time,
+    position: lerp(portion, sample1.position, sample2.position),
+    rotation: slerp(portion, sample1.rotation, sample2.rotation),
+  }
+}
+
+function lerp(
+  ratio: number,
+  a: { x: number; y: number; z: number },
+  b: { x: number; y: number; z: number },
+) {
+  return {
+    x: b.x * ratio + (1 - ratio) * a.x,
+    y: b.y * ratio + (1 - ratio) * a.y,
+    z: b.z * ratio + (1 - ratio) * a.z,
+  }
+}
+
+function slerp(
+  ratio: number,
+  a: { x: number; y: number; z: number },
+  b: { x: number; y: number; z: number },
+) {
+  const qa = new THREE.Quaternion().setFromEuler(
+    new THREE.Euler(a.y, a.x, -a.z, 'XYZ'),
+  )
+  const qb = new THREE.Quaternion().setFromEuler(
+    new THREE.Euler(b.y, b.x, -b.z, 'XYZ'),
+  )
+  const mixed = qa.slerp(qb, ratio)
+  const res = new THREE.Euler().setFromQuaternion(mixed)
+  return { x: res.y, y: res.x, z: -res.z }
 }
 
 function computeCalibration(wasm: WrappedWasm, data: SavedCalibration) {
