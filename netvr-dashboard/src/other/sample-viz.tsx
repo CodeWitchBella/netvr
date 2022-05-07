@@ -14,6 +14,7 @@ import {
 import { useWasmSuspending, type WrappedWasm } from '../wasm/wasm-wrapper'
 
 type SavedCalibration = {
+  fileName: string
   followerDevice: number
   leaderDevice: number
   follower: number
@@ -38,7 +39,7 @@ export default function SampleVizRoute() {
     multiple: false,
     onDrop: ([file]) => {
       file.text().then((v) => {
-        setSavedCalibration(JSON.parse(v))
+        setSavedCalibration({ fileName: file.name, ...JSON.parse(v) })
       })
     },
   })
@@ -92,12 +93,14 @@ function SpinningCube() {
   )
 }
 
+const defaultFileName = 'Drag and drop calibration.json to explore it'
+
 function Scene({ data }: { data: SavedCalibration | null }) {
   const theme = useTheme()
   const [{ translate, rotate }, set] = useControls(() => ({
     translate: [0, 0, 0],
     rotate: [0, 0, 0],
-    file: { editable: false, value: 'Drag and drop config.json to explore it' },
+    file: { editable: false, value: defaultFileName },
     leader: { editable: false, value: theme.base08 },
     follower: { editable: false, value: theme.base0B },
     meanDistance: { editable: false, value: '' },
@@ -109,6 +112,10 @@ function Scene({ data }: { data: SavedCalibration | null }) {
     if (!wasm || !data) return
     return computeCalibration(wasm, data)
   }, [data, wasm])
+
+  useEffect(() => {
+    set({ file: data?.fileName ?? defaultFileName })
+  }, [data?.fileName, set])
 
   useEffect(() => {
     if (recomputed && data) {
