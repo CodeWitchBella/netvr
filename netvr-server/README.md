@@ -22,7 +22,7 @@ Also to have dashboard available you need to have dashboard built first. See REA
 
 ## Deploying server to cloudflare
 
-You'll need [nodejs 16][nodejs] (later might also work, but I did not test that), and [yarn classic][yarn]. To install nodejs use the LTS download button on their [home page][nodejs]. To install yarn I recommend running `corepack enable yarn` as admin (corepack is installed by default with recent nodejs versions). Then you can run `yarn` to install dependencies followed by `yarn publish` to do the deployment in this folder (netvr-server). You might need to update `wrangler.toml` with your account_id and/or login to cloudflare. See wrangler's documentation.
+You'll need [nodejs 16][nodejs] (later might also work, but I did not test that), and [yarn classic][yarn]. To install nodejs use the LTS download button on their [home page][nodejs]. To install yarn I recommend running `corepack enable yarn` as admin (corepack is installed by default with recent nodejs versions). Then you can run `yarn` to install dependencies followed by `yarn run publish` to do the deployment in this folder (netvr-server). You might need to update `wrangler.toml` with your account_id and/or login to cloudflare. See wrangler's documentation.
 
 Also to have dashboard available you need to have dashboard built first. See README.md in netvr-dashboard folder for instructions on how to do that.
 
