@@ -4,7 +4,7 @@ using UnityEngine;
 
 class IsblCalibration : System.IDisposable
 {
-    IsblDynamicLibrary _lib;
+    IsblNetvrLibrary _lib;
     int _handle;
 
     public IsblCalibration()
@@ -22,7 +22,7 @@ class IsblCalibration : System.IDisposable
         );
     }
 
-    public IsblDynamicLibrary.CalibrationComputeResult Compute()
+    public IsblNetvrLibrary.CalibrationComputeResult Compute()
     {
         _lib.CalibrationCompute(_handle, out var result);
         return result;

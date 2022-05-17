@@ -27,12 +27,12 @@ public class IsblXRFeature : OpenXRFeature
     public const string FeatureId = "cz.isbl.netvr";
 
     ulong _xrInstance;
-    internal IsblDynamicLibrary Lib { get; private set; }
+    internal IsblNetvrLibrary Lib { get; private set; }
 
     static string _log = "";
     static Timer _timer;
 
-    [AOT.MonoPInvokeCallback(typeof(IsblDynamicLibrary.Logger_Delegate))]
+    [AOT.MonoPInvokeCallback(typeof(IsblNetvrLibrary.Logger_Delegate))]
     static void Logger(string value)
     {
         _log += "\n" + value;

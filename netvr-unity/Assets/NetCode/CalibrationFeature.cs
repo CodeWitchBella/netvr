@@ -407,7 +407,7 @@ public class CalibrationFeature : IIsblNetFeature
                 );
             }
         }
-        IsblDynamicLibrary.CalibrationComputeResult result;
+        IsblNetvrLibrary.CalibrationComputeResult result;
         using (var timer2 = new IsblStopwatch("ComputeCalibration::compute only"))
         {
             result = calculation.Compute();
