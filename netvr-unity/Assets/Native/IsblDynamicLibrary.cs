@@ -41,7 +41,6 @@ class IsblDynamicLibrary : IDisposable
         }
     }
     IntPtr _library;
-    const string Prefix = "Assets/Plugins/Windows/x64/";
     readonly string _fullPath;
 
     public void GetDelegate<TDelegate>(string name, out TDelegate val)
@@ -97,18 +96,18 @@ class IsblDynamicLibrary : IDisposable
         }
     }
 
-    public IsblDynamicLibrary(string name, string path)
+    public IsblDynamicLibrary(string name, string prefix)
     {
 #if UNITY_EDITOR_WIN
         for (int i = 0; ; ++i)
         {
-            _fullPath = Prefix + name + $"{i}.dll";
+            _fullPath = prefix + name + $"{i}.dll";
             try
             {
                 using (var watch = new IsblStopwatch("AreFilesIdentical:.dll"))
-                    if (AreFilesIdentical(Prefix + name + ".dll", _fullPath)) break;
+                    if (AreFilesIdentical(prefix + name + ".dll", _fullPath)) break;
                 // copy to new file so that original is still writeable
-                File.Copy(Prefix + name + ".dll", _fullPath, true);
+                File.Copy(prefix + name + ".dll", _fullPath, true);
                 break;
             }
             catch (IOException) when (i != 9)

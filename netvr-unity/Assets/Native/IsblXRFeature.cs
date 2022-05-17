@@ -28,6 +28,7 @@ public class IsblXRFeature : OpenXRFeature
 
     ulong _xrInstance;
     internal IsblNetvrLibrary Lib { get; private set; }
+    internal IsblRustLibrary RustLib { get; private set; }
 
     static string _log = "";
     static Timer _timer;
@@ -50,6 +51,26 @@ public class IsblXRFeature : OpenXRFeature
         }
     }
 
+    static string _logRust = "";
+    static Timer _timerRust;
+    [AOT.MonoPInvokeCallback(typeof(IsblNetvrLibrary.Logger_Delegate))]
+    static void LoggerRust(string value)
+    {
+        _logRust += "\n" + value;
+        if (_timerRust == null)
+        {
+            _timerRust = new Timer(1000);
+            _timerRust.Elapsed += (source, evt) =>
+            {
+                Utils.Log($"From Rust:{_logRust}\nEND");
+                _logRust = "";
+                _timerRust.Dispose();
+                _timerRust = null;
+            };
+            _timerRust.Enabled = true;
+        }
+    }
+
     protected override bool OnInstanceCreate(ulong xrInstance)
     {
         Utils.Log("OnInstanceCreate");
@@ -59,6 +80,11 @@ public class IsblXRFeature : OpenXRFeature
             Lib = new();
             Lib.SetLogger(Logger);
         }
+        if (RustLib == null)
+        {
+            RustLib = new();
+            RustLib.SetLogger(LoggerRust);
+        }
         return true;
     }
 
@@ -67,6 +93,8 @@ public class IsblXRFeature : OpenXRFeature
         Utils.Log("OnInstanceDestroy");
         Lib?.Dispose();
         Lib = null;
+        RustLib?.Dispose();
+        RustLib = null;
         _xrInstance = 0;
     }
 

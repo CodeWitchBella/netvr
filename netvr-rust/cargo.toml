@@ -1,0 +1,9 @@
+[package]
+name = "netvr"
+version = "0.1.0"
+authors = ["Isabella Skořepová"]
+edition = "2021"
+
+[lib]
+name = "isbl_netvr_rust"
+crate-type = ["cdylib"]
