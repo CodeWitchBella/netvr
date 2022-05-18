@@ -121,7 +121,12 @@ public class IsblXRFeature : OpenXRFeature
             Lib = new();
             Lib.SetLogger(Logger);
         }
-        return Lib.HookGetInstanceProcAddr(func);
+        if (RustLib == null)
+        {
+            RustLib = new();
+            RustLib.SetLogger(LoggerRust);
+        }
+        return RustLib.HookGetInstanceProcAddr(func);
     }
 
     protected override void OnSessionCreate(ulong xrSession)

@@ -7,3 +7,6 @@ edition = "2021"
 [lib]
 name = "isbl_netvr_rust"
 crate-type = ["cdylib"]
+
+[dependencies]
+openxr-sys = "0.9.1"
