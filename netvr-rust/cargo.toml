@@ -10,3 +10,4 @@ crate-type = ["cdylib"]
 
 [dependencies]
 openxr-sys = "0.9.1"
+lazy_static = "1.4.0"

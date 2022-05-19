@@ -1,3 +1,10 @@
+#[macro_use]
+mod utils;
+mod xr_functions;
+
+#[macro_use]
+extern crate lazy_static;
+
 mod log;
 pub use log::netvr_set_logger;
 

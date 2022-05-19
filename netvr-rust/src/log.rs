@@ -1,31 +1,37 @@
-use std::os::raw::c_char;
+use super::utils;
+use std::ffi::CString;
+use std::sync::RwLock;
 
 // region: logger
-type LoggerFn = Option<unsafe extern "C" fn(*const c_char)>;
-static mut LOGGER: LoggerFn = Option::None;
+type LoggerFn = Option<unsafe extern "C" fn(utils::Cstr)>;
+lazy_static! {
+    static ref LOGGER: RwLock<LoggerFn> = RwLock::new(Option::None);
+}
 
-pub fn log_cstr(s: *const c_char) {
-    let logger: LoggerFn;
-    unsafe {
-        logger = LOGGER;
-    }
-    match logger {
-        Some(f) => unsafe {
-            f(s);
-        },
+pub fn log_cstr(s: utils::Cstr) {
+    let r = LOGGER.read().unwrap();
+    match *r {
+        Some(f) => unsafe { f(s) },
         None => {}
     }
 }
 
 pub fn log(s: &str) {
-    log_cstr(s.as_ptr() as *const c_char);
+    let cstr = CString::new(s).unwrap();
+    log_cstr(cstr.as_ptr());
+}
+
+pub fn log_string(s: String) {
+    let cstr = CString::new(s).unwrap();
+    log_cstr(cstr.as_ptr());
 }
 
 #[no_mangle]
 pub extern "C" fn netvr_set_logger(func: LoggerFn) {
     println!("Hello world from Rust!");
-    unsafe {
-        LOGGER = func;
+    {
+        let mut w = LOGGER.write().unwrap();
+        *w = func;
     }
     log("Hello there\n");
 }
