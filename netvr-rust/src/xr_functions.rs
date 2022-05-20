@@ -1,8 +1,16 @@
+use std::clone::Clone;
 use std::ffi::CString;
+use std::marker::Copy;
 
 use openxr_sys::pfn;
 
-pub struct XrFunctionsNoInstance {
+#[derive(Clone, Copy)]
+pub struct XrInstanceFunctions {
+    pub destroy_instance: pfn::DestroyInstance,
+}
+
+#[derive(Clone, Copy)]
+pub struct XrFunctions {
     pub get_instance_proc_addr: pfn::GetInstanceProcAddr,
     pub enumerate_instance_extension_properties: pfn::EnumerateInstanceExtensionProperties,
     pub enumerate_api_layer_properties: pfn::EnumerateApiLayerProperties,
@@ -11,13 +19,32 @@ pub struct XrFunctionsNoInstance {
 
 macro_rules! find_and_cast {
     ($func: expr, $name: expr, $t: ty) => {{
-        let raw = call_get_instance_proc_addr($func, $name);
+        let func: pfn::GetInstanceProcAddr = $func;
+        let name: &str = $name;
+        let raw = call_get_instance_proc_addr(openxr_sys::Instance::NULL, func, name);
         match raw {
             Ok(f) => unsafe { std::mem::transmute::<pfn::VoidFunction, $t>(f) },
             Err(error) => {
                 return Err(format!(
                     "Failed to load {} with error {}",
-                    $name,
+                    name,
+                    decode_xr_result(error)
+                ));
+            }
+        }
+    }};
+    ($instance: expr, $func: expr, $name: expr, $t: ty) => {{
+        let instance: openxr_sys::Instance = $instance;
+        let func: pfn::GetInstanceProcAddr = $func;
+        let name: &str = $name;
+        let raw = call_get_instance_proc_addr(instance, func, name);
+        match raw {
+            Ok(f) => unsafe { std::mem::transmute::<pfn::VoidFunction, $t>(f) },
+            Err(error) => {
+                return Err(format!(
+                    "Failed to load {} for instance {} with error {}",
+                    name,
+                    instance.into_raw(),
                     decode_xr_result(error)
                 ));
             }
@@ -25,8 +52,8 @@ macro_rules! find_and_cast {
     }};
 }
 
-pub fn load(func: openxr_sys::pfn::GetInstanceProcAddr) -> Result<XrFunctionsNoInstance, String> {
-    let functions = XrFunctionsNoInstance {
+pub fn load(func: pfn::GetInstanceProcAddr) -> Result<XrFunctions, String> {
+    let functions = XrFunctions {
         get_instance_proc_addr: func,
         enumerate_instance_extension_properties: find_and_cast!(
             func,
@@ -43,18 +70,33 @@ pub fn load(func: openxr_sys::pfn::GetInstanceProcAddr) -> Result<XrFunctionsNoI
     return Ok(functions);
 }
 
+pub fn load_instance(
+    instance: openxr_sys::Instance,
+    get_instance_proc_addr: pfn::GetInstanceProcAddr,
+) -> Result<XrInstanceFunctions, String> {
+    if instance == openxr_sys::Instance::NULL {
+        return Err("Instance must not be NULL".to_owned());
+    }
+    let functions = XrInstanceFunctions {
+        destroy_instance: find_and_cast!(
+            instance,
+            get_instance_proc_addr,
+            "xrDestroyInstance",
+            pfn::DestroyInstance
+        ),
+    };
+    return Ok(functions);
+}
+
 fn call_get_instance_proc_addr(
-    func: openxr_sys::pfn::GetInstanceProcAddr,
+    instance: openxr_sys::Instance,
+    func: pfn::GetInstanceProcAddr,
     name: &str,
 ) -> Result<pfn::VoidFunction, openxr_sys::Result> {
     let mut function: Option<pfn::VoidFunction> = Option::None;
     let name_cstr = CString::new(name).unwrap();
     unsafe {
-        let status = func(
-            openxr_sys::Instance::NULL,
-            name_cstr.as_ptr(),
-            &mut function,
-        );
+        let status = func(instance, name_cstr.as_ptr(), &mut function);
         if status != openxr_sys::Result::SUCCESS {
             return Err(status);
         }
@@ -66,7 +108,7 @@ fn call_get_instance_proc_addr(
 }
 
 #[rustfmt::skip]
-fn decode_xr_result(result: openxr_sys::Result) -> String {
+pub fn decode_xr_result(result: openxr_sys::Result) -> String {
     match result {
         openxr_sys::Result::SUCCESS => "XR_SUCCESS".to_owned(),
         openxr_sys::Result::TIMEOUT_EXPIRED => "XR_TIMEOUT_EXPIRED".to_owned(),
