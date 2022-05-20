@@ -11,22 +11,29 @@ lazy_static! {
 // this gets called from unity to give us option to override basically any openxr function
 #[no_mangle]
 pub extern "C" fn netvr_hook_get_instance_proc_addr(
-    func: Option<openxr_sys::pfn::GetInstanceProcAddr>,
+    func_in: Option<openxr_sys::pfn::GetInstanceProcAddr>,
 ) -> Option<openxr_sys::pfn::GetInstanceProcAddr> {
     log::log("isbl_netvr_hook_get_instance_proc_addr");
-
-    if func.is_none() {
-        log::log("Its none");
-    }
-
-    let v = match func {
-        Some(f) => super::xr_functions::load(f),
+    let func = match func_in {
+        Some(f) => f,
         None => {
-            internal_screaming!();
+            log::log("GetInstanceProcAddr is null. Expected valid function pointer.");
+            return None;
+        }
+    };
+
+    let value = match super::xr_functions::load(func) {
+        Ok(v) => v,
+        Err(error) => {
+            log::log_string(format!(
+                "Failed to initialize. Disabling netvr layer.\n  Original error: {}",
+                error
+            ));
+            return func_in;
         }
     };
     let mut w = FUNCTIONS.write().unwrap();
-    *w = Some(v);
+    *w = Some(value);
     return Some(my_get_instance_proc_addr);
 }
 
