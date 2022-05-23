@@ -144,4 +144,12 @@ class IsblDynamicLibrary : IDisposable
         }
 #endif
     }
+
+    public const bool DoesUnload =
+#if UNITY_EDITOR_WIN
+        true
+#else
+        false
+#endif
+;
 }

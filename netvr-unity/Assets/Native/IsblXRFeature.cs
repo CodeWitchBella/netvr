@@ -93,6 +93,7 @@ public class IsblXRFeature : OpenXRFeature
         Utils.Log("OnInstanceDestroy");
         Lib?.Dispose();
         Lib = null;
+        if (IsblRustLibrary.DoesUnload) RustLib.ManualDestroyInstance(_xrInstance);
         RustLib?.Dispose();
         RustLib = null;
         _xrInstance = 0;
@@ -126,7 +127,7 @@ public class IsblXRFeature : OpenXRFeature
             RustLib = new();
             RustLib.SetLogger(LoggerRust);
         }
-        return RustLib.HookGetInstanceProcAddr(func);
+        return RustLib.HookGetInstanceProcAddr(func, automaticDestroy: !IsblRustLibrary.DoesUnload);
     }
 
     protected override void OnSessionCreate(ulong xrSession)

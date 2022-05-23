@@ -15,6 +15,10 @@ pub struct XrFunctions {
     pub enumerate_instance_extension_properties: pfn::EnumerateInstanceExtensionProperties,
     pub enumerate_api_layer_properties: pfn::EnumerateApiLayerProperties,
     pub create_instance: pfn::CreateInstance,
+    // This probably should not be in this struct, but is the easiest place to
+    // put it. In case configuration options grow you should consider creating
+    // struct which would contain those and XrFunctions.
+    pub automatic_destroy: bool,
 }
 
 macro_rules! find_and_cast {
@@ -66,6 +70,7 @@ pub fn load(func: pfn::GetInstanceProcAddr) -> Result<XrFunctions, String> {
             pfn::EnumerateApiLayerProperties
         ),
         create_instance: find_and_cast!(func, "xrCreateInstance", pfn::CreateInstance),
+        automatic_destroy: true,
     };
     return Ok(functions);
 }

@@ -33,5 +33,5 @@ pub extern "C" fn netvr_set_logger(func: LoggerFn) {
         let mut w = LOGGER.write().unwrap();
         *w = func;
     }
-    log("Hello there\n");
+    log("Logger was setup and seems to be working correctly.");
 }
