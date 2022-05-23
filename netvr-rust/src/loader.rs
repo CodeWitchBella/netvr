@@ -115,6 +115,14 @@ extern "system" fn my_get_instance_proc_addr(
         }
     };
 
+    if !name.starts_with("xr") {
+        log::log_string(format!(
+            "xrGetInstanceProcAddr can only handle functions starting with xr. Got: {}",
+            name,
+        ));
+        return fallback!();
+    }
+
     macro_rules! check {
         ($t: ty, $func: expr) => {{
             if stringify!($t)[5..] == name[2..] {

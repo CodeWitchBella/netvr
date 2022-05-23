@@ -7,6 +7,7 @@ use openxr_sys::pfn;
 #[derive(Clone, Copy)]
 pub struct XrInstanceFunctions {
     pub destroy_instance: pfn::DestroyInstance,
+    pub structure_type_to_string: pfn::StructureTypeToString,
 }
 
 #[derive(Clone, Copy)]
@@ -21,55 +22,31 @@ pub struct XrFunctions {
     pub automatic_destroy: bool,
 }
 
-macro_rules! find_and_cast {
-    ($func: expr, $name: expr, $t: ty) => {{
-        let func: pfn::GetInstanceProcAddr = $func;
-        let name: &str = $name;
-        let raw = call_get_instance_proc_addr(openxr_sys::Instance::NULL, func, name);
-        match raw {
-            Ok(f) => unsafe { std::mem::transmute::<pfn::VoidFunction, $t>(f) },
-            Err(error) => {
-                return Err(format!(
-                    "Failed to load {} with error {}",
-                    name,
-                    decode_xr_result(error)
-                ));
-            }
-        }
-    }};
-    ($instance: expr, $func: expr, $name: expr, $t: ty) => {{
-        let instance: openxr_sys::Instance = $instance;
-        let func: pfn::GetInstanceProcAddr = $func;
-        let name: &str = $name;
-        let raw = call_get_instance_proc_addr(instance, func, name);
-        match raw {
-            Ok(f) => unsafe { std::mem::transmute::<pfn::VoidFunction, $t>(f) },
-            Err(error) => {
-                return Err(format!(
-                    "Failed to load {} for instance {} with error {}",
-                    name,
-                    instance.into_raw(),
-                    decode_xr_result(error)
-                ));
-            }
-        }
-    }};
-}
-
 pub fn load(func: pfn::GetInstanceProcAddr) -> Result<XrFunctions, String> {
+    macro_rules! find_and_cast {
+        ($t: ty) => {{
+            let name: &str = stringify!($t);
+            let raw = call_get_instance_proc_addr(openxr_sys::Instance::NULL, func, name);
+            match raw {
+                Ok(f) => unsafe { std::mem::transmute::<pfn::VoidFunction, $t>(f) },
+                Err(error) => {
+                    return Err(format!(
+                        "Failed to load {} with error {}",
+                        name,
+                        decode_xr_result(error)
+                    ));
+                }
+            }
+        }};
+    }
+
     let functions = XrFunctions {
         get_instance_proc_addr: func,
         enumerate_instance_extension_properties: find_and_cast!(
-            func,
-            "xrEnumerateInstanceExtensionProperties",
             pfn::EnumerateInstanceExtensionProperties
         ),
-        enumerate_api_layer_properties: find_and_cast!(
-            func,
-            "xrEnumerateApiLayerProperties",
-            pfn::EnumerateApiLayerProperties
-        ),
-        create_instance: find_and_cast!(func, "xrCreateInstance", pfn::CreateInstance),
+        enumerate_api_layer_properties: find_and_cast!(pfn::EnumerateApiLayerProperties),
+        create_instance: find_and_cast!(pfn::CreateInstance),
         automatic_destroy: true,
     };
     return Ok(functions);
@@ -82,13 +59,31 @@ pub fn load_instance(
     if instance == openxr_sys::Instance::NULL {
         return Err("Instance must not be NULL".to_owned());
     }
+
+    macro_rules! find_and_cast {
+        ($t: ty) => {{
+            let name: &str = stringify!($t);
+            let raw = call_get_instance_proc_addr(instance, get_instance_proc_addr, name);
+            match raw {
+                Ok(f) => {
+                    crate::log::log_string(format!("Successfully loaded {}", name));
+                    unsafe { std::mem::transmute::<pfn::VoidFunction, $t>(f) }
+                }
+                Err(error) => {
+                    return Err(format!(
+                        "Failed to load {} for instance {} with error {}",
+                        name,
+                        instance.into_raw(),
+                        decode_xr_result(error)
+                    ));
+                }
+            }
+        }};
+    }
+
     let functions = XrInstanceFunctions {
-        destroy_instance: find_and_cast!(
-            instance,
-            get_instance_proc_addr,
-            "xrDestroyInstance",
-            pfn::DestroyInstance
-        ),
+        destroy_instance: find_and_cast!(pfn::DestroyInstance),
+        structure_type_to_string: find_and_cast!(pfn::StructureTypeToString),
     };
     return Ok(functions);
 }
@@ -99,7 +94,7 @@ fn call_get_instance_proc_addr(
     name: &str,
 ) -> Result<pfn::VoidFunction, openxr_sys::Result> {
     let mut function: Option<pfn::VoidFunction> = Option::None;
-    let name_cstr = CString::new(name).unwrap();
+    let name_cstr = CString::new(name.replace("pfn::", "xr")).unwrap();
     unsafe {
         let status = func(instance, name_cstr.as_ptr(), &mut function);
         if status != openxr_sys::Result::SUCCESS {
