@@ -4,6 +4,7 @@ use crate::log::LogWarn;
 use crate::utils::xr_wrap;
 use crate::utils::ResultConvertible;
 use crate::xr_functions::{self, XrFunctions, XrInstanceFunctions};
+use crate::xr_structures::*;
 
 use openxr_sys::pfn;
 use std::collections::hash_map::HashMap;
@@ -251,6 +252,26 @@ extern "system" fn override_poll_event(
 ) -> openxr_sys::Result {
     xr_wrap(|| {
         let instance = get_instance("xrPollEvent", instance_handle)?;
-        unsafe { (instance.poll_event)(instance_handle, event_data) }.into_result()
+        let result = unsafe { (instance.poll_event)(instance_handle, event_data) }.into_result();
+        if result.is_ok() {
+            for ptr in XrIterator::event_data_buffer(event_data) {
+                use DecodedStructData::*;
+                match ptr.data {
+                    EventDataSessionStateChanged(d) => {
+                        LogInfo::string(format!("Event(SessionStateChanged): {:#?}", d.state));
+                    }
+                    EventDataInteractionProfileChanged(d) => {
+                        LogInfo::string(format!(
+                            "Event(InteractionProfileChanged): {:?}",
+                            d.session
+                        ));
+                    }
+                    _ => {
+                        LogInfo::string(format!("Event({:#?})", ptr.ty));
+                    }
+                };
+            }
+        }
+        result
     })
 }

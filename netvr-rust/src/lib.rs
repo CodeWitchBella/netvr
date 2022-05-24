@@ -1,6 +1,7 @@
 #[macro_use]
 mod utils;
 mod xr_functions;
+mod xr_structures;
 
 #[macro_use]
 extern crate lazy_static;
