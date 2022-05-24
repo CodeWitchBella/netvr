@@ -29,58 +29,41 @@ impl Iterator for XrIterator {
     }
 }
 
-pub enum DecodedStructData {
-    EventDataSessionStateChanged(openxr_sys::EventDataSessionStateChanged),
-    EventDataInteractionProfileChanged(openxr_sys::EventDataInteractionProfileChanged),
-    Unknown,
-}
-
 pub struct DecodedStruct {
     pub ty: openxr_sys::StructureType,
-    pub data: DecodedStructData,
+    data: *const openxr_sys::BaseInStructure,
 }
 
+macro_rules! implement {
+    ($( $method: ident reads $id: ident ), *,) => {
+        impl DecodedStruct {
+            $(
+                #[allow(dead_code)]
+                pub fn $method(&self) -> Option<openxr_sys::$id> {
+                    if self.data.is_null() { return None; }
+                    Some(unsafe {
+                        *std::mem::transmute::<
+                            *const openxr_sys::BaseInStructure,
+                            *const openxr_sys::$id,
+                        >(self.data)
+                    })
+                }
+            )*
+        }
+
+    };
+}
+
+implement!(
+    into_event_data_session_state_changed reads EventDataSessionStateChanged,
+    into_event_data_interaction_profile_changed reads EventDataInteractionProfileChanged,
+    into_event_data_buffer reads EventDataBuffer,
+);
+
 impl DecodedStruct {
-    fn from(arg: *const openxr_sys::BaseInStructure) -> DecodedStruct {
-        use DecodedStructData::*;
+    fn from(arg: *const openxr_sys::BaseInStructure) -> Self {
         let ty = unsafe { *arg }.ty;
 
-        macro_rules! implement {
-            ($type: pat, $id: ident) => {
-                if let $type = ty {
-                    return DecodedStruct {
-                        ty,
-                        data: $id(unsafe {
-                            *std::mem::transmute::<
-                                *const openxr_sys::BaseInStructure,
-                                *const openxr_sys::$id,
-                            >(arg)
-                        }),
-                    };
-                }
-            };
-        }
-        if let openxr_sys::StructureType::EVENT_DATA_SESSION_STATE_CHANGED = ty {
-            return DecodedStruct {
-                ty,
-                data: EventDataSessionStateChanged(unsafe {
-                    *std::mem::transmute::<
-                        *const openxr_sys::BaseInStructure,
-                        *const openxr_sys::EventDataSessionStateChanged,
-                    >(arg)
-                }),
-            };
-        }
-        use openxr_sys::StructureType;
-        implement!(
-            StructureType::EVENT_DATA_SESSION_STATE_CHANGED,
-            EventDataSessionStateChanged
-        );
-        implement!(
-            StructureType::EVENT_DATA_INTERACTION_PROFILE_CHANGED,
-            EventDataInteractionProfileChanged
-        );
-
-        DecodedStruct { ty, data: Unknown }
+        Self { ty, data: arg }
     }
 }

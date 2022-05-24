@@ -255,21 +255,17 @@ extern "system" fn override_poll_event(
         let result = unsafe { (instance.poll_event)(instance_handle, event_data) }.into_result();
         if result.is_ok() {
             for ptr in XrIterator::event_data_buffer(event_data) {
-                use DecodedStructData::*;
-                match ptr.data {
-                    EventDataSessionStateChanged(d) => {
-                        LogInfo::string(format!("Event(SessionStateChanged): {:#?}", d.state));
-                    }
-                    EventDataInteractionProfileChanged(d) => {
-                        LogInfo::string(format!(
-                            "Event(InteractionProfileChanged): {:?}",
-                            d.session
-                        ));
-                    }
-                    _ => {
-                        LogInfo::string(format!("Event({:#?})", ptr.ty));
-                    }
-                };
+                let ptr: DecodedStruct = ptr;
+                if let Some(d) = ptr.into_event_data_session_state_changed() {
+                    LogInfo::string(format!("Event(SessionStateChanged): {:#?}", d.state));
+                } else if let Some(d) = ptr.into_event_data_interaction_profile_changed() {
+                    LogInfo::string(format!(
+                        "Event(InteractionProfileChanged): {:#?}",
+                        d.session
+                    ));
+                } else {
+                    LogInfo::string(format!("Event({:#?})", ptr.ty));
+                }
             }
         }
         result

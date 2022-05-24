@@ -45,6 +45,7 @@ fn _string(level: Level, text: String) {
 macro_rules! implement {
     ($id: ident, $level: expr) => {
         pub struct $id {}
+        #[allow(dead_code)]
         impl $id {
             pub fn cstr(text: utils::Cstr) {
                 _cstr($level, text);
