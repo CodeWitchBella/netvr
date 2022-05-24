@@ -113,7 +113,7 @@ static class Utils
 
     /**
     * Like Debug.LogWarning but only appends stacktrace if in editor so that
-    * plaintext logs are readable. Also appends to senable log.
+    * plaintext logs are readable. Also appends to sendable log.
     */
     public static void LogWarning(string text)
     {
@@ -124,6 +124,22 @@ static class Utils
         Debug.LogWarning(text);
 #else
         Debug.LogFormat(LogType.Warning, LogOption.NoStacktrace, null, "{0}", text);
+#endif
+    }
+
+    /**
+    * Like Debug.LogError but only appends stacktrace if in editor so that
+    * plaintext logs are readable. Also appends to sendable log.
+    */
+    public static void LogError(string text)
+    {
+        text = text.Replace("\n", "\n    ");
+        AppendEntry(new LogEntry() { Text = text, Type = LogType.Error });
+
+#if UNITY_EDITOR
+        Debug.LogError(text);
+#else
+        Debug.LogFormat(LogType.Error, LogOption.NoStacktrace, null, "{0}", text);
 #endif
     }
 }

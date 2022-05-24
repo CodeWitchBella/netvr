@@ -54,21 +54,41 @@ public class IsblXRFeature : OpenXRFeature
     static string _logRust = "";
     static Timer _timerRust;
     [AOT.MonoPInvokeCallback(typeof(IsblNetvrLibrary.Logger_Delegate))]
-    static void LoggerRust(string value)
+    static void LoggerRust(Int32 level, string value)
     {
-        _logRust += "\n" + value;
-        if (_timerRust == null)
+        if (level <= 1 /* Info */)
         {
-            _timerRust = new Timer(1000);
-            _timerRust.Elapsed += (source, evt) =>
+            _logRust += "\n" + value;
+            if (_timerRust == null)
             {
-                Utils.Log($"From Rust:{_logRust}\nEND");
-                _logRust = "";
-                _timerRust.Dispose();
-                _timerRust = null;
-            };
-            _timerRust.Enabled = true;
+                _timerRust = new Timer(1000);
+                _timerRust.Elapsed += (source, evt) => InfoLogProcess();
+                _timerRust.Enabled = true;
+            }
         }
+        else
+        {
+            // make sure that logs aren't out of order
+            InfoLogProcess();
+
+            if (level == 2 /* Warn */)
+            {
+                Utils.LogWarning($"[rust][warn] {value}");
+            }
+            else /* Error */
+            {
+                Utils.LogError($"[rust][error] {value}");
+            }
+        }
+    }
+
+    static void InfoLogProcess()
+    {
+        if (_timerRust == null) return;
+        Utils.Log($"[rust][info] {_logRust}");
+        _logRust = "";
+        _timerRust.Dispose();
+        _timerRust = null;
     }
 
     protected override bool OnInstanceCreate(ulong xrInstance)

@@ -7,7 +7,7 @@ class IsblRustLibrary : IDisposable
 {
     private readonly IsblDynamicLibrary _l;
 
-    public delegate void Logger_Delegate([MarshalAs(UnmanagedType.LPStr)] string message);
+    public delegate void Logger_Delegate(Int32 level, [MarshalAs(UnmanagedType.LPStr)] string message);
     public delegate void SetLogger_Delegate(Logger_Delegate logger);
     public readonly SetLogger_Delegate SetLogger;
 

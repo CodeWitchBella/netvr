@@ -1,3 +1,4 @@
+use crate::log::LogInfo;
 use std::clone::Clone;
 use std::ffi::CString;
 use std::marker::Copy;
@@ -8,6 +9,7 @@ use openxr_sys::pfn;
 pub struct XrInstanceFunctions {
     pub destroy_instance: pfn::DestroyInstance,
     pub structure_type_to_string: pfn::StructureTypeToString,
+    pub poll_event: pfn::PollEvent,
 }
 
 #[derive(Clone, Copy)]
@@ -64,26 +66,26 @@ pub fn load_instance(
         ($t: ty) => {{
             let name: &str = stringify!($t);
             let raw = call_get_instance_proc_addr(instance, get_instance_proc_addr, name);
-            match raw {
+            let res: Result<$t, String> = match raw {
                 Ok(f) => {
-                    crate::log::log_string(format!("Successfully loaded {}", name));
-                    unsafe { std::mem::transmute::<pfn::VoidFunction, $t>(f) }
+                    LogInfo::string(format!("Successfully loaded {}", name));
+                    Ok(unsafe { std::mem::transmute::<pfn::VoidFunction, $t>(f) })
                 }
-                Err(error) => {
-                    return Err(format!(
-                        "Failed to load {} for instance {} with error {}",
-                        name,
-                        instance.into_raw(),
-                        decode_xr_result(error)
-                    ));
-                }
-            }
+                Err(error) => Err(format!(
+                    "Failed to load {} for instance {} with error {}",
+                    name,
+                    instance.into_raw(),
+                    decode_xr_result(error)
+                )),
+            };
+            res
         }};
     }
 
     let functions = XrInstanceFunctions {
-        destroy_instance: find_and_cast!(pfn::DestroyInstance),
-        structure_type_to_string: find_and_cast!(pfn::StructureTypeToString),
+        destroy_instance: find_and_cast!(pfn::DestroyInstance)?,
+        structure_type_to_string: find_and_cast!(pfn::StructureTypeToString)?,
+        poll_event: find_and_cast!(pfn::PollEvent)?,
     };
     return Ok(functions);
 }
