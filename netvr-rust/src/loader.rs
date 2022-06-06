@@ -355,17 +355,19 @@ extern "system" fn override_create_action(
 */
 extern "system" fn override_string_to_path(
     instance_handle: openxr_sys::Instance,
-    path_string: *const c_char,
+    path_string_raw: *const c_char,
     path: *mut openxr_sys::Path,
 ) -> openxr_sys::Result {
     xr_wrap(|| {
         let instance = get_instance("xrStringToPath", instance_handle)?;
-        let result = unsafe { (instance.string_to_path)(instance_handle, path_string, path) };
-        LogInfo::string(format!(
-            "xrStringToPath {:#?} -> {}",
-            path_string,
-            xr_functions::decode_xr_result(result)
-        ));
+        let result = unsafe { (instance.string_to_path)(instance_handle, path_string_raw, path) };
+        if let Some(path_string) = parse_input_string(path_string_raw) {
+            LogInfo::string(format!(
+                "xrStringToPath \"{}\" -> {}",
+                path_string,
+                xr_functions::decode_xr_result(result)
+            ));
+        }
         result.into_result()
     })
 }
