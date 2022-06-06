@@ -1,0 +1,11 @@
+[package]
+name = "isbl_netvr_rust"
+version = "0.1.0"
+edition = "2021"
+
+[lib]
+name = "isbl_netvr_rust"
+crate-type = ["cdylib"]
+
+[dependencies]
+xr_layer = { path = "../xr_layer" }

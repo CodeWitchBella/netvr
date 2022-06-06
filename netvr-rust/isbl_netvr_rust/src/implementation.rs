@@ -1,4 +1,4 @@
-use crate::loader::{ImplementationTrait, LowerLayer};
+use xr_layer::loader::{ImplementationTrait, LowerLayer};
 
 pub struct ImplementationInstance {}
 impl ImplementationTrait for ImplementationInstance {

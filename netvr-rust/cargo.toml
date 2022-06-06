@@ -1,14 +1,6 @@
-[package]
-name = "netvr"
-version = "0.1.0"
-authors = ["Isabella Skořepová"]
-edition = "2021"
+[workspace]
 
-[lib]
-name = "isbl_netvr_rust"
-crate-type = ["cdylib"]
-
-[dependencies]
-openxr-sys = "0.9.1"
-lazy_static = "1.4.0"
-once_cell = "1.12.0"
+members = [
+    "xr_layer",
+    "isbl_netvr_rust"
+]
