@@ -44,22 +44,13 @@ void netvr_manual_destroy_instance(XrInstance instance);
 **Step 1** Add definition to `XrInstanceFunctions` struct. This is technically not a prerequisite for overriding a function, but you will probably want to call the original function, which this allows you to do.
 
 ```rust
-pub struct XrInstanceFunctions {
+implement!(
     // ... existing fields
     pub poll_event: pfn::PollEvent,
-}
+)
 ```
 
-**Step 2** Compile and fix the initialization error. Take inspiration in surrounding code.
-
-```rust
-let functions = XrInstanceFunctions {
-    // ... existing fields
-    poll_event: find_and_cast!(pfn::PollEvent),
-}
-```
-
-**Step 3** Define a function to your chosen function with. See definition of your chosen function in [openxr_sys's docs](https://docs.rs/openxr-sys/latest/openxr_sys/pfn/index.html) to get required signature. I use prefix `override_` for those functions. Depending on which (if any) handle the function uses you will have to choose correct function.
+**Step 2** Define a function to override your chosen function with. See relevant definition in [openxr_sys's docs](https://docs.rs/openxr-sys/latest/openxr_sys/pfn/index.html) to get required signature. I use prefix `override_` for those functions. Depending on which (if any) handle the function uses you will have to choose correct function.
 
 You can use `xr_wrap` helper to simplify your implementation. It takes closure, calls it and converts its return value from `Result<(), openxr_sys::Result>` to `openxr_sys::Result`. This allows you to use the `?` operator.
 
@@ -78,12 +69,12 @@ extern "system" fn override_poll_event(
 }
 ```
 
-**Step 4** Add a check to `override_get_instance_proc_addr`. This will error out if your `override_` function has wrong signature.
+**Step 3** Add a check to `override_get_instance_proc_addr`. This will error out if your `override_` function has wrong signature.
 
 ```rust
 check!(pfn::PollEvent, override_poll_event);
 ```
 
-**Step 5** Test that an app which uses this function does not crash at this point. Steps above should not change the behavior.
+**Step 4** Test that an app which uses this function does not crash at this point. Steps above should not change the behavior.
 
-**Step 6** Implement your override.
+**Step 5** Implement your override.

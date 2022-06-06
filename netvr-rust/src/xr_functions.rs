@@ -5,12 +5,52 @@ use std::marker::Copy;
 
 use openxr_sys::pfn;
 
-#[derive(Clone, Copy)]
-pub struct XrInstanceFunctions {
+macro_rules! implement {
+    ($( pub $field: ident: $id: ty ), *,) => {
+        #[derive(Clone, Copy)]
+        pub struct XrInstanceFunctions {
+            $(
+                pub $field: $id,
+            )*
+        }
+
+        pub fn load_instance(
+            instance: openxr_sys::Instance,
+            get_instance_proc_addr: pfn::GetInstanceProcAddr,
+        ) -> Result<XrInstanceFunctions, String> {
+            if instance == openxr_sys::Instance::NULL {
+                return Err("Instance must not be NULL".to_owned());
+            }
+
+
+            let functions = XrInstanceFunctions {
+                $(
+                    $field: {
+                        let void = call_get_instance_proc_addr(instance, get_instance_proc_addr, stringify!($id))?;
+                        unsafe { std::mem::transmute::<pfn::VoidFunction, $id>(void) }
+                    },
+                )*
+            };
+            return Ok(functions);
+        }
+    };
+}
+
+implement!(
     pub destroy_instance: pfn::DestroyInstance,
     pub structure_type_to_string: pfn::StructureTypeToString,
     pub poll_event: pfn::PollEvent,
-}
+    pub create_action_set: pfn::CreateActionSet,
+    pub create_action: pfn::CreateAction,
+    pub string_to_path: pfn::StringToPath,
+    pub suggest_interaction_profile_bindings: pfn::SuggestInteractionProfileBindings,
+    pub attach_session_action_sets: pfn::AttachSessionActionSets,
+    pub sync_actions: pfn::SyncActions,
+    pub get_action_state_boolean: pfn::GetActionStateBoolean,
+    pub apply_haptic_feedback: pfn::ApplyHapticFeedback,
+    pub create_session: pfn::CreateSession,
+    pub destroy_session: pfn::DestroySession,
+);
 
 #[derive(Clone, Copy)]
 pub struct XrFunctions {
@@ -32,11 +72,7 @@ pub fn load(func: pfn::GetInstanceProcAddr) -> Result<XrFunctions, String> {
             match raw {
                 Ok(f) => unsafe { std::mem::transmute::<pfn::VoidFunction, $t>(f) },
                 Err(error) => {
-                    return Err(format!(
-                        "Failed to load {} with error {}",
-                        name,
-                        decode_xr_result(error)
-                    ));
+                    return Err(error);
                 }
             }
         }};
@@ -54,59 +90,33 @@ pub fn load(func: pfn::GetInstanceProcAddr) -> Result<XrFunctions, String> {
     return Ok(functions);
 }
 
-pub fn load_instance(
-    instance: openxr_sys::Instance,
-    get_instance_proc_addr: pfn::GetInstanceProcAddr,
-) -> Result<XrInstanceFunctions, String> {
-    if instance == openxr_sys::Instance::NULL {
-        return Err("Instance must not be NULL".to_owned());
-    }
-
-    macro_rules! find_and_cast {
-        ($t: ty) => {{
-            let name: &str = stringify!($t);
-            let raw = call_get_instance_proc_addr(instance, get_instance_proc_addr, name);
-            let res: Result<$t, String> = match raw {
-                Ok(f) => {
-                    LogInfo::string(format!("Successfully loaded {}", name));
-                    Ok(unsafe { std::mem::transmute::<pfn::VoidFunction, $t>(f) })
-                }
-                Err(error) => Err(format!(
-                    "Failed to load {} for instance {} with error {}",
-                    name,
-                    instance.into_raw(),
-                    decode_xr_result(error)
-                )),
-            };
-            res
-        }};
-    }
-
-    let functions = XrInstanceFunctions {
-        destroy_instance: find_and_cast!(pfn::DestroyInstance)?,
-        structure_type_to_string: find_and_cast!(pfn::StructureTypeToString)?,
-        poll_event: find_and_cast!(pfn::PollEvent)?,
-    };
-    return Ok(functions);
-}
-
 fn call_get_instance_proc_addr(
     instance: openxr_sys::Instance,
     func: pfn::GetInstanceProcAddr,
     name: &str,
-) -> Result<pfn::VoidFunction, openxr_sys::Result> {
+) -> Result<pfn::VoidFunction, String> {
     let mut function: Option<pfn::VoidFunction> = Option::None;
     let name_cstr = CString::new(name.replace("pfn::", "xr")).unwrap();
-    unsafe {
-        let status = func(instance, name_cstr.as_ptr(), &mut function);
-        if status != openxr_sys::Result::SUCCESS {
-            return Err(status);
-        }
-    }
-    return match function {
-        Some(f) => Ok(f),
-        None => Err(openxr_sys::Result::ERROR_RUNTIME_FAILURE),
+    let status = unsafe { func(instance, name_cstr.as_ptr(), &mut function) };
+    if status != openxr_sys::Result::SUCCESS {
+        return Err(format!(
+            "Failed to load {} for instance {} with error {}",
+            name,
+            instance.into_raw(),
+            decode_xr_result(status)
+        ));
     };
+    match function {
+        Some(f) => {
+            LogInfo::string(format!("Successfully loaded {}", name));
+            Ok(f)
+        }
+        None => Err(format!(
+            "underlying xrGetInstanceProcAddr returned SUCCESS, but pointer is null. Requested function: {}, instance: {}",
+            name,
+            instance.into_raw(),
+        )),
+    }
 }
 
 #[rustfmt::skip]

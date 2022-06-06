@@ -1,3 +1,5 @@
+ACTIONSET
+ACTIONSETS
 brotli
 cite*
 corepack
@@ -13,8 +15,12 @@ nodejs
 OpenVR
 OpenXR
 OptiTrack 
+REPROJECTION
+rustfmt
 SteamVR
 struct
+SWAPCHAIN
+VARJO
 VIVE
 VRAPI
 vrlab
