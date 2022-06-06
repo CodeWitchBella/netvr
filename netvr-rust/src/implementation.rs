@@ -1,8 +1,8 @@
-use crate::loader::ImplementationTrait;
+use crate::loader::{ImplementationTrait, LowerLayer};
 
 pub struct ImplementationInstance {}
 impl ImplementationTrait for ImplementationInstance {
-    fn new() -> Self {
+    fn new(lower: &LowerLayer) -> Self {
         Self {}
     }
 }
