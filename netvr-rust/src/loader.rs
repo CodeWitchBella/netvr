@@ -12,19 +12,11 @@ use std::collections::hash_map::HashMap;
 use std::error::Error;
 use std::ffi::CStr;
 use std::os::raw::c_char;
-use std::sync::Arc;
 use std::sync::RwLock;
-
-#[derive(Clone, Copy)]
-struct Session {
-    pub instance_handle: openxr_sys::Instance,
-}
 
 lazy_static! {
     // store get_instance_proc_addr
     static ref FUNCTIONS: RwLock<Option<XrFunctions>> = RwLock::new(Option::None);
-    static ref INSTANCES: RwLock<HashMap<u64, XrInstanceFunctions>> = RwLock::new(HashMap::new());
-    static ref SESSIONS: RwLock<HashMap<u64, Session>> = RwLock::new(HashMap::new());
 }
 
 fn get_functions(caller: &str) -> Result<XrFunctions, openxr_sys::Result> {
@@ -35,46 +27,6 @@ fn get_functions(caller: &str) -> Result<XrFunctions, openxr_sys::Result> {
             LogError::string(format!(
                 "{} was called before setting up pointer to xrGetInstanceProcAddr",
                 caller
-            ));
-            Err(openxr_sys::Result::ERROR_RUNTIME_FAILURE)
-        }
-    }
-}
-
-fn get_instance(
-    caller: &str,
-    instance_handle: openxr_sys::Instance,
-) -> Result<XrInstanceFunctions, openxr_sys::Result> {
-    let r = INSTANCES.read().unwrap();
-    let handle = instance_handle.into_raw();
-    match (*r).get(&handle) {
-        Some(v) => Ok(*v),
-        None => {
-            LogError::string(format!(
-                "{}: Can't find instance with handle {}. Maybe it was destroyed already?",
-                caller, handle,
-            ));
-            Err(openxr_sys::Result::ERROR_RUNTIME_FAILURE)
-        }
-    }
-}
-
-fn get_session(
-    caller: &str,
-    session_handle: openxr_sys::Session,
-) -> Result<(XrInstanceFunctions, Session), openxr_sys::Result> {
-    let r = SESSIONS.read().unwrap();
-    let handle = session_handle.into_raw();
-    match (*r).get(&handle) {
-        Some(v) => {
-            let value = *v;
-            let instance = get_instance(caller, value.instance_handle)?;
-            Ok((instance, value))
-        }
-        None => {
-            LogError::string(format!(
-                "{}: Can't find session with handle {}. Maybe it was destroyed already?",
-                caller, handle,
             ));
             Err(openxr_sys::Result::ERROR_RUNTIME_FAILURE)
         }
@@ -94,12 +46,14 @@ fn parse_input_string<'a>(name_ptr: *const c_char) -> Option<&'a str> {
     }
 }
 
-pub struct ImplementationPtr(pub *mut ::std::os::raw::c_void);
-unsafe impl Send for ImplementationPtr {}
-unsafe impl Sync for ImplementationPtr {}
+#[derive(Clone, Copy)]
+pub struct ImplementationInstancePtr(pub *mut ::std::os::raw::c_void);
+unsafe impl Send for ImplementationInstancePtr {}
+unsafe impl Sync for ImplementationInstancePtr {}
 
+#[derive(Clone, Copy)]
 struct LayerInstance {
-    pub implementation: ImplementationPtr,
+    pub implementation: ImplementationInstancePtr,
     pub functions: XrInstanceFunctions,
 }
 
@@ -108,10 +62,62 @@ pub struct XrLayerLoader<Implementation> {
 }
 
 lazy_static! {
-    static ref N_INSTANCES: RwLock<HashMap<u64, Arc<LayerInstance>>> = RwLock::new(HashMap::new());
+    static ref N_CREATE_IMPLEMENTATION_INSTANCE: RwLock<Option<fn() -> ImplementationInstancePtr>> =
+        RwLock::new(None);
+    static ref N_INSTANCES: RwLock<HashMap<u64, LayerInstance>> = RwLock::new(HashMap::new());
+    static ref N_SESSIONS: RwLock<HashMap<u64, openxr_sys::Instance>> = RwLock::new(HashMap::new());
 }
 
-impl<Implementation> XrLayerLoader<Implementation> {
+pub trait ImplementationTrait {
+    fn new() -> Self;
+}
+
+impl<Implementation: ImplementationTrait> XrLayerLoader<Implementation> {
+    fn get_instance(
+        caller: &str,
+        instance_handle: openxr_sys::Instance,
+    ) -> Result<LayerInstance, openxr_sys::Result> {
+        let r = N_INSTANCES.read().unwrap();
+        let handle = instance_handle.into_raw();
+        match (*r).get(&handle) {
+            Some(v) => Ok(*v),
+            None => {
+                LogError::string(format!(
+                    "{}: Can't find instance with handle {}. Maybe it was destroyed already?",
+                    caller, handle,
+                ));
+                Err(openxr_sys::Result::ERROR_RUNTIME_FAILURE)
+            }
+        }
+    }
+
+    fn get_session(
+        caller: &str,
+        session_handle: openxr_sys::Session,
+    ) -> Result<(LayerInstance, openxr_sys::Instance), openxr_sys::Result> {
+        let r = N_SESSIONS.read().unwrap();
+        let handle = session_handle.into_raw();
+        match (*r).get(&handle) {
+            Some(v) => {
+                let value = *v;
+                let instance = Self::get_instance(caller, value)?;
+                Ok((instance, value))
+            }
+            None => {
+                LogError::string(format!(
+                    "{}: Can't find session with handle {}. Maybe it was destroyed already?",
+                    caller, handle,
+                ));
+                Err(openxr_sys::Result::ERROR_RUNTIME_FAILURE)
+            }
+        }
+    }
+
+    fn create_implementation_instance() -> ImplementationInstancePtr {
+        let val = Box::<Implementation>::new(Implementation::new());
+        unsafe { std::mem::transmute(Box::into_raw(val)) }
+    }
+
     // this gets called from unity to give us option to override basically any openxr function
     pub fn hook_get_instance_proc_addr(
         func_in: Option<openxr_sys::pfn::GetInstanceProcAddr>,
@@ -137,6 +143,14 @@ impl<Implementation> XrLayerLoader<Implementation> {
                 return None;
             }
         };
+        {
+            let mut w = N_CREATE_IMPLEMENTATION_INSTANCE.write().unwrap();
+            if let Some(_) = *w {
+                LogError::str("hook_get_instance_proc_addr can only be called once");
+                return None;
+            }
+            *w = Some(Self::create_implementation_instance);
+        }
 
         let mut value = match crate::xr_functions::load(func) {
             Ok(v) => v,
@@ -223,7 +237,7 @@ impl<Implementation> XrLayerLoader<Implementation> {
                 return fallback();
             }
 
-            let r = INSTANCES.read().unwrap();
+            let r = N_INSTANCES.read().unwrap();
             let handle = instance_handle.into_raw();
             if (*r).get(&handle).is_none() {
                 // do not return overrides for uninitialized instances
@@ -288,9 +302,24 @@ impl<Implementation> XrLayerLoader<Implementation> {
                         return result.into_result();
                     }
                 };
-
-            let mut w = INSTANCES.write().unwrap();
-            (*w).insert(instance.into_raw(), value);
+            let create_implementation_instance = {
+                let r = N_CREATE_IMPLEMENTATION_INSTANCE.read().unwrap();
+                match *r {
+                    Some(v) => Ok(v),
+                    None => {
+                        LogError::str("Failed to read create_instance");
+                        Err(openxr_sys::Result::ERROR_RUNTIME_FAILURE)
+                    }
+                }
+            }?;
+            let mut w = N_INSTANCES.write().unwrap();
+            (*w).insert(
+                instance.into_raw(),
+                LayerInstance {
+                    implementation: create_implementation_instance(),
+                    functions: value,
+                },
+            );
             result.into_result()
         })
     }
@@ -298,7 +327,7 @@ impl<Implementation> XrLayerLoader<Implementation> {
     extern "system" fn override_destroy_instance(
         instance_handle: openxr_sys::Instance,
     ) -> openxr_sys::Result {
-        let mut w = INSTANCES.write().unwrap();
+        let mut w = N_INSTANCES.write().unwrap();
         let handle = instance_handle.into_raw();
         let instance = match (*w).get(&handle) {
             Some(v) => *v,
@@ -310,7 +339,7 @@ impl<Implementation> XrLayerLoader<Implementation> {
                 return openxr_sys::Result::ERROR_HANDLE_INVALID;
             }
         };
-        let result = unsafe { (instance.destroy_instance)(instance_handle) };
+        let result = unsafe { (instance.functions.destroy_instance)(instance_handle) };
         (*w).remove(&handle);
         return result;
     }
@@ -320,9 +349,9 @@ impl<Implementation> XrLayerLoader<Implementation> {
         event_data: *mut openxr_sys::EventDataBuffer,
     ) -> openxr_sys::Result {
         xr_wrap(|| {
-            let instance = get_instance("xrPollEvent", instance_handle)?;
-            let result =
-                unsafe { (instance.poll_event)(instance_handle, event_data) }.into_result();
+            let instance = Self::get_instance("xrPollEvent", instance_handle)?;
+            let result = unsafe { (instance.functions.poll_event)(instance_handle, event_data) }
+                .into_result();
             if result.is_ok() {
                 for ptr in XrIterator::event_data_buffer(event_data) {
                     let ptr: DecodedStruct = ptr;
@@ -348,8 +377,9 @@ impl<Implementation> XrLayerLoader<Implementation> {
         out: *mut openxr_sys::ActionSet,
     ) -> openxr_sys::Result {
         xr_wrap(|| {
-            let instance = get_instance("xrCreateActionSet", instance_handle)?;
-            let result = unsafe { (instance.create_action_set)(instance_handle, info, out) };
+            let instance = Self::get_instance("xrCreateActionSet", instance_handle)?;
+            let result =
+                unsafe { (instance.functions.create_action_set)(instance_handle, info, out) };
             LogInfo::string(format!(
                 "xrCreateActionSet {:#?} -> {}",
                 info,
@@ -378,9 +408,10 @@ impl<Implementation> XrLayerLoader<Implementation> {
         path: *mut openxr_sys::Path,
     ) -> openxr_sys::Result {
         xr_wrap(|| {
-            let instance = get_instance("xrStringToPath", instance_handle)?;
-            let result =
-                unsafe { (instance.string_to_path)(instance_handle, path_string_raw, path) };
+            let instance = Self::get_instance("xrStringToPath", instance_handle)?;
+            let result = unsafe {
+                (instance.functions.string_to_path)(instance_handle, path_string_raw, path)
+            };
             if let Some(path_string) = parse_input_string(path_string_raw) {
                 LogInfo::string(format!(
                     "xrStringToPath \"{}\" -> {}",
@@ -397,9 +428,13 @@ impl<Implementation> XrLayerLoader<Implementation> {
         suggested_bindings: *const openxr_sys::InteractionProfileSuggestedBinding,
     ) -> openxr_sys::Result {
         xr_wrap(|| {
-            let instance = get_instance("xrSuggestInteractionProfileBindings", instance_handle)?;
+            let instance =
+                Self::get_instance("xrSuggestInteractionProfileBindings", instance_handle)?;
             let result = unsafe {
-                (instance.suggest_interaction_profile_bindings)(instance_handle, suggested_bindings)
+                (instance.functions.suggest_interaction_profile_bindings)(
+                    instance_handle,
+                    suggested_bindings,
+                )
             };
             LogInfo::string(format!(
                 "xrSuggestInteractionProfileBindings {:#?} -> {}",
@@ -415,9 +450,10 @@ impl<Implementation> XrLayerLoader<Implementation> {
         attach_info: *const openxr_sys::SessionActionSetsAttachInfo,
     ) -> openxr_sys::Result {
         xr_wrap(|| {
-            let (instance, _) = get_session("xrAttachSessionActionSets", session_handle)?;
-            let result =
-                unsafe { (instance.attach_session_action_sets)(session_handle, attach_info) };
+            let (instance, _) = Self::get_session("xrAttachSessionActionSets", session_handle)?;
+            let result = unsafe {
+                (instance.functions.attach_session_action_sets)(session_handle, attach_info)
+            };
             LogInfo::string(format!(
                 "xrAttachSessionActionSets {:#?} -> {}",
                 attach_info,
@@ -432,8 +468,8 @@ impl<Implementation> XrLayerLoader<Implementation> {
         sync_info: *const openxr_sys::ActionsSyncInfo,
     ) -> openxr_sys::Result {
         xr_wrap(|| {
-            let (instance, _) = get_session("xrSyncActions", session_handle)?;
-            let result = unsafe { (instance.sync_actions)(session_handle, sync_info) };
+            let (instance, _) = Self::get_session("xrSyncActions", session_handle)?;
+            let result = unsafe { (instance.functions.sync_actions)(session_handle, sync_info) };
             LogInfo::string(format!(
                 "xrSyncActions {:#?} -> {}",
                 sync_info,
@@ -449,9 +485,10 @@ impl<Implementation> XrLayerLoader<Implementation> {
         state: *mut openxr_sys::ActionStateBoolean,
     ) -> openxr_sys::Result {
         xr_wrap(|| {
-            let (instance, _) = get_session("xrGetActionStateBoolean", session_handle)?;
-            let result =
-                unsafe { (instance.get_action_state_boolean)(session_handle, get_info, state) };
+            let (instance, _) = Self::get_session("xrGetActionStateBoolean", session_handle)?;
+            let result = unsafe {
+                (instance.functions.get_action_state_boolean)(session_handle, get_info, state)
+            };
             LogInfo::string(format!(
                 "xrGetActionStateBoolean {:#?} -> {}",
                 get_info,
@@ -467,9 +504,9 @@ impl<Implementation> XrLayerLoader<Implementation> {
         haptic_feedback: *const openxr_sys::HapticBaseHeader,
     ) -> openxr_sys::Result {
         xr_wrap(|| {
-            let (instance, _) = get_session("xrApplyHapticFeedback", session_handle)?;
+            let (instance, _) = Self::get_session("xrApplyHapticFeedback", session_handle)?;
             let result = unsafe {
-                (instance.apply_haptic_feedback)(
+                (instance.functions.apply_haptic_feedback)(
                     session_handle,
                     haptic_action_info,
                     haptic_feedback,
@@ -490,10 +527,11 @@ impl<Implementation> XrLayerLoader<Implementation> {
         session_ptr: *mut openxr_sys::Session,
     ) -> openxr_sys::Result {
         xr_wrap(|| {
-            let instance = get_instance("xrCreateSession", instance_handle)?;
-            let result =
-                unsafe { (instance.create_session)(instance_handle, create_info, session_ptr) }
-                    .into_result();
+            let instance = Self::get_instance("xrCreateSession", instance_handle)?;
+            let result = unsafe {
+                (instance.functions.create_session)(instance_handle, create_info, session_ptr)
+            }
+            .into_result();
             if let Err(error) = result {
                 LogInfo::string(format!(
                     "xrCreateSession {:#?} -> {}",
@@ -501,14 +539,14 @@ impl<Implementation> XrLayerLoader<Implementation> {
                     xr_functions::decode_xr_result(error)
                 ));
             } else {
-                let mut w = SESSIONS.write().unwrap();
+                let mut w = N_SESSIONS.write().unwrap();
                 let session: openxr_sys::Session = unsafe { *session_ptr };
                 LogInfo::string(format!(
                     "xrCreateSession {:#?} -> {}",
                     create_info,
                     session.into_raw()
                 ));
-                (*w).insert(session.into_raw(), Session { instance_handle });
+                (*w).insert(session.into_raw(), instance_handle);
             }
             result
         })
@@ -518,11 +556,11 @@ impl<Implementation> XrLayerLoader<Implementation> {
         session_handle: openxr_sys::Session,
     ) -> openxr_sys::Result {
         xr_wrap(|| {
-            let (instance, _) = get_session("xrDestroySession", session_handle)?;
-            let result = unsafe { (instance.destroy_session)(session_handle) };
+            let (instance, _) = Self::get_session("xrDestroySession", session_handle)?;
+            let result = unsafe { (instance.functions.destroy_session)(session_handle) };
             LogInfo::string(format!("xrDestroySession -> {}", decode_xr_result(result)));
 
-            let mut w = SESSIONS.write().unwrap();
+            let mut w = N_SESSIONS.write().unwrap();
             let handle = session_handle.into_raw();
             (*w).remove(&handle);
             result.into_result()

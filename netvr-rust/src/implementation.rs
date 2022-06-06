@@ -1,10 +1,11 @@
-use std::sync::RwLock;
-
-use once_cell::sync::Lazy;
-
-use crate::loader::XrLayerLoader;
+use crate::loader::{ImplementationTrait, XrLayerLoader};
 
 struct ImplementationInstance {}
+impl ImplementationTrait for ImplementationInstance {
+    fn new() -> Self {
+        Self {}
+    }
+}
 
 type Loader = XrLayerLoader<ImplementationInstance>;
 
