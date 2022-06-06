@@ -3,7 +3,7 @@ use std::error::Error;
 use std::ffi::{CStr, CString};
 use std::sync::RwLock;
 
-type LoggerFn = Option<unsafe extern "C" fn(i32, utils::Cstr)>;
+pub type LoggerFn = Option<unsafe extern "C" fn(i32, utils::Cstr)>;
 lazy_static! {
     static ref LOGGER: RwLock<LoggerFn> = RwLock::new(Option::None);
 }
@@ -63,8 +63,7 @@ implement!(LogInfo, Level::Info);
 implement!(LogWarn, Level::Warn);
 implement!(LogError, Level::Error);
 
-#[no_mangle]
-pub extern "C" fn netvr_set_logger(func: LoggerFn) {
+pub fn set_logger(func: LoggerFn) {
     println!("Hello world from Rust!");
     {
         let mut w = LOGGER.write().unwrap();

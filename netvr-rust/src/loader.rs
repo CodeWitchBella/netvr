@@ -15,6 +15,10 @@ use std::os::raw::c_char;
 use std::sync::RwLock;
 use std::sync::RwLockReadGuard;
 
+pub trait ImplementationTrait {
+    fn new() -> Self;
+}
+
 lazy_static! {
     // store get_instance_proc_addr
     static ref FUNCTIONS: RwLock<Option<XrFunctions>> = RwLock::new(Option::None);
@@ -52,6 +56,7 @@ unsafe impl Send for ImplementationInstancePtr {}
 unsafe impl Sync for ImplementationInstancePtr {}
 
 struct LayerInstance {
+    // TODO: maybe use Box<dyn ImplementationTrait> instead?
     pub implementation: Option<ImplementationInstancePtr>,
     pub functions: XrInstanceFunctions,
 }
@@ -76,10 +81,6 @@ lazy_static! {
 }
 
 type InstanceReadGuard<'a> = std::sync::RwLockReadGuard<'a, HashMap<u64, LayerInstance>>;
-
-pub trait ImplementationTrait {
-    fn new() -> Self;
-}
 
 struct InstanceLock<'a> {
     pub guard: InstanceReadGuard<'a>,
