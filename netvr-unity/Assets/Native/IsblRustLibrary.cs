@@ -5,6 +5,8 @@ using UnityEngine;
 
 class IsblRustLibrary : IDisposable
 {
+    const string LibraryName = "isbl_netvr_rust";
+
     private readonly IsblDynamicLibrary _l;
 
     public delegate void Logger_Delegate(Int32 level, [MarshalAs(UnmanagedType.LPStr)] string message);
@@ -23,16 +25,16 @@ class IsblRustLibrary : IDisposable
     static extern void SetLogger_Native(Logger_Delegate logger);
 
     [DllImport(LibraryName, EntryPoint = "netvr_hook_get_instance_proc_addr")]
-    static extern IntPtr HookGetInstanceProcAddr_Native(IntPtr func);
+    static extern IntPtr HookGetInstanceProcAddr_Native(IntPtr func, bool automaticDestroy);
 
     [DllImport(LibraryName, EntryPoint = "netvr_manual_destroy_instance")]
-    static extern IntPtr HookGetInstanceProcAddr_Native(IntPtr func);
+    static extern void ManualDestroyInstance_Native(ulong func);
     // ADD_FUNC: add static extern above this line
 #endif // !UNITY_EDITOR_WIN
 
     public IsblRustLibrary()
     {
-        this._l = new IsblDynamicLibrary("isbl_netvr_rust", "../netvr-rust/target/debug/");
+        this._l = new IsblDynamicLibrary(LibraryName, "../netvr-rust/target/debug/");
 #if UNITY_EDITOR_WIN
         // get function pointers converted to delegates
         _l.GetDelegate("netvr_set_logger", out SetLogger);
@@ -42,6 +44,7 @@ class IsblRustLibrary : IDisposable
 #else
         SetLogger = SetLogger_Native;
         HookGetInstanceProcAddr = HookGetInstanceProcAddr_Native;
+        ManualDestroyInstance = ManualDestroyInstance_Native;
         // ADD_FUNC: add a statement above this line
 #endif
     }

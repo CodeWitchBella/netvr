@@ -78,3 +78,21 @@ check!(pfn::PollEvent, override_poll_event);
 **Step 4** Test that an app which uses this function does not crash at this point. Steps above should not change the behavior.
 
 **Step 5** Implement your override.
+
+## Compiling for Quest
+
+Make sure that your rust and unity installations are located in path without spaces. One way to do that for rust is to set following environment variables system-wide:
+
+- `CARGO_HOME` to `C:\Stuff\Rust\cargo`
+- `RUSTUP_HOME` to `C:\Stuff\Rust\rustup`
+
+And only after doing so installing rust using rustup. Alternatively you can use WSL.
+
+Then to build the project you have to create `.cargo/config.toml` file containing correct paths. Use `.cargo/config-example.toml` as a guide.
+
+```bash
+# Install rust target for android
+rustup target add aarch64-linux-android
+# Compile
+cargo build --target aarch64-linux-android
+```
