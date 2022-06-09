@@ -24,7 +24,7 @@ fn main() {
     .unwrap();
 
     let maybe_copy = |filename: &str, target: Option<&str>| {
-        let target = target.or_else(|| Some(filename)).unwrap();
+        let target = target.or(Some(filename)).unwrap();
         let result = fs::copy(
             build_path.join(filename),
             root.join("netvr-unity")

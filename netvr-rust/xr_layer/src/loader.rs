@@ -236,7 +236,7 @@ impl<Implementation: ImplementationTrait> XrLayerLoader<Implementation> {
         };
         {
             let mut w = N_CREATE_IMPLEMENTATION_INSTANCE.write().unwrap();
-            if let Some(_) = *w {
+            if w.is_some() {
                 LogError::str("hook_get_instance_proc_addr can only be called once");
                 return None;
             }
@@ -256,7 +256,7 @@ impl<Implementation: ImplementationTrait> XrLayerLoader<Implementation> {
         value.automatic_destroy = automatic_destroy;
         let mut w = FUNCTIONS.write().unwrap();
         *w = Some(value);
-        return Some(Self::override_get_instance_proc_addr);
+        Some(Self::override_get_instance_proc_addr)
     }
 
     pub fn netvr_manual_destroy_instance(instance_handle: openxr_sys::Instance) {

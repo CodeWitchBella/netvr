@@ -18,7 +18,7 @@ pub extern "C" fn netvr_hook_get_instance_proc_addr(
     func_in: Option<pfn::GetInstanceProcAddr>,
     automatic_destroy: bool,
 ) -> Option<pfn::GetInstanceProcAddr> {
-    return Loader::hook_get_instance_proc_addr(func_in, automatic_destroy);
+    Loader::hook_get_instance_proc_addr(func_in, automatic_destroy)
 }
 
 #[no_mangle]
@@ -36,7 +36,7 @@ pub extern "C" fn netvr_set_logger(func: log::LoggerFn) {
                 location.file(),
                 location.line(),
             ),
-            None => format!("panic occurred but can't get location information..."),
+            None => "panic occurred but can't get location information...".to_string(),
         };
 
         if let Some(s) = panic_info.payload().downcast_ref::<&str>() {

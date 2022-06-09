@@ -87,7 +87,7 @@ pub fn load(func: pfn::GetInstanceProcAddr) -> Result<XrFunctions, String> {
         create_instance: find_and_cast!(pfn::CreateInstance),
         automatic_destroy: true,
     };
-    return Ok(functions);
+    Ok(functions)
 }
 
 fn call_get_instance_proc_addr(

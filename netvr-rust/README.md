@@ -72,7 +72,7 @@ extern "system" fn override_poll_event(
 **Step 3** Add a check to `override_get_instance_proc_addr`. This will error out if your `override_` function has wrong signature.
 
 ```rust
-check!(pfn::PollEvent, override_poll_event);
+check!(pfn::PollEvent, Self::override_poll_event);
 ```
 
 **Step 4** Test that an app which uses this function does not crash at this point. Steps above should not change the behavior.
