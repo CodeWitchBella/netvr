@@ -9,7 +9,7 @@ class IsblRustLibrary : IDisposable
 
     private readonly IsblDynamicLibrary _l;
 
-    public delegate void Logger_Delegate(Int32 level, [MarshalAs(UnmanagedType.LPStr)] string message);
+    public delegate void Logger_Delegate(Int32 level, [MarshalAs(UnmanagedType.LPStr)] string message, [MarshalAs(UnmanagedType.LPStr)] string stack);
     public delegate void SetLogger_Delegate(Logger_Delegate logger);
     public readonly SetLogger_Delegate SetLogger;
 
@@ -34,7 +34,7 @@ class IsblRustLibrary : IDisposable
 
     public IsblRustLibrary()
     {
-        this._l = new IsblDynamicLibrary(LibraryName, "Assets/Plugins/Windows/x64/");
+        this._l = new IsblDynamicLibrary(LibraryName, "Assets/Plugins/Windows/x64/", LibraryName + "_copy");
 #if UNITY_EDITOR_WIN
         // get function pointers converted to delegates
         _l.GetDelegate("netvr_set_logger", out SetLogger);

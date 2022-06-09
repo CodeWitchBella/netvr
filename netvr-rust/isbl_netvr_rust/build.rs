@@ -23,7 +23,8 @@ fn main() {
     })
     .unwrap();
 
-    let maybe_copy = |filename: &str| {
+    let maybe_copy = |filename: &str, target: Option<&str>| {
+        let target = target.or_else(|| Some(filename)).unwrap();
         let result = fs::copy(
             build_path.join(filename),
             root.join("netvr-unity")
@@ -31,7 +32,7 @@ fn main() {
                 .join("Plugins")
                 .join(target_dir.0)
                 .join(target_dir.1)
-                .join(filename),
+                .join(target),
         );
         if result.is_ok() {
             println!(
@@ -41,18 +42,20 @@ fn main() {
         }
         result
     };
-    let copy = |filename: &str| {
-        maybe_copy(filename).expect("File not found");
+    let copy = |filename: &str, target: Option<&str>| {
+        maybe_copy(filename, target).expect("File not found");
     };
 
     let target_os = env::var("CARGO_CFG_TARGET_OS").unwrap();
     if target_os == "windows" {
-        copy("isbl_netvr_rust.dll");
-        let _ = maybe_copy("isbl_netvr_rust.pdb");
+        let _ = maybe_copy("isbl_netvr_rust.dll", None);
+        copy("isbl_netvr_rust.dll", Some("isbl_netvr_rust_copy.dll"));
+        let _ = maybe_copy("isbl_netvr_rust.pdb", None);
+        let _ = maybe_copy("isbl_netvr_rust.pdb", Some("isbl_netvr_rust_copy.pdb"));
     } else if target_os == "android" || target_os == "linux" {
-        copy("libisbl_netvr_rust.so");
+        copy("libisbl_netvr_rust.so", None);
     } else if target_os == "macos" {
-        copy("libisbl_netvr_rust.dylib");
+        copy("libisbl_netvr_rust.dylib", None);
     } else {
         panic!("Unsupported OS {target_os}");
     }

@@ -54,8 +54,12 @@ public class IsblXRFeature : OpenXRFeature
     static string _logRust = "";
     static Timer _timerRust;
     [AOT.MonoPInvokeCallback(typeof(IsblNetvrLibrary.Logger_Delegate))]
-    static void LoggerRust(Int32 level, string value)
+    static void LoggerRust(Int32 level, string value, string stack)
     {
+#if UNITY_EDITOR
+        if (stack != "")
+            value = value + "\nstack:\n" + stack;
+#endif
         if (level <= 1 /* Info */)
         {
             _logRust += "\n" + value;
