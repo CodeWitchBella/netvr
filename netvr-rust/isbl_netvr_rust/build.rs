@@ -48,10 +48,10 @@ fn main() {
 
     let target_os = env::var("CARGO_CFG_TARGET_OS").unwrap();
     if target_os == "windows" {
-        let _ = maybe_copy("isbl_netvr_rust.dll", None);
         copy("isbl_netvr_rust.dll", Some("isbl_netvr_rust_copy.dll"));
-        let _ = maybe_copy("isbl_netvr_rust.pdb", None);
         let _ = maybe_copy("isbl_netvr_rust.pdb", Some("isbl_netvr_rust_copy.pdb"));
+        let _ = maybe_copy("isbl_netvr_rust.dll", None);
+        let _ = maybe_copy("isbl_netvr_rust.pdb", None);
     } else if target_os == "android" || target_os == "linux" {
         copy("libisbl_netvr_rust.so", None);
     } else if target_os == "macos" {

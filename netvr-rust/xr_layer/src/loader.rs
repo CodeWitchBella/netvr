@@ -4,7 +4,7 @@ use crate::log::LogWarn;
 use crate::utils::xr_wrap;
 use crate::utils::ResultConvertible;
 use crate::xr_functions::decode_xr_result;
-use crate::xr_functions::{self, XrFunctions, XrInstanceFunctions};
+use crate::xr_functions::{self, XrInstanceFunctions};
 use crate::xr_structures::*;
 
 use openxr_sys::pfn;
@@ -40,18 +40,36 @@ pub trait ImplementationTrait {
     fn new(lower_layer: &LowerLayer) -> Self;
 }
 
-lazy_static! {
-    // store get_instance_proc_addr
-    static ref FUNCTIONS: RwLock<Option<XrFunctions>> = RwLock::new(Option::None);
+struct LoaderRoot {
+    pub entry: openxr::Entry,
+    // This probably should not be in this struct, but is the easiest place to
+    // put it. In case configuration options grow you should consider creating
+    // struct which would contain those and XrFunctions.
+    pub automatic_destroy: bool,
 }
 
-struct FunctionsLock<'a> {
-    pub guard: std::sync::RwLockReadGuard<'a, Option<XrFunctions>>,
+impl LoaderRoot {
+    pub fn create(func: pfn::GetInstanceProcAddr) -> Result<Self, String> {
+        Ok(Self {
+            entry: unsafe { openxr::Entry::from_get_instance_proc_addr(func) }
+                .map_err(decode_xr_result)?,
+            automatic_destroy: true,
+        })
+    }
+}
+
+lazy_static! {
+    // store get_instance_proc_addr
+    static ref LOADER_ROOT: RwLock<Option<LoaderRoot>> = RwLock::new(Option::None);
+}
+
+struct LoaderRootLock<'a> {
+    pub guard: std::sync::RwLockReadGuard<'a, Option<LoaderRoot>>,
     pub caller: &'static str,
 }
 
-impl<'a> FunctionsLock<'a> {
-    pub fn read(&'a self) -> Result<&'a XrFunctions, openxr_sys::Result> {
+impl<'a> LoaderRootLock<'a> {
+    pub fn read(&'a self) -> Result<&'a LoaderRoot, openxr_sys::Result> {
         match &*self.guard {
             Some(v) => Ok(v),
             None => {
@@ -65,9 +83,9 @@ impl<'a> FunctionsLock<'a> {
     }
 }
 
-fn get_functions(caller: &'static str) -> Result<FunctionsLock, openxr_sys::Result> {
-    Ok(FunctionsLock {
-        guard: match FUNCTIONS.read() {
+fn get_functions(caller: &'static str) -> Result<LoaderRootLock, openxr_sys::Result> {
+    Ok(LoaderRootLock {
+        guard: match LOADER_ROOT.read() {
             Ok(v) => Ok(v),
             Err(err) => {
                 LogError::string(format!(
@@ -243,7 +261,7 @@ impl<Implementation: ImplementationTrait> XrLayerLoader<Implementation> {
             *w = Some(Self::create_implementation_instance);
         }
 
-        let mut value = match crate::xr_functions::load(func) {
+        let mut value = match LoaderRoot::create(func) {
             Ok(v) => v,
             Err(error) => {
                 LogError::string(format!(
@@ -254,7 +272,7 @@ impl<Implementation: ImplementationTrait> XrLayerLoader<Implementation> {
             }
         };
         value.automatic_destroy = automatic_destroy;
-        let mut w = FUNCTIONS.write().unwrap();
+        let mut w = LOADER_ROOT.write().unwrap();
         *w = Some(value);
         Some(Self::override_get_instance_proc_addr)
     }
@@ -282,9 +300,11 @@ impl<Implementation: ImplementationTrait> XrLayerLoader<Implementation> {
         function: *mut Option<openxr_sys::pfn::VoidFunction>,
     ) -> openxr_sys::Result {
         xr_wrap(|| {
-            let fallback_fns = |fns: &XrFunctions| {
-                unsafe { (fns.get_instance_proc_addr)(instance_handle, name_ptr, function) }
-                    .into_result()
+            let fallback_fns = |fns: &LoaderRoot| {
+                unsafe {
+                    (fns.entry.fp().get_instance_proc_addr)(instance_handle, name_ptr, function)
+                }
+                .into_result()
             };
             let fallback = || {
                 let lock = get_functions("xrGetInstanceProcAddr")?;
@@ -374,7 +394,7 @@ impl<Implementation: ImplementationTrait> XrLayerLoader<Implementation> {
             let lock = get_functions("xrCreateInstance")?;
             let fns = lock.read()?;
 
-            let result = unsafe { (fns.create_instance)(create_info, instance_ptr) };
+            let result = unsafe { (fns.entry.fp().create_instance)(create_info, instance_ptr) };
             let instance: openxr_sys::Instance = unsafe { *instance_ptr };
             if result != openxr_sys::Result::SUCCESS {
                 LogError::string(format!(
@@ -384,9 +404,10 @@ impl<Implementation: ImplementationTrait> XrLayerLoader<Implementation> {
             ));
                 return result.into_result();
             };
+
             let functions = match super::xr_functions::load_instance(
                 instance,
-                fns.get_instance_proc_addr,
+                fns.entry.fp().get_instance_proc_addr,
             ) {
                 Ok(v) => v,
                 Err(error) => {

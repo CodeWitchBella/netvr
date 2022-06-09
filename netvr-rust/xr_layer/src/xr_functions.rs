@@ -52,44 +52,6 @@ implement!(
     pub destroy_session: pfn::DestroySession,
 );
 
-#[derive(Clone)]
-pub struct XrFunctions {
-    pub get_instance_proc_addr: pfn::GetInstanceProcAddr,
-    pub enumerate_instance_extension_properties: pfn::EnumerateInstanceExtensionProperties,
-    pub enumerate_api_layer_properties: pfn::EnumerateApiLayerProperties,
-    pub create_instance: pfn::CreateInstance,
-    // This probably should not be in this struct, but is the easiest place to
-    // put it. In case configuration options grow you should consider creating
-    // struct which would contain those and XrFunctions.
-    pub automatic_destroy: bool,
-}
-
-pub fn load(func: pfn::GetInstanceProcAddr) -> Result<XrFunctions, String> {
-    macro_rules! find_and_cast {
-        ($t: ty) => {{
-            let name: &str = stringify!($t);
-            let raw = call_get_instance_proc_addr(openxr_sys::Instance::NULL, func, name);
-            match raw {
-                Ok(f) => unsafe { std::mem::transmute::<pfn::VoidFunction, $t>(f) },
-                Err(error) => {
-                    return Err(error);
-                }
-            }
-        }};
-    }
-
-    let functions = XrFunctions {
-        get_instance_proc_addr: func,
-        enumerate_instance_extension_properties: find_and_cast!(
-            pfn::EnumerateInstanceExtensionProperties
-        ),
-        enumerate_api_layer_properties: find_and_cast!(pfn::EnumerateApiLayerProperties),
-        create_instance: find_and_cast!(pfn::CreateInstance),
-        automatic_destroy: true,
-    };
-    Ok(functions)
-}
-
 fn call_get_instance_proc_addr(
     instance: openxr_sys::Instance,
     func: pfn::GetInstanceProcAddr,

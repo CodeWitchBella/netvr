@@ -5,7 +5,8 @@ authors = ["Isabella Skořepová"]
 edition = "2021"
 
 [dependencies]
-openxr-sys = "0.9.1"
+openxr-sys = { path = "../../../openxrs/sys" }
+openxr = { path = "../../../openxrs/openxr" }
 lazy_static = "1.4.0"
 once_cell = "1.12.0"
 backtrace = "0.3.65"
