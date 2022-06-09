@@ -8,4 +8,5 @@ name = "isbl_netvr_rust"
 crate-type = ["cdylib"]
 
 [dependencies]
+backtrace = "0.3.65"
 xr_layer = { path = "../xr_layer" }

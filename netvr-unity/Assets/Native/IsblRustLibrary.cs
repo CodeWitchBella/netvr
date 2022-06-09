@@ -34,7 +34,7 @@ class IsblRustLibrary : IDisposable
 
     public IsblRustLibrary()
     {
-        this._l = new IsblDynamicLibrary(LibraryName, "../netvr-rust/target/debug/");
+        this._l = new IsblDynamicLibrary(LibraryName, "Assets/Plugins/Windows/x64/");
 #if UNITY_EDITOR_WIN
         // get function pointers converted to delegates
         _l.GetDelegate("netvr_set_logger", out SetLogger);

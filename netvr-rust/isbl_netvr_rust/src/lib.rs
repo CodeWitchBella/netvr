@@ -1,5 +1,12 @@
+use backtrace::Backtrace;
+use std::panic;
+
 use implementation::ImplementationInstance;
-use xr_layer::{loader::XrLayerLoader, log, pfn, XrInstance};
+use xr_layer::{
+    loader::XrLayerLoader,
+    log::{self, LogPanic},
+    pfn, XrInstance,
+};
 
 mod implementation;
 
@@ -21,5 +28,23 @@ pub extern "C" fn netvr_manual_destroy_instance(instance_handle: XrInstance) {
 
 #[no_mangle]
 pub extern "C" fn netvr_set_logger(func: log::LoggerFn) {
+    panic::set_hook(Box::new(|panic_info| {
+        let backtrace = Backtrace::new();
+        let mut message = match panic_info.location() {
+            Some(location) => format!(
+                "panic occurred in file '{}' at line {}",
+                location.file(),
+                location.line(),
+            ),
+            None => format!("panic occurred but can't get location information..."),
+        };
+
+        if let Some(s) = panic_info.payload().downcast_ref::<&str>() {
+            message = format!("{message}: {s:?}");
+        }
+        message = format!("{message}\n{panic_info:?}\n{backtrace:?}");
+        LogPanic::string(message);
+    }));
+
     log::set_logger(func)
 }

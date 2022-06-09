@@ -77,7 +77,8 @@ public class IsblXRFeature : OpenXRFeature
             }
             else /* Error */
             {
-                Utils.LogError($"[rust][error] {value}");
+                var levelText = level == 3 ? "error" : level == 4 ? "panic" : "unknown";
+                Utils.LogError($"[rust][{levelText}] {value}");
             }
         }
     }

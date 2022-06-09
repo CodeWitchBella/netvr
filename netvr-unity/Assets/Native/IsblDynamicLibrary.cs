@@ -101,29 +101,35 @@ class IsblDynamicLibrary : IDisposable
 #if UNITY_EDITOR_WIN
         for (int i = 0; ; ++i)
         {
-            _fullPath = prefix + name + $"{i}.dll";
+            _fullPath = prefix + name + i;
             try
             {
                 using (var watch = new IsblStopwatch("AreFilesIdentical:.dll"))
-                    if (AreFilesIdentical(prefix + name + ".dll", _fullPath)) break;
+                    if (AreFilesIdentical(prefix + name + ".dll", _fullPath + ".dll") && AreFilesIdentical(prefix + name + ".pdb", _fullPath + ".pdb")) break;
                 // copy to new file so that original is still writeable
-                File.Copy(prefix + name + ".dll", _fullPath, true);
+                File.Copy(prefix + name + ".dll", _fullPath + ".dll", true);
+                try
+                {
+                    File.Copy(prefix + name + ".pdb", _fullPath + ".pdb", true);
+                }
+                catch (IOException) { }
                 break;
             }
-            catch (IOException) when (i != 9)
+            catch (IOException) when (i < 9)
             {
                 // retry
             }
             catch (IOException e)
             {
                 Utils.LogException(e);
+                break;
             }
         }
 
         // load
-        Utils.Log($"Loading library from {_fullPath}");
-        _library = SystemLibrary.LoadLibrary(_fullPath);
-        if (_library == default) Utils.LogWarning($"Failed to load {_fullPath}");
+        Utils.Log($"Loading library from {_fullPath}.dll");
+        _library = SystemLibrary.LoadLibrary(_fullPath + ".dll");
+        if (_library == default) Utils.LogWarning($"Failed to load {_fullPath}.dll");
 #endif 
     }
 
@@ -137,10 +143,16 @@ class IsblDynamicLibrary : IDisposable
             _library = default;
             try
             {
-                File.Delete(_fullPath);
-                File.Delete(_fullPath + ".meta");
+                File.Delete(_fullPath + ".dll");
+                File.Delete(_fullPath + ".dll.meta");
             }
             catch (IOException e) { Utils.LogException(e); }
+            try
+            {
+                File.Delete(_fullPath + ".pdb");
+                File.Delete(_fullPath + ".pdb.meta");
+            }
+            catch (IOException) { }
         }
 #endif
     }

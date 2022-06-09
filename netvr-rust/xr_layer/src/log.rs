@@ -12,6 +12,7 @@ enum Level {
     Info = 1,
     Warn = 2,
     Error = 3,
+    Panic = 4,
 }
 
 fn _cstr(level: Level, text: utils::Cstr) {
@@ -62,6 +63,7 @@ macro_rules! implement {
 implement!(LogInfo, Level::Info);
 implement!(LogWarn, Level::Warn);
 implement!(LogError, Level::Error);
+implement!(LogPanic, Level::Panic);
 
 pub fn set_logger(func: LoggerFn) {
     println!("Hello world from Rust!");

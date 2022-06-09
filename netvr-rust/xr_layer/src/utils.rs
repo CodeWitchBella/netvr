@@ -1,4 +1,6 @@
-use std::os::raw::c_char;
+use std::{os::raw::c_char, panic};
+
+use crate::log::LogPanic;
 pub type Cstr = *const c_char;
 
 #[macro_export]
@@ -8,13 +10,38 @@ macro_rules! internal_screaming {
     };
 }
 
+fn print_panic(panic: Box<dyn std::any::Any + Send>) {
+    match panic.downcast::<String>() {
+        Ok(cause) => {
+            LogPanic::string(format!(
+                "Caught panic. This is probably a bug. cause: {}",
+                cause
+            ));
+        }
+        Err(err) => {
+            LogPanic::string(format!(
+                "Caught panic. This is probably a bug. cause: {:?}",
+                err
+            ));
+        }
+    };
+}
+
 pub fn xr_wrap<O>(function: O) -> openxr_sys::Result
 where
     O: FnOnce() -> Result<(), openxr_sys::Result>,
+    O: std::panic::UnwindSafe,
 {
-    match function() {
-        Ok(()) => openxr_sys::Result::SUCCESS,
-        Err(v) => v,
+    let maybe_panicked = panic::catch_unwind(|| function());
+    match maybe_panicked {
+        Ok(result) => match result {
+            Ok(()) => openxr_sys::Result::SUCCESS,
+            Err(v) => v,
+        },
+        Err(panic) => {
+            print_panic(panic);
+            openxr_sys::Result::ERROR_RUNTIME_FAILURE
+        }
     }
 }
 

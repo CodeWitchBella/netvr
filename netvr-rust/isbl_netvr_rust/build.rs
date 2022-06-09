@@ -23,32 +23,39 @@ fn main() {
     })
     .unwrap();
 
-    let target_os = env::var("CARGO_CFG_TARGET_OS").unwrap();
-    let filename = if target_os == "windows" {
-        Ok("isbl_netvr_rust.dll")
-    } else if target_os == "android" || target_os == "linux" {
-        Ok("libisbl_netvr_rust.so")
-    } else if target_os == "macos" {
-        Ok("libisbl_netvr_rust.dylib")
-    } else {
-        Err(format!("Unsupported OS {target_os}"))
-    }
-    .unwrap();
+    let maybe_copy = |filename: &str| {
+        let result = fs::copy(
+            build_path.join(filename),
+            root.join("netvr-unity")
+                .join("Assets")
+                .join("Plugins")
+                .join(target_dir.0)
+                .join(target_dir.1)
+                .join(filename),
+        );
+        if result.is_ok() {
+            println!(
+                "cargo:rerun-if-changed={}/isbl_netvr_rust.dll",
+                build_path.join(filename).to_str().unwrap()
+            );
+        }
+        result
+    };
+    let copy = |filename: &str| {
+        maybe_copy(filename).expect("File not found");
+    };
 
-    fs::copy(
-        build_path.join(filename),
-        root.join("netvr-unity")
-            .join("Assets")
-            .join("Plugins")
-            .join(target_dir.0)
-            .join(target_dir.1)
-            .join(filename),
-    )
-    .unwrap();
+    let target_os = env::var("CARGO_CFG_TARGET_OS").unwrap();
+    if target_os == "windows" {
+        copy("isbl_netvr_rust.dll");
+        let _ = maybe_copy("isbl_netvr_rust.pdb");
+    } else if target_os == "android" || target_os == "linux" {
+        copy("libisbl_netvr_rust.so");
+    } else if target_os == "macos" {
+        copy("libisbl_netvr_rust.dylib");
+    } else {
+        panic!("Unsupported OS {target_os}");
+    }
 
     println!("cargo:rerun-if-changed=build.rs");
-    println!(
-        "cargo:rerun-if-changed={}/isbl_netvr_rust.dll",
-        build_path.join(filename).to_str().unwrap()
-    );
 }
