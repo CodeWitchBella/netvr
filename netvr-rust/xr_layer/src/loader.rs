@@ -29,11 +29,11 @@ impl LowerLayer {
         path_string_raw: *const c_char,
     ) -> Result<openxr_sys::Path, openxr_sys::Result> {
         return Err(openxr_sys::Result::ERROR_ACTIONSETS_ALREADY_ATTACHED);
-    }*/
+    }
 
     pub fn raw_static_functions() -> Result<XrFunctions, openxr_sys::Result> {
         return get_functions("Implementation");
-    }
+    }*/
 }
 
 pub trait ImplementationTrait {
@@ -45,18 +45,40 @@ lazy_static! {
     static ref FUNCTIONS: RwLock<Option<XrFunctions>> = RwLock::new(Option::None);
 }
 
-fn get_functions(caller: &str) -> Result<XrFunctions, openxr_sys::Result> {
-    let r = FUNCTIONS.read().unwrap();
-    match *r {
-        Some(v) => Ok(v),
-        None => {
-            LogError::string(format!(
-                "{} was called before setting up pointer to xrGetInstanceProcAddr",
-                caller
-            ));
-            Err(openxr_sys::Result::ERROR_RUNTIME_FAILURE)
+struct FunctionsLock<'a> {
+    pub guard: std::sync::RwLockReadGuard<'a, Option<XrFunctions>>,
+    pub caller: &'static str,
+}
+
+impl<'a> FunctionsLock<'a> {
+    pub fn read(&'a self) -> Result<&'a XrFunctions, openxr_sys::Result> {
+        match &*self.guard {
+            Some(v) => Ok(v),
+            None => {
+                LogError::string(format!(
+                    "{} was called before setting up pointer to xrGetInstanceProcAddr",
+                    self.caller
+                ));
+                Err(openxr_sys::Result::ERROR_RUNTIME_FAILURE)
+            }
         }
     }
+}
+
+fn get_functions(caller: &'static str) -> Result<FunctionsLock, openxr_sys::Result> {
+    Ok(FunctionsLock {
+        guard: match FUNCTIONS.read() {
+            Ok(v) => Ok(v),
+            Err(err) => {
+                LogError::string(format!(
+                    "{}: Failed to acquire read lock on global instances array. {:}",
+                    caller, err
+                ));
+                Err(openxr_sys::Result::ERROR_RUNTIME_FAILURE)
+            }
+        }?,
+        caller,
+    })
 }
 
 fn parse_input_string<'a>(name_ptr: *const c_char) -> Option<&'a str> {
@@ -260,12 +282,13 @@ impl<Implementation: ImplementationTrait> XrLayerLoader<Implementation> {
         function: *mut Option<openxr_sys::pfn::VoidFunction>,
     ) -> openxr_sys::Result {
         xr_wrap(|| {
-            let fallback_fns = |fns: XrFunctions| {
+            let fallback_fns = |fns: &XrFunctions| {
                 unsafe { (fns.get_instance_proc_addr)(instance_handle, name_ptr, function) }
                     .into_result()
             };
             let fallback = || {
-                let fns = get_functions("xrGetInstanceProcAddr")?;
+                let lock = get_functions("xrGetInstanceProcAddr")?;
+                let fns = lock.read()?;
                 fallback_fns(fns)
             };
 
@@ -314,7 +337,8 @@ impl<Implementation: ImplementationTrait> XrLayerLoader<Implementation> {
             };
 
             if name == "xrDestroyInstance" {
-                let fns = get_functions("xrGetInstanceProcAddr")?;
+                let lock = get_functions("xrGetInstanceProcAddr")?;
+                let fns = lock.read()?;
                 // do not hook xrDestroyInstance if automatic_destroy is disabled
                 if fns.automatic_destroy {
                     check!(pfn::DestroyInstance, Self::override_destroy_instance);
@@ -324,20 +348,20 @@ impl<Implementation: ImplementationTrait> XrLayerLoader<Implementation> {
                 }
             }
             #[rustfmt::skip]
-        let checks = || {
-            check!(pfn::PollEvent, Self::override_poll_event);
-            check!(pfn::CreateActionSet, Self::override_create_action_set);
-            //check!(pfn::CreateAction, override_create_action);
-            check!(pfn::StringToPath, Self::override_string_to_path);
-            check!(pfn::SuggestInteractionProfileBindings, Self::override_suggest_interaction_profile_bindings);
-            check!(pfn::AttachSessionActionSets, Self::override_attach_session_action_sets);
-            check!(pfn::SyncActions, Self::override_sync_actions);
-            check!(pfn::GetActionStateBoolean, Self::override_get_action_state_boolean);
-            check!(pfn::ApplyHapticFeedback, Self::override_apply_haptic_feedback);
-            check!(pfn::CreateSession, Self::override_create_session);
-            check!(pfn::DestroySession, Self::override_destroy_session);
-            fallback()
-        };
+            let checks = || {
+                check!(pfn::PollEvent, Self::override_poll_event);
+                check!(pfn::CreateActionSet, Self::override_create_action_set);
+                //check!(pfn::CreateAction, override_create_action);
+                check!(pfn::StringToPath, Self::override_string_to_path);
+                check!(pfn::SuggestInteractionProfileBindings, Self::override_suggest_interaction_profile_bindings);
+                check!(pfn::AttachSessionActionSets, Self::override_attach_session_action_sets);
+                check!(pfn::SyncActions, Self::override_sync_actions);
+                check!(pfn::GetActionStateBoolean, Self::override_get_action_state_boolean);
+                check!(pfn::ApplyHapticFeedback, Self::override_apply_haptic_feedback);
+                check!(pfn::CreateSession, Self::override_create_session);
+                check!(pfn::DestroySession, Self::override_destroy_session);
+                fallback()
+            };
             checks()
         })
     }
@@ -347,7 +371,8 @@ impl<Implementation: ImplementationTrait> XrLayerLoader<Implementation> {
         instance_ptr: *mut openxr_sys::Instance,
     ) -> openxr_sys::Result {
         xr_wrap(|| {
-            let fns = get_functions("xrCreateInstance")?;
+            let lock = get_functions("xrCreateInstance")?;
+            let fns = lock.read()?;
 
             let result = unsafe { (fns.create_instance)(create_info, instance_ptr) };
             let instance: openxr_sys::Instance = unsafe { *instance_ptr };
@@ -359,18 +384,20 @@ impl<Implementation: ImplementationTrait> XrLayerLoader<Implementation> {
             ));
                 return result.into_result();
             };
-            let functions =
-                match super::xr_functions::load_instance(instance, fns.get_instance_proc_addr) {
-                    Ok(v) => v,
-                    Err(error) => {
-                        LogError::string(format!(
-                    "load_instance failed with error {}. Netvr won't be enabled for instance {}.",
-                    error,
-                    instance.into_raw(),
-                ));
-                        return result.into_result();
-                    }
-                };
+            let functions = match super::xr_functions::load_instance(
+                instance,
+                fns.get_instance_proc_addr,
+            ) {
+                Ok(v) => v,
+                Err(error) => {
+                    LogError::string(format!(
+                            "load_instance failed with error {}. Netvr won't be enabled for instance {}.",
+                            error,
+                            instance.into_raw(),
+                        ));
+                    return result.into_result();
+                }
+            };
             let create_implementation_instance = {
                 let r = N_CREATE_IMPLEMENTATION_INSTANCE.read().unwrap();
                 match *r {
@@ -619,7 +646,7 @@ impl<Implementation: ImplementationTrait> XrLayerLoader<Implementation> {
         })
     }
 
-    unsafe extern "system" fn override_create_session(
+    extern "system" fn override_create_session(
         instance_handle: openxr_sys::Instance,
         create_info: *const openxr_sys::SessionCreateInfo,
         session_ptr: *mut openxr_sys::Session,
@@ -655,7 +682,7 @@ impl<Implementation: ImplementationTrait> XrLayerLoader<Implementation> {
         })
     }
 
-    unsafe extern "system" fn override_destroy_session(
+    extern "system" fn override_destroy_session(
         session_handle: openxr_sys::Session,
     ) -> openxr_sys::Result {
         xr_wrap(|| {

@@ -52,7 +52,7 @@ implement!(
     pub destroy_session: pfn::DestroySession,
 );
 
-#[derive(Clone, Copy)]
+#[derive(Clone)]
 pub struct XrFunctions {
     pub get_instance_proc_addr: pfn::GetInstanceProcAddr,
     pub enumerate_instance_extension_properties: pfn::EnumerateInstanceExtensionProperties,
