@@ -15,4 +15,5 @@
     </application>
     <uses-permission android:name="com.oculus.permission.HAND_TRACKING" />
     <uses-feature android:name="oculus.software.handtracking" android:required="false" />
+    <meta-data android:name="pvr.app.type" android:value="vr" />
 </manifest>

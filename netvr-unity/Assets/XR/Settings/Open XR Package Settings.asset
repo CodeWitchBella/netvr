@@ -1,5 +1,25 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
+--- !u!114 &-8337974926340133946
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b9e6793cda0f3be4ab86f419df37b1f6, type: 3}
+  m_Name: PicoOpenXRFeature Android
+  m_EditorClassIdentifier: 
+  m_enabled: 1
+  nameUi: Pico OpenXR Feature
+  version: 0.0.1
+  featureIdInternal: cz.isbl.picoopenxr
+  openxrExtensionStrings: 
+  company: Isbl
+  priority: 0
+  required: 0
 --- !u!114 &-8090210824752771119
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -41,6 +61,26 @@ MonoBehaviour:
   priority: 0
   required: 0
   ignoreValidationErrors: 0
+--- !u!114 &-7651445495083507007
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b9e6793cda0f3be4ab86f419df37b1f6, type: 3}
+  m_Name: PicoOpenXRFeature Android
+  m_EditorClassIdentifier: 
+  m_enabled: 0
+  nameUi: Pico OpenXR Feature
+  version: 0.0.1
+  featureIdInternal: cz.isbl.picoopenxr
+  openxrExtensionStrings: 
+  company: Isbl
+  priority: 0
+  required: 0
 --- !u!114 &-7179675269632839200
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -201,6 +241,26 @@ MonoBehaviour:
   company: Unity
   priority: 0
   required: 0
+--- !u!114 &-693188521797965615
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b9e6793cda0f3be4ab86f419df37b1f6, type: 3}
+  m_Name: PicoOpenXRFeature Android
+  m_EditorClassIdentifier: 
+  m_enabled: 0
+  nameUi: Pico OpenXR Feature
+  version: 0.0.1
+  featureIdInternal: cz.isbl.picoopenxr
+  openxrExtensionStrings: 
+  company: Isbl
+  priority: 0
+  required: 0
 --- !u!114 &11400000
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -297,6 +357,7 @@ MonoBehaviour:
   - {fileID: 3447582771640548276}
   - {fileID: -7179675269632839200}
   - {fileID: -3474587938445764710}
+  - {fileID: -7651445495083507007}
   - {fileID: 7355699691889217522}
   m_renderMode: 1
   m_depthSubmissionMode: 0
