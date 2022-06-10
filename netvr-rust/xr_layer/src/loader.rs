@@ -17,11 +17,15 @@ use std::sync::RwLockReadGuard;
 
 pub struct LowerLayer {
     pub raw_functions: XrInstanceFunctions,
+    pub instance: openxr::Instance,
 }
 
 impl LowerLayer {
-    fn new(fns: XrInstanceFunctions) -> Self {
-        Self { raw_functions: fns }
+    fn new(fns: XrInstanceFunctions, instance: openxr::Instance) -> Self {
+        Self {
+            raw_functions: fns,
+            instance,
+        }
     }
 
     /*fn string_to_path(
@@ -308,8 +312,8 @@ impl<Implementation: ImplementationTrait> XrLayerLoader<Implementation> {
             };
             let fallback = || {
                 let lock = get_functions("xrGetInstanceProcAddr")?;
-                let fns = lock.read()?;
-                fallback_fns(fns)
+                let loader_root = lock.read()?;
+                fallback_fns(loader_root)
             };
 
             let name = match parse_input_string(name_ptr) {
@@ -358,13 +362,13 @@ impl<Implementation: ImplementationTrait> XrLayerLoader<Implementation> {
 
             if name == "xrDestroyInstance" {
                 let lock = get_functions("xrGetInstanceProcAddr")?;
-                let fns = lock.read()?;
+                let loader_root = lock.read()?;
                 // do not hook xrDestroyInstance if automatic_destroy is disabled
-                if fns.automatic_destroy {
+                if loader_root.automatic_destroy {
                     check!(pfn::DestroyInstance, Self::override_destroy_instance);
                 } else {
                     LogInfo::str("Skipping automatic destroy registration. You'll have to call netvr_manual_destroy_instance manually.");
-                    return fallback_fns(fns);
+                    return fallback_fns(loader_root);
                 }
             }
             #[rustfmt::skip]
@@ -392,29 +396,30 @@ impl<Implementation: ImplementationTrait> XrLayerLoader<Implementation> {
     ) -> openxr_sys::Result {
         xr_wrap(|| {
             let lock = get_functions("xrCreateInstance")?;
-            let fns = lock.read()?;
+            let loader_root = lock.read()?;
 
-            let result = unsafe { (fns.entry.fp().create_instance)(create_info, instance_ptr) };
-            let instance: openxr_sys::Instance = unsafe { *instance_ptr };
+            let result =
+                unsafe { (loader_root.entry.fp().create_instance)(create_info, instance_ptr) };
+            let instance_handle: openxr_sys::Instance = unsafe { *instance_ptr };
             if result != openxr_sys::Result::SUCCESS {
                 LogError::string(format!(
                 "Underlying xrCreateInstance returned non-success error code {}. Netvr won't be enabled for instance {}.",
                 xr_functions::decode_xr_result(result),
-                instance.into_raw(),
+                instance_handle.into_raw(),
             ));
                 return result.into_result();
             };
 
             let functions = match super::xr_functions::load_instance(
-                instance,
-                fns.entry.fp().get_instance_proc_addr,
+                instance_handle,
+                loader_root.entry.fp().get_instance_proc_addr,
             ) {
                 Ok(v) => v,
                 Err(error) => {
                     LogError::string(format!(
                             "load_instance failed with error {}. Netvr won't be enabled for instance {}.",
                             error,
-                            instance.into_raw(),
+                            instance_handle.into_raw(),
                         ));
                     return result.into_result();
                 }
@@ -429,10 +434,21 @@ impl<Implementation: ImplementationTrait> XrLayerLoader<Implementation> {
                     }
                 }
             }?;
+            let instance = unsafe {
+                // TODO: use actual extensions
+                let extension_set = openxr::ExtensionSet::default();
+                let extensions = openxr::InstanceExtensions::load(
+                    &loader_root.entry,
+                    instance_handle,
+                    &extension_set,
+                )?;
+                openxr::Instance::from_raw(loader_root.entry.clone(), instance_handle, extensions)
+            }?;
+            LogWarn::str("Henlo");
             let mut w = N_INSTANCES.write().unwrap();
-            let lower_layer = LowerLayer::new(functions);
+            let lower_layer = LowerLayer::new(functions, instance);
             (*w).insert(
-                instance.into_raw(),
+                instance_handle.into_raw(),
                 LayerInstance {
                     implementation: create_implementation_instance(&lower_layer),
                     lower_layer,
