@@ -1,3 +1,4 @@
+use crate::impl_interface::SyncActions;
 use crate::log::LogError;
 use crate::log::LogInfo;
 use crate::log::LogWarn;
@@ -6,6 +7,7 @@ use crate::utils::ResultConvertible;
 use crate::xr_functions;
 use crate::xr_functions::decode_xr_result;
 use crate::xr_structures::*;
+use crate::LayerImplementation;
 
 use openxr_sys::pfn;
 use std::collections::hash_map::HashMap;
@@ -14,10 +16,6 @@ use std::ffi::CStr;
 use std::os::raw::c_char;
 use std::sync::RwLock;
 use std::sync::RwLockReadGuard;
-
-pub trait ImplementationTrait {
-    fn new(instance: &openxr::Instance) -> Self;
-}
 
 struct LoaderRoot {
     pub entry: openxr::Entry,
@@ -91,6 +89,7 @@ fn parse_input_string<'a>(name_ptr: *const c_char) -> Option<&'a str> {
     }
 }
 
+#[derive(Clone)]
 pub struct ImplementationInstancePtr(pub *mut ::std::ptr::NonNull<::std::os::raw::c_void>);
 unsafe impl Send for ImplementationInstancePtr {}
 unsafe impl Sync for ImplementationInstancePtr {}
@@ -143,7 +142,7 @@ impl<'a> InstanceLock<'a> {
     }
 }
 
-impl<Implementation: ImplementationTrait> XrLayerLoader<Implementation> {
+impl<Implementation: LayerImplementation> XrLayerLoader<Implementation> {
     fn get_instance<'a>(
         caller: &'static str,
         instance_handle: openxr_sys::Instance,
@@ -203,6 +202,15 @@ impl<Implementation: ImplementationTrait> XrLayerLoader<Implementation> {
                     *mut Implementation,
                 >(value))
             };
+        }
+    }
+
+    fn read_implementation(
+        instance: &LayerInstance,
+    ) -> Result<&Implementation, openxr_sys::Result> {
+        match instance.implementation.clone() {
+            Some(ptr) => Ok(unsafe { &*std::mem::transmute::<_, *mut Implementation>(ptr) }),
+            None => Err(openxr_sys::Result::ERROR_RUNTIME_FAILURE),
         }
     }
 
@@ -570,14 +578,14 @@ impl<Implementation: ImplementationTrait> XrLayerLoader<Implementation> {
         xr_wrap(|| {
             let (lock, _) = Self::get_session("xrSyncActions", session_handle)?;
             let instance = lock.read()?;
-            let result =
-                unsafe { (instance.instance.fp().sync_actions)(session_handle, sync_info) };
-            LogInfo::string(format!(
-                "xrSyncActions {:#?} -> {}",
+            let implementation = Self::read_implementation(instance)?;
+
+            let wrapper = SyncActions {
+                instance: instance.instance.clone(),
                 sync_info,
-                xr_functions::decode_xr_result(result)
-            ));
-            result.into_result()
+                session_handle,
+            };
+            implementation.sync_actions(&wrapper)
         })
     }
 
