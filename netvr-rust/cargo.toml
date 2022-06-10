@@ -4,3 +4,7 @@ members = [
     "xr_layer",
     "isbl_netvr_rust"
 ]
+
+[patch.crates-io]
+openxr-sys = { git = "https://github.com/CodeWitchBella/openxrs", branch = "construct-from-raw" }
+openxr = { git = "https://github.com/CodeWitchBella/openxrs", branch = "construct-from-raw" }
