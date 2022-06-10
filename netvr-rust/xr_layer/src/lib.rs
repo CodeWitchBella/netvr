@@ -7,5 +7,4 @@ pub mod loader;
 pub mod log;
 mod xr_functions;
 mod xr_structures;
-pub use openxr_sys::pfn;
-pub use openxr_sys::Instance as XrInstance;
+pub use openxr;

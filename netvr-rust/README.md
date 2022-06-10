@@ -57,16 +57,18 @@ You can use `xr_wrap` helper to simplify your implementation. It takes closure, 
 Example boilerplate:
 
 ```rust
-extern "system" fn override_poll_event(
-    instance_handle: openxr_sys::Instance,
-    event_data: *mut openxr_sys::EventDataBuffer,
-) -> openxr_sys::Result {
-    xr_wrap(|| {
-        let instance = get_instance("xrPollEvent", instance_handle)?;
-        unsafe { (instance.poll_event)(instance_handle, event_data) }
-            .into_result()
-    })
-}
+    extern "system" fn override_poll_event(
+        instance_handle: openxr_sys::Instance,
+        event_data: *mut openxr_sys::EventDataBuffer,
+    ) -> openxr_sys::Result {
+        xr_wrap(|| {
+            let lock = Self::get_instance("xrPollEvent", instance_handle)?;
+            let instance = lock.read()?;
+
+            unsafe { (instance.instance.fp().poll_event)(instance_handle, event_data) }
+                .into_result()
+        })
+    }
 ```
 
 **Step 3** Add a check to `override_get_instance_proc_addr`. This will error out if your `override_` function has wrong signature.

@@ -3,8 +3,8 @@ use crate::log::LogInfo;
 use crate::log::LogWarn;
 use crate::utils::xr_wrap;
 use crate::utils::ResultConvertible;
+use crate::xr_functions;
 use crate::xr_functions::decode_xr_result;
-use crate::xr_functions::{self, XrInstanceFunctions};
 use crate::xr_structures::*;
 
 use openxr_sys::pfn;
@@ -15,33 +15,8 @@ use std::os::raw::c_char;
 use std::sync::RwLock;
 use std::sync::RwLockReadGuard;
 
-pub struct LowerLayer {
-    pub raw_functions: XrInstanceFunctions,
-    pub instance: openxr::Instance,
-}
-
-impl LowerLayer {
-    fn new(fns: XrInstanceFunctions, instance: openxr::Instance) -> Self {
-        Self {
-            raw_functions: fns,
-            instance,
-        }
-    }
-
-    /*fn string_to_path(
-        instance_handle: openxr_sys::Instance,
-        path_string_raw: *const c_char,
-    ) -> Result<openxr_sys::Path, openxr_sys::Result> {
-        return Err(openxr_sys::Result::ERROR_ACTIONSETS_ALREADY_ATTACHED);
-    }
-
-    pub fn raw_static_functions() -> Result<XrFunctions, openxr_sys::Result> {
-        return get_functions("Implementation");
-    }*/
-}
-
 pub trait ImplementationTrait {
-    fn new(lower_layer: &LowerLayer) -> Self;
+    fn new(instance: &openxr::Instance) -> Self;
 }
 
 struct LoaderRoot {
@@ -123,7 +98,7 @@ unsafe impl Sync for ImplementationInstancePtr {}
 struct LayerInstance {
     // TODO: maybe use Box<dyn ImplementationTrait> instead?
     implementation: Option<ImplementationInstancePtr>,
-    lower_layer: LowerLayer,
+    instance: openxr::Instance,
 }
 
 impl Drop for LayerInstance {
@@ -139,7 +114,7 @@ pub struct XrLayerLoader<Implementation> {
 }
 
 lazy_static! {
-    static ref N_CREATE_IMPLEMENTATION_INSTANCE: RwLock<Option<fn(lower_layer: &LowerLayer) -> Option<ImplementationInstancePtr>>> =
+    static ref N_CREATE_IMPLEMENTATION_INSTANCE: RwLock<Option<fn(instance: &openxr::Instance) -> Option<ImplementationInstancePtr>>> =
         RwLock::new(None);
     static ref N_INSTANCES: RwLock<HashMap<u64, LayerInstance>> = RwLock::new(HashMap::new());
     static ref N_SESSIONS: RwLock<HashMap<u64, openxr_sys::Instance>> = RwLock::new(HashMap::new());
@@ -214,9 +189,9 @@ impl<Implementation: ImplementationTrait> XrLayerLoader<Implementation> {
     }
 
     fn create_implementation_instance(
-        lower_layer: &LowerLayer,
+        instance: &openxr::Instance,
     ) -> Option<ImplementationInstancePtr> {
-        let val = Box::<Implementation>::new(Implementation::new(lower_layer));
+        let val = Box::<Implementation>::new(Implementation::new(instance));
         Some(unsafe { std::mem::transmute(Box::into_raw(val)) })
     }
 
@@ -410,20 +385,6 @@ impl<Implementation: ImplementationTrait> XrLayerLoader<Implementation> {
                 return result.into_result();
             };
 
-            let functions = match super::xr_functions::load_instance(
-                instance_handle,
-                loader_root.entry.fp().get_instance_proc_addr,
-            ) {
-                Ok(v) => v,
-                Err(error) => {
-                    LogError::string(format!(
-                            "load_instance failed with error {}. Netvr won't be enabled for instance {}.",
-                            error,
-                            instance_handle.into_raw(),
-                        ));
-                    return result.into_result();
-                }
-            };
             let create_implementation_instance = {
                 let r = N_CREATE_IMPLEMENTATION_INSTANCE.read().unwrap();
                 match *r {
@@ -444,14 +405,12 @@ impl<Implementation: ImplementationTrait> XrLayerLoader<Implementation> {
                 )?;
                 openxr::Instance::from_raw(loader_root.entry.clone(), instance_handle, extensions)
             }?;
-            LogWarn::str("Henlo");
             let mut w = N_INSTANCES.write().unwrap();
-            let lower_layer = LowerLayer::new(functions, instance);
             (*w).insert(
                 instance_handle.into_raw(),
                 LayerInstance {
-                    implementation: create_implementation_instance(&lower_layer),
-                    lower_layer,
+                    implementation: create_implementation_instance(&instance),
+                    instance,
                 },
             );
             result.into_result()
@@ -467,8 +426,7 @@ impl<Implementation: ImplementationTrait> XrLayerLoader<Implementation> {
             let instance = (*w).get_mut(&handle);
             if let Some(v) = instance {
                 Self::finish_implementation_instance(v.implementation.take());
-                let result =
-                    unsafe { (v.lower_layer.raw_functions.destroy_instance)(instance_handle) };
+                let result = unsafe { (v.instance.fp().destroy_instance)(instance_handle) };
                 (*w).remove(&handle);
                 result.into_result()
             } else {
@@ -488,10 +446,9 @@ impl<Implementation: ImplementationTrait> XrLayerLoader<Implementation> {
         xr_wrap(|| {
             let lock = Self::get_instance("xrPollEvent", instance_handle)?;
             let instance = lock.read()?;
-            let result = unsafe {
-                (instance.lower_layer.raw_functions.poll_event)(instance_handle, event_data)
-            }
-            .into_result();
+            let result =
+                unsafe { (instance.instance.fp().poll_event)(instance_handle, event_data) }
+                    .into_result();
             if result.is_ok() {
                 for ptr in XrIterator::event_data_buffer(event_data) {
                     let ptr: DecodedStruct = ptr;
@@ -519,9 +476,8 @@ impl<Implementation: ImplementationTrait> XrLayerLoader<Implementation> {
         xr_wrap(|| {
             let lock = Self::get_instance("xrCreateActionSet", instance_handle)?;
             let instance = lock.read()?;
-            let result = unsafe {
-                (instance.lower_layer.raw_functions.create_action_set)(instance_handle, info, out)
-            };
+            let result =
+                unsafe { (instance.instance.fp().create_action_set)(instance_handle, info, out) };
             LogInfo::string(format!(
                 "xrCreateActionSet {:#?} -> {}",
                 info,
@@ -553,11 +509,7 @@ impl<Implementation: ImplementationTrait> XrLayerLoader<Implementation> {
             let lock = Self::get_instance("xrStringToPath", instance_handle)?;
             let instance = lock.read()?;
             let result = unsafe {
-                (instance.lower_layer.raw_functions.string_to_path)(
-                    instance_handle,
-                    path_string_raw,
-                    path,
-                )
+                (instance.instance.fp().string_to_path)(instance_handle, path_string_raw, path)
             };
             if let Some(path_string) = parse_input_string(path_string_raw) {
                 LogInfo::string(format!(
@@ -578,11 +530,9 @@ impl<Implementation: ImplementationTrait> XrLayerLoader<Implementation> {
             let lock = Self::get_instance("xrSuggestInteractionProfileBindings", instance_handle)?;
             let instance = lock.read()?;
             let result = unsafe {
-                (instance
-                    .lower_layer
-                    .raw_functions
-                    .suggest_interaction_profile_bindings)(
-                    instance_handle, suggested_bindings
+                (instance.instance.fp().suggest_interaction_profile_bindings)(
+                    instance_handle,
+                    suggested_bindings,
                 )
             };
             LogInfo::string(format!(
@@ -602,10 +552,7 @@ impl<Implementation: ImplementationTrait> XrLayerLoader<Implementation> {
             let (lock, _) = Self::get_session("xrAttachSessionActionSets", session_handle)?;
             let instance = lock.read()?;
             let result = unsafe {
-                (instance
-                    .lower_layer
-                    .raw_functions
-                    .attach_session_action_sets)(session_handle, attach_info)
+                (instance.instance.fp().attach_session_action_sets)(session_handle, attach_info)
             };
             LogInfo::string(format!(
                 "xrAttachSessionActionSets {:#?} -> {}",
@@ -623,9 +570,8 @@ impl<Implementation: ImplementationTrait> XrLayerLoader<Implementation> {
         xr_wrap(|| {
             let (lock, _) = Self::get_session("xrSyncActions", session_handle)?;
             let instance = lock.read()?;
-            let result = unsafe {
-                (instance.lower_layer.raw_functions.sync_actions)(session_handle, sync_info)
-            };
+            let result =
+                unsafe { (instance.instance.fp().sync_actions)(session_handle, sync_info) };
             LogInfo::string(format!(
                 "xrSyncActions {:#?} -> {}",
                 sync_info,
@@ -644,11 +590,7 @@ impl<Implementation: ImplementationTrait> XrLayerLoader<Implementation> {
             let (lock, _) = Self::get_session("xrGetActionStateBoolean", session_handle)?;
             let instance = lock.read()?;
             let result = unsafe {
-                (instance.lower_layer.raw_functions.get_action_state_boolean)(
-                    session_handle,
-                    get_info,
-                    state,
-                )
+                (instance.instance.fp().get_action_state_boolean)(session_handle, get_info, state)
             };
             LogInfo::string(format!(
                 "xrGetActionStateBoolean {:#?} -> {}",
@@ -668,7 +610,7 @@ impl<Implementation: ImplementationTrait> XrLayerLoader<Implementation> {
             let (lock, _) = Self::get_session("xrApplyHapticFeedback", session_handle)?;
             let instance = lock.read()?;
             let result = unsafe {
-                (instance.lower_layer.raw_functions.apply_haptic_feedback)(
+                (instance.instance.fp().apply_haptic_feedback)(
                     session_handle,
                     haptic_action_info,
                     haptic_feedback,
@@ -692,11 +634,7 @@ impl<Implementation: ImplementationTrait> XrLayerLoader<Implementation> {
             let lock = Self::get_instance("xrCreateSession", instance_handle)?;
             let instance = lock.read()?;
             let result = unsafe {
-                (instance.lower_layer.raw_functions.create_session)(
-                    instance_handle,
-                    create_info,
-                    session_ptr,
-                )
+                (instance.instance.fp().create_session)(instance_handle, create_info, session_ptr)
             }
             .into_result();
             if let Err(error) = result {
@@ -725,8 +663,7 @@ impl<Implementation: ImplementationTrait> XrLayerLoader<Implementation> {
         xr_wrap(|| {
             let (lock, _) = Self::get_session("xrDestroySession", session_handle)?;
             let instance = lock.read()?;
-            let result =
-                unsafe { (instance.lower_layer.raw_functions.destroy_session)(session_handle) };
+            let result = unsafe { (instance.instance.fp().destroy_session)(session_handle) };
             LogInfo::string(format!("xrDestroySession -> {}", decode_xr_result(result)));
 
             let mut w = N_SESSIONS.write().unwrap();

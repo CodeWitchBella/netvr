@@ -1,8 +1,8 @@
-use xr_layer::loader::{ImplementationTrait, LowerLayer};
+use xr_layer::{loader::ImplementationTrait, openxr};
 
 pub struct ImplementationInstance {}
 impl ImplementationTrait for ImplementationInstance {
-    fn new(_lower: &LowerLayer) -> Self {
+    fn new(_lower: &openxr::Instance) -> Self {
         Self {}
     }
 }

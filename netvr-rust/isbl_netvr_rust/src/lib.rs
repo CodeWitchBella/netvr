@@ -5,7 +5,7 @@ use implementation::ImplementationInstance;
 use xr_layer::{
     loader::XrLayerLoader,
     log::{self, LogPanic},
-    pfn, XrInstance,
+    openxr::sys::{self, pfn},
 };
 
 mod implementation;
@@ -22,7 +22,7 @@ pub extern "C" fn netvr_hook_get_instance_proc_addr(
 }
 
 #[no_mangle]
-pub extern "C" fn netvr_manual_destroy_instance(instance_handle: XrInstance) {
+pub extern "C" fn netvr_manual_destroy_instance(instance_handle: sys::Instance) {
     Loader::netvr_manual_destroy_instance(instance_handle);
 }
 
