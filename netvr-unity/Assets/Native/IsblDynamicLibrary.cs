@@ -97,37 +97,33 @@ class IsblDynamicLibrary : IDisposable
         }
     }
 
-    public IsblDynamicLibrary(string name, string prefix, string source = null)
+    public IsblDynamicLibrary(string name, string prefix)
     {
 #if UNITY_EDITOR_WIN
-        _deleteOnDispose = false;
-        if (source == null)
+        for (int i = 0; ; ++i)
         {
-            source = name;
-            name = source + "0";
-            _deleteOnDispose = true;
-        }
-
-        _fullPath = prefix + name;
-        var sourcePath = prefix + source;
-
-        bool same = false;
-        using (var watch = new IsblStopwatch("AreFilesIdentical:.dll"))
-        {
-            same = AreFilesIdentical(sourcePath + ".dll", _fullPath + ".dll")
-                && AreFilesIdentical(sourcePath + ".pdb", _fullPath + ".pdb");
-        }
-        if (!same)
-        {
-            // copy to new file so that original is still writeable
-            File.Copy(sourcePath + ".dll", _fullPath + ".dll", true);
+            _fullPath = prefix + name + i;
             try
             {
-                File.Copy(sourcePath + ".pdb", _fullPath + ".pdb", true);
+                using (var watch = new IsblStopwatch("AreFilesIdentical:.dll"))
+                    if (AreFilesIdentical(prefix + name + ".dll", _fullPath + ".dll") && AreFilesIdentical(prefix + name + ".pdb", _fullPath + ".pdb")) break;
+                // copy to new file so that original is still writeable
+                File.Copy(prefix + name + ".dll", _fullPath + ".dll", true);
+                try
+                {
+                    File.Copy(prefix + name + ".pdb", _fullPath + ".pdb", true);
+                }
+                catch (IOException) { }
+                break;
             }
-            catch (IOException exception)
+            catch (IOException) when (i < 9)
             {
-                Debug.LogWarning(exception);
+                // retry
+            }
+            catch (IOException e)
+            {
+                Utils.LogException(e);
+                break;
             }
         }
 
@@ -135,7 +131,7 @@ class IsblDynamicLibrary : IDisposable
         Utils.Log($"Loading library from {_fullPath}.dll");
         _library = SystemLibrary.LoadLibrary(_fullPath + ".dll");
         if (_library == default) Utils.LogWarning($"Failed to load {_fullPath}.dll");
-#endif
+#endif 
     }
 
     public void Dispose()
@@ -146,21 +142,18 @@ class IsblDynamicLibrary : IDisposable
             Utils.Log("IsblDynamicLibrary.Dispose()");
             SystemLibrary.FreeLibrary(_library);
             _library = default;
-            if (_deleteOnDispose)
+            try
             {
-                try
-                {
-                    File.Delete(_fullPath + ".dll");
-                    File.Delete(_fullPath + ".dll.meta");
-                }
-                catch (IOException e) { Utils.LogException(e); }
-                try
-                {
-                    File.Delete(_fullPath + ".pdb");
-                    File.Delete(_fullPath + ".pdb.meta");
-                }
-                catch (IOException) { }
+                File.Delete(_fullPath + ".dll");
+                File.Delete(_fullPath + ".dll.meta");
             }
+            catch (IOException e) { Utils.LogException(e); }
+            try
+            {
+                File.Delete(_fullPath + ".pdb");
+                File.Delete(_fullPath + ".pdb.meta");
+            }
+            catch (IOException) { }
         }
 #endif
     }

@@ -96,3 +96,14 @@ rustup target add aarch64-linux-android
 # Compile
 cargo build --target aarch64-linux-android
 ```
+
+## Suggested cargo commands
+
+```bash
+# Install components
+cargo install cargo-post cargo-watch cargo-edit
+# Watch for changes and compile
+cargo watch -cx "post b --package isbl_netvr_rust"
+# Build release version and copy to unity
+cargo post b --release
+```
