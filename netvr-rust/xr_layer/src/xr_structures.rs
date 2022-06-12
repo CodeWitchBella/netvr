@@ -39,10 +39,10 @@ macro_rules! implement {
         impl DecodedStruct {
             $(
                 #[allow(dead_code)]
-                pub fn $method(&self) -> Option<openxr_sys::$id> {
+                pub fn $method<'a>(&'a self) -> Option<&'a openxr_sys::$id> {
                     if self.data.is_null() { return None; }
                     Some(unsafe {
-                        *std::mem::transmute::<
+                        &*std::mem::transmute::<
                             *const openxr_sys::BaseInStructure,
                             *const openxr_sys::$id,
                         >(self.data)
@@ -55,9 +55,9 @@ macro_rules! implement {
 }
 
 implement!(
-    into_event_data_session_state_changed reads EventDataSessionStateChanged,
-    into_event_data_interaction_profile_changed reads EventDataInteractionProfileChanged,
-    into_event_data_buffer reads EventDataBuffer,
+    read_event_data_session_state_changed reads EventDataSessionStateChanged,
+    read_event_data_interaction_profile_changed reads EventDataInteractionProfileChanged,
+    read_event_data_buffer reads EventDataBuffer,
 );
 
 impl DecodedStruct {

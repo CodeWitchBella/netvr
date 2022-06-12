@@ -95,8 +95,11 @@ pub struct XrLayerLoader<Implementation> {
     _never_instantiated: Implementation,
 }
 
+type CreateImplementationInstance =
+    fn(instance: &openxr::Instance) -> Option<ImplementationInstancePtr>;
+
 lazy_static! {
-    static ref N_CREATE_IMPLEMENTATION_INSTANCE: RwLock<Option<fn(instance: &openxr::Instance) -> Option<ImplementationInstancePtr>>> =
+    static ref N_CREATE_IMPLEMENTATION_INSTANCE: RwLock<Option<CreateImplementationInstance>> =
         RwLock::new(None);
     static ref GLOBALS: GlobalMaps = GlobalMaps::new();
 }
@@ -368,9 +371,9 @@ impl<Implementation: LayerImplementation> XrLayerLoader<Implementation> {
             if result.is_ok() {
                 for ptr in XrIterator::event_data_buffer(event_data) {
                     let ptr: DecodedStruct = ptr;
-                    if let Some(d) = ptr.into_event_data_session_state_changed() {
+                    if let Some(d) = ptr.read_event_data_session_state_changed() {
                         LogInfo::string(format!("Event(SessionStateChanged): {:#?}", d.state));
-                    } else if let Some(d) = ptr.into_event_data_interaction_profile_changed() {
+                    } else if let Some(d) = ptr.read_event_data_interaction_profile_changed() {
                         LogInfo::string(format!(
                             "Event(InteractionProfileChanged): {:#?}",
                             d.session
