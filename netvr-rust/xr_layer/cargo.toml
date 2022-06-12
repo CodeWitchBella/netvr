@@ -3,6 +3,7 @@ name = "xr_layer"
 version = "0.1.0"
 authors = ["Isabella Skořepová"]
 edition = "2021"
+links = "isbl_xr_layer"
 
 [dependencies]
 openxr = "0.16.0"
