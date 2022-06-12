@@ -1,21 +1,23 @@
 use crate::impl_interface::SyncActions;
+use crate::loader_globals::GlobalMaps;
+use crate::loader_globals::ImplementationInstancePtr;
+use crate::loader_globals::LayerInstance;
 use crate::log::LogError;
 use crate::log::LogInfo;
 use crate::log::LogWarn;
 use crate::utils::xr_wrap;
 use crate::utils::ResultConvertible;
+use crate::utils::ResultToWarning;
 use crate::xr_functions;
 use crate::xr_functions::decode_xr_result;
 use crate::xr_structures::*;
 use crate::LayerImplementation;
 
 use openxr_sys::pfn;
-use std::collections::hash_map::HashMap;
 use std::error::Error;
 use std::ffi::CStr;
 use std::os::raw::c_char;
 use std::sync::RwLock;
-use std::sync::RwLockReadGuard;
 
 struct LoaderRoot {
     pub entry: openxr::Entry,
@@ -89,25 +91,6 @@ fn parse_input_string<'a>(name_ptr: *const c_char) -> Option<&'a str> {
     }
 }
 
-#[derive(Clone)]
-pub struct ImplementationInstancePtr(pub *mut ::std::ptr::NonNull<::std::os::raw::c_void>);
-unsafe impl Send for ImplementationInstancePtr {}
-unsafe impl Sync for ImplementationInstancePtr {}
-
-struct LayerInstance {
-    // TODO: maybe use Box<dyn ImplementationTrait> instead?
-    implementation: Option<ImplementationInstancePtr>,
-    instance: openxr::Instance,
-}
-
-impl Drop for LayerInstance {
-    fn drop(&mut self) {
-        if self.implementation.is_some() {
-            LogWarn::str("LayerInstance was not properly disposed of in Loader");
-        }
-    }
-}
-
 pub struct XrLayerLoader<Implementation> {
     _never_instantiated: Implementation,
 }
@@ -115,78 +98,10 @@ pub struct XrLayerLoader<Implementation> {
 lazy_static! {
     static ref N_CREATE_IMPLEMENTATION_INSTANCE: RwLock<Option<fn(instance: &openxr::Instance) -> Option<ImplementationInstancePtr>>> =
         RwLock::new(None);
-    static ref N_INSTANCES: RwLock<HashMap<u64, LayerInstance>> = RwLock::new(HashMap::new());
-    static ref N_SESSIONS: RwLock<HashMap<u64, openxr_sys::Instance>> = RwLock::new(HashMap::new());
-}
-
-type InstanceReadGuard<'a> = std::sync::RwLockReadGuard<'a, HashMap<u64, LayerInstance>>;
-
-struct InstanceLock<'a> {
-    pub guard: InstanceReadGuard<'a>,
-    pub handle: u64,
-    pub caller: &'static str,
-}
-
-impl<'a> InstanceLock<'a> {
-    pub fn read(&'a self) -> Result<&'a LayerInstance, openxr_sys::Result> {
-        match (*self.guard).get(&self.handle) {
-            Some(v) => Ok(v),
-            None => {
-                LogError::string(format!(
-                    "{}: Can't find instance with handle {}. Maybe it was destroyed already?",
-                    self.caller, self.handle,
-                ));
-                Err(openxr_sys::Result::ERROR_RUNTIME_FAILURE)
-            }
-        }
-    }
+    static ref GLOBALS: GlobalMaps = GlobalMaps::new();
 }
 
 impl<Implementation: LayerImplementation> XrLayerLoader<Implementation> {
-    fn get_instance<'a>(
-        caller: &'static str,
-        instance_handle: openxr_sys::Instance,
-    ) -> Result<InstanceLock<'a>, openxr_sys::Result> {
-        let read_guard: RwLockReadGuard<'a, HashMap<u64, LayerInstance>> = match N_INSTANCES.read()
-        {
-            Ok(v) => Ok(v),
-            Err(err) => {
-                LogError::string(format!(
-                    "{}: Failed to acquire read lock on global instances array. {:}",
-                    caller, err
-                ));
-                Err(openxr_sys::Result::ERROR_RUNTIME_FAILURE)
-            }
-        }?;
-        Ok(InstanceLock {
-            guard: read_guard,
-            handle: instance_handle.into_raw(),
-            caller,
-        })
-    }
-
-    fn get_session<'a>(
-        caller: &'static str,
-        session_handle: openxr_sys::Session,
-    ) -> Result<(InstanceLock<'a>, openxr_sys::Instance), openxr_sys::Result> {
-        let r = N_SESSIONS.read().unwrap();
-        let handle = session_handle.into_raw();
-        match (*r).get(&handle) {
-            Some(v) => {
-                let value = *v;
-                let lock = Self::get_instance(caller, value)?;
-                Ok((lock, value))
-            }
-            None => {
-                LogError::string(format!(
-                    "{}: Can't find session with handle {}. Maybe it was destroyed already?",
-                    caller, handle,
-                ));
-                Err(openxr_sys::Result::ERROR_RUNTIME_FAILURE)
-            }
-        }
-    }
-
     fn create_implementation_instance(
         instance: &openxr::Instance,
     ) -> Option<ImplementationInstancePtr> {
@@ -336,9 +251,8 @@ impl<Implementation: LayerImplementation> XrLayerLoader<Implementation> {
                 return fallback();
             }
 
-            let r = N_INSTANCES.read().unwrap();
-            let handle = instance_handle.into_raw();
-            if (*r).get(&handle).is_none() {
+            let lock = GLOBALS.get_instance_direct("xrGetInstanceProcAddr", instance_handle)?;
+            if lock.read().is_err() {
                 // do not return overrides for uninitialized instances
                 return fallback();
             };
@@ -358,7 +272,7 @@ impl<Implementation: LayerImplementation> XrLayerLoader<Implementation> {
             let checks = || {
                 check!(pfn::PollEvent, Self::override_poll_event);
                 check!(pfn::CreateActionSet, Self::override_create_action_set);
-                //check!(pfn::CreateAction, override_create_action);
+                //check!(pfn::CreateAction, Self::override_create_action);
                 check!(pfn::StringToPath, Self::override_string_to_path);
                 check!(pfn::SuggestInteractionProfileBindings, Self::override_suggest_interaction_profile_bindings);
                 check!(pfn::AttachSessionActionSets, Self::override_attach_session_action_sets);
@@ -413,14 +327,15 @@ impl<Implementation: LayerImplementation> XrLayerLoader<Implementation> {
                 )?;
                 openxr::Instance::from_raw(loader_root.entry.clone(), instance_handle, extensions)
             }?;
-            let mut w = N_INSTANCES.write().unwrap();
-            (*w).insert(
-                instance_handle.into_raw(),
+            if let Err(error) = GLOBALS.insert_instance(
+                instance_handle,
                 LayerInstance {
                     implementation: create_implementation_instance(&instance),
                     instance,
                 },
-            );
+            ) {
+                LogError::string(format!("Failed to insert instance into context. This will mean that netvr is effectively disabled. Cause: {}", error));
+            }
             result.into_result()
         })
     }
@@ -428,20 +343,13 @@ impl<Implementation: LayerImplementation> XrLayerLoader<Implementation> {
     extern "system" fn override_destroy_instance(
         instance_handle: openxr_sys::Instance,
     ) -> openxr_sys::Result {
-        xr_wrap(|| {
-            let mut w = N_INSTANCES.write().unwrap();
-            let handle = instance_handle.into_raw();
-            let instance = (*w).get_mut(&handle);
-            if let Some(v) = instance {
+        xr_wrap(|| match GLOBALS.remove_instance(instance_handle) {
+            Ok(mut v) => {
                 Self::finish_implementation_instance(v.implementation.take());
-                let result = unsafe { (v.instance.fp().destroy_instance)(instance_handle) };
-                (*w).remove(&handle);
-                result.into_result()
-            } else {
-                LogError::string(format!(
-                    "Can't find instance with handle {}. Maybe it was destroyed already?",
-                    handle
-                ));
+                unsafe { (v.instance.fp().destroy_instance)(instance_handle) }.into_result()
+            }
+            Err(err) => {
+                LogError::string(format!("destroy instance failed with error: {}", err));
                 Err(openxr_sys::Result::ERROR_HANDLE_INVALID)
             }
         })
@@ -452,7 +360,7 @@ impl<Implementation: LayerImplementation> XrLayerLoader<Implementation> {
         event_data: *mut openxr_sys::EventDataBuffer,
     ) -> openxr_sys::Result {
         xr_wrap(|| {
-            let lock = Self::get_instance("xrPollEvent", instance_handle)?;
+            let lock = GLOBALS.get_instance_direct("xrPollEvent", instance_handle)?;
             let instance = lock.read()?;
             let result =
                 unsafe { (instance.instance.fp().poll_event)(instance_handle, event_data) }
@@ -482,7 +390,7 @@ impl<Implementation: LayerImplementation> XrLayerLoader<Implementation> {
         out: *mut openxr_sys::ActionSet,
     ) -> openxr_sys::Result {
         xr_wrap(|| {
-            let lock = Self::get_instance("xrCreateActionSet", instance_handle)?;
+            let lock = GLOBALS.get_instance_direct("xrCreateActionSet", instance_handle)?;
             let instance = lock.read()?;
             let result =
                 unsafe { (instance.instance.fp().create_action_set)(instance_handle, info, out) };
@@ -514,7 +422,7 @@ impl<Implementation: LayerImplementation> XrLayerLoader<Implementation> {
         path: *mut openxr_sys::Path,
     ) -> openxr_sys::Result {
         xr_wrap(|| {
-            let lock = Self::get_instance("xrStringToPath", instance_handle)?;
+            let lock = GLOBALS.get_instance_direct("xrStringToPath", instance_handle)?;
             let instance = lock.read()?;
             let result = unsafe {
                 (instance.instance.fp().string_to_path)(instance_handle, path_string_raw, path)
@@ -535,7 +443,8 @@ impl<Implementation: LayerImplementation> XrLayerLoader<Implementation> {
         suggested_bindings: *const openxr_sys::InteractionProfileSuggestedBinding,
     ) -> openxr_sys::Result {
         xr_wrap(|| {
-            let lock = Self::get_instance("xrSuggestInteractionProfileBindings", instance_handle)?;
+            let lock = GLOBALS
+                .get_instance_direct("xrSuggestInteractionProfileBindings", instance_handle)?;
             let instance = lock.read()?;
             let result = unsafe {
                 (instance.instance.fp().suggest_interaction_profile_bindings)(
@@ -557,7 +466,7 @@ impl<Implementation: LayerImplementation> XrLayerLoader<Implementation> {
         attach_info: *const openxr_sys::SessionActionSetsAttachInfo,
     ) -> openxr_sys::Result {
         xr_wrap(|| {
-            let (lock, _) = Self::get_session("xrAttachSessionActionSets", session_handle)?;
+            let lock = GLOBALS.get_instance("xrAttachSessionActionSets", session_handle)?;
             let instance = lock.read()?;
             let result = unsafe {
                 (instance.instance.fp().attach_session_action_sets)(session_handle, attach_info)
@@ -576,7 +485,7 @@ impl<Implementation: LayerImplementation> XrLayerLoader<Implementation> {
         sync_info: *const openxr_sys::ActionsSyncInfo,
     ) -> openxr_sys::Result {
         xr_wrap(|| {
-            let (lock, _) = Self::get_session("xrSyncActions", session_handle)?;
+            let lock = GLOBALS.get_instance("xrSyncActions", session_handle)?;
             let instance = lock.read()?;
             let implementation = Self::read_implementation(instance)?;
 
@@ -595,7 +504,7 @@ impl<Implementation: LayerImplementation> XrLayerLoader<Implementation> {
         state: *mut openxr_sys::ActionStateBoolean,
     ) -> openxr_sys::Result {
         xr_wrap(|| {
-            let (lock, _) = Self::get_session("xrGetActionStateBoolean", session_handle)?;
+            let lock = GLOBALS.get_instance("xrGetActionStateBoolean", session_handle)?;
             let instance = lock.read()?;
             let result = unsafe {
                 (instance.instance.fp().get_action_state_boolean)(session_handle, get_info, state)
@@ -615,7 +524,7 @@ impl<Implementation: LayerImplementation> XrLayerLoader<Implementation> {
         haptic_feedback: *const openxr_sys::HapticBaseHeader,
     ) -> openxr_sys::Result {
         xr_wrap(|| {
-            let (lock, _) = Self::get_session("xrApplyHapticFeedback", session_handle)?;
+            let lock = GLOBALS.get_instance("xrApplyHapticFeedback", session_handle)?;
             let instance = lock.read()?;
             let result = unsafe {
                 (instance.instance.fp().apply_haptic_feedback)(
@@ -639,12 +548,19 @@ impl<Implementation: LayerImplementation> XrLayerLoader<Implementation> {
         session_ptr: *mut openxr_sys::Session,
     ) -> openxr_sys::Result {
         xr_wrap(|| {
-            let lock = Self::get_instance("xrCreateSession", instance_handle)?;
-            let instance = lock.read()?;
-            let result = unsafe {
-                (instance.instance.fp().create_session)(instance_handle, create_info, session_ptr)
+            let result = {
+                let lock = GLOBALS.get_instance_direct("xrCreateSession", instance_handle)?;
+                let instance = lock.read()?;
+                unsafe {
+                    (instance.instance.fp().create_session)(
+                        instance_handle,
+                        create_info,
+                        session_ptr,
+                    )
+                }
             }
             .into_result();
+
             if let Err(error) = result {
                 LogInfo::string(format!(
                     "xrCreateSession {:#?} -> {}",
@@ -652,14 +568,15 @@ impl<Implementation: LayerImplementation> XrLayerLoader<Implementation> {
                     xr_functions::decode_xr_result(error)
                 ));
             } else {
-                let mut w = N_SESSIONS.write().unwrap();
                 let session: openxr_sys::Session = unsafe { *session_ptr };
+                GLOBALS
+                    .insert_instance_reference("xrCreateSession", session, instance_handle)
+                    .warn_on_err("insert_instance_reference");
                 LogInfo::string(format!(
                     "xrCreateSession {:#?} -> {}",
                     create_info,
                     session.into_raw()
                 ));
-                (*w).insert(session.into_raw(), instance_handle);
             }
             result
         })
@@ -669,14 +586,12 @@ impl<Implementation: LayerImplementation> XrLayerLoader<Implementation> {
         session_handle: openxr_sys::Session,
     ) -> openxr_sys::Result {
         xr_wrap(|| {
-            let (lock, _) = Self::get_session("xrDestroySession", session_handle)?;
+            let lock = GLOBALS.remove_instance_reference("xrDestroySession", session_handle)?;
             let instance = lock.read()?;
             let result = unsafe { (instance.instance.fp().destroy_session)(session_handle) };
+
             LogInfo::string(format!("xrDestroySession -> {}", decode_xr_result(result)));
 
-            let mut w = N_SESSIONS.write().unwrap();
-            let handle = session_handle.into_raw();
-            (*w).remove(&handle);
             result.into_result()
         })
     }

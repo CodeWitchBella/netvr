@@ -5,6 +5,7 @@ extern crate lazy_static;
 mod utils;
 mod impl_interface;
 pub mod loader;
+mod loader_globals;
 pub mod log;
 mod xr_functions;
 mod xr_structures;

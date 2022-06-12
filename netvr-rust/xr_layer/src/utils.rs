@@ -1,6 +1,9 @@
 use std::{os::raw::c_char, panic};
 
-use crate::log::LogPanic;
+use crate::{
+    decode_xr_result,
+    log::{LogPanic, LogWarn},
+};
 pub type Cstr = *const c_char;
 
 #[macro_export]
@@ -55,6 +58,22 @@ impl ResultConvertible for openxr_sys::Result {
             Ok(())
         } else {
             Err(self)
+        }
+    }
+}
+
+pub(crate) trait ResultToWarning {
+    fn warn_on_err(self, function_name: &'static str);
+}
+
+impl ResultToWarning for Result<(), openxr_sys::Result> {
+    fn warn_on_err(self, function_name: &'static str) {
+        if let Err(error) = self {
+            LogWarn::string(format!(
+                "Function {} failed with result {}",
+                function_name,
+                decode_xr_result(error)
+            ))
         }
     }
 }
