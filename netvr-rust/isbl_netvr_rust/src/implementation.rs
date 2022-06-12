@@ -6,9 +6,15 @@ impl LayerImplementation for ImplementationInstance {
         Self {}
     }
 
-    fn sync_actions(&self, sync_info: &SyncActions) -> Result<(), openxr::sys::Result> {
-        let result = sync_info.sync();
-        LogInfo::string(format!("xrSyncActions {:#?} -> {:?}", sync_info, result));
+    fn sync_actions(&self, input: SyncActions) -> Result<(), openxr::sys::Result> {
+        let result = input.sync();
+        LogInfo::string(format!("xrSyncActions {:#?} -> {:?}", input, result));
+        result
+    }
+
+    fn create_action(&self, input: xr_layer::CreateAction) -> Result<(), openxr::sys::Result> {
+        let result = input.create_action();
+        LogInfo::string(format!("xrSyncActions {:#?} -> {:?}", input, result));
         result
     }
 }

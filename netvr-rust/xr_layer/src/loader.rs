@@ -1,23 +1,14 @@
-use crate::impl_interface::SyncActions;
-use crate::loader_globals::GlobalMaps;
-use crate::loader_globals::ImplementationInstancePtr;
-use crate::loader_globals::LayerInstance;
-use crate::log::LogError;
-use crate::log::LogInfo;
-use crate::log::LogWarn;
-use crate::utils::xr_wrap;
-use crate::utils::ResultConvertible;
-use crate::utils::ResultToWarning;
-use crate::xr_functions;
-use crate::xr_functions::decode_xr_result;
-use crate::xr_structures::*;
-use crate::LayerImplementation;
+use crate::{
+    loader_globals::{GlobalMaps, ImplementationInstancePtr, LayerInstance},
+    log::{LogError, LogInfo, LogWarn},
+    utils::{xr_wrap, ResultConvertible, ResultToWarning},
+    xr_functions::{self, decode_xr_result},
+    xr_structures::*,
+    LayerImplementation,
+};
 
 use openxr_sys::pfn;
-use std::error::Error;
-use std::ffi::CStr;
-use std::os::raw::c_char;
-use std::sync::RwLock;
+use std::{error::Error, ffi::CStr, os::raw::c_char, sync::RwLock};
 
 struct LoaderRoot {
     pub entry: openxr::Entry,
@@ -275,7 +266,7 @@ impl<Implementation: LayerImplementation> XrLayerLoader<Implementation> {
             let checks = || {
                 check!(pfn::PollEvent, Self::override_poll_event);
                 check!(pfn::CreateActionSet, Self::override_create_action_set);
-                //check!(pfn::CreateAction, Self::override_create_action);
+                check!(pfn::CreateAction, Self::override_create_action);
                 check!(pfn::StringToPath, Self::override_string_to_path);
                 check!(pfn::SuggestInteractionProfileBindings, Self::override_suggest_interaction_profile_bindings);
                 check!(pfn::AttachSessionActionSets, Self::override_attach_session_action_sets);
@@ -390,35 +381,57 @@ impl<Implementation: LayerImplementation> XrLayerLoader<Implementation> {
     extern "system" fn override_create_action_set(
         instance_handle: openxr_sys::Instance,
         info: *const openxr_sys::ActionSetCreateInfo,
-        out: *mut openxr_sys::ActionSet,
+        action_set_ptr: *mut openxr_sys::ActionSet,
     ) -> openxr_sys::Result {
         xr_wrap(|| {
-            let lock = GLOBALS.get_instance_direct("xrCreateActionSet", instance_handle)?;
-            let instance = lock.read()?;
-            let result =
-                unsafe { (instance.instance.fp().create_action_set)(instance_handle, info, out) };
+            let result = {
+                let lock = GLOBALS.get_instance_direct("xrCreateActionSet", instance_handle)?;
+                let instance = lock.read()?;
+                unsafe {
+                    (instance.instance.fp().create_action_set)(
+                        instance_handle,
+                        info,
+                        action_set_ptr,
+                    )
+                }
+            };
+
             LogInfo::string(format!(
                 "xrCreateActionSet {:#?} -> {}",
                 info,
                 xr_functions::decode_xr_result(result)
             ));
-            result.into_result()
+            let decoded_result = result.into_result();
+
+            if let Ok(()) = decoded_result {
+                let session = unsafe { *action_set_ptr };
+                GLOBALS
+                    .insert_instance_reference("xrCreateActionSet", session, instance_handle)
+                    .warn_on_err("insert_instance_reference");
+            }
+            decoded_result
         })
     }
-    /*
+
     extern "system" fn override_create_action(
         action_set_handle: openxr_sys::ActionSet,
         info: *const openxr_sys::ActionCreateInfo,
         out: *mut openxr_sys::Action,
     ) -> openxr_sys::Result {
         xr_wrap(|| {
-            let instance = get_instance("xrCreateAction", instance_handle)?;
-            let result =
-                unsafe { (instance.create_action)(action_set_handle, info, out) }.into_result();
-            result
+            let lock = GLOBALS.get_instance("xrCreateAction", action_set_handle)?;
+            let instance = lock.read()?;
+            let implementation = Self::read_implementation(instance)?;
+
+            implementation.create_action(crate::CreateAction {
+                instance: instance.instance.clone(),
+                action_set_handle,
+                info,
+                out,
+            })
         })
     }
-    */
+
     extern "system" fn override_string_to_path(
         instance_handle: openxr_sys::Instance,
         path_string_raw: *const c_char,
@@ -492,12 +505,11 @@ impl<Implementation: LayerImplementation> XrLayerLoader<Implementation> {
             let instance = lock.read()?;
             let implementation = Self::read_implementation(instance)?;
 
-            let wrapper = SyncActions {
+            implementation.sync_actions(crate::SyncActions {
                 instance: instance.instance.clone(),
                 sync_info,
                 session_handle,
-            };
-            implementation.sync_actions(&wrapper)
+            })
         })
     }
 

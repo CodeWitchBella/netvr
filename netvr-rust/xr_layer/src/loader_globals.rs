@@ -24,21 +24,44 @@ impl Drop for LayerInstance {
     }
 }
 
-pub(crate) struct GlobalMaps {
-    instances: RwLock<HashMap<u64, LayerInstance>>,
-    sessions: RwLock<HashMap<u64, openxr_sys::Instance>>,
-    action_sets: RwLock<HashMap<u64, openxr_sys::Instance>>,
+macro_rules! implement {
+    ($( $field: ident: $handle: ty ), *,) => {
+        pub(crate) struct GlobalMaps {
+            instances: RwLock<HashMap<u64, LayerInstance>>,
+            $(
+                $field: RwLock<HashMap<u64, openxr_sys::Instance>>,
+            )*
+        }
+
+        impl GlobalMaps {
+            pub fn new() -> Self {
+                Self {
+                    instances: RwLock::new(HashMap::new()),
+                    $(
+                        $field: RwLock::new(HashMap::new()),
+                    )*
+                }
+            }
+        }
+
+        $(
+        impl GlobalMapsReadInstanceHandle for $handle {
+            fn get_mapping(maps: &GlobalMaps) -> &RwLock<HashMap<u64, openxr_sys::Instance>> {
+                &maps.$field
+            }
+
+            fn read_raw(&self) -> u64 {
+                (*self).into_raw()
+            }
+        }
+        )*
+    };
 }
 
-impl GlobalMaps {
-    pub fn new() -> Self {
-        Self {
-            instances: RwLock::new(HashMap::new()),
-            sessions: RwLock::new(HashMap::new()),
-            action_sets: RwLock::new(HashMap::new()),
-        }
-    }
-}
+implement!(
+    sessions: openxr_sys::Session,
+    action_sets: openxr_sys::ActionSet,
+);
 
 ///////////////////////////////////////////////////////////////////////////////
 /// READING LayerInstance directly
@@ -197,16 +220,6 @@ impl GlobalMaps {
 pub(crate) trait GlobalMapsReadInstanceHandle {
     fn get_mapping(maps: &GlobalMaps) -> &RwLock<HashMap<u64, openxr_sys::Instance>>;
     fn read_raw(&self) -> u64;
-}
-
-impl GlobalMapsReadInstanceHandle for openxr_sys::Session {
-    fn get_mapping(maps: &GlobalMaps) -> &RwLock<HashMap<u64, openxr_sys::Instance>> {
-        &maps.sessions
-    }
-
-    fn read_raw(&self) -> u64 {
-        openxr_sys::Session::into_raw(*self)
-    }
 }
 
 pub(crate) struct InstanceReadLock<'a, Handle>
