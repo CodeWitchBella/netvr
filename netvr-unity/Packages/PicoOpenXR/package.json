@@ -1,0 +1,9 @@
+{
+  "name": "cz.isbl.picoopenxr",
+  "displayName": "Pico OpenXR",
+  "version": "0.0.0",
+  "unity": "2019.4",
+  "description": "OpenXR version of Pico support",
+  "keywords": [],
+  "dependencies": {}
+}
