@@ -3,7 +3,10 @@ use std::{
     sync::{RwLock, RwLockReadGuard},
 };
 
-use crate::log::{LogError, LogWarn};
+use crate::{
+    impl_interface::XrResult,
+    log::{LogError, LogWarn},
+};
 
 #[derive(Clone)]
 pub struct ImplementationInstancePtr(pub *mut ::std::ptr::NonNull<::std::os::raw::c_void>);
@@ -72,7 +75,7 @@ impl GlobalMaps {
         &'a self,
         caller: &'static str,
         handle: openxr_sys::Instance,
-    ) -> Result<InstanceDirectReadLock<'a>, openxr_sys::Result> {
+    ) -> XrResult<InstanceDirectReadLock<'a>> {
         let guard = match self.instances.read() {
             Ok(v) => Ok(v),
             Err(err) => {
@@ -98,7 +101,7 @@ pub(crate) struct InstanceDirectReadLock<'a> {
 }
 
 impl<'a> InstanceDirectReadLock<'a> {
-    pub fn read(&'a self) -> Result<&'a LayerInstance, openxr_sys::Result> {
+    pub fn read(&'a self) -> XrResult<&'a LayerInstance> {
         let handle = self.handle.into_raw();
         if let Some(instance) = (*self.guard).get(&handle) {
             Ok(instance)
@@ -184,7 +187,7 @@ impl GlobalMaps {
         &'a self,
         caller: &'static str,
         handle: Handle,
-    ) -> Result<InstanceReadLock<'a, Handle>, openxr_sys::Result>
+    ) -> XrResult<InstanceReadLock<'a, Handle>>
     where
         Handle: GlobalMapsReadInstanceHandle + std::fmt::Debug,
     {
@@ -236,7 +239,7 @@ impl<'a, Handle> InstanceReadLock<'a, Handle>
 where
     Handle: GlobalMapsReadInstanceHandle + std::fmt::Debug,
 {
-    pub fn read(&'a self) -> Result<&'a LayerInstance, openxr_sys::Result> {
+    pub fn read(&'a self) -> XrResult<&'a LayerInstance> {
         let handle_raw = self.handle.read_raw();
         if let Some(instance_handle) = (*self.guard_map).get(&handle_raw) {
             let instance_handle_raw = instance_handle.into_raw();
@@ -270,7 +273,7 @@ impl GlobalMaps {
         caller: &'static str,
         handle: Handle,
         instance_handle: openxr_sys::Instance,
-    ) -> Result<(), openxr_sys::Result>
+    ) -> XrResult<()>
     where
         Handle: GlobalMapsReadInstanceHandle + std::fmt::Debug,
     {
@@ -292,7 +295,7 @@ impl GlobalMaps {
         &'a self,
         caller: &'static str,
         handle: Handle,
-    ) -> Result<InstanceDirectReadLock<'a>, openxr_sys::Result>
+    ) -> XrResult<InstanceDirectReadLock<'a>>
     where
         Handle: GlobalMapsReadInstanceHandle + std::fmt::Debug,
     {

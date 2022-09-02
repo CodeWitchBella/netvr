@@ -4,7 +4,7 @@ use crate::{
     utils::{xr_wrap, ResultConvertible, ResultToWarning},
     xr_functions::{self, decode_xr_result},
     xr_structures::*,
-    LayerImplementation,
+    LayerImplementation, XrResult,
 };
 
 use openxr_sys::pfn;
@@ -39,7 +39,7 @@ struct LoaderRootLock<'a> {
 }
 
 impl<'a> LoaderRootLock<'a> {
-    pub fn read(&'a self) -> Result<&'a LoaderRoot, openxr_sys::Result> {
+    pub fn read(&'a self) -> XrResult<&'a LoaderRoot> {
         match &*self.guard {
             Some(v) => Ok(v),
             None => {
@@ -53,7 +53,7 @@ impl<'a> LoaderRootLock<'a> {
     }
 }
 
-fn get_functions(caller: &'static str) -> Result<LoaderRootLock, openxr_sys::Result> {
+fn get_functions(caller: &'static str) -> XrResult<LoaderRootLock> {
     Ok(LoaderRootLock {
         guard: match LOADER_ROOT.read() {
             Ok(v) => Ok(v),
@@ -114,9 +114,7 @@ impl<Implementation: LayerImplementation> XrLayerLoader<Implementation> {
         }
     }
 
-    fn read_implementation(
-        instance: &LayerInstance,
-    ) -> Result<&Implementation, openxr_sys::Result> {
+    fn read_implementation(instance: &LayerInstance) -> XrResult<&Implementation> {
         match instance.implementation.clone() {
             Some(ptr) => Ok(unsafe { &*std::mem::transmute::<_, *mut Implementation>(ptr) }),
             None => Err(openxr_sys::Result::ERROR_RUNTIME_FAILURE),

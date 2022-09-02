@@ -1,6 +1,6 @@
 use std::fmt::Debug;
 
-use crate::utils::ResultConvertible;
+use crate::{utils::ResultConvertible, XrResult};
 
 pub struct SyncActions {
     pub(crate) instance: openxr::Instance,
@@ -19,7 +19,7 @@ impl Debug for SyncActions {
 }
 
 impl SyncActions {
-    pub fn sync(&self) -> Result<(), openxr_sys::Result> {
+    pub fn sync(&self) -> XrResult<()> {
         unsafe { (self.instance.fp().sync_actions)(self.session_handle, self.sync_info) }
             .into_result()
     }

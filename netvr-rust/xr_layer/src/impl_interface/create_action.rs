@@ -1,6 +1,6 @@
 use std::fmt::Debug;
 
-use crate::utils::ResultConvertible;
+use crate::{utils::ResultConvertible, XrResult};
 
 pub struct CreateAction {
     pub(crate) instance: openxr::Instance,
@@ -20,7 +20,7 @@ impl Debug for CreateAction {
 }
 
 impl CreateAction {
-    pub fn create_action(&self) -> Result<(), openxr_sys::Result> {
+    pub fn create_action(&self) -> XrResult<()> {
         unsafe { (self.instance.fp().create_action)(self.action_set_handle, self.info, self.out) }
             .into_result()
     }

@@ -3,6 +3,7 @@ use std::{os::raw::c_char, panic};
 use crate::{
     decode_xr_result,
     log::{LogPanic, LogWarn},
+    XrResult,
 };
 pub type Cstr = *const c_char;
 
@@ -32,7 +33,7 @@ fn print_panic(panic: Box<dyn std::any::Any + Send>) {
 
 pub fn xr_wrap<O>(function: O) -> openxr_sys::Result
 where
-    O: FnOnce() -> Result<(), openxr_sys::Result>,
+    O: FnOnce() -> XrResult<()>,
     O: std::panic::UnwindSafe,
 {
     let maybe_panicked = panic::catch_unwind(function);
@@ -49,11 +50,11 @@ where
 }
 
 pub(crate) trait ResultConvertible {
-    fn into_result(self) -> Result<(), openxr_sys::Result>;
+    fn into_result(self) -> XrResult<()>;
 }
 
 impl ResultConvertible for openxr_sys::Result {
-    fn into_result(self) -> Result<(), openxr_sys::Result> {
+    fn into_result(self) -> XrResult<()> {
         if self == openxr_sys::Result::SUCCESS {
             Ok(())
         } else {
@@ -66,7 +67,7 @@ pub(crate) trait ResultToWarning {
     fn warn_on_err(self, function_name: &'static str);
 }
 
-impl ResultToWarning for Result<(), openxr_sys::Result> {
+impl ResultToWarning for XrResult<()> {
     fn warn_on_err(self, function_name: &'static str) {
         if let Err(error) = self {
             LogWarn::string(format!(

@@ -1,4 +1,4 @@
-use xr_layer::{log::LogInfo, openxr, LayerImplementation, SyncActions};
+use xr_layer::{log::LogInfo, openxr, CreateAction, LayerImplementation, SyncActions, XrResult};
 
 pub struct ImplementationInstance {}
 impl LayerImplementation for ImplementationInstance {
@@ -6,15 +6,15 @@ impl LayerImplementation for ImplementationInstance {
         Self {}
     }
 
-    fn sync_actions(&self, input: SyncActions) -> Result<(), openxr::sys::Result> {
+    fn sync_actions(&self, input: SyncActions) -> XrResult<()> {
         let result = input.sync();
         LogInfo::string(format!("xrSyncActions {:#?} -> {:?}", input, result));
         result
     }
 
-    fn create_action(&self, input: xr_layer::CreateAction) -> Result<(), openxr::sys::Result> {
+    fn create_action(&self, input: CreateAction) -> XrResult<()> {
         let result = input.create_action();
-        LogInfo::string(format!("xrSyncActions {:#?} -> {:?}", input, result));
+        LogInfo::string(format!("xrCreateAction {:#?} -> {:?}", input, result));
         result
     }
 }
