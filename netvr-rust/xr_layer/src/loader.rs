@@ -1,6 +1,6 @@
 use crate::{
     loader_globals::{GlobalMaps, ImplementationInstancePtr, LayerInstance},
-    log::{LogError, LogInfo, LogWarn},
+    log::{LogError, LogInfo, LogTrace, LogWarn},
     utils::{xr_wrap, ResultConvertible, ResultToWarning},
     xr_functions::{self, decode_xr_result},
     xr_structures::*,
@@ -138,7 +138,7 @@ impl<Implementation: LayerImplementation> XrLayerLoader<Implementation> {
         // This all happens automatically.
         automatic_destroy: bool,
     ) -> Option<openxr_sys::pfn::GetInstanceProcAddr> {
-        LogInfo::str("isbl_netvr_hook_get_instance_proc_addr");
+        LogTrace::str("isbl_netvr_hook_get_instance_proc_addr");
         let func = match func_in {
             Some(f) => f,
             None => {
@@ -224,7 +224,7 @@ impl<Implementation: LayerImplementation> XrLayerLoader<Implementation> {
             macro_rules! check {
                 ($t: ty, $func: expr) => {{
                     if stringify!($t)[5..] == name[2..] {
-                        LogInfo::string(format!(
+                        LogTrace::string(format!(
                             "xrGetInstanceProcAddr: Returning {} for {}",
                             stringify!($func),
                             name
@@ -361,14 +361,14 @@ impl<Implementation: LayerImplementation> XrLayerLoader<Implementation> {
                 for ptr in XrIterator::event_data_buffer(event_data) {
                     let ptr: DecodedStruct = ptr;
                     if let Some(d) = ptr.read_event_data_session_state_changed() {
-                        LogInfo::string(format!("Event(SessionStateChanged): {:#?}", d.state));
+                        LogTrace::string(format!("Event(SessionStateChanged): {:#?}", d.state));
                     } else if let Some(d) = ptr.read_event_data_interaction_profile_changed() {
-                        LogInfo::string(format!(
+                        LogTrace::string(format!(
                             "Event(InteractionProfileChanged): {:#?}",
                             d.session
                         ));
                     } else {
-                        LogInfo::string(format!("Event({:#?})", ptr.ty));
+                        LogTrace::string(format!("Event({:#?})", ptr.ty));
                     }
                 }
             }
@@ -394,7 +394,7 @@ impl<Implementation: LayerImplementation> XrLayerLoader<Implementation> {
                 }
             };
 
-            LogInfo::string(format!(
+            LogTrace::string(format!(
                 "xrCreateActionSet {:#?} -> {}",
                 info,
                 xr_functions::decode_xr_result(result)
@@ -441,13 +441,13 @@ impl<Implementation: LayerImplementation> XrLayerLoader<Implementation> {
             let result = unsafe {
                 (instance.instance.fp().string_to_path)(instance_handle, path_string_raw, path)
             };
-            if let Some(path_string) = parse_input_string(path_string_raw) {
-                LogInfo::string(format!(
-                    "xrStringToPath \"{}\" -> {}",
-                    path_string,
-                    xr_functions::decode_xr_result(result)
-                ));
-            }
+            //if let Some(path_string) = parse_input_string(path_string_raw) {
+            //    LogTrace::string(format!(
+            //        "xrStringToPath \"{}\" -> {}",
+            //        path_string,
+            //        xr_functions::decode_xr_result(result)
+            //    ));
+            //}
             result.into_result()
         })
     }
@@ -466,7 +466,7 @@ impl<Implementation: LayerImplementation> XrLayerLoader<Implementation> {
                     suggested_bindings,
                 )
             };
-            LogInfo::string(format!(
+            LogTrace::string(format!(
                 "xrSuggestInteractionProfileBindings {:#?} -> {}",
                 suggested_bindings,
                 xr_functions::decode_xr_result(result)
@@ -485,7 +485,7 @@ impl<Implementation: LayerImplementation> XrLayerLoader<Implementation> {
             let result = unsafe {
                 (instance.instance.fp().attach_session_action_sets)(session_handle, attach_info)
             };
-            LogInfo::string(format!(
+            LogTrace::string(format!(
                 "xrAttachSessionActionSets {:#?} -> {}",
                 attach_info,
                 xr_functions::decode_xr_result(result)
@@ -522,7 +522,7 @@ impl<Implementation: LayerImplementation> XrLayerLoader<Implementation> {
             let result = unsafe {
                 (instance.instance.fp().get_action_state_boolean)(session_handle, get_info, state)
             };
-            LogInfo::string(format!(
+            LogTrace::string(format!(
                 "xrGetActionStateBoolean {:#?} -> {}",
                 get_info,
                 xr_functions::decode_xr_result(result)
@@ -546,7 +546,7 @@ impl<Implementation: LayerImplementation> XrLayerLoader<Implementation> {
                     haptic_feedback,
                 )
             };
-            LogInfo::string(format!(
+            LogTrace::string(format!(
                 "xrApplyHapticFeedback {:#?} -> {}",
                 haptic_action_info,
                 decode_xr_result(result)
@@ -575,7 +575,7 @@ impl<Implementation: LayerImplementation> XrLayerLoader<Implementation> {
             .into_result();
 
             if let Err(error) = result {
-                LogInfo::string(format!(
+                LogTrace::string(format!(
                     "xrCreateSession {:#?} -> {}",
                     create_info,
                     xr_functions::decode_xr_result(error)
@@ -585,7 +585,7 @@ impl<Implementation: LayerImplementation> XrLayerLoader<Implementation> {
                 GLOBALS
                     .insert_instance_reference("xrCreateSession", session, instance_handle)
                     .warn_on_err("insert_instance_reference");
-                LogInfo::string(format!(
+                LogTrace::string(format!(
                     "xrCreateSession {:#?} -> {}",
                     create_info,
                     session.into_raw()
@@ -603,7 +603,7 @@ impl<Implementation: LayerImplementation> XrLayerLoader<Implementation> {
             let instance = lock.read()?;
             let result = unsafe { (instance.instance.fp().destroy_session)(session_handle) };
 
-            LogInfo::string(format!("xrDestroySession -> {}", decode_xr_result(result)));
+            LogTrace::string(format!("xrDestroySession -> {}", decode_xr_result(result)));
 
             result.into_result()
         })

@@ -60,9 +60,9 @@ public class IsblXRFeature : OpenXRFeature
         if (stack != "")
             value = value + "\nstack:\n" + stack;
 #endif
-        if (level <= 1 /* Info */)
+        if (level <= 2 /* Info or Trace */)
         {
-            _logRust += "\n" + value;
+            _logRust += "\n" + (level == 2 ? "[trace] " : "[info] ") + value.Replace("\n", "\n  ");
             if (_timerRust == null)
             {
                 _timerRust = new Timer(1000);
@@ -75,13 +75,13 @@ public class IsblXRFeature : OpenXRFeature
             // make sure that logs aren't out of order
             InfoLogProcess();
 
-            if (level == 2 /* Warn */)
+            if (level == 3 /* Warn */)
             {
                 Utils.LogWarning($"[rust][warn] {value}");
             }
             else /* Error */
             {
-                var levelText = level == 3 ? "error" : level == 4 ? "panic" : "unknown";
+                var levelText = level == 4 ? "error" : level == 5 ? "panic" : "unknown";
                 Utils.LogError($"[rust][{levelText}] {value}");
             }
         }
@@ -90,7 +90,7 @@ public class IsblXRFeature : OpenXRFeature
     static void InfoLogProcess()
     {
         if (_timerRust == null) return;
-        Utils.Log($"[rust][info] {_logRust}");
+        Utils.Log($"[rust] {_logRust}");
         _logRust = "";
         _timerRust.Dispose();
         _timerRust = null;

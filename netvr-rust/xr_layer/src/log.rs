@@ -18,10 +18,11 @@ const EMPTY_CSTR: &std::ffi::CStr = cstr!("");
 
 #[derive(Clone, Copy)]
 enum Level {
-    Info = 1,
-    Warn = 2,
-    Error = 3,
-    Panic = 4,
+    Trace = 1,
+    Info = 2,
+    Warn = 3,
+    Error = 4,
+    Panic = 5,
 }
 
 fn _cstr(level: Level, text: utils::Cstr) {
@@ -77,6 +78,7 @@ macro_rules! implement {
         }
     };
 }
+implement!(LogTrace, Level::Trace);
 implement!(LogInfo, Level::Info);
 implement!(LogWarn, Level::Warn);
 implement!(LogError, Level::Error);
