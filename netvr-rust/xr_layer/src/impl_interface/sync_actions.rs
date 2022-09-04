@@ -1,21 +1,13 @@
 use std::fmt::Debug;
 
+use super::debug_helpers::InstanceDebug;
 use crate::{utils::ResultConvertible, XrResult};
 
+#[derive(Debug)]
 pub struct SyncActions {
-    pub(crate) instance: openxr::Instance,
+    pub(crate) instance: InstanceDebug,
     pub(crate) session_handle: openxr_sys::Session,
     pub(crate) sync_info: *const openxr_sys::ActionsSyncInfo,
-}
-
-impl Debug for SyncActions {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("ActionSyncData")
-            .field("instance", &self.instance.as_raw())
-            .field("session_handle", &self.session_handle)
-            .field("sync_info", &self.sync_info)
-            .finish()
-    }
 }
 
 impl SyncActions {
@@ -25,6 +17,6 @@ impl SyncActions {
     }
 
     pub fn instance(&self) -> &openxr::Instance {
-        &self.instance
+        &self.instance.v
     }
 }

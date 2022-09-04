@@ -1,22 +1,14 @@
 use std::fmt::Debug;
 
+use super::debug_helpers::InstanceDebug;
 use crate::{utils::ResultConvertible, XrResult};
 
+#[derive(Debug)]
 pub struct CreateAction {
-    pub(crate) instance: openxr::Instance,
+    pub(crate) instance: InstanceDebug,
     pub(crate) action_set_handle: openxr_sys::ActionSet,
     pub(crate) info: *const openxr_sys::ActionCreateInfo,
     pub(crate) out: *mut openxr_sys::Action,
-}
-
-impl Debug for CreateAction {
-    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
-        f.debug_struct("CreateAction")
-            .field("action_set_handle", &self.action_set_handle)
-            .field("info", &self.info)
-            .field("out", &self.out)
-            .finish()
-    }
 }
 
 impl CreateAction {
@@ -26,6 +18,6 @@ impl CreateAction {
     }
 
     pub fn instance(&self) -> &openxr::Instance {
-        &self.instance
+        &self.instance.v
     }
 }

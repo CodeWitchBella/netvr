@@ -422,7 +422,7 @@ impl<Implementation: LayerImplementation> XrLayerLoader<Implementation> {
             let implementation = Self::read_implementation(instance)?;
 
             implementation.create_action(crate::CreateAction {
-                instance: instance.instance.clone(),
+                instance: instance.instance.clone().into(),
                 action_set_handle,
                 info,
                 out,
@@ -504,7 +504,7 @@ impl<Implementation: LayerImplementation> XrLayerLoader<Implementation> {
             let implementation = Self::read_implementation(instance)?;
 
             implementation.sync_actions(crate::SyncActions {
-                instance: instance.instance.clone(),
+                instance: instance.instance.clone().into(),
                 sync_info,
                 session_handle,
             })
