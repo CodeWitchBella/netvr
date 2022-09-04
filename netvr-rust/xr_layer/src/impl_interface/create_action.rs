@@ -1,7 +1,7 @@
 use std::fmt::Debug;
 
 use super::debug_helpers::InstanceDebug;
-use crate::{utils::ResultConvertible, XrResult};
+use crate::{utils::ResultConvertible, xr_structures::XrIterator, XrResult};
 
 #[derive(Debug)]
 pub struct CreateAction {
@@ -19,5 +19,9 @@ impl CreateAction {
 
     pub fn instance(&self) -> &openxr::Instance {
         &self.instance.v
+    }
+
+    pub fn info(&self) -> XrIterator {
+        self.info.into()
     }
 }

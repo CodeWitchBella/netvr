@@ -2,19 +2,28 @@ pub struct XrIterator {
     ptr: *const openxr_sys::BaseInStructure,
 }
 
-macro_rules! implement {
-    ($method: ident for $t: ty) => {
-        pub fn event_data_buffer(input: *const $t) -> XrIterator {
-            XrIterator {
-                ptr: unsafe { std::mem::transmute(input) },
+macro_rules! implement_from {
+    ($t: ty) => {
+        impl From<*const $t> for XrIterator {
+            fn from(input: *const $t) -> Self {
+                XrIterator {
+                    ptr: unsafe { std::mem::transmute(input) },
+                }
+            }
+        }
+
+        impl From<*mut $t> for XrIterator {
+            fn from(input: *mut $t) -> Self {
+                XrIterator {
+                    ptr: unsafe { std::mem::transmute(input) },
+                }
             }
         }
     };
 }
 
-impl XrIterator {
-    implement!(event_data_buffer for openxr_sys::EventDataBuffer);
-}
+implement_from!(openxr_sys::EventDataBuffer);
+implement_from!(openxr_sys::ActionCreateInfo);
 
 impl Iterator for XrIterator {
     type Item = DecodedStruct;
@@ -34,7 +43,7 @@ pub struct DecodedStruct {
     data: *const openxr_sys::BaseInStructure,
 }
 
-macro_rules! implement {
+macro_rules! implement_from {
     ($( $method: ident reads $id: ident ), *,) => {
         impl DecodedStruct {
             $(
@@ -54,10 +63,11 @@ macro_rules! implement {
     };
 }
 
-implement!(
+implement_from!(
     read_event_data_session_state_changed reads EventDataSessionStateChanged,
     read_event_data_interaction_profile_changed reads EventDataInteractionProfileChanged,
     read_event_data_buffer reads EventDataBuffer,
+    read_action_create_info reads ActionCreateInfo,
 );
 
 impl DecodedStruct {

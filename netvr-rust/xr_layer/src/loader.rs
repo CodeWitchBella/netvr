@@ -358,7 +358,7 @@ impl<Implementation: LayerImplementation> XrLayerLoader<Implementation> {
                 unsafe { (instance.instance.fp().poll_event)(instance_handle, event_data) }
                     .into_result();
             if result.is_ok() {
-                for ptr in XrIterator::event_data_buffer(event_data) {
+                for ptr in XrIterator::from(event_data) {
                     let ptr: DecodedStruct = ptr;
                     if let Some(d) = ptr.read_event_data_session_state_changed() {
                         LogTrace::string(format!("Event(SessionStateChanged): {:#?}", d.state));
