@@ -170,23 +170,21 @@ checksum = "7709cef83f0c1f58f666e746a08b21e0085f7440fa6a29cc194d68aac97a4225"
 [[package]]
 name = "openxr"
 version = "0.16.0"
-source = "git+https://github.com/CodeWitchBella/openxrs?branch=construct-from-raw#e4653ddc1cf2af0ca3f9b1d8d151e64e6df46041"
+source = "git+https://github.com/Ralith/openxrs#05a0f442d93e627bf45b341100ad09c621d6ab06"
 dependencies = [
  "libc",
  "libloading",
  "ndk-context",
  "openxr-sys",
- "winapi",
 ]
 
 [[package]]
 name = "openxr-sys"
 version = "0.9.1"
-source = "git+https://github.com/CodeWitchBella/openxrs?branch=construct-from-raw#e4653ddc1cf2af0ca3f9b1d8d151e64e6df46041"
+source = "git+https://github.com/Ralith/openxrs#05a0f442d93e627bf45b341100ad09c621d6ab06"
 dependencies = [
  "jni",
  "libc",
- "winapi",
 ]
 
 [[package]]

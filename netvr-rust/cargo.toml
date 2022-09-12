@@ -6,5 +6,5 @@ members = [
 ]
 
 [patch.crates-io]
-openxr-sys = { git = "https://github.com/CodeWitchBella/openxrs", branch = "construct-from-raw" }
-openxr = { git = "https://github.com/CodeWitchBella/openxrs", branch = "construct-from-raw" }
+openxr-sys = { git = "https://github.com/Ralith/openxrs", commit = "05a0f442d93e627bf45b341100ad09c621d6ab06" }
+openxr = { git = "https://github.com/Ralith/openxrs", commit = "05a0f442d93e627bf45b341100ad09c621d6ab06" }
