@@ -2,7 +2,6 @@ use crate::{
     loader_globals::{GlobalMaps, ImplementationInstancePtr, LayerInstance},
     log::{LogError, LogInfo, LogTrace, LogWarn},
     utils::{xr_wrap, ResultConvertible, ResultToWarning},
-    xr_functions::{self, decode_xr_result},
     xr_structures::*,
     LayerImplementation, XrResult,
 };
@@ -19,10 +18,9 @@ struct LoaderRoot {
 }
 
 impl LoaderRoot {
-    pub fn create(func: pfn::GetInstanceProcAddr) -> Result<Self, String> {
+    pub fn create(func: pfn::GetInstanceProcAddr) -> Result<Self, openxr_sys::Result> {
         Ok(Self {
-            entry: unsafe { openxr::Entry::from_get_instance_proc_addr(func) }
-                .map_err(decode_xr_result)?,
+            entry: unsafe { openxr::Entry::from_get_instance_proc_addr(func) }?,
             automatic_destroy: true,
         })
     }
@@ -159,7 +157,7 @@ impl<Implementation: LayerImplementation> XrLayerLoader<Implementation> {
             Ok(v) => v,
             Err(error) => {
                 LogError::string(format!(
-                    "Failed to initialize. Disabling netvr layer.\n  Original error: {}",
+                    "Failed to initialize. Disabling netvr layer.\n  Original error: {:?}",
                     error
                 ));
                 return func_in;
@@ -180,9 +178,9 @@ impl<Implementation: LayerImplementation> XrLayerLoader<Implementation> {
             ));
         } else {
             LogError::string(format!(
-                "Instance {} was destroyed with non-zero status {}",
+                "Instance {} was destroyed with non-zero status {:?}",
                 instance_handle.into_raw(),
-                crate::xr_functions::decode_xr_result(status)
+                status
             ));
         }
     }
@@ -292,9 +290,10 @@ impl<Implementation: LayerImplementation> XrLayerLoader<Implementation> {
             let instance_handle: openxr_sys::Instance = unsafe { *instance_ptr };
             if result != openxr_sys::Result::SUCCESS {
                 LogError::string(format!(
-                "Underlying xrCreateInstance returned non-success error code {}. Netvr won't be enabled for instance {}.",
-                xr_functions::decode_xr_result(result),
+                "Underlying xrCreateInstance returned non-success error code \"{:?}\". Netvr won't be enabled for instance {}.\nLonger error: {}",
+                result,
                 instance_handle.into_raw(),
+                result,
             ));
                 return result.into_result();
             };
@@ -394,11 +393,7 @@ impl<Implementation: LayerImplementation> XrLayerLoader<Implementation> {
                 }
             };
 
-            LogTrace::string(format!(
-                "xrCreateActionSet {:#?} -> {}",
-                info,
-                xr_functions::decode_xr_result(result)
-            ));
+            LogTrace::string(format!("xrCreateActionSet {:#?} -> {:?}", info, result));
             let decoded_result = result.into_result();
 
             if let Ok(()) = decoded_result {
@@ -443,9 +438,9 @@ impl<Implementation: LayerImplementation> XrLayerLoader<Implementation> {
             };
             //if let Some(path_string) = parse_input_string(path_string_raw) {
             //    LogTrace::string(format!(
-            //        "xrStringToPath \"{}\" -> {}",
+            //        "xrStringToPath \"{}\" -> {:?}",
             //        path_string,
-            //        xr_functions::decode_xr_result(result)
+            //        result
             //    ));
             //}
             result.into_result()
@@ -467,9 +462,8 @@ impl<Implementation: LayerImplementation> XrLayerLoader<Implementation> {
                 )
             };
             LogTrace::string(format!(
-                "xrSuggestInteractionProfileBindings {:#?} -> {}",
-                suggested_bindings,
-                xr_functions::decode_xr_result(result)
+                "xrSuggestInteractionProfileBindings {:#?} -> {:?}",
+                suggested_bindings, result
             ));
             result.into_result()
         })
@@ -486,9 +480,8 @@ impl<Implementation: LayerImplementation> XrLayerLoader<Implementation> {
                 (instance.instance.fp().attach_session_action_sets)(session_handle, attach_info)
             };
             LogTrace::string(format!(
-                "xrAttachSessionActionSets {:#?} -> {}",
-                attach_info,
-                xr_functions::decode_xr_result(result)
+                "xrAttachSessionActionSets {:#?} -> {:?}",
+                attach_info, result
             ));
             result.into_result()
         })
@@ -523,9 +516,8 @@ impl<Implementation: LayerImplementation> XrLayerLoader<Implementation> {
                 (instance.instance.fp().get_action_state_boolean)(session_handle, get_info, state)
             };
             LogTrace::string(format!(
-                "xrGetActionStateBoolean {:#?} -> {}",
-                get_info,
-                xr_functions::decode_xr_result(result)
+                "xrGetActionStateBoolean {:#?} -> {:?}",
+                get_info, result
             ));
             result.into_result()
         })
@@ -547,9 +539,8 @@ impl<Implementation: LayerImplementation> XrLayerLoader<Implementation> {
                 )
             };
             LogTrace::string(format!(
-                "xrApplyHapticFeedback {:#?} -> {}",
-                haptic_action_info,
-                decode_xr_result(result)
+                "xrApplyHapticFeedback {:#?} -> {:?}",
+                haptic_action_info, result
             ));
             result.into_result()
         })
@@ -575,11 +566,7 @@ impl<Implementation: LayerImplementation> XrLayerLoader<Implementation> {
             .into_result();
 
             if let Err(error) = result {
-                LogTrace::string(format!(
-                    "xrCreateSession {:#?} -> {}",
-                    create_info,
-                    xr_functions::decode_xr_result(error)
-                ));
+                LogTrace::string(format!("xrCreateSession {:#?} -> {:?}", create_info, error));
             } else {
                 let session: openxr_sys::Session = unsafe { *session_ptr };
                 GLOBALS
@@ -603,7 +590,7 @@ impl<Implementation: LayerImplementation> XrLayerLoader<Implementation> {
             let instance = lock.read()?;
             let result = unsafe { (instance.instance.fp().destroy_session)(session_handle) };
 
-            LogTrace::string(format!("xrDestroySession -> {}", decode_xr_result(result)));
+            LogTrace::string(format!("xrDestroySession -> {:?}", result));
 
             result.into_result()
         })

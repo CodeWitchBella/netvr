@@ -1,9 +1,4 @@
-use std::{error::Error, ffi::CStr, os::raw::c_char};
-
-use xr_layer::{
-    log::{LogInfo, LogWarn},
-    openxr, CreateAction, LayerImplementation, SyncActions, XrResult,
-};
+use xr_layer::{log::LogInfo, openxr, CreateAction, LayerImplementation, SyncActions, XrResult};
 
 /*
 fn parse_input_string<'a>(name_ptr: *const c_char) -> Option<&'a str> {

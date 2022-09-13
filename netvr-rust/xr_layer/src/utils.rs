@@ -1,7 +1,6 @@
 use std::{os::raw::c_char, panic};
 
 use crate::{
-    decode_xr_result,
     log::{LogPanic, LogWarn},
     XrResult,
 };
@@ -71,9 +70,8 @@ impl ResultToWarning for XrResult<()> {
     fn warn_on_err(self, function_name: &'static str) {
         if let Err(error) = self {
             LogWarn::string(format!(
-                "Function {} failed with result {}",
-                function_name,
-                decode_xr_result(error)
+                "Function {} failed with result {:?}",
+                function_name, error
             ))
         }
     }

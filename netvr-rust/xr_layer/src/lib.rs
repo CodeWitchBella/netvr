@@ -7,8 +7,6 @@ mod impl_interface;
 pub mod loader;
 mod loader_globals;
 pub mod log;
-mod xr_functions;
 mod xr_structures;
 pub use impl_interface::*;
 pub use openxr;
-pub use xr_functions::decode_xr_result;
