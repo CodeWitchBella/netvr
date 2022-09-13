@@ -18,7 +18,7 @@ impl CreateAction {
     }
 
     pub fn instance(&self) -> &openxr::Instance {
-        &self.instance.v
+        &self.instance.0
     }
 
     pub fn info(&self) -> XrIterator {

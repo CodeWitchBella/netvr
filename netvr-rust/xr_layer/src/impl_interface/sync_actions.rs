@@ -17,6 +17,6 @@ impl SyncActions {
     }
 
     pub fn instance(&self) -> &openxr::Instance {
-        &self.instance.v
+        &self.instance.0
     }
 }

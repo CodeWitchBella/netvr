@@ -1,13 +1,11 @@
 use std::fmt::Debug;
 
-pub(crate) struct InstanceDebug {
-    pub(crate) v: openxr::Instance,
-}
+pub(crate) struct InstanceDebug(pub(crate) openxr::Instance);
 
 impl InstanceDebug {
     #[inline]
     pub(crate) fn fp(&self) -> &openxr::raw::Instance {
-        self.v.fp()
+        self.0.fp()
     }
 }
 
@@ -19,12 +17,12 @@ impl Debug for InstanceDebug {
 
 impl From<InstanceDebug> for openxr::Instance {
     fn from(item: InstanceDebug) -> Self {
-        item.v
+        item.0
     }
 }
 
 impl From<openxr::Instance> for InstanceDebug {
     fn from(v: openxr::Instance) -> Self {
-        Self { v }
+        Self(v)
     }
 }
