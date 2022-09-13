@@ -1,3 +1,5 @@
+use std::{ffi::CStr, os::raw::c_char};
+
 pub struct XrIterator {
     ptr: *const openxr_sys::BaseInStructure,
 }
@@ -44,18 +46,24 @@ pub struct DecodedStruct {
 }
 
 macro_rules! implement_from {
-    ($( $method: ident reads $id: ident ), *,) => {
+    ($( $method: ident reads $id: ident), *,) => {
+        $(
+            #[derive(Debug)]
+            #[repr(transparent)]
+            pub struct $id<'a>(pub(crate) &'a openxr_sys::$id);
+        )*
+
         impl DecodedStruct {
             $(
                 #[allow(dead_code)]
-                pub fn $method<'a>(&'a self) -> Option<&'a openxr_sys::$id> {
+                pub fn $method<'a>(&'a self) -> Option<$id<'a>> {
                     if self.data.is_null() { return None; }
-                    Some(unsafe {
+                    Some($id(unsafe {
                         &*std::mem::transmute::<
                             *const openxr_sys::BaseInStructure,
                             *const openxr_sys::$id,
                         >(self.data)
-                    })
+                    }))
                 }
             )*
         }
@@ -75,5 +83,31 @@ impl DecodedStruct {
         let ty = unsafe { *arg }.ty;
 
         Self { ty, data: arg }
+    }
+}
+
+#[derive(Debug)]
+pub enum StringParseError {
+    NotNullTerminated,
+    Utf8Error(std::str::Utf8Error),
+}
+
+fn parse_input_string(name_ptr: &[c_char; 64]) -> Result<&str, StringParseError> {
+    if name_ptr[name_ptr.len() - 1] != 0 {
+        return Err(StringParseError::NotNullTerminated);
+    };
+    match unsafe { CStr::from_ptr(name_ptr.as_ptr()) }.to_str() {
+        Ok(val) => Ok(val),
+        Err(error) => Err(StringParseError::Utf8Error(error)),
+    }
+}
+
+impl<'a> ActionCreateInfo<'a> {
+    pub fn action_name(&'a self) -> Result<&'a str, StringParseError> {
+        parse_input_string(&self.0.action_name)
+    }
+
+    pub fn action_type(&self) -> openxr::ActionType {
+        self.0.action_type
     }
 }

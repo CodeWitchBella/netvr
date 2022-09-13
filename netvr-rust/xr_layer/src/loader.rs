@@ -360,12 +360,9 @@ impl<Implementation: LayerImplementation> XrLayerLoader<Implementation> {
                 for ptr in XrIterator::from(event_data) {
                     let ptr: DecodedStruct = ptr;
                     if let Some(d) = ptr.read_event_data_session_state_changed() {
-                        LogTrace::string(format!("Event(SessionStateChanged): {:#?}", d.state));
+                        LogTrace::string(format!("Event(SessionStateChanged): {:#?}", d));
                     } else if let Some(d) = ptr.read_event_data_interaction_profile_changed() {
-                        LogTrace::string(format!(
-                            "Event(InteractionProfileChanged): {:#?}",
-                            d.session
-                        ));
+                        LogTrace::string(format!("Event(InteractionProfileChanged): {:#?}", d));
                     } else {
                         LogTrace::string(format!("Event({:#?})", ptr.ty));
                     }
