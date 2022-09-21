@@ -1,5 +1,7 @@
 use std::{ffi::CStr, fmt::Debug, os::raw::c_char};
 
+use crate::SizedArrayValueIterator;
+
 pub struct XrStruct {
     pub ty: openxr_sys::StructureType,
     data: *const openxr_sys::BaseInStructure,
@@ -67,6 +69,7 @@ implement_readers!(
     read_event_data_interaction_profile_changed reads EventDataInteractionProfileChanged,
     read_event_data_buffer reads EventDataBuffer,
     read_action_create_info reads ActionCreateInfo,
+    read_actions_sync_info reads ActionsSyncInfo,
 );
 
 impl XrStruct {
@@ -93,40 +96,6 @@ fn parse_input_string(name_ptr: &[c_char]) -> Result<&str, StringParseError> {
     }
 }
 
-pub struct SizedArrayValueIterator<T>
-where
-    T: Copy,
-{
-    count: u32,
-    ptr: *const T,
-}
-
-impl<T> SizedArrayValueIterator<T>
-where
-    T: Copy,
-{
-    unsafe fn new(count: u32, ptr: *const T) -> Self {
-        Self { count, ptr }
-    }
-}
-
-impl<T> Iterator for SizedArrayValueIterator<T>
-where
-    T: Copy,
-{
-    type Item = T;
-
-    fn next(&mut self) -> Option<T> {
-        if self.count == 0 {
-            return None;
-        }
-        let ptr = self.ptr;
-        self.ptr = unsafe { ptr.add(1) };
-        self.count = 0;
-        Some(unsafe { *ptr })
-    }
-}
-
 impl<'a> ActionCreateInfo<'a> {
     pub fn action_name(&'a self) -> Result<&'a str, StringParseError> {
         parse_input_string(&self.0.action_name)
@@ -143,6 +112,14 @@ impl<'a> ActionCreateInfo<'a> {
     pub fn subaction_paths(&self) -> SizedArrayValueIterator<openxr_sys::Path> {
         unsafe {
             SizedArrayValueIterator::new(self.0.count_subaction_paths, self.0.subaction_paths)
+        }
+    }
+}
+
+impl<'a> ActionsSyncInfo<'a> {
+    pub fn active_action_sets(&self) -> SizedArrayValueIterator<openxr_sys::ActiveActionSet> {
+        unsafe {
+            SizedArrayValueIterator::new(self.0.count_active_action_sets, self.0.active_action_sets)
         }
     }
 }

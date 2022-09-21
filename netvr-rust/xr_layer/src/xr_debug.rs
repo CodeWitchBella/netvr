@@ -1,4 +1,4 @@
-use crate::xr_struct::ActionCreateInfo;
+use crate::xr_struct::{self, ActionCreateInfo};
 
 pub trait XrDebug<'a> {
     fn xr_debug(&'a self, instance: &openxr::Instance) -> XrDebugValue<'a>;
@@ -127,6 +127,16 @@ impl<'a> XrDebug<'a> for openxr_sys::Time {
     }
 }
 
+impl<'a> XrDebug<'a> for xr_struct::ActionsSyncInfo<'a> {
+    fn xr_debug(&'a self, instance: &openxr::Instance) -> XrDebugValue<'a> {
+        XrDebugValue::new(instance.clone(), |_debugable, f| {
+            f.debug_struct("ActionsSyncInfo")
+                .field("active_action_sets", &self.active_action_sets())
+                .finish()
+        })
+    }
+}
+
 macro_rules! implement_as_non_exhaustive {
     ($($id: ty), *,) => {
         $(
@@ -146,10 +156,9 @@ implement_as_non_exhaustive!(
     openxr_sys::ActionCreateInfo,
     openxr_sys::Action,
     openxr_sys::Session,
-    openxr_sys::ActionsSyncInfo,
     openxr_sys::SessionState,
-    crate::xr_struct::EventDataInteractionProfileChanged<'_>,
-    crate::xr_struct::EventDataBuffer<'_>,
+    xr_struct::EventDataInteractionProfileChanged<'_>,
+    xr_struct::EventDataBuffer<'_>,
 );
 
 pub(crate) struct DebugFn<T>
