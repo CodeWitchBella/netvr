@@ -1,4 +1,4 @@
-use crate::{utils::ResultConvertible, xr_structures::XrIterator, XrDebug, XrResult};
+use crate::{utils::ResultConvertible, UnsafeFrom, XrDebug, XrIterator, XrResult};
 
 pub struct CreateAction {
     pub(crate) instance: openxr::Instance,
@@ -18,7 +18,7 @@ impl CreateAction {
     }
 
     pub fn info(&self) -> XrIterator {
-        self.info.into()
+        unsafe { XrIterator::from_ptr(self.info) }
     }
 }
 

@@ -14,7 +14,7 @@ impl LayerImplementation for ImplementationInstance {
 
     fn sync_actions(&self, input: SyncActions) -> XrResult<()> {
         let result = input.sync();
-        LogInfo::string(format!("xrSyncActions {:#?} -> {:?}", input, result));
+        LogInfo::string(format!("xrSyncActions {:?} -> {:?}", input, result));
         result
     }
 

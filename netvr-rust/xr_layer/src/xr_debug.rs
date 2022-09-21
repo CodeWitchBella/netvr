@@ -1,4 +1,4 @@
-use crate::xr_structures::ActionCreateInfo;
+use crate::xr_struct::ActionCreateInfo;
 
 pub trait XrDebug<'a> {
     fn xr_debug(&'a self, instance: &openxr::Instance) -> XrDebugValue<'a>;
@@ -27,14 +27,23 @@ impl<'a> XrDebugValue<'a> {
     }
 }
 
-impl<'a, T> XrDebug<'a> for Option<&'a T>
+impl<'a, T> XrDebug<'a> for &'a T
+where
+    T: XrDebug<'a>,
+{
+    fn xr_debug(&'a self, instance: &openxr::Instance) -> XrDebugValue<'a> {
+        (*self).xr_debug(instance)
+    }
+}
+
+impl<'a, T> XrDebug<'a> for Option<T>
 where
     T: XrDebug<'a>,
 {
     fn xr_debug(&'a self, instance: &openxr::Instance) -> XrDebugValue<'a> {
         match self {
             Some(v) => v.xr_debug(instance),
-            None => XrDebugValue::new(instance.clone(), |_debuggable, f| {
+            None => XrDebugValue::new(instance.clone(), |_debugable, f| {
                 f.debug_struct("None").finish()
             }),
         }
@@ -43,8 +52,8 @@ where
 
 impl<'a> XrDebug<'a> for ActionCreateInfo<'a> {
     fn xr_debug(&'a self, instance: &openxr::Instance) -> XrDebugValue<'a> {
-        XrDebugValue::new(instance.clone(), |debuggable, f| {
-            let instance = &debuggable.instance;
+        XrDebugValue::new(instance.clone(), |debugable, f| {
+            let instance = &debugable.instance;
             let mut f = f.debug_struct("ActionCreateInfo");
             let value = self.action_name();
             let f = f.field("action_name", &value);
@@ -63,23 +72,68 @@ impl<'a> XrDebug<'a> for ActionCreateInfo<'a> {
     }
 }
 
-impl<'a> XrDebug<'a> for crate::xr_structures::EventDataSessionStateChanged<'a> {
+impl<'a> XrDebug<'a> for crate::xr_struct::EventDataSessionStateChanged<'a> {
     fn xr_debug(&'a self, instance: &openxr::Instance) -> crate::XrDebugValue<'a> {
-        crate::XrDebugValue::new(instance.clone(), |_debuggable, f| {
-            f.debug_tuple("EventDataSessionStateChanged")
-                .field(&"<TODO>")
+        crate::XrDebugValue::new(instance.clone(), |debugable, f| {
+            let raw = self.as_raw();
+            f.debug_struct("EventDataSessionStateChanged")
+                .field("session", &raw.session)
+                .field("state", &raw.state)
+                .field("time", &raw.time.xr_debug(&debugable.instance))
                 .finish()
         })
     }
 }
 
-macro_rules! implement_as_hidden {
-    ($($id: ident), *,) => {
+impl<'a> XrDebug<'a> for openxr_sys::Time {
+    fn xr_debug(&'a self, instance: &openxr::Instance) -> crate::XrDebugValue<'a> {
+        crate::XrDebugValue::new(instance.clone(), |_debugable, f| {
+            let mut f = f.debug_struct("Time");
+            let mut value = self.as_nanos();
+            f.field("raw", &value);
+            f.field("ns", &(value % 1000));
+            value /= 1000;
+            if value < 1 {
+                return f.finish();
+            }
+            f.field("us", &(value % 1000));
+            value /= 1000;
+            if value < 1 {
+                return f.finish();
+            }
+            f.field("ms", &(value % 1000));
+            value /= 1000;
+            if value < 1 {
+                return f.finish();
+            }
+            f.field("s", &(value % 60));
+            value /= 60;
+            if value < 1 {
+                return f.finish();
+            }
+            f.field("min", &(value % 60));
+            value /= 60;
+            if value < 1 {
+                return f.finish();
+            }
+            f.field("h", &(value % 24));
+            value /= 24;
+            if value < 1 {
+                return f.finish();
+            }
+            f.field("d", &value);
+            f.finish()
+        })
+    }
+}
+
+macro_rules! implement_as_non_exhaustive {
+    ($($id: ty), *,) => {
         $(
-            impl<'a> XrDebug<'a> for openxr_sys::$id {
+            impl<'a> XrDebug<'a> for $id {
                 fn xr_debug(&'a self, instance: &openxr::Instance) -> XrDebugValue<'a> {
-                    XrDebugValue::new(instance.clone(), |_debuggable, f| {
-                        f.debug_tuple(stringify!($id)).field(&"<hidden>").finish()
+                    XrDebugValue::new(instance.clone(), |_debugable, f| {
+                        f.debug_struct(stringify!($id)).finish_non_exhaustive()
                     })
                 }
             }
@@ -87,10 +141,38 @@ macro_rules! implement_as_hidden {
     };
 }
 
-implement_as_hidden!(
-    ActionSet,
-    ActionCreateInfo,
-    Action,
-    Session,
-    ActionsSyncInfo,
+implement_as_non_exhaustive!(
+    openxr_sys::ActionSet,
+    openxr_sys::ActionCreateInfo,
+    openxr_sys::Action,
+    openxr_sys::Session,
+    openxr_sys::ActionsSyncInfo,
+    openxr_sys::SessionState,
+    crate::xr_struct::EventDataInteractionProfileChanged<'_>,
+    crate::xr_struct::EventDataBuffer<'_>,
 );
+
+pub(crate) struct DebugFn<T>
+where
+    T: Fn(&mut std::fmt::Formatter) -> std::fmt::Result,
+{
+    fun: T,
+}
+
+impl<T> std::fmt::Debug for DebugFn<T>
+where
+    T: Fn(&mut std::fmt::Formatter) -> std::fmt::Result,
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
+        (self.fun)(f)
+    }
+}
+
+impl<T> DebugFn<T>
+where
+    T: Fn(&mut std::fmt::Formatter) -> std::fmt::Result,
+{
+    pub(crate) fn new(fun: T) -> Self {
+        Self { fun }
+    }
+}

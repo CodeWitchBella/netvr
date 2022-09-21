@@ -1,55 +1,22 @@
-use std::{ffi::CStr, os::raw::c_char};
+use std::{ffi::CStr, fmt::Debug, os::raw::c_char};
 
-pub struct XrIterator {
-    ptr: *const openxr_sys::BaseInStructure,
-}
-
-macro_rules! implement_from {
-    ($t: ty) => {
-        impl From<*const $t> for XrIterator {
-            fn from(input: *const $t) -> Self {
-                XrIterator {
-                    ptr: unsafe { std::mem::transmute(input) },
-                }
-            }
-        }
-
-        impl From<*mut $t> for XrIterator {
-            fn from(input: *mut $t) -> Self {
-                XrIterator {
-                    ptr: unsafe { std::mem::transmute(input) },
-                }
-            }
-        }
-    };
-}
-
-implement_from!(openxr_sys::EventDataBuffer);
-implement_from!(openxr_sys::ActionCreateInfo);
-
-impl Iterator for XrIterator {
-    type Item = DecodedStruct;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        let res: *const openxr_sys::BaseInStructure = unsafe { std::mem::transmute(self.ptr) };
-        if res.is_null() {
-            return None;
-        }
-        self.ptr = unsafe { std::mem::transmute((*res).next) };
-        Some(DecodedStruct::from(res))
-    }
-}
-
-pub struct DecodedStruct {
+pub struct XrStruct {
     pub ty: openxr_sys::StructureType,
     data: *const openxr_sys::BaseInStructure,
 }
 
-macro_rules! implement_from {
+macro_rules! implement_readers {
     ($( $method: ident reads $id: ident), *,) => {
         $(
             #[repr(transparent)]
-            pub struct $id<'a>(pub(crate) &'a openxr_sys::$id);
+            pub struct $id<'a>(&'a openxr_sys::$id);
+
+            impl<'a> $id<'a> {
+                #[inline]
+                pub fn as_raw(&'a self) -> &'a openxr_sys::$id {
+                    self.0
+                }
+            }
 
             impl<'a> std::fmt::Debug for $id<'a> {
                 fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
@@ -58,11 +25,12 @@ macro_rules! implement_from {
             }
         )*
 
-        impl DecodedStruct {
+        impl XrStruct {
             $(
                 #[allow(dead_code)]
                 pub fn $method<'a>(&'a self) -> Option<$id<'a>> {
                     if self.data.is_null() { return None; }
+                    if self.ty != openxr_sys::$id::TYPE { return None; }
                     Some($id(unsafe {
                         &*std::mem::transmute::<
                             *const openxr_sys::BaseInStructure,
@@ -73,18 +41,36 @@ macro_rules! implement_from {
             )*
         }
 
+        impl<'a> crate::XrDebug<'a> for XrStruct {
+            fn xr_debug(&'a self, instance: &openxr::Instance) -> crate::XrDebugValue<'a> {
+                crate::XrDebugValue::new(instance.clone(), |debugable, f| match self.ty {
+                    $(
+                        openxr_sys::$id::TYPE => {
+                            match self.$method() {
+                                Some(v) => v.xr_debug(&debugable.instance).fmt(f),
+                                None => f.debug_struct("None").finish(),
+                            }
+                        }
+                    )*
+                    _ => f
+                        .debug_struct("Unknown")
+                        .field("ty", &self.ty)
+                        .finish_non_exhaustive(),
+                })
+            }
+        }
     };
 }
 
-implement_from!(
+implement_readers!(
     read_event_data_session_state_changed reads EventDataSessionStateChanged,
     read_event_data_interaction_profile_changed reads EventDataInteractionProfileChanged,
     read_event_data_buffer reads EventDataBuffer,
     read_action_create_info reads ActionCreateInfo,
 );
 
-impl DecodedStruct {
-    fn from(arg: *const openxr_sys::BaseInStructure) -> Self {
+impl XrStruct {
+    pub(crate) fn from(arg: *const openxr_sys::BaseInStructure) -> Self {
         let ty = unsafe { *arg }.ty;
 
         Self { ty, data: arg }
