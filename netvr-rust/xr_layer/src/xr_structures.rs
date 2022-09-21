@@ -1,4 +1,4 @@
-use std::{ffi::CStr, os::raw::c_char};
+use std::{borrow::Borrow, ffi::CStr, os::raw::c_char};
 
 pub struct XrIterator {
     ptr: *const openxr_sys::BaseInStructure,
@@ -92,7 +92,7 @@ pub enum StringParseError {
     Utf8Error(std::str::Utf8Error),
 }
 
-fn parse_input_string(name_ptr: &[c_char; 64]) -> Result<&str, StringParseError> {
+fn parse_input_string(name_ptr: &[c_char]) -> Result<&str, StringParseError> {
     if name_ptr[name_ptr.len() - 1] != 0 {
         return Err(StringParseError::NotNullTerminated);
     };
@@ -102,12 +102,56 @@ fn parse_input_string(name_ptr: &[c_char; 64]) -> Result<&str, StringParseError>
     }
 }
 
+pub struct SizedArrayValueIterator<T>
+where
+    T: Copy,
+{
+    count: u32,
+    ptr: *const T,
+}
+
+impl<T> SizedArrayValueIterator<T>
+where
+    T: Copy,
+{
+    unsafe fn new(count: u32, ptr: *const T) -> Self {
+        Self { count, ptr }
+    }
+}
+
+impl<T> Iterator for SizedArrayValueIterator<T>
+where
+    T: Copy,
+{
+    type Item = T;
+
+    fn next(&mut self) -> Option<T> {
+        if self.count == 0 {
+            return None;
+        }
+        let ptr = self.ptr;
+        self.ptr = unsafe { ptr.add(1) };
+        self.count = 0;
+        Some(unsafe { *ptr })
+    }
+}
+
 impl<'a> ActionCreateInfo<'a> {
     pub fn action_name(&'a self) -> Result<&'a str, StringParseError> {
         parse_input_string(&self.0.action_name)
     }
 
-    pub fn action_type(&self) -> openxr::ActionType {
+    pub fn localized_action_name(&'a self) -> Result<&'a str, StringParseError> {
+        parse_input_string(&self.0.localized_action_name)
+    }
+
+    pub fn action_type(&self) -> openxr_sys::ActionType {
         self.0.action_type
+    }
+
+    pub fn subaction_paths(&self) -> SizedArrayValueIterator<openxr_sys::Path> {
+        unsafe {
+            SizedArrayValueIterator::new(self.0.count_subaction_paths, self.0.subaction_paths)
+        }
     }
 }

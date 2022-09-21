@@ -3,10 +3,12 @@ extern crate lazy_static;
 
 #[macro_use]
 mod utils;
+mod debuggable;
 mod impl_interface;
 pub mod loader;
 mod loader_globals;
 pub mod log;
 mod xr_structures;
+pub use debuggable::*;
 pub use impl_interface::*;
 pub use openxr;

@@ -1,9 +1,15 @@
-use xr_layer::{log::LogInfo, openxr, CreateAction, LayerImplementation, SyncActions, XrResult};
+use xr_layer::{
+    log::LogInfo, openxr, CreateAction, Debuggable, LayerImplementation, SyncActions, XrResult,
+};
 
-pub struct ImplementationInstance {}
+pub struct ImplementationInstance {
+    lower: openxr::Instance,
+}
 impl LayerImplementation for ImplementationInstance {
-    fn new(_lower: &openxr::Instance) -> Self {
-        Self {}
+    fn new(lower: &openxr::Instance) -> Self {
+        Self {
+            lower: lower.clone(),
+        }
     }
 
     fn sync_actions(&self, input: SyncActions) -> XrResult<()> {
@@ -13,17 +19,13 @@ impl LayerImplementation for ImplementationInstance {
     }
 
     fn create_action(&self, input: CreateAction) -> XrResult<()> {
-        for ptr in input.info() {
-            if let Some(info) = ptr.read_action_create_info() {
-                LogInfo::string(format!(
-                    "info {:?} {:#?}",
-                    info.action_name(),
-                    info.action_type()
-                ));
-            }
-        }
         let result = input.create_action();
         LogInfo::string(format!("xrCreateAction {:#?} -> {:?}", input, result));
+        for ptr in input.info() {
+            if let Some(info) = ptr.read_action_create_info() {
+                LogInfo::string(format!("info {:?}", info.xr_debug(&self.lower)));
+            }
+        }
         result
     }
 }
