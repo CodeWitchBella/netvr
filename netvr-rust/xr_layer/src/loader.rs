@@ -3,7 +3,7 @@ use crate::{
     log::{LogError, LogInfo, LogTrace, LogWarn},
     utils::{xr_wrap, ResultConvertible, ResultToWarning},
     xr_structures::*,
-    LayerImplementation, XrResult,
+    LayerImplementation, XrDebug, XrResult,
 };
 
 use openxr_sys::pfn;
@@ -360,7 +360,10 @@ impl<Implementation: LayerImplementation> XrLayerLoader<Implementation> {
                 for ptr in XrIterator::from(event_data) {
                     let ptr: DecodedStruct = ptr;
                     if let Some(d) = ptr.read_event_data_session_state_changed() {
-                        LogTrace::string(format!("Event(SessionStateChanged): {:#?}", d));
+                        LogTrace::string(format!(
+                            "Event(SessionStateChanged): {:#?}",
+                            d.xr_debug(&instance.instance)
+                        ));
                     } else if let Some(d) = ptr.read_event_data_interaction_profile_changed() {
                         LogTrace::string(format!("Event(InteractionProfileChanged): {:#?}", d));
                     } else {
@@ -414,7 +417,7 @@ impl<Implementation: LayerImplementation> XrLayerLoader<Implementation> {
             let implementation = Self::read_implementation(instance)?;
 
             implementation.create_action(crate::CreateAction {
-                instance: instance.instance.clone().into(),
+                instance: instance.instance.clone(),
                 action_set_handle,
                 info,
                 out,
@@ -494,7 +497,7 @@ impl<Implementation: LayerImplementation> XrLayerLoader<Implementation> {
             let implementation = Self::read_implementation(instance)?;
 
             implementation.sync_actions(crate::SyncActions {
-                instance: instance.instance.clone().into(),
+                instance: instance.instance.clone(),
                 sync_info,
                 session_handle,
             })

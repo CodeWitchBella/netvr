@@ -1,4 +1,4 @@
-use std::{borrow::Borrow, ffi::CStr, os::raw::c_char};
+use std::{ffi::CStr, os::raw::c_char};
 
 pub struct XrIterator {
     ptr: *const openxr_sys::BaseInStructure,
@@ -48,9 +48,14 @@ pub struct DecodedStruct {
 macro_rules! implement_from {
     ($( $method: ident reads $id: ident), *,) => {
         $(
-            #[derive(Debug)]
             #[repr(transparent)]
             pub struct $id<'a>(pub(crate) &'a openxr_sys::$id);
+
+            impl<'a> std::fmt::Debug for $id<'a> {
+                fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+                    self.0.fmt(f)
+                }
+            }
         )*
 
         impl DecodedStruct {
