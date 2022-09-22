@@ -25,13 +25,13 @@ impl std::fmt::Debug for SyncActions {
     fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
         let mut f = f.debug_struct("SyncActions");
         f.field("instance", &self.instance.as_raw());
-        f.field("session", &self.session_handle.xr_debug(&self.instance));
+        f.field("session", &self.session_handle.as_debug(&self.instance));
         f.field(
             "sync_info",
             &DebugFn::new(|f: &mut std::fmt::Formatter| {
                 let mut f = f.debug_list();
                 for info in self.sync_info() {
-                    f.entry(&info.xr_debug(&self.instance));
+                    f.entry(&info.as_debug(&self.instance));
                 }
                 f.finish()
             }),

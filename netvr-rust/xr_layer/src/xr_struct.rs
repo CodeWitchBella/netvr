@@ -1,7 +1,8 @@
-use std::{ffi::CStr, fmt::Debug, os::raw::c_char};
+use std::{ffi::CStr, fmt, fmt::Debug, os::raw::c_char};
 
-use crate::SizedArrayValueIterator;
+use crate::{SizedArrayValueIterator, XrDebug};
 
+#[derive(Clone)]
 pub struct XrStruct {
     pub ty: openxr_sys::StructureType,
     data: *const openxr_sys::BaseInStructure,
@@ -43,13 +44,13 @@ macro_rules! implement_readers {
             )*
         }
 
-        impl<'a> crate::XrDebug<'a> for XrStruct {
-            fn xr_debug(&'a self, instance: &openxr::Instance) -> crate::XrDebugValue<'a> {
-                crate::XrDebugValue::new(instance.clone(), |debugable, f| match self.ty {
+        impl XrDebug for XrStruct {
+            fn xr_fmt(&self, f: &mut fmt::Formatter, instance: &openxr::Instance) -> fmt::Result {
+                match self.ty {
                     $(
                         openxr_sys::$id::TYPE => {
                             match self.$method() {
-                                Some(v) => v.xr_debug(&debugable.instance).fmt(f),
+                                Some(v) => v.xr_fmt(f, instance),
                                 None => f.debug_struct("None").finish(),
                             }
                         }
@@ -58,7 +59,7 @@ macro_rules! implement_readers {
                         .debug_struct("Unknown")
                         .field("ty", &self.ty)
                         .finish_non_exhaustive(),
-                })
+                }
             }
         }
     };

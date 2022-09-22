@@ -362,7 +362,7 @@ impl<Implementation: LayerImplementation> XrLayerLoader<Implementation> {
                     if let Some(d) = ptr.read_event_data_session_state_changed() {
                         LogTrace::string(format!(
                             "Event(SessionStateChanged): {:?}",
-                            d.xr_debug(&instance.instance)
+                            d.as_debug(&instance.instance)
                         ));
                     } else if let Some(d) = ptr.read_event_data_interaction_profile_changed() {
                         LogTrace::string(format!("Event(InteractionProfileChanged): {:?}", d));

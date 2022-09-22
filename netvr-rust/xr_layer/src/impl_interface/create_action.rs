@@ -28,15 +28,15 @@ impl std::fmt::Debug for CreateAction {
             .field("instance", &self.instance.as_raw())
             .field(
                 "action_set",
-                &self.action_set_handle.xr_debug(&self.instance),
+                &self.action_set_handle.as_debug(&self.instance),
             )
             .field(
                 "info",
-                &unsafe { self.info.read() }.xr_debug(&self.instance),
+                &unsafe { self.info.read() }.as_debug(&self.instance),
             )
             .field(
                 "out",
-                &unsafe { self.out.as_ref() }.xr_debug(&self.instance),
+                &unsafe { self.out.as_ref() }.as_debug(&self.instance),
             )
             .finish()
     }

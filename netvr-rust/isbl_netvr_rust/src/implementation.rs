@@ -23,7 +23,7 @@ impl LayerImplementation for ImplementationInstance {
         LogInfo::string(format!("xrCreateAction {:?} -> {:?}", input, result));
         for ptr in input.info() {
             if let Some(info) = ptr.read_action_create_info() {
-                LogInfo::string(format!("info {:?}", info.xr_debug(&self.lower)));
+                LogInfo::string(format!("info {:?}", info.as_debug(&self.lower)));
             }
         }
         result

@@ -1,4 +1,6 @@
-use crate::xr_struct::XrStruct;
+use std::fmt;
+
+use crate::{xr_struct::XrStruct, XrDebug, XrDebugValue};
 
 pub struct XrIterator {
     ptr: *const openxr_sys::BaseInStructure,
@@ -92,6 +94,19 @@ where
         let mut f = f.debug_list();
         for item in self.clone() {
             f.entry(&item);
+        }
+        f.finish()
+    }
+}
+
+impl<T> XrDebug for SizedArrayValueIterator<T>
+where
+    T: Copy + XrDebug,
+{
+    fn xr_fmt(&self, f: &mut fmt::Formatter, instance: &openxr::Instance) -> fmt::Result {
+        let mut f = f.debug_list();
+        for item in self.clone() {
+            f.entry(&XrDebugValue(instance.clone(), &item));
         }
         f.finish()
     }
