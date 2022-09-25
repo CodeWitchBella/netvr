@@ -1,6 +1,7 @@
-use std::fmt;
+use std::{borrow::BorrowMut, ffi::CStr, fmt};
 
 use crate::{
+    utils::ResultConvertible,
     xr_struct::{self, ActionCreateInfo},
     XrIterator,
 };
@@ -13,9 +14,26 @@ impl<'a, T: XrDebug> fmt::Debug for XrDebugValue<'a, T> {
     }
 }
 
+/// Allows object to be debugged with extra information obtained from OpenXR
+/// runtime.
 pub trait XrDebug {
+    /// Acts similarly to std::fmt::Debug::fmt but may call OpenXR function to
+    /// reveal further detail about given object.
     fn xr_fmt(&self, f: &mut fmt::Formatter, instance: &openxr::Instance) -> fmt::Result;
 
+    /// This is usually how you consume object which implements XrDebug trait.
+    ///
+    /// If conversion to string and/or printing the object is desired
+    /// ```
+    /// format!("{:?}", object.as_debug(&self.instance))
+    /// ```
+    ///
+    /// Or if you are implementing Debug or XrDebug (usually depending on the
+    /// availability of openxr::Instance reference)
+    ///
+    /// ```
+    /// f.field("field", &self.field.as_debug(instance))
+    /// ```
     fn as_debug(&self, instance: &openxr::Instance) -> XrDebugValue<Self>
     where
         Self: std::marker::Sized + XrDebug,
@@ -123,10 +141,71 @@ impl XrDebug for openxr_sys::Time {
 }
 
 impl XrDebug for xr_struct::ActionsSyncInfo<'_> {
-    fn xr_fmt(&self, f: &mut fmt::Formatter, _: &openxr::Instance) -> fmt::Result {
+    fn xr_fmt(&self, f: &mut fmt::Formatter, instance: &openxr::Instance) -> fmt::Result {
         f.debug_struct("ActionsSyncInfo")
-            .field("active_action_sets", &self.active_action_sets())
+            .field(
+                "active_action_sets",
+                &self.active_action_sets().as_debug(instance),
+            )
             .finish()
+    }
+}
+
+impl XrDebug for openxr_sys::ActiveActionSet {
+    fn xr_fmt(&self, f: &mut fmt::Formatter, instance: &openxr::Instance) -> fmt::Result {
+        f.debug_struct("ActiveActionSet")
+            .field("action_set", &self.action_set.as_debug(instance))
+            .field("subaction_path", &self.subaction_path.as_debug(instance))
+            .finish()
+    }
+}
+
+/// Utility function which takes openxr_sys::Path and prints it with formatter.
+/// If something goes wrong it returns empty error ().
+fn debug_path(
+    path: &openxr_sys::Path,
+    f: &mut fmt::Formatter,
+    instance: &openxr::Instance,
+) -> Result<Result<(), fmt::Error>, ()> {
+    let mut size_u32: u32 = 0;
+
+    unsafe {
+        (instance.fp().path_to_string)(
+            instance.as_raw(),
+            *path,
+            0,
+            size_u32.borrow_mut(),
+            std::ptr::null_mut(),
+        )
+        .into_result()
+        .map_err(|_| ())?;
+        let size: usize = size_u32.try_into().map_err(|_| ())?;
+
+        let mut vec = vec![0_u8; size];
+        (instance.fp().path_to_string)(
+            instance.as_raw(),
+            *path,
+            size_u32,
+            size_u32.borrow_mut(),
+            std::mem::transmute(vec.as_mut_ptr()),
+        )
+        .into_result()
+        .map_err(|_| ())?;
+
+        let str = CStr::from_bytes_with_nul(vec.as_slice())
+            .map_err(|_| ())?
+            .to_str()
+            .map_err(|_| ())?;
+        Ok(f.debug_tuple("Path").field(&str).finish())
+    }
+}
+
+impl XrDebug for openxr_sys::Path {
+    fn xr_fmt(&self, f: &mut fmt::Formatter, instance: &openxr::Instance) -> fmt::Result {
+        match debug_path(self, f, instance) {
+            Ok(result) => result,
+            Err(_) => f.debug_tuple("Path").field(&"<invalid>").finish(),
+        }
     }
 }
 
@@ -151,28 +230,3 @@ implement_as_non_exhaustive!(
     xr_struct::EventDataInteractionProfileChanged<'_>,
     xr_struct::EventDataBuffer<'_>,
 );
-
-pub(crate) struct DebugFn<T>
-where
-    T: Fn(&mut std::fmt::Formatter) -> std::fmt::Result,
-{
-    fun: T,
-}
-
-impl<T> std::fmt::Debug for DebugFn<T>
-where
-    T: Fn(&mut std::fmt::Formatter) -> std::fmt::Result,
-{
-    fn fmt(&self, f: &mut std::fmt::Formatter) -> std::fmt::Result {
-        (self.fun)(f)
-    }
-}
-
-impl<T> DebugFn<T>
-where
-    T: Fn(&mut std::fmt::Formatter) -> std::fmt::Result,
-{
-    pub(crate) fn new(fun: T) -> Self {
-        Self { fun }
-    }
-}

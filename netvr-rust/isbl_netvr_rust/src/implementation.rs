@@ -1,6 +1,4 @@
-use xr_layer::{
-    log::LogInfo, openxr, CreateAction, LayerImplementation, SyncActions, XrDebug, XrResult,
-};
+use xr_layer::{log::LogInfo, openxr, CreateAction, LayerImplementation, SyncActions, XrResult};
 
 pub struct ImplementationInstance {
     lower: openxr::Instance,
@@ -14,7 +12,11 @@ impl LayerImplementation for ImplementationInstance {
 
     fn sync_actions(&self, input: SyncActions) -> XrResult<()> {
         let result = input.sync();
-        LogInfo::string(format!("xrSyncActions {:?} -> {:?}", input, result));
+        LogInfo::string(format!("xrSyncActions {:#?} -> {:?}", input, result));
+        // Here we should run xrGetActionState, update local copy of locally-tracked
+        // devices and trigger send to the server.
+        // Also, we should read latest data which arrived from the server and
+        // copy it to their local copies which we provide to the application.
         result
     }
 

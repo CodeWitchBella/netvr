@@ -1,4 +1,4 @@
-use crate::{utils::ResultConvertible, DebugFn, UnsafeFrom, XrDebug, XrIterator, XrResult};
+use crate::{utils::ResultConvertible, UnsafeFrom, XrDebug, XrIterator, XrResult};
 
 pub struct SyncActions {
     pub(crate) instance: openxr::Instance,
@@ -26,16 +26,7 @@ impl std::fmt::Debug for SyncActions {
         let mut f = f.debug_struct("SyncActions");
         f.field("instance", &self.instance.as_raw());
         f.field("session", &self.session_handle.as_debug(&self.instance));
-        f.field(
-            "sync_info",
-            &DebugFn::new(|f: &mut std::fmt::Formatter| {
-                let mut f = f.debug_list();
-                for info in self.sync_info() {
-                    f.entry(&info.as_debug(&self.instance));
-                }
-                f.finish()
-            }),
-        );
+        f.field("sync_info", &self.sync_info().as_debug(&self.instance));
         f.finish()
     }
 }
