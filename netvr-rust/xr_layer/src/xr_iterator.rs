@@ -2,13 +2,24 @@ use std::fmt;
 
 use crate::{xr_struct::XrStruct, XrDebug, XrDebugValue};
 
+#[derive(Clone)]
 pub struct XrIterator {
     ptr: *const openxr_sys::BaseInStructure,
 }
 
 impl XrIterator {
-    fn new(ptr: &openxr_sys::BaseInStructure) -> Self {
+    unsafe fn new(ptr: &openxr_sys::BaseInStructure) -> Self {
         Self { ptr }
+    }
+
+    /// .
+    ///
+    /// # Safety
+    ///
+    /// You must make sure that the clone does not outlive its parent because it
+    /// is actually a reference in a trench coat.
+    pub(crate) unsafe fn unsafe_clone(&self) -> Self {
+        Self { ptr: self.ptr }
     }
 }
 
@@ -17,8 +28,8 @@ pub trait UnsafeFrom<T> {
     ///
     /// # Safety
     ///
-    /// ptr must be valid and must not be null. Must point to structure
-    /// conforming to OpenXR structure definition (type, next, ...)
+    /// ptr must be valid and point to structure conforming to OpenXR structure
+    /// definition (type, next, ...)
     unsafe fn from_ptr(ptr: T) -> Self;
 }
 
@@ -45,10 +56,10 @@ impl Iterator for XrIterator {
     type Item = XrStruct;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let res: *const openxr_sys::BaseInStructure = unsafe { std::mem::transmute(self.ptr) };
-        if res.is_null() {
+        if self.ptr.is_null() {
             return None;
         }
+        let res: *const openxr_sys::BaseInStructure = unsafe { std::mem::transmute(self.ptr) };
         self.ptr = unsafe { std::mem::transmute((*res).next) };
         Some(XrStruct::from(res))
     }

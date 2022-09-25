@@ -21,11 +21,6 @@ impl LayerImplementation for ImplementationInstance {
     fn create_action(&self, input: CreateAction) -> XrResult<()> {
         let result = input.create_action();
         LogInfo::string(format!("xrCreateAction {:?} -> {:?}", input, result));
-        for ptr in input.info() {
-            if let Some(info) = ptr.read_action_create_info() {
-                LogInfo::string(format!("info {:?}", info.as_debug(&self.lower)));
-            }
-        }
         result
     }
 }

@@ -1,6 +1,9 @@
 use std::fmt;
 
-use crate::xr_struct::{self, ActionCreateInfo};
+use crate::{
+    xr_struct::{self, ActionCreateInfo},
+    XrIterator,
+};
 
 pub struct XrDebugValue<'a, T: XrDebug>(pub(crate) openxr::Instance, pub(crate) &'a T);
 
@@ -21,9 +24,13 @@ pub trait XrDebug {
     }
 }
 
-impl XrDebug for dyn fmt::Debug {
-    fn xr_fmt(&self, f: &mut fmt::Formatter, _instance: &openxr::Instance) -> fmt::Result {
-        self.fmt(f)
+impl XrDebug for XrIterator {
+    fn xr_fmt(&self, f: &mut fmt::Formatter, instance: &openxr::Instance) -> fmt::Result {
+        let mut f = f.debug_list();
+        for item in unsafe { self.unsafe_clone() } {
+            f.entry(&item.as_debug(instance));
+        }
+        f.finish()
     }
 }
 

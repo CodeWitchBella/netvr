@@ -32,7 +32,7 @@ impl std::fmt::Debug for CreateAction {
             )
             .field(
                 "info",
-                &unsafe { self.info.read() }.as_debug(&self.instance),
+                &self.info().as_debug(&self.instance),
             )
             .field(
                 "out",
