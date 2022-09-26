@@ -1,29 +1,29 @@
 use super::*;
 
-pub trait LayerImplementation {
-    fn new(instance: &openxr::Instance) -> Self;
+pub trait LayerImplementation: std::marker::Send {
+    fn should_override(action: &str) -> bool;
 
-    fn sync_actions(&self, input: SyncActions) -> XrResult<()> {
-        input.sync()
+    fn sync_actions(_: SyncActions) -> XrResult<()> {
+        panic!("Method is set to be overriden but is not implemented")
     }
 
-    fn create_action(&self, input: CreateAction) -> XrResult<()> {
-        input.create_action()
+    fn create_action(_: CreateAction) -> XrResult<()> {
+        panic!("Method is set to be overriden but is not implemented")
     }
 
-    fn get_action_state_boolean(&self, input: GetActionStateBoolean) -> XrResult<()> {
-        input.get()
+    fn get_action_state_boolean(_: GetActionStateBoolean) -> XrResult<()> {
+        panic!("Method is set to be overriden but is not implemented")
     }
 
-    fn get_action_state_float(&self, input: GetActionStateFloat) -> XrResult<()> {
-        input.get()
+    fn get_action_state_float(_: GetActionStateFloat) -> XrResult<()> {
+        panic!("Method is set to be overriden but is not implemented")
     }
 
-    fn get_action_state_vector2f(&self, input: GetActionStateVector2f) -> XrResult<()> {
-        input.get()
+    fn get_action_state_vector2f(_: GetActionStateVector2f) -> XrResult<()> {
+        panic!("Method is set to be overriden but is not implemented")
     }
 
-    fn get_action_state_pose(&self, input: GetActionStatePose) -> XrResult<()> {
-        input.get()
+    fn get_action_state_pose(_: GetActionStatePose) -> XrResult<()> {
+        panic!("Method is set to be overriden but is not implemented")
     }
 }

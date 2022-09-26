@@ -9,4 +9,5 @@ crate-type = ["cdylib"]
 
 [dependencies]
 backtrace = "0.3.65"
+lazy_static = "1.4.0"
 xr_layer = { path = "../xr_layer" }
