@@ -209,6 +209,77 @@ impl XrDebug for openxr_sys::Path {
     }
 }
 
+impl XrDebug for xr_struct::ActionStateGetInfo<'_> {
+    fn xr_fmt(&self, f: &mut fmt::Formatter, instance: &openxr::Instance) -> fmt::Result {
+        f.debug_struct("ActionStateGetInfo")
+            .field("subaction_path", &self.subaction_path().as_debug(instance))
+            .field("action", &self.action().as_debug(instance))
+            .finish()
+    }
+}
+
+macro_rules! implement_as_action_state {
+    ($id: ident) => {
+        impl XrDebug for openxr_sys::$id {
+            fn xr_fmt(&self, f: &mut fmt::Formatter, _: &openxr::Instance) -> fmt::Result {
+                f.debug_struct(stringify!($id))
+                    .field("changed_since_last_sync", &self.changed_since_last_sync)
+                    .field("current_state", &self.current_state)
+                    .field("is_active", &self.is_active)
+                    .field("last_change_time", &self.last_change_time)
+                    .finish()
+            }
+        }
+    };
+}
+implement_as_action_state!(ActionStateBoolean);
+implement_as_action_state!(ActionStateFloat);
+implement_as_action_state!(ActionStateVector2f);
+
+impl XrDebug for openxr_sys::ActionStatePose {
+    fn xr_fmt(&self, f: &mut fmt::Formatter, _: &openxr::Instance) -> fmt::Result {
+        f.debug_struct(stringify!($id))
+            .field("changed_since_last_sync", &self.is_active)
+            .field("is_active", &self.is_active)
+            .finish()
+        // Pose does not have last_change_time nor current_state!?
+    }
+}
+
+macro_rules! implement_as_handle {
+    ($($id: ident), *,) => {
+        $(
+            impl XrDebug for openxr_sys::$id {
+                fn xr_fmt(&self, f: &mut fmt::Formatter, _: &openxr::Instance) -> fmt::Result {
+                    f.write_fmt(format_args!("{}({})", stringify!($id), self.into_raw()))
+                }
+            }
+        )*
+    };
+}
+
+implement_as_handle!(
+    Instance,
+    Session,
+    Swapchain,
+    Space,
+    ActionSet,
+    Action,
+    DebugUtilsMessengerEXT,
+    SpatialAnchorMSFT,
+    SpatialGraphNodeTypeMSFT,
+    HandTrackerEXT,
+    SceneObserverMSFT,
+    SceneMSFT,
+    FacialTrackerHTC,
+    FoveationProfileFB,
+    TriangleMeshFB,
+    PassthroughFB,
+    PassthroughLayerFB,
+    GeometryInstanceFB,
+    SpatialAnchorStoreConnectionMSFT,
+);
+
 macro_rules! implement_as_non_exhaustive {
     ($($id: ty), *,) => {
         $(
@@ -222,12 +293,6 @@ macro_rules! implement_as_non_exhaustive {
 }
 
 implement_as_non_exhaustive!(
-    openxr_sys::ActionSet,
-    openxr_sys::Action,
-    openxr_sys::Session,
-    openxr_sys::SessionState,
-    openxr_sys::ActionStateBoolean,
-    openxr_sys::ActionStateFloat,
     //
     // Following are missing because they are android-only and I did not want to
     // spend time to try and figure out how to integrate them, since I do not
@@ -241,11 +306,11 @@ implement_as_non_exhaustive!(
     //   - xr_struct::ActionCreateInfo<'_>,
     //   - xr_struct::ActionsSyncInfo<'_>,
     //   - xr_struct::EventDataSessionStateChanged<'_>,
+    //   - xr_struct::ActionStateGetInfo<'_>,
     //
     // Following types are readable via XrIterator and do not have full implementation
     xr_struct::ActionSetCreateInfo<'_>,
     xr_struct::ActionSpaceCreateInfo<'_>,
-    xr_struct::ActionStateGetInfo<'_>,
     xr_struct::BindingModificationsKHR<'_>,
     xr_struct::BoundSourcesForActionEnumerateInfo<'_>,
     xr_struct::CompositionLayerColorScaleBiasKHR<'_>,
