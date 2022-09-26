@@ -71,6 +71,7 @@ implement_readers!(
     read_event_data_buffer reads EventDataBuffer,
     read_action_create_info reads ActionCreateInfo,
     read_actions_sync_info reads ActionsSyncInfo,
+    read_action_state_get_info reads ActionStateGetInfo,
 );
 
 impl XrStruct {

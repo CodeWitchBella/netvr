@@ -227,6 +227,10 @@ implement_as_non_exhaustive!(
     openxr_sys::Action,
     openxr_sys::Session,
     openxr_sys::SessionState,
+    openxr_sys::ActionStateGetInfo,
+    openxr_sys::ActionStateBoolean,
+    openxr_sys::ActionStateFloat,
     xr_struct::EventDataInteractionProfileChanged<'_>,
     xr_struct::EventDataBuffer<'_>,
+    xr_struct::ActionStateGetInfo<'_>,
 );

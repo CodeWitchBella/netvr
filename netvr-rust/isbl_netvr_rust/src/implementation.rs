@@ -25,4 +25,19 @@ impl LayerImplementation for ImplementationInstance {
         LogInfo::string(format!("xrCreateAction {:?} -> {:?}", input, result));
         result
     }
+
+    fn get_action_state_boolean(&self, input: xr_layer::GetActionStateBoolean) -> XrResult<()> {
+        let result = input.get();
+        LogInfo::string(format!(
+            "xrGetActionStateBoolean {:?} -> {:?}",
+            input, result
+        ));
+        result
+    }
+
+    fn get_action_state_float(&self, input: xr_layer::GetActionStateFloat) -> XrResult<()> {
+        let result = input.get();
+        LogInfo::string(format!("xrGetActionStateFloat {:?} -> {:?}", input, result));
+        result
+    }
 }

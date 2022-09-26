@@ -51,6 +51,7 @@ macro_rules! implement_from {
 implement_from!(openxr_sys::EventDataBuffer);
 implement_from!(openxr_sys::ActionsSyncInfo);
 implement_from!(openxr_sys::ActionCreateInfo);
+implement_from!(openxr_sys::ActionStateGetInfo);
 
 impl Iterator for XrIterator {
     type Item = XrStruct;

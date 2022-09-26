@@ -268,6 +268,7 @@ impl<Implementation: LayerImplementation> XrLayerLoader<Implementation> {
                 check!(pfn::AttachSessionActionSets, Self::override_attach_session_action_sets);
                 check!(pfn::SyncActions, Self::override_sync_actions);
                 check!(pfn::GetActionStateBoolean, Self::override_get_action_state_boolean);
+                check!(pfn::GetActionStateFloat, Self::override_get_action_state_float);
                 check!(pfn::ApplyHapticFeedback, Self::override_apply_haptic_feedback);
                 check!(pfn::CreateSession, Self::override_create_session);
                 check!(pfn::DestroySession, Self::override_destroy_session);
@@ -512,14 +513,37 @@ impl<Implementation: LayerImplementation> XrLayerLoader<Implementation> {
         xr_wrap(|| {
             let lock = GLOBALS.get_instance("xrGetActionStateBoolean", session_handle)?;
             let instance = lock.read()?;
-            let result = unsafe {
-                (instance.instance.fp().get_action_state_boolean)(session_handle, get_info, state)
-            };
-            LogTrace::string(format!(
-                "xrGetActionStateBoolean {:#?} -> {:?}",
-                get_info, result
-            ));
-            result.into_result()
+            let implementation = Self::read_implementation(instance)?;
+
+            implementation.get_action_state_boolean(crate::GetActionStateBoolean {
+                base: crate::GetActionState {
+                    instance: instance.instance.clone(),
+                    session_handle,
+                    get_info,
+                },
+                state,
+            })
+        })
+    }
+
+    extern "system" fn override_get_action_state_float(
+        session_handle: openxr_sys::Session,
+        get_info: *const openxr_sys::ActionStateGetInfo,
+        state: *mut openxr_sys::ActionStateFloat,
+    ) -> openxr_sys::Result {
+        xr_wrap(|| {
+            let lock = GLOBALS.get_instance("xrGetActionStateFloat", session_handle)?;
+            let instance = lock.read()?;
+            let implementation = Self::read_implementation(instance)?;
+
+            implementation.get_action_state_float(crate::GetActionStateFloat {
+                base: crate::GetActionState {
+                    instance: instance.instance.clone(),
+                    session_handle,
+                    get_info,
+                },
+                state,
+            })
         })
     }
 
