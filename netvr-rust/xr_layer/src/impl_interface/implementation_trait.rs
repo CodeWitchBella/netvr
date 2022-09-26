@@ -18,4 +18,12 @@ pub trait LayerImplementation {
     fn get_action_state_float(&self, input: GetActionStateFloat) -> XrResult<()> {
         input.get()
     }
+
+    fn get_action_state_vector2f(&self, input: GetActionStateVector2f) -> XrResult<()> {
+        input.get()
+    }
+
+    fn get_action_state_pose(&self, input: GetActionStatePose) -> XrResult<()> {
+        input.get()
+    }
 }

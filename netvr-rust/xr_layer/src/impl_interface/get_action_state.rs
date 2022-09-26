@@ -68,3 +68,5 @@ macro_rules! implement {
 
 implement!(GetActionStateBoolean ActionStateBoolean get_action_state_boolean);
 implement!(GetActionStateFloat ActionStateFloat get_action_state_float);
+implement!(GetActionStateVector2f ActionStateVector2f get_action_state_vector2f);
+implement!(GetActionStatePose ActionStatePose get_action_state_pose);
