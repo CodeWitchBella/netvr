@@ -94,7 +94,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 9ef793c31862a37448e907829482ef80, type: 3}
   m_Name: OculusQuestFeature Android
   m_EditorClassIdentifier: 
-  m_enabled: 0
+  m_enabled: 1
   nameUi: Oculus Quest Support
   version: 1.0.0
   featureIdInternal: com.unity.openxr.feature.oculusquest
@@ -194,7 +194,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 75fe097147b1d3f4ebb571a20504de65, type: 3}
   m_Name: IsblXRFeature Android
   m_EditorClassIdentifier: 
-  m_enabled: 0
+  m_enabled: 1
   nameUi: Isbl NetVR XR Feature
   version: 0.0.1
   featureIdInternal: cz.isbl.netvr
@@ -310,7 +310,7 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 6f04a22a9c482984789cefbdaab16862, type: 3}
   m_Name: PicoOpenXRFeature Android
   m_EditorClassIdentifier: 
-  m_enabled: 1
+  m_enabled: 0
   nameUi: Pico Neo 3 OpenXR Support
   version: 1.0.0
   featureIdInternal: cz.isbl.picoopenxr

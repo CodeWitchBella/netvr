@@ -12,14 +12,16 @@ use xr_layer::{
 
 mod instance;
 mod overrides;
+mod xr_wrap;
 
 // this gets called from unity to give us option to override basically any openxr function
 // it only calls into loader and is what injects our safe rust implementation
 #[no_mangle]
 pub extern "C" fn netvr_hook_get_instance_proc_addr(
     func_in: Option<pfn::GetInstanceProcAddr>,
+    manual_unhook: bool,
 ) -> Option<pfn::GetInstanceProcAddr> {
-    func_in.map(overrides::init)
+    func_in.map(|func| overrides::init(func, manual_unhook))
 }
 
 #[no_mangle]
