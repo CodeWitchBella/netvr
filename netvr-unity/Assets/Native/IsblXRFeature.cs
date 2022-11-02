@@ -32,6 +32,7 @@ public class IsblXRFeature : OpenXRFeature
 
     static string _log = "";
     static Timer _timer;
+    const bool InstantLog = false;
 
     [AOT.MonoPInvokeCallback(typeof(IsblNetvrLibrary.Logger_Delegate))]
     static void Logger(string value)
@@ -69,6 +70,7 @@ public class IsblXRFeature : OpenXRFeature
                 _timerRust.Elapsed += (source, evt) => InfoLogProcess();
                 _timerRust.Enabled = true;
             }
+            if (InstantLog) InfoLogProcess();
         }
         else
         {

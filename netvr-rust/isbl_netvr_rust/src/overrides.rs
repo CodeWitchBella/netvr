@@ -1,4 +1,10 @@
-use crate::{instance::Instance, xr_wrap::xr_wrap, xr_wrap::ResultConvertible};
+#![allow(unused_variables, dead_code)]
+
+use crate::{
+    instance::Instance,
+    xr_wrap::xr_wrap,
+    xr_wrap::{xr_wrap_trace, ResultConvertible},
+};
 use std::{collections::HashMap, os::raw::c_char, sync::RwLock};
 use xr_layer::{
     log::{LogError, LogTrace, LogWarn},
@@ -11,6 +17,8 @@ struct Layer {
     /// drop and is therefore safe to use.
     pub(self) entry: Entry,
     pub(self) instances: HashMap<sys::Instance, Instance>,
+    pub(self) sessions: HashMap<sys::Session, sys::Instance>,
+    pub(self) action_sets: HashMap<sys::ActionSet, sys::Instance>,
 }
 
 impl Layer {
@@ -21,21 +29,20 @@ impl Layer {
             .add_override(FnPtr::CreateInstance(create_instance))
             .add_override(FnPtr::PollEvent(poll_event))
             .add_override(FnPtr::CreateActionSet(create_action_set))
-            //.add_override(FnPtr::CreateAction(create_action))
+            .add_override(FnPtr::CreateAction(create_action))
             .add_override(FnPtr::StringToPath(string_to_path))
             .add_override(FnPtr::SuggestInteractionProfileBindings(
                 suggest_interaction_profile_bindings,
             ))
             .add_override(FnPtr::CreateSession(create_session))
-            //.add_override(FnPtr::DestroySession(destroy_session))
-            //.add_override(FnPtr::AttachSessionActionSets(attach_session_action_sets))
-            //.add_override(FnPtr::SyncActions(sync_actions))
-            //.add_override(FnPtr::GetActionStateBoolean(get_action_state_boolean))
-            //.add_override(FnPtr::GetActionStateFloat(get_action_state_float))
-            //.add_override(FnPtr::GetActionStateVector2f(get_action_state_vector2f))
-            //.add_override(FnPtr::GetActionStatePose(get_action_state_pose))
-            //.add_override(FnPtr::ApplyHapticFeedback(apply_haptic_feedback))
-          ;
+            .add_override(FnPtr::DestroySession(destroy_session))
+            .add_override(FnPtr::AttachSessionActionSets(attach_session_action_sets))
+            .add_override(FnPtr::SyncActions(sync_actions))
+            .add_override(FnPtr::GetActionStateBoolean(get_action_state_boolean))
+            .add_override(FnPtr::GetActionStateFloat(get_action_state_float))
+            .add_override(FnPtr::GetActionStateVector2f(get_action_state_vector2f))
+            .add_override(FnPtr::GetActionStatePose(get_action_state_pose))
+            .add_override(FnPtr::ApplyHapticFeedback(apply_haptic_feedback));
         if !manual_unhook {
             layer.add_override(FnPtr::DestroyInstance(destroy_instance));
         }
@@ -44,6 +51,8 @@ impl Layer {
             layer,
             entry,
             instances: HashMap::default(),
+            sessions: HashMap::default(),
+            action_sets: HashMap::default(),
         }
     }
 }
@@ -175,6 +184,56 @@ fn read_instance<'a>(
         .ok_or(sys::Result::ERROR_INSTANCE_LOST)
 }
 
+fn read_layer_mut<'a>(
+    w: &'a mut std::sync::RwLockWriteGuard<Option<Layer>>,
+    instance_handle: sys::Instance,
+) -> Result<&'a mut Layer, xr_layer::sys::Result> {
+    (*w).as_mut().ok_or(sys::Result::ERROR_RUNTIME_FAILURE)
+}
+
+fn read_instance_layer_mut(
+    layer: &mut Layer,
+    instance_handle: sys::Instance,
+) -> Result<&mut Instance, xr_layer::sys::Result> {
+    layer
+        .instances
+        .get_mut(&instance_handle)
+        .ok_or(sys::Result::ERROR_INSTANCE_LOST)
+}
+
+fn subresource_read_instance<'a, T: std::hash::Hash + std::cmp::Eq>(
+    r: &'a std::sync::RwLockReadGuard<Option<Layer>>,
+    reader: fn(layer: &Layer) -> &HashMap<T, sys::Instance>,
+    handle: T,
+) -> Result<&'a Instance, xr_layer::sys::Result> {
+    let layer = (*r).as_ref().ok_or(sys::Result::ERROR_RUNTIME_FAILURE)?;
+    let instance_handle = reader(layer)
+        .get(&handle)
+        .ok_or(sys::Result::ERROR_HANDLE_INVALID)?;
+    layer
+        .instances
+        .get(instance_handle)
+        .ok_or(sys::Result::ERROR_INSTANCE_LOST)
+}
+
+fn subresource_delete<'a, T: std::hash::Hash + std::cmp::Eq>(
+    w: &'a mut std::sync::RwLockWriteGuard<Option<Layer>>,
+    reader: fn(layer: &mut Layer) -> &mut HashMap<T, sys::Instance>,
+    handle: T,
+) -> Result<&'a Instance, xr_layer::sys::Result> {
+    // TODO: deleting instance should also delete sub-resources, and eg. deleting
+    // ActionSet should also delete Action, etc.
+
+    let layer = (*w).as_mut().ok_or(sys::Result::ERROR_RUNTIME_FAILURE)?;
+    let instance_handle = reader(layer)
+        .remove(&handle)
+        .ok_or(sys::Result::ERROR_HANDLE_INVALID)?;
+    layer
+        .instances
+        .get(&instance_handle)
+        .ok_or(sys::Result::ERROR_INSTANCE_LOST)
+}
+
 extern "system" fn poll_event(
     instance_handle: sys::Instance,
     event_data: *mut sys::EventDataBuffer,
@@ -195,8 +254,9 @@ extern "system" fn create_action_set(
     action_set_ptr: *mut sys::ActionSet,
 ) -> sys::Result {
     xr_wrap(|| {
-        let r = LAYER.read()?;
-        let instance = read_instance(&r, instance_handle)?;
+        let mut w = LAYER.write()?;
+        let layer = read_layer_mut(&mut w, instance_handle)?;
+        let instance = read_instance_layer_mut(layer, instance_handle)?;
 
         let result =
             unsafe { (instance.pfn.create_action_set)(instance_handle, info, action_set_ptr) };
@@ -204,6 +264,10 @@ extern "system" fn create_action_set(
             "create_action_set {:?} -> {:?}",
             instance_handle, result
         ));
+        if result.into_result().is_ok() {
+            let action_set = unsafe { *action_set_ptr };
+            layer.action_sets.insert(action_set, instance_handle);
+        }
         result.into_result()
     })
 }
@@ -213,7 +277,12 @@ extern "system" fn create_action(
     info: *const sys::ActionCreateInfo,
     out: *mut sys::Action,
 ) -> sys::Result {
-    sys::Result::ERROR_RUNTIME_FAILURE
+    xr_wrap_trace("create_action", || {
+        let r = LAYER.read()?;
+        let instance = subresource_read_instance(&r, |l| &l.action_sets, action_set_handle)?;
+        let result = unsafe { (instance.pfn.create_action)(action_set_handle, info, out) };
+        result.into_result()
+    })
 }
 
 extern "system" fn string_to_path(
@@ -274,21 +343,44 @@ extern "system" fn create_session(
 }
 
 extern "system" fn destroy_session(session_handle: sys::Session) -> sys::Result {
-    sys::Result::ERROR_RUNTIME_FAILURE
+    xr_wrap(|| {
+        let mut w = LAYER.write()?;
+        let instance = subresource_delete(&mut w, |l| &mut l.sessions, session_handle)?;
+
+        let result = unsafe { (instance.pfn.destroy_session)(session_handle) };
+        LogTrace::string(format!(
+            "destroy_session {:?} -> {:?}",
+            session_handle, result
+        ));
+        result.into_result()
+    })
 }
 
 extern "system" fn attach_session_action_sets(
     session_handle: sys::Session,
     attach_info: *const sys::SessionActionSetsAttachInfo,
 ) -> sys::Result {
-    sys::Result::ERROR_RUNTIME_FAILURE
+    xr_wrap_trace("attach_session_action_sets", || {
+        let r = LAYER.read()?;
+        let instance = subresource_read_instance(&r, |l| &l.sessions, session_handle)?;
+
+        let result =
+            unsafe { (instance.pfn.attach_session_action_sets)(session_handle, attach_info) };
+        result.into_result()
+    })
 }
 
 extern "system" fn sync_actions(
     session_handle: sys::Session,
     sync_info: *const sys::ActionsSyncInfo,
 ) -> sys::Result {
-    sys::Result::ERROR_RUNTIME_FAILURE
+    xr_wrap_trace("sync_actions", || {
+        let r = LAYER.read()?;
+        let instance = subresource_read_instance(&r, |l| &l.sessions, session_handle)?;
+
+        let result = unsafe { (instance.pfn.sync_actions)(session_handle, sync_info) };
+        result.into_result()
+    })
 }
 
 extern "system" fn get_action_state_boolean(
@@ -296,7 +388,14 @@ extern "system" fn get_action_state_boolean(
     get_info: *const sys::ActionStateGetInfo,
     state: *mut sys::ActionStateBoolean,
 ) -> sys::Result {
-    sys::Result::ERROR_RUNTIME_FAILURE
+    xr_wrap_trace("get_action_state_boolean", || {
+        let r = LAYER.read()?;
+        let instance = subresource_read_instance(&r, |l| &l.sessions, session_handle)?;
+
+        let result =
+            unsafe { (instance.pfn.get_action_state_boolean)(session_handle, get_info, state) };
+        result.into_result()
+    })
 }
 
 extern "system" fn get_action_state_float(
@@ -304,7 +403,14 @@ extern "system" fn get_action_state_float(
     get_info: *const sys::ActionStateGetInfo,
     state: *mut sys::ActionStateFloat,
 ) -> sys::Result {
-    sys::Result::ERROR_RUNTIME_FAILURE
+    xr_wrap_trace("get_action_state_float", || {
+        let r = LAYER.read()?;
+        let instance = subresource_read_instance(&r, |l| &l.sessions, session_handle)?;
+
+        let result =
+            unsafe { (instance.pfn.get_action_state_float)(session_handle, get_info, state) };
+        result.into_result()
+    })
 }
 
 extern "system" fn get_action_state_vector2f(
@@ -312,7 +418,14 @@ extern "system" fn get_action_state_vector2f(
     get_info: *const sys::ActionStateGetInfo,
     state: *mut sys::ActionStateVector2f,
 ) -> sys::Result {
-    sys::Result::ERROR_RUNTIME_FAILURE
+    xr_wrap_trace("get_action_state_vector2f", || {
+        let r = LAYER.read()?;
+        let instance = subresource_read_instance(&r, |l| &l.sessions, session_handle)?;
+
+        let result =
+            unsafe { (instance.pfn.get_action_state_vector2f)(session_handle, get_info, state) };
+        result.into_result()
+    })
 }
 
 extern "system" fn get_action_state_pose(
@@ -320,7 +433,14 @@ extern "system" fn get_action_state_pose(
     get_info: *const sys::ActionStateGetInfo,
     state: *mut sys::ActionStatePose,
 ) -> sys::Result {
-    sys::Result::ERROR_RUNTIME_FAILURE
+    xr_wrap_trace("get_action_state_pose", || {
+        let r = LAYER.read()?;
+        let instance = subresource_read_instance(&r, |l| &l.sessions, session_handle)?;
+
+        let result =
+            unsafe { (instance.pfn.get_action_state_pose)(session_handle, get_info, state) };
+        result.into_result()
+    })
 }
 
 extern "system" fn apply_haptic_feedback(
@@ -328,5 +448,17 @@ extern "system" fn apply_haptic_feedback(
     haptic_action_info: *const sys::HapticActionInfo,
     haptic_feedback: *const sys::HapticBaseHeader,
 ) -> sys::Result {
-    sys::Result::ERROR_RUNTIME_FAILURE
+    xr_wrap_trace("apply_haptic_feedback", || {
+        let r = LAYER.read()?;
+        let instance = subresource_read_instance(&r, |l| &l.sessions, session_handle)?;
+
+        let result = unsafe {
+            (instance.pfn.apply_haptic_feedback)(
+                session_handle,
+                haptic_action_info,
+                haptic_feedback,
+            )
+        };
+        result.into_result()
+    })
 }

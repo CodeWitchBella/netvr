@@ -1,14 +1,7 @@
-use std::{os::raw::c_char, panic};
+use std::os::raw::c_char;
 
 use crate::{log::LogWarn, XrResult};
 pub type Cstr = *const c_char;
-
-#[macro_export]
-macro_rules! internal_screaming {
-    () => {
-        panic!("AAAAAAAAAAAaaaaaaaaaaaaaaaaaaaaaaaaa");
-    };
-}
 
 pub(crate) trait ResultConvertible {
     fn into_result(self) -> XrResult<()>;

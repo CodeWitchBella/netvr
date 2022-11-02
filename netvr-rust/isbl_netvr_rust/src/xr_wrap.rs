@@ -1,7 +1,7 @@
 use std::{error::Error, panic, sync::PoisonError};
 
 use xr_layer::{
-    log::{LogError, LogPanic},
+    log::{LogError, LogPanic, LogTrace},
     sys,
 };
 
@@ -71,6 +71,21 @@ where
             sys::Result::ERROR_RUNTIME_FAILURE
         }
     }
+}
+
+pub(crate) fn xr_wrap_trace<O>(fn_name: &'static str, function: O) -> sys::Result
+where
+    O: FnOnce() -> Result<(), XrWrapError>,
+    O: std::panic::UnwindSafe,
+{
+    let result = xr_wrap(function);
+    let maybe_panicked = panic::catch_unwind(|| {
+        LogTrace::string(format!("{} -> {:?}", fn_name, result));
+    });
+    if maybe_panicked.is_err() {
+        LogError::str("Trace function panicked");
+    }
+    result
 }
 
 /// Utility trait to be able to do `result.into_result()?` inside the function.

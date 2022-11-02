@@ -11,7 +11,7 @@ To support openxr-loader we would have to expose proper openxr layer, which is d
 
 ## Public API
 
-The .dll (or .so on non-windows platforms) has three exported functions - `netvr_hook_get_instance_proc_addr`, `netvr_manual_destroy_instance` and `netvr_set_logger`.
+The .dll (or .so on non-windows platforms) has three exported functions - `netvr_hook_get_instance_proc_addr`, `netvr_unhook` and `netvr_set_logger`.
 
 **netvr_hook_get_instance_proc_addr** is the most important function. You call this function before you call any openxr functions (see lifecycle) and it sets everything up automatically. You should set `automatic_destroy` to 1. It has following signature:
 
@@ -30,12 +30,12 @@ void netvr_set_logger(netvr_logger_callback callback);
 // level is one of: 1 - Info, 2 - Warn, 3 - Error
 ```
 
-**netvr_manual_destroy_instance** if you do library unloading on instance destroy then your application would crash. To work around this you can set `automatic_destroy` parameter to hook function to `0`. That will prevent it from taking over `xrDestroyInstance` which will allow you to unload the library before that function is called.
+**netvr_unhook** if you do library unloading on instance destroy then your application would crash. To work around this you can set `automatic_destroy` parameter to hook function to `0`. That will prevent it from taking over `xrDestroyInstance` which will allow you to unload the library before that function is called.
 
-That unfortunately means that you have to finalize library yourself by calling this `netvr_manual_destroy_instance` yourself.
+That unfortunately means that you have to finalize library yourself by calling this `netvr_unhook` yourself.
 
 ```c
-void netvr_manual_destroy_instance(XrInstance instance);
+void netvr_unhook(XrInstance instance);
 // instance is OpenXR instance handle
 ```
 

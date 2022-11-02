@@ -39,7 +39,7 @@ class IsblRustLibrary : IDisposable
         // get function pointers converted to delegates
         _l.GetDelegate("netvr_set_logger", out SetLogger);
         _l.GetDelegate("netvr_hook_get_instance_proc_addr", out HookGetInstanceProcAddr);
-        _l.GetDelegate("netvr_manual_destroy_instance", out Unhook);
+        _l.GetDelegate("netvr_unhook", out Unhook);
         // ADD_FUNC: add GetDelegate call above this line
 #else
         SetLogger = SetLogger_Native;
