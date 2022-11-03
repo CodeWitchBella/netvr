@@ -1,14 +1,12 @@
-#![allow(unused_variables, dead_code)]
-
 use crate::{
+    implementation::post_sync_actions,
     instance::Instance,
-    xr_wrap::xr_wrap,
-    xr_wrap::{xr_wrap_trace, ResultConvertible},
+    xr_wrap::{xr_wrap_trace, ResultConvertible, XrWrapError},
 };
 use std::{collections::HashMap, os::raw::c_char, sync::RwLock};
 use xr_layer::{
     log::{LogError, LogTrace, LogWarn},
-    raw, sys, Entry, FnPtr,
+    raw, sys, Entry, FnPtr, UnsafeFrom, XrIterator,
 };
 
 struct Layer {
@@ -42,7 +40,8 @@ impl Layer {
             .add_override(FnPtr::GetActionStateFloat(get_action_state_float))
             .add_override(FnPtr::GetActionStateVector2f(get_action_state_vector2f))
             .add_override(FnPtr::GetActionStatePose(get_action_state_pose))
-            .add_override(FnPtr::ApplyHapticFeedback(apply_haptic_feedback));
+            .add_override(FnPtr::ApplyHapticFeedback(apply_haptic_feedback))
+            .add_override(FnPtr::LocateViews(locate_views));
         if !manual_unhook {
             layer.add_override(FnPtr::DestroyInstance(destroy_instance));
         }
@@ -133,7 +132,7 @@ extern "system" fn create_instance(
     create_info: *const sys::InstanceCreateInfo,
     instance_ptr: *mut sys::Instance,
 ) -> sys::Result {
-    xr_wrap(|| {
+    xr_wrap_trace("create_instance", || {
         let mut w = LAYER.write()?;
         let layer = (*w).as_mut().ok_or(sys::Result::ERROR_RUNTIME_FAILURE)?;
         let result = unsafe { (layer.entry.fp().create_instance)(create_info, instance_ptr) };
@@ -148,16 +147,12 @@ extern "system" fn create_instance(
                 LogWarn::str("Failed to acquire raw::Instance");
             }
         }
-        LogTrace::string(format!(
-            "create_instance {:?} -> {:?}",
-            create_info, instance_ptr
-        ));
         result.into_result()
     })
 }
 
 extern "system" fn destroy_instance(instance_handle: sys::Instance) -> sys::Result {
-    xr_wrap(|| {
+    xr_wrap_trace("destroy_instance", || {
         let mut w = LAYER.write()?;
         let layer = (*w).as_mut().ok_or(sys::Result::ERROR_RUNTIME_FAILURE)?;
         let instance = layer
@@ -165,10 +160,6 @@ extern "system" fn destroy_instance(instance_handle: sys::Instance) -> sys::Resu
             .remove(&instance_handle)
             .ok_or(sys::Result::ERROR_INSTANCE_LOST)?;
         let result = unsafe { (instance.pfn.destroy_instance)(instance_handle) };
-        LogTrace::string(format!(
-            "destroy_instance {:?} -> {:?}",
-            instance_handle, result
-        ));
         result.into_result()
     })
 }
@@ -186,7 +177,6 @@ fn read_instance<'a>(
 
 fn read_layer_mut<'a>(
     w: &'a mut std::sync::RwLockWriteGuard<Option<Layer>>,
-    instance_handle: sys::Instance,
 ) -> Result<&'a mut Layer, xr_layer::sys::Result> {
     (*w).as_mut().ok_or(sys::Result::ERROR_RUNTIME_FAILURE)
 }
@@ -238,12 +228,11 @@ extern "system" fn poll_event(
     instance_handle: sys::Instance,
     event_data: *mut sys::EventDataBuffer,
 ) -> sys::Result {
-    xr_wrap(|| {
+    xr_wrap_trace("poll_event", || {
         let r = LAYER.read()?;
         let instance = read_instance(&r, instance_handle)?;
 
         let result = unsafe { (instance.pfn.poll_event)(instance_handle, event_data) };
-        LogTrace::string(format!("poll_event {:?} -> {:?}", instance_handle, result));
         result.into_result()
     })
 }
@@ -253,17 +242,13 @@ extern "system" fn create_action_set(
     info: *const sys::ActionSetCreateInfo,
     action_set_ptr: *mut sys::ActionSet,
 ) -> sys::Result {
-    xr_wrap(|| {
+    xr_wrap_trace("create_action_set", || {
         let mut w = LAYER.write()?;
-        let layer = read_layer_mut(&mut w, instance_handle)?;
+        let layer = read_layer_mut(&mut w)?;
         let instance = read_instance_layer_mut(layer, instance_handle)?;
 
         let result =
             unsafe { (instance.pfn.create_action_set)(instance_handle, info, action_set_ptr) };
-        LogTrace::string(format!(
-            "create_action_set {:?} -> {:?}",
-            instance_handle, result
-        ));
         if result.into_result().is_ok() {
             let action_set = unsafe { *action_set_ptr };
             layer.action_sets.insert(action_set, instance_handle);
@@ -290,16 +275,12 @@ extern "system" fn string_to_path(
     path_string_raw: *const c_char,
     path: *mut sys::Path,
 ) -> sys::Result {
-    xr_wrap(|| {
+    xr_wrap_trace("string_to_path", || {
         let r = LAYER.read()?;
         let instance = read_instance(&r, instance_handle)?;
 
         let result =
             unsafe { (instance.pfn.string_to_path)(instance_handle, path_string_raw, path) };
-        LogTrace::string(format!(
-            "string_to_path {:?} -> {:?}",
-            instance_handle, result
-        ));
         result.into_result()
     })
 }
@@ -308,17 +289,13 @@ extern "system" fn suggest_interaction_profile_bindings(
     instance_handle: sys::Instance,
     suggested_bindings: *const sys::InteractionProfileSuggestedBinding,
 ) -> sys::Result {
-    xr_wrap(|| {
+    xr_wrap_trace("suggest_interaction_profile_bindings", || {
         let r = LAYER.read()?;
         let instance = read_instance(&r, instance_handle)?;
 
         let result = unsafe {
             (instance.pfn.suggest_interaction_profile_bindings)(instance_handle, suggested_bindings)
         };
-        LogTrace::string(format!(
-            "suggest_interaction_profile_bindings {:?} -> {:?}",
-            instance_handle, result
-        ));
         result.into_result()
     })
 }
@@ -328,30 +305,27 @@ extern "system" fn create_session(
     create_info: *const sys::SessionCreateInfo,
     session_ptr: *mut sys::Session,
 ) -> sys::Result {
-    xr_wrap(|| {
-        let r = LAYER.read()?;
-        let instance = read_instance(&r, instance_handle)?;
+    xr_wrap_trace("create_session", || {
+        let mut w = LAYER.write()?;
+        let layer = read_layer_mut(&mut w)?;
+        let instance = read_instance_layer_mut(layer, instance_handle)?;
 
         let result =
             unsafe { (instance.pfn.create_session)(instance_handle, create_info, session_ptr) };
-        LogTrace::string(format!(
-            "create_session {:?} -> {:?}",
-            instance_handle, result
-        ));
+        if result.into_result().is_ok() {
+            let session = unsafe { *session_ptr };
+            layer.sessions.insert(session, instance_handle);
+        }
         result.into_result()
     })
 }
 
 extern "system" fn destroy_session(session_handle: sys::Session) -> sys::Result {
-    xr_wrap(|| {
+    xr_wrap_trace("destroy_session", || {
         let mut w = LAYER.write()?;
         let instance = subresource_delete(&mut w, |l| &mut l.sessions, session_handle)?;
 
         let result = unsafe { (instance.pfn.destroy_session)(session_handle) };
-        LogTrace::string(format!(
-            "destroy_session {:?} -> {:?}",
-            session_handle, result
-        ));
         result.into_result()
     })
 }
@@ -379,6 +353,7 @@ extern "system" fn sync_actions(
         let instance = subresource_read_instance(&r, |l| &l.sessions, session_handle)?;
 
         let result = unsafe { (instance.pfn.sync_actions)(session_handle, sync_info) };
+        post_sync_actions(instance, unsafe { XrIterator::from_ptr(sync_info) });
         result.into_result()
     })
 }
@@ -461,4 +436,39 @@ extern "system" fn apply_haptic_feedback(
         };
         result.into_result()
     })
+}
+
+extern "system" fn locate_views(
+    session_handle: sys::Session,
+    view_locate_info: *const sys::ViewLocateInfo,
+    view_state: *mut sys::ViewState,
+    view_capacity_input: u32,
+    view_count_output: *mut u32,
+    view: *mut sys::View,
+) -> sys::Result {
+    xr_wrap_trace("locate_views", || {
+        let r = LAYER.read()?;
+        let instance = subresource_read_instance(&r, |l| &l.sessions, session_handle)?;
+
+        let result = unsafe {
+            (instance.pfn.locate_views)(
+                session_handle,
+                view_locate_info,
+                view_state,
+                view_capacity_input,
+                view_count_output,
+                view,
+            )
+        };
+        result.into_result()
+    })
+}
+
+pub(crate) fn with_instance<T>(handle: sys::Instance, cb: T) -> Result<(), XrWrapError>
+where
+    T: FnOnce(&Instance) -> Result<(), XrWrapError>,
+{
+    let r = LAYER.read()?;
+    let instance = read_instance(&r, handle)?;
+    cb(instance)
 }

@@ -397,6 +397,7 @@ public class CalibrationFeature : IIsblNetFeature
             var p2 = UnityToOVR(followerSample.Position);
             var q2 = UnityToOVR(followerSample.Rotation);
             calculation.AddPair(p1, q1, p2, q2);
+#pragma warning disable 0162
             if (false)
             {
                 Utils.Log($"Passing converted sample {i}:"
@@ -406,6 +407,7 @@ public class CalibrationFeature : IIsblNetFeature
                     + $"\nq2: ({q2.x}, {q2.y}, {q2.z}, {q2.w})"
                 );
             }
+#pragma warning restore 0162
         }
         IsblNetvrLibrary.CalibrationComputeResult result;
         using (var timer2 = new IsblStopwatch("ComputeCalibration::compute only"))

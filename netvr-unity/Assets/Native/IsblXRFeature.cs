@@ -34,6 +34,8 @@ public class IsblXRFeature : OpenXRFeature
     static Timer _timer;
     const bool InstantLog = false;
 
+    static Timer _tickTimer;
+
     [AOT.MonoPInvokeCallback(typeof(IsblNetvrLibrary.Logger_Delegate))]
     static void Logger(string value)
     {
@@ -70,7 +72,9 @@ public class IsblXRFeature : OpenXRFeature
                 _timerRust.Elapsed += (source, evt) => InfoLogProcess();
                 _timerRust.Enabled = true;
             }
+#pragma warning disable 0162
             if (InstantLog) InfoLogProcess();
+#pragma warning restore 0162
         }
         else
         {
@@ -112,6 +116,12 @@ public class IsblXRFeature : OpenXRFeature
             RustLib = new();
             RustLib.SetLogger(LoggerRust);
         }
+        if (_tickTimer == null)
+        {
+            _tickTimer = new(10);
+            _tickTimer.Elapsed += (source, evt) => RustLib?.Tick(xrInstance);
+            _tickTimer.Enabled = true;
+        }
         return true;
     }
 
@@ -124,6 +134,11 @@ public class IsblXRFeature : OpenXRFeature
         RustLib?.Dispose();
         RustLib = null;
         _xrInstance = 0;
+        if (_tickTimer != null)
+        {
+            _tickTimer.Enabled = false;
+            _tickTimer = null;
+        }
     }
 
     protected override void OnSystemChange(ulong xrSystem)

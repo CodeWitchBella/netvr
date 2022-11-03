@@ -18,6 +18,9 @@ class IsblRustLibrary : IDisposable
 
     public delegate void Unhook_Delegate();
     public readonly Unhook_Delegate Unhook;
+
+    public delegate void Tick_Delegate(ulong xrInstance);
+    public readonly Tick_Delegate Tick;
     // ADD_FUNC: add delegate and public field above this line
 
 #if !UNITY_EDITOR_WIN
@@ -29,6 +32,9 @@ class IsblRustLibrary : IDisposable
 
     [DllImport(LibraryName, EntryPoint = "netvr_unhook")]
     static extern void Unhook_Native();
+
+    [DllImport(LibraryName, EntryPoint = "netvr_tick")]
+    static extern void Tick_Native(ulong xrInstance);
     // ADD_FUNC: add static extern above this line
 #endif // !UNITY_EDITOR_WIN
 
@@ -40,11 +46,13 @@ class IsblRustLibrary : IDisposable
         _l.GetDelegate("netvr_set_logger", out SetLogger);
         _l.GetDelegate("netvr_hook_get_instance_proc_addr", out HookGetInstanceProcAddr);
         _l.GetDelegate("netvr_unhook", out Unhook);
+        _l.GetDelegate("netvr_tick", out Tick);
         // ADD_FUNC: add GetDelegate call above this line
 #else
         SetLogger = SetLogger_Native;
         HookGetInstanceProcAddr = HookGetInstanceProcAddr_Native;
         Unhook = Unhook_Native;
+        Tick = Tick_Native;
         // ADD_FUNC: add a statement above this line
 #endif
     }

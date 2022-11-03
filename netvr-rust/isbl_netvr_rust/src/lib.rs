@@ -2,14 +2,18 @@
 extern crate lazy_static;
 
 use backtrace::Backtrace;
+use implementation::tick;
+use overrides::with_instance;
 use std::panic;
+use xr_wrap::xr_wrap_trace;
 
 //use implementation::ImplementationInstance;
 use xr_layer::{
     log::{self, LogPanic},
-    pfn,
+    pfn, sys,
 };
 
+mod implementation;
 mod instance;
 mod overrides;
 mod xr_wrap;
@@ -50,4 +54,14 @@ pub extern "C" fn netvr_set_logger(func: log::LoggerFn) {
     }));
 
     log::set_logger(func)
+}
+
+#[no_mangle]
+pub extern "C" fn netvr_tick(instance_handle: sys::Instance) {
+    xr_wrap_trace("netvr_tick", || {
+        with_instance(instance_handle, |instance| {
+            tick(instance_handle, instance);
+            Ok(())
+        })
+    });
 }
