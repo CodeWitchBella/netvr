@@ -151,6 +151,12 @@ impl XrDebug for xr_struct::ActionsSyncInfo<'_> {
     }
 }
 
+impl XrDebug for xr_struct::SessionCreateInfo<'_> {
+    fn xr_fmt(&self, f: &mut fmt::Formatter, instance: &openxr::Instance) -> fmt::Result {
+        f.debug_struct("SessionCreateInfo").finish_non_exhaustive()
+    }
+}
+
 impl XrDebug for openxr_sys::ActiveActionSet {
     fn xr_fmt(&self, f: &mut fmt::Formatter, instance: &openxr::Instance) -> fmt::Result {
         f.debug_struct("ActiveActionSet")
@@ -307,6 +313,7 @@ implement_as_non_exhaustive!(
     //   - xr_struct::ActionsSyncInfo<'_>,
     //   - xr_struct::EventDataSessionStateChanged<'_>,
     //   - xr_struct::ActionStateGetInfo<'_>,
+    //   - xr_struct::SessionCreateInfo<'_>,
     //
     // Following types are readable via XrIterator and do not have full implementation
     xr_struct::ActionSetCreateInfo<'_>,
@@ -385,7 +392,6 @@ implement_as_non_exhaustive!(
     xr_struct::SecondaryViewConfigurationSwapchainCreateInfoMSFT<'_>,
     xr_struct::SessionActionSetsAttachInfo<'_>,
     xr_struct::SessionBeginInfo<'_>,
-    xr_struct::SessionCreateInfo<'_>,
     xr_struct::SessionCreateInfoOverlayEXTX<'_>,
     xr_struct::SpatialAnchorCreateInfoMSFT<'_>,
     xr_struct::SpatialAnchorFromPersistedAnchorCreateInfoMSFT<'_>,

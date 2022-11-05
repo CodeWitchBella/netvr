@@ -134,11 +134,9 @@ public class IsblXRFeature : OpenXRFeature
         RustLib?.Dispose();
         RustLib = null;
         _xrInstance = 0;
-        if (_tickTimer != null)
-        {
-            _tickTimer.Enabled = false;
-            _tickTimer = null;
-        }
+        _tickTimer?.Stop();
+        _tickTimer?.Dispose();
+        _tickTimer = null;
     }
 
     protected override void OnSystemChange(ulong xrSystem)

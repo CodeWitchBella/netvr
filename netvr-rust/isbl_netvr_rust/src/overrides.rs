@@ -5,8 +5,9 @@ use crate::{
 };
 use std::{collections::HashMap, os::raw::c_char, sync::RwLock};
 use xr_layer::{
-    log::{LogError, LogTrace, LogWarn},
-    raw, sys, Entry, FnPtr, UnsafeFrom, XrIterator,
+    log::{LogError, LogInfo, LogTrace, LogWarn},
+    safe_openxr::{self, InstanceExtensions},
+    sys, Entry, FnPtr, SessionCreateInfo, UnsafeFrom, XrDebug, XrIterator,
 };
 
 struct Layer {
@@ -138,13 +139,19 @@ extern "system" fn create_instance(
         let result = unsafe { (layer.entry.fp().create_instance)(create_info, instance_ptr) };
         if result == sys::Result::SUCCESS {
             let instance_handle = unsafe { *instance_ptr };
-            let raw_instance_result = unsafe { raw::Instance::load(&layer.entry, instance_handle) };
-            if let Ok(raw_instance) = raw_instance_result {
+            let instance_result = unsafe {
+                safe_openxr::Instance::from_raw(
+                    layer.entry.clone(),
+                    instance_handle,
+                    InstanceExtensions::default(),
+                )
+            };
+            if let Ok(instance) = instance_result {
                 layer
                     .instances
-                    .insert(instance_handle, Instance::new(raw_instance));
+                    .insert(instance_handle, Instance::new(instance));
             } else {
-                LogWarn::str("Failed to acquire raw::Instance");
+                LogWarn::str("Failed to acquire Instance");
             }
         }
         result.into_result()
@@ -159,8 +166,10 @@ extern "system" fn destroy_instance(instance_handle: sys::Instance) -> sys::Resu
             .instances
             .remove(&instance_handle)
             .ok_or(sys::Result::ERROR_INSTANCE_LOST)?;
-        let result = unsafe { (instance.pfn.destroy_instance)(instance_handle) };
-        result.into_result()
+        // This is already done by above's drop:
+        //let result = unsafe { (instance.fp().destroy_instance)(instance_handle) };
+        //result.into_result()
+        Ok(())
     })
 }
 
@@ -182,11 +191,10 @@ fn read_layer_mut<'a>(
 }
 
 fn read_instance_layer_mut(
-    layer: &mut Layer,
+    instances: &mut HashMap<sys::Instance, Instance>,
     instance_handle: sys::Instance,
 ) -> Result<&mut Instance, xr_layer::sys::Result> {
-    layer
-        .instances
+    instances
         .get_mut(&instance_handle)
         .ok_or(sys::Result::ERROR_INSTANCE_LOST)
 }
@@ -210,7 +218,7 @@ fn subresource_delete<'a, T: std::hash::Hash + std::cmp::Eq>(
     w: &'a mut std::sync::RwLockWriteGuard<Option<Layer>>,
     reader: fn(layer: &mut Layer) -> &mut HashMap<T, sys::Instance>,
     handle: T,
-) -> Result<&'a Instance, xr_layer::sys::Result> {
+) -> Result<&'a mut Instance, xr_layer::sys::Result> {
     // TODO: deleting instance should also delete sub-resources, and eg. deleting
     // ActionSet should also delete Action, etc.
 
@@ -220,7 +228,7 @@ fn subresource_delete<'a, T: std::hash::Hash + std::cmp::Eq>(
         .ok_or(sys::Result::ERROR_HANDLE_INVALID)?;
     layer
         .instances
-        .get(&instance_handle)
+        .get_mut(&instance_handle)
         .ok_or(sys::Result::ERROR_INSTANCE_LOST)
 }
 
@@ -232,7 +240,7 @@ extern "system" fn poll_event(
         let r = LAYER.read()?;
         let instance = read_instance(&r, instance_handle)?;
 
-        let result = unsafe { (instance.pfn.poll_event)(instance_handle, event_data) };
+        let result = unsafe { (instance.fp().poll_event)(instance_handle, event_data) };
         result.into_result()
     })
 }
@@ -245,10 +253,10 @@ extern "system" fn create_action_set(
     xr_wrap_trace("create_action_set", || {
         let mut w = LAYER.write()?;
         let layer = read_layer_mut(&mut w)?;
-        let instance = read_instance_layer_mut(layer, instance_handle)?;
+        let instance = read_instance_layer_mut(&mut layer.instances, instance_handle)?;
 
         let result =
-            unsafe { (instance.pfn.create_action_set)(instance_handle, info, action_set_ptr) };
+            unsafe { (instance.fp().create_action_set)(instance_handle, info, action_set_ptr) };
         if result.into_result().is_ok() {
             let action_set = unsafe { *action_set_ptr };
             layer.action_sets.insert(action_set, instance_handle);
@@ -265,7 +273,7 @@ extern "system" fn create_action(
     xr_wrap_trace("create_action", || {
         let r = LAYER.read()?;
         let instance = subresource_read_instance(&r, |l| &l.action_sets, action_set_handle)?;
-        let result = unsafe { (instance.pfn.create_action)(action_set_handle, info, out) };
+        let result = unsafe { (instance.fp().create_action)(action_set_handle, info, out) };
         result.into_result()
     })
 }
@@ -280,7 +288,7 @@ extern "system" fn string_to_path(
         let instance = read_instance(&r, instance_handle)?;
 
         let result =
-            unsafe { (instance.pfn.string_to_path)(instance_handle, path_string_raw, path) };
+            unsafe { (instance.fp().string_to_path)(instance_handle, path_string_raw, path) };
         result.into_result()
     })
 }
@@ -294,7 +302,10 @@ extern "system" fn suggest_interaction_profile_bindings(
         let instance = read_instance(&r, instance_handle)?;
 
         let result = unsafe {
-            (instance.pfn.suggest_interaction_profile_bindings)(instance_handle, suggested_bindings)
+            (instance.fp().suggest_interaction_profile_bindings)(
+                instance_handle,
+                suggested_bindings,
+            )
         };
         result.into_result()
     })
@@ -302,19 +313,33 @@ extern "system" fn suggest_interaction_profile_bindings(
 
 extern "system" fn create_session(
     instance_handle: sys::Instance,
-    create_info: *const sys::SessionCreateInfo,
+    create_info_ptr: *const sys::SessionCreateInfo,
     session_ptr: *mut sys::Session,
 ) -> sys::Result {
     xr_wrap_trace("create_session", || {
         let mut w = LAYER.write()?;
         let layer = read_layer_mut(&mut w)?;
-        let instance = read_instance_layer_mut(layer, instance_handle)?;
+        let instance = read_instance_layer_mut(&mut layer.instances, instance_handle)?;
 
-        let result =
-            unsafe { (instance.pfn.create_session)(instance_handle, create_info, session_ptr) };
+        let result = unsafe {
+            (instance.fp().create_session)(instance_handle, create_info_ptr, session_ptr)
+        };
         if result.into_result().is_ok() {
-            let session = unsafe { *session_ptr };
-            layer.sessions.insert(session, instance_handle);
+            let session_handle = unsafe { *session_ptr };
+            layer.sessions.insert(session_handle, instance_handle);
+            let session = unsafe {
+                // Note: this is slightly wrong, but works unless we use graphics
+                // api. We do not do that and do immediately convert it to AnyGraphics.
+                safe_openxr::Session::<safe_openxr::Vulkan>::from_raw(
+                    instance.instance.clone(),
+                    session_handle,
+                    Box::new(()),
+                )
+            }
+            .0
+            .into_any_graphics();
+
+            instance.sessions.insert(session_handle, session);
         }
         result.into_result()
     })
@@ -325,8 +350,14 @@ extern "system" fn destroy_session(session_handle: sys::Session) -> sys::Result 
         let mut w = LAYER.write()?;
         let instance = subresource_delete(&mut w, |l| &mut l.sessions, session_handle)?;
 
-        let result = unsafe { (instance.pfn.destroy_session)(session_handle) };
-        result.into_result()
+        instance
+            .sessions
+            .remove(&session_handle)
+            .ok_or(sys::Result::ERROR_HANDLE_INVALID)?;
+        Ok(())
+        // already handled:
+        //let result = unsafe { (instance.fp().destroy_session)(session_handle) };
+        //result.into_result()
     })
 }
 
@@ -339,7 +370,7 @@ extern "system" fn attach_session_action_sets(
         let instance = subresource_read_instance(&r, |l| &l.sessions, session_handle)?;
 
         let result =
-            unsafe { (instance.pfn.attach_session_action_sets)(session_handle, attach_info) };
+            unsafe { (instance.fp().attach_session_action_sets)(session_handle, attach_info) };
         result.into_result()
     })
 }
@@ -352,7 +383,7 @@ extern "system" fn sync_actions(
         let r = LAYER.read()?;
         let instance = subresource_read_instance(&r, |l| &l.sessions, session_handle)?;
 
-        let result = unsafe { (instance.pfn.sync_actions)(session_handle, sync_info) };
+        let result = unsafe { (instance.fp().sync_actions)(session_handle, sync_info) };
         post_sync_actions(instance, unsafe { XrIterator::from_ptr(sync_info) });
         result.into_result()
     })
@@ -368,7 +399,7 @@ extern "system" fn get_action_state_boolean(
         let instance = subresource_read_instance(&r, |l| &l.sessions, session_handle)?;
 
         let result =
-            unsafe { (instance.pfn.get_action_state_boolean)(session_handle, get_info, state) };
+            unsafe { (instance.fp().get_action_state_boolean)(session_handle, get_info, state) };
         result.into_result()
     })
 }
@@ -383,7 +414,7 @@ extern "system" fn get_action_state_float(
         let instance = subresource_read_instance(&r, |l| &l.sessions, session_handle)?;
 
         let result =
-            unsafe { (instance.pfn.get_action_state_float)(session_handle, get_info, state) };
+            unsafe { (instance.fp().get_action_state_float)(session_handle, get_info, state) };
         result.into_result()
     })
 }
@@ -398,7 +429,7 @@ extern "system" fn get_action_state_vector2f(
         let instance = subresource_read_instance(&r, |l| &l.sessions, session_handle)?;
 
         let result =
-            unsafe { (instance.pfn.get_action_state_vector2f)(session_handle, get_info, state) };
+            unsafe { (instance.fp().get_action_state_vector2f)(session_handle, get_info, state) };
         result.into_result()
     })
 }
@@ -413,7 +444,7 @@ extern "system" fn get_action_state_pose(
         let instance = subresource_read_instance(&r, |l| &l.sessions, session_handle)?;
 
         let result =
-            unsafe { (instance.pfn.get_action_state_pose)(session_handle, get_info, state) };
+            unsafe { (instance.fp().get_action_state_pose)(session_handle, get_info, state) };
         result.into_result()
     })
 }
@@ -428,7 +459,7 @@ extern "system" fn apply_haptic_feedback(
         let instance = subresource_read_instance(&r, |l| &l.sessions, session_handle)?;
 
         let result = unsafe {
-            (instance.pfn.apply_haptic_feedback)(
+            (instance.fp().apply_haptic_feedback)(
                 session_handle,
                 haptic_action_info,
                 haptic_feedback,
@@ -451,7 +482,7 @@ extern "system" fn locate_views(
         let instance = subresource_read_instance(&r, |l| &l.sessions, session_handle)?;
 
         let result = unsafe {
-            (instance.pfn.locate_views)(
+            (instance.fp().locate_views)(
                 session_handle,
                 view_locate_info,
                 view_state,
@@ -464,7 +495,7 @@ extern "system" fn locate_views(
     })
 }
 
-pub(crate) fn with_instance<T>(handle: sys::Instance, cb: T) -> Result<(), XrWrapError>
+pub(crate) fn with_layer<T>(handle: sys::Instance, cb: T) -> Result<(), XrWrapError>
 where
     T: FnOnce(&Instance) -> Result<(), XrWrapError>,
 {
