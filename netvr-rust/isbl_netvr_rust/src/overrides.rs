@@ -1,14 +1,19 @@
 use crate::{
     implementation::post_sync_actions,
-    instance::Instance,
+    instance::{Instance, Session},
     xr_wrap::{xr_wrap_trace, ResultConvertible, XrWrapError},
 };
 use std::{collections::HashMap, os::raw::c_char, sync::RwLock};
 use xr_layer::{
     log::{LogError, LogInfo, LogTrace, LogWarn},
     safe_openxr::{self, InstanceExtensions},
-    sys, Entry, FnPtr, SessionCreateInfo, UnsafeFrom, XrDebug, XrIterator,
+    sys, Entry, FnPtr, UnsafeFrom, XrIterator,
 };
+
+struct InstanceRefs {
+    pub(crate) sessions: HashMap<sys::Session, sys::Instance>,
+    pub(crate) action_sets: HashMap<sys::ActionSet, sys::Instance>,
+}
 
 struct Layer {
     pub(self) layer: xr_layer::Layer,
@@ -16,8 +21,7 @@ struct Layer {
     /// drop and is therefore safe to use.
     pub(self) entry: Entry,
     pub(self) instances: HashMap<sys::Instance, Instance>,
-    pub(self) sessions: HashMap<sys::Session, sys::Instance>,
-    pub(self) action_sets: HashMap<sys::ActionSet, sys::Instance>,
+    pub(self) instance_refs: InstanceRefs,
 }
 
 impl Layer {
@@ -35,6 +39,8 @@ impl Layer {
             ))
             .add_override(FnPtr::CreateSession(create_session))
             .add_override(FnPtr::DestroySession(destroy_session))
+            .add_override(FnPtr::BeginSession(begin_session))
+            .add_override(FnPtr::WaitFrame(wait_frame))
             .add_override(FnPtr::AttachSessionActionSets(attach_session_action_sets))
             .add_override(FnPtr::SyncActions(sync_actions))
             .add_override(FnPtr::GetActionStateBoolean(get_action_state_boolean))
@@ -51,8 +57,10 @@ impl Layer {
             layer,
             entry,
             instances: HashMap::default(),
-            sessions: HashMap::default(),
-            action_sets: HashMap::default(),
+            instance_refs: InstanceRefs {
+                sessions: HashMap::default(),
+                action_sets: HashMap::default(),
+            },
         }
     }
 }
@@ -162,7 +170,7 @@ extern "system" fn destroy_instance(instance_handle: sys::Instance) -> sys::Resu
     xr_wrap_trace("destroy_instance", || {
         let mut w = LAYER.write()?;
         let layer = (*w).as_mut().ok_or(sys::Result::ERROR_RUNTIME_FAILURE)?;
-        let instance = layer
+        let _ = layer
             .instances
             .remove(&instance_handle)
             .ok_or(sys::Result::ERROR_INSTANCE_LOST)?;
@@ -201,11 +209,11 @@ fn read_instance_layer_mut(
 
 fn subresource_read_instance<'a, T: std::hash::Hash + std::cmp::Eq>(
     r: &'a std::sync::RwLockReadGuard<Option<Layer>>,
-    reader: fn(layer: &Layer) -> &HashMap<T, sys::Instance>,
+    reader: fn(layer: &InstanceRefs) -> &HashMap<T, sys::Instance>,
     handle: T,
 ) -> Result<&'a Instance, xr_layer::sys::Result> {
     let layer = (*r).as_ref().ok_or(sys::Result::ERROR_RUNTIME_FAILURE)?;
-    let instance_handle = reader(layer)
+    let instance_handle = reader(&layer.instance_refs)
         .get(&handle)
         .ok_or(sys::Result::ERROR_HANDLE_INVALID)?;
     layer
@@ -214,16 +222,31 @@ fn subresource_read_instance<'a, T: std::hash::Hash + std::cmp::Eq>(
         .ok_or(sys::Result::ERROR_INSTANCE_LOST)
 }
 
-fn subresource_delete<'a, T: std::hash::Hash + std::cmp::Eq>(
+fn subresource_read_instance_mut<'a, T: std::hash::Hash + std::cmp::Eq>(
     w: &'a mut std::sync::RwLockWriteGuard<Option<Layer>>,
-    reader: fn(layer: &mut Layer) -> &mut HashMap<T, sys::Instance>,
+    reader: fn(layer: &mut InstanceRefs) -> &mut HashMap<T, sys::Instance>,
+    handle: T,
+) -> Result<&'a mut Instance, xr_layer::sys::Result> {
+    let layer = (*w).as_mut().ok_or(sys::Result::ERROR_RUNTIME_FAILURE)?;
+    let instances = &mut layer.instances;
+    let instance_handle = reader(&mut layer.instance_refs)
+        .get(&handle)
+        .ok_or(sys::Result::ERROR_HANDLE_INVALID)?;
+    instances
+        .get_mut(instance_handle)
+        .ok_or(sys::Result::ERROR_INSTANCE_LOST)
+}
+
+fn instance_ref_delete<'a, T: std::hash::Hash + std::cmp::Eq>(
+    w: &'a mut std::sync::RwLockWriteGuard<Option<Layer>>,
+    reader: fn(layer: &mut InstanceRefs) -> &mut HashMap<T, sys::Instance>,
     handle: T,
 ) -> Result<&'a mut Instance, xr_layer::sys::Result> {
     // TODO: deleting instance should also delete sub-resources, and eg. deleting
     // ActionSet should also delete Action, etc.
 
     let layer = (*w).as_mut().ok_or(sys::Result::ERROR_RUNTIME_FAILURE)?;
-    let instance_handle = reader(layer)
+    let instance_handle = reader(&mut layer.instance_refs)
         .remove(&handle)
         .ok_or(sys::Result::ERROR_HANDLE_INVALID)?;
     layer
@@ -259,7 +282,10 @@ extern "system" fn create_action_set(
             unsafe { (instance.fp().create_action_set)(instance_handle, info, action_set_ptr) };
         if result.into_result().is_ok() {
             let action_set = unsafe { *action_set_ptr };
-            layer.action_sets.insert(action_set, instance_handle);
+            layer
+                .instance_refs
+                .action_sets
+                .insert(action_set, instance_handle);
         }
         result.into_result()
     })
@@ -326,7 +352,10 @@ extern "system" fn create_session(
         };
         if result.into_result().is_ok() {
             let session_handle = unsafe { *session_ptr };
-            layer.sessions.insert(session_handle, instance_handle);
+            layer
+                .instance_refs
+                .sessions
+                .insert(session_handle, instance_handle);
             let session = unsafe {
                 // Note: this is slightly wrong, but works unless we use graphics
                 // api. We do not do that and do immediately convert it to AnyGraphics.
@@ -339,7 +368,9 @@ extern "system" fn create_session(
             .0
             .into_any_graphics();
 
-            instance.sessions.insert(session_handle, session);
+            instance
+                .sessions
+                .insert(session_handle, Session::new(session)?);
         }
         result.into_result()
     })
@@ -348,7 +379,7 @@ extern "system" fn create_session(
 extern "system" fn destroy_session(session_handle: sys::Session) -> sys::Result {
     xr_wrap_trace("destroy_session", || {
         let mut w = LAYER.write()?;
-        let instance = subresource_delete(&mut w, |l| &mut l.sessions, session_handle)?;
+        let instance = instance_ref_delete(&mut w, |l| &mut l.sessions, session_handle)?;
 
         instance
             .sessions
@@ -358,6 +389,29 @@ extern "system" fn destroy_session(session_handle: sys::Session) -> sys::Result 
         // already handled:
         //let result = unsafe { (instance.fp().destroy_session)(session_handle) };
         //result.into_result()
+    })
+}
+
+extern "system" fn begin_session(
+    session_handle: sys::Session,
+    begin_info_ptr: *const sys::SessionBeginInfo,
+) -> sys::Result {
+    xr_wrap_trace("begin_session", || {
+        let mut w = LAYER.write()?;
+        let instance = subresource_read_instance_mut(&mut w, |l| &mut l.sessions, session_handle)?;
+        let begin_session = instance.fp().begin_session;
+
+        let begin_info = unsafe { *begin_info_ptr };
+        let session = instance
+            .sessions
+            .get_mut(&session_handle)
+            .ok_or(sys::Result::ERROR_HANDLE_INVALID)?;
+
+        let result = unsafe { (begin_session)(session_handle, begin_info_ptr) }.into_result();
+        if result.is_ok() {
+            session.view_configuration_type = begin_info.primary_view_configuration_type;
+        }
+        result
     })
 }
 
@@ -502,4 +556,28 @@ where
     let r = LAYER.read()?;
     let instance = read_instance(&r, handle)?;
     cb(instance)
+}
+
+extern "system" fn wait_frame(
+    session_handle: sys::Session,
+    frame_wait_info: *const sys::FrameWaitInfo,
+    frame_state_ptr: *mut sys::FrameState,
+) -> sys::Result {
+    xr_wrap_trace("wait_frame", || {
+        let mut w = LAYER.write()?;
+        let instance = subresource_read_instance_mut(&mut w, |l| &mut l.sessions, session_handle)?;
+
+        let result =
+            unsafe { (instance.fp().wait_frame)(session_handle, frame_wait_info, frame_state_ptr) }
+                .into_result();
+
+        if result.is_ok() {
+            let frame_state = unsafe { *frame_state_ptr };
+            if let Some(session) = instance.sessions.get_mut(&session_handle) {
+                session.time = frame_state.predicted_display_time;
+            }
+        }
+
+        result
+    })
 }

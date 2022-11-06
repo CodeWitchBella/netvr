@@ -152,7 +152,7 @@ impl XrDebug for xr_struct::ActionsSyncInfo<'_> {
 }
 
 impl XrDebug for xr_struct::SessionCreateInfo<'_> {
-    fn xr_fmt(&self, f: &mut fmt::Formatter, instance: &openxr::Instance) -> fmt::Result {
+    fn xr_fmt(&self, f: &mut fmt::Formatter, _instance: &openxr::Instance) -> fmt::Result {
         f.debug_struct("SessionCreateInfo").finish_non_exhaustive()
     }
 }
@@ -212,6 +212,36 @@ impl XrDebug for openxr_sys::Path {
             Ok(result) => result,
             Err(_) => f.debug_tuple("Path").field(&"<invalid>").finish(),
         }
+    }
+}
+
+impl XrDebug for openxr_sys::Posef {
+    fn xr_fmt(&self, f: &mut fmt::Formatter, instance: &openxr::Instance) -> fmt::Result {
+        f.debug_struct("Posef")
+            .field("position", &self.position.as_debug(instance))
+            .field("orientation", &self.orientation.as_debug(instance))
+            .finish()
+    }
+}
+
+impl XrDebug for openxr_sys::Vector3f {
+    fn xr_fmt(&self, f: &mut fmt::Formatter, _: &openxr::Instance) -> fmt::Result {
+        f.debug_struct("Vector3f")
+            .field("x", &self.x)
+            .field("y", &self.y)
+            .field("z", &self.z)
+            .finish()
+    }
+}
+
+impl XrDebug for openxr_sys::Quaternionf {
+    fn xr_fmt(&self, f: &mut fmt::Formatter, _: &openxr::Instance) -> fmt::Result {
+        f.debug_struct("Quaternionf")
+            .field("x", &self.x)
+            .field("y", &self.y)
+            .field("z", &self.z)
+            .field("w", &self.w)
+            .finish()
     }
 }
 

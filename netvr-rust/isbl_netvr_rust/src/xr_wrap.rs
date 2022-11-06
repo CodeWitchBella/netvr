@@ -25,6 +25,7 @@ fn print_panic(panic: Box<dyn std::any::Any + Send>) {
 /// Any override function can return this. It is useful to be able to use ?
 /// operator on basically anything. Each error is associated with behavior
 /// (like logging) and xr error code.
+#[derive(Debug)]
 pub(crate) enum XrWrapError {
     /// Error that is expected to happen, or is outside layer's control.
     Expected(sys::Result),
