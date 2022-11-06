@@ -3,10 +3,13 @@ use std::{
     sync::{RwLock, RwLockReadGuard},
 };
 
-use xr_layer::{log::LogInfo, safe_openxr, sys};
+use xr_layer::{safe_openxr, sys};
 
 use crate::xr_wrap::XrWrapError;
 
+/// This struct has 1-1 correspondence with each session the application creates
+/// It is used to hold the underlying session from runtime and extra data
+/// required by the netvr layer.
 pub(crate) struct Session {
     pub(crate) session: safe_openxr::Session<safe_openxr::AnyGraphics>,
     pub(crate) view_configuration_type: safe_openxr::ViewConfigurationType,
@@ -15,6 +18,7 @@ pub(crate) struct Session {
 }
 
 impl Session {
+    /// Initializes the structure.
     pub(crate) fn new(
         session: safe_openxr::Session<safe_openxr::AnyGraphics>,
     ) -> Result<Self, XrWrapError> {
@@ -27,6 +31,7 @@ impl Session {
         })
     }
 
+    /// Reads space_stage and if it is None, then it tries to initialize it.
     pub(crate) fn read_space(
         &self,
     ) -> Result<RwLockReadGuard<Option<safe_openxr::Space>>, XrWrapError> {
@@ -60,12 +65,16 @@ impl Session {
     }
 }
 
+/// This struct has 1-1 correspondence with each XrInstance the application creates
+/// It is used to hold the underlying instance from runtime and extra data
+/// required by the netvr layer.
 pub(crate) struct Instance {
     pub(crate) instance: safe_openxr::Instance,
     pub(crate) sessions: HashMap<sys::Session, Session>,
 }
 
 impl Instance {
+    /// Initializes the structure.
     pub(crate) fn new(instance: safe_openxr::Instance) -> Self {
         Self {
             instance,
@@ -73,6 +82,7 @@ impl Instance {
         }
     }
 
+    /// Convenience function serving as a shortcut.
     pub(crate) fn fp(&self) -> &xr_layer::raw::Instance {
         self.instance.fp()
     }
