@@ -5,7 +5,7 @@ use crate::{
 };
 use std::{collections::HashMap, os::raw::c_char, sync::RwLock};
 use xr_layer::{
-    log::{LogError, LogInfo, LogTrace, LogWarn},
+    log::{LogError, LogTrace, LogWarn},
     safe_openxr::{self, InstanceExtensions},
     sys, Entry, FnPtr, UnsafeFrom, XrIterator,
 };
