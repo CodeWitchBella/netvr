@@ -1,5 +1,5 @@
 use super::utils;
-use backtrace::Backtrace;
+use std::backtrace::Backtrace;
 use std::error::Error;
 use std::ffi::{CStr, CString};
 use std::sync::RwLock;
@@ -30,7 +30,7 @@ fn _cstr(level: Level, text: utils::Cstr) {
     match *r {
         Some(f) => {
             if level as i32 >= Level::Error as i32 {
-                let backtrace = Backtrace::new();
+                let backtrace = Backtrace::capture();
                 let backtrace_cstring = CString::new(format!("{backtrace:?}")).unwrap();
                 unsafe { f(level as i32, text, backtrace_cstring.as_ptr()) }
             } else {

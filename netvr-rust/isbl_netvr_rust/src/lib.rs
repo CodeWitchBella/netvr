@@ -1,9 +1,9 @@
 #[macro_use]
 extern crate lazy_static;
 
-use backtrace::Backtrace;
 use implementation::tick;
 use overrides::with_layer;
+use std::backtrace::Backtrace;
 use std::panic;
 use xr_wrap::xr_wrap_trace;
 
@@ -41,7 +41,7 @@ pub extern "C" fn netvr_unhook() {
 #[no_mangle]
 pub extern "C" fn netvr_set_logger(func: log::LoggerFn) {
     panic::set_hook(Box::new(|panic_info| {
-        let backtrace = Backtrace::new();
+        let backtrace = Backtrace::capture();
         let mut message = match panic_info.location() {
             Some(location) => format!(
                 "panic occurred in file '{}' at line {}",
