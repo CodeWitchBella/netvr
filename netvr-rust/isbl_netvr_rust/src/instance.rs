@@ -3,9 +3,10 @@ use std::{
     sync::{RwLock, RwLockReadGuard},
 };
 
+use tracing::{span, Level, Span};
 use xr_layer::{safe_openxr, sys};
 
-use crate::xr_wrap::XrWrapError;
+use crate::xr_wrap::{Trace, XrWrapError};
 
 /// This struct has 1-1 correspondence with each session the application creates
 /// It is used to hold the underlying session from runtime and extra data
@@ -15,12 +16,14 @@ pub(crate) struct Session {
     pub(crate) view_configuration_type: safe_openxr::ViewConfigurationType,
     pub(crate) space_stage: RwLock<Option<safe_openxr::Space>>,
     pub(crate) time: sys::Time,
+    _span: Span,
 }
 
 impl Session {
     /// Initializes the structure.
     pub(crate) fn new(
         session: safe_openxr::Session<safe_openxr::AnyGraphics>,
+        trace: &Trace,
     ) -> Result<Self, XrWrapError> {
         Ok(Self {
             session,
@@ -28,6 +31,7 @@ impl Session {
             view_configuration_type: sys::ViewConfigurationType::PRIMARY_MONO,
             space_stage: RwLock::new(None),
             time: sys::Time::from_nanos(-1),
+            _span: trace.wrap(|| span!(Level::TRACE, "Instance")),
         })
     }
 
@@ -71,14 +75,20 @@ impl Session {
 pub(crate) struct Instance {
     pub(crate) instance: safe_openxr::Instance,
     pub(crate) sessions: HashMap<sys::Session, Session>,
+    pub(crate) trace: Trace,
+    _span: Span,
 }
 
 impl Instance {
     /// Initializes the structure.
     pub(crate) fn new(instance: safe_openxr::Instance) -> Self {
+        let trace = Trace::new();
+        let span = trace.wrap(|| span!(Level::TRACE, "Instance"));
         Self {
             instance,
             sessions: HashMap::default(),
+            trace,
+            _span: span,
         }
     }
 

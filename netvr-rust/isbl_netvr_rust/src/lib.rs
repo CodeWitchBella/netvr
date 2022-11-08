@@ -5,7 +5,7 @@ use implementation::tick;
 use overrides::with_layer;
 use std::backtrace::Backtrace;
 use std::panic;
-use xr_wrap::xr_wrap_trace;
+use tracing::{span, Level};
 
 //use implementation::ImplementationInstance;
 use xr_layer::{
@@ -65,5 +65,10 @@ pub extern "C" fn netvr_set_logger(func: log::LoggerFn) {
 /// rendering loop.
 #[no_mangle]
 pub extern "C" fn netvr_tick(instance_handle: sys::Instance) {
-    xr_wrap_trace("netvr_tick", || with_layer(instance_handle, tick));
+    xr_wrap::xr_wrap(|| {
+        with_layer(instance_handle, |instance| {
+            let _span = span!(Level::TRACE, "netvr_tick").entered();
+            tick(instance)
+        })
+    });
 }

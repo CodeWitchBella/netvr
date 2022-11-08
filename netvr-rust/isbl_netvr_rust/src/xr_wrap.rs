@@ -1,7 +1,11 @@
+use std::sync::{Arc, Mutex};
 use std::{error::Error, panic, sync::PoisonError};
-
+use tracing::{dispatcher, Dispatch, Level};
+use tracing_chrome::{ChromeLayerBuilder, FlushGuard};
+use tracing_subscriber::prelude::*;
+use tracing_subscriber::FmtSubscriber;
 use xr_layer::{
-    log::{LogError, LogPanic, LogTrace},
+    log::{LogError, LogPanic},
     sys,
 };
 
@@ -74,19 +78,33 @@ where
     }
 }
 
-pub(crate) fn xr_wrap_trace<O>(fn_name: &'static str, function: O) -> sys::Result
-where
-    O: FnOnce() -> Result<(), XrWrapError>,
-    O: std::panic::UnwindSafe,
-{
-    let result = xr_wrap(function);
-    let maybe_panicked = panic::catch_unwind(|| {
-        LogTrace::string(format!("{} -> {:?}", fn_name, result));
-    });
-    if maybe_panicked.is_err() {
-        LogError::str("Trace function panicked");
+#[derive(Clone)]
+pub(crate) struct Trace {
+    pub(self) dispatch: tracing::Dispatch,
+    pub(self) _flush_guard: Arc<Mutex<FlushGuard>>,
+}
+
+impl Trace {
+    pub(crate) fn new() -> Self {
+        let (chrome_layer, trace_flush_guard) = ChromeLayerBuilder::new().build();
+
+        Self {
+            dispatch: Dispatch::new(
+                FmtSubscriber::builder()
+                    // all spans/events with a level higher than TRACE (e.g, debug, info, warn, etc.)
+                    // will be written to stdout.
+                    .with_max_level(Level::TRACE)
+                    // completes the builder.
+                    .finish()
+                    .with(chrome_layer),
+            ),
+            _flush_guard: Arc::new(Mutex::new(trace_flush_guard)),
+        }
     }
-    result
+
+    pub(crate) fn wrap<T>(&self, f: impl FnOnce() -> T) -> T {
+        dispatcher::with_default(&self.dispatch, f)
+    }
 }
 
 /// Utility trait to be able to do `result.into_result()?` inside the function.

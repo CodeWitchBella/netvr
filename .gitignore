@@ -11,6 +11,7 @@ deno-dist
 *.exe
 /netvr-server/server
 yarn-error.log
+trace-*.json
 
 # This .gitignore file should be placed at the root of your Unity project directory
 #

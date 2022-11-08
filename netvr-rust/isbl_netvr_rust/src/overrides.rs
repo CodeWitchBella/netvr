@@ -1,13 +1,14 @@
 use crate::{
     implementation::post_sync_actions,
     instance::{Instance, Session},
-    xr_wrap::{xr_wrap_trace, ResultConvertible, XrWrapError},
+    xr_wrap::{xr_wrap, ResultConvertible, XrWrapError},
 };
 use std::{collections::HashMap, os::raw::c_char, sync::RwLock};
+use tracing::{info, trace_span};
 use xr_layer::{
     log::{LogError, LogTrace, LogWarn},
     safe_openxr::{self, InstanceExtensions},
-    sys, Entry, FnPtr, UnsafeFrom, XrIterator,
+    sys, Entry, FnPtr, UnsafeFrom, XrDebug, XrIterator,
 };
 
 struct InstanceRefs {
@@ -77,10 +78,13 @@ pub(crate) fn init(
     func_in: sys::pfn::GetInstanceProcAddr,
     manual_unhook: bool,
 ) -> sys::pfn::GetInstanceProcAddr {
-    LogTrace::str("init");
-    let layer = Layer::new(func_in, manual_unhook);
-    let mut w = LAYER.write().unwrap();
-    *w = Some(layer);
+    xr_wrap(|| {
+        LogTrace::str("init");
+        let layer = Layer::new(func_in, manual_unhook);
+        let mut w = LAYER.write().unwrap();
+        *w = Some(layer);
+        Ok(())
+    });
     get_instance_proc_addr
 }
 
@@ -141,7 +145,7 @@ extern "system" fn create_instance(
     create_info: *const sys::InstanceCreateInfo,
     instance_ptr: *mut sys::Instance,
 ) -> sys::Result {
-    xr_wrap_trace("create_instance", || {
+    xr_wrap(|| {
         let mut w = LAYER.write()?;
         let layer = (*w).as_mut().ok_or(sys::Result::ERROR_RUNTIME_FAILURE)?;
         let result = unsafe { (layer.entry.fp().create_instance)(create_info, instance_ptr) };
@@ -167,7 +171,7 @@ extern "system" fn create_instance(
 }
 
 extern "system" fn destroy_instance(instance_handle: sys::Instance) -> sys::Result {
-    xr_wrap_trace("destroy_instance", || {
+    xr_wrap(|| {
         let mut w = LAYER.write()?;
         let layer = (*w).as_mut().ok_or(sys::Result::ERROR_RUNTIME_FAILURE)?;
         let _ = layer
@@ -259,12 +263,15 @@ extern "system" fn poll_event(
     instance_handle: sys::Instance,
     event_data: *mut sys::EventDataBuffer,
 ) -> sys::Result {
-    xr_wrap_trace("poll_event", || {
+    xr_wrap(|| {
         let r = LAYER.read()?;
         let instance = read_instance(&r, instance_handle)?;
+        instance.trace.wrap(|| {
+            let _span = trace_span!("poll_event").entered();
 
-        let result = unsafe { (instance.fp().poll_event)(instance_handle, event_data) };
-        result.into_result()
+            let result = unsafe { (instance.fp().poll_event)(instance_handle, event_data) };
+            result.into_result()
+        })
     })
 }
 
@@ -273,21 +280,25 @@ extern "system" fn create_action_set(
     info: *const sys::ActionSetCreateInfo,
     action_set_ptr: *mut sys::ActionSet,
 ) -> sys::Result {
-    xr_wrap_trace("create_action_set", || {
+    xr_wrap(|| {
         let mut w = LAYER.write()?;
         let layer = read_layer_mut(&mut w)?;
         let instance = read_instance_layer_mut(&mut layer.instances, instance_handle)?;
 
-        let result =
-            unsafe { (instance.fp().create_action_set)(instance_handle, info, action_set_ptr) };
-        if result.into_result().is_ok() {
-            let action_set = unsafe { *action_set_ptr };
-            layer
-                .instance_refs
-                .action_sets
-                .insert(action_set, instance_handle);
-        }
-        result.into_result()
+        instance.trace.wrap(|| {
+            let _span = trace_span!("create_action_set").entered();
+
+            let result =
+                unsafe { (instance.fp().create_action_set)(instance_handle, info, action_set_ptr) };
+            if result.into_result().is_ok() {
+                let action_set = unsafe { *action_set_ptr };
+                layer
+                    .instance_refs
+                    .action_sets
+                    .insert(action_set, instance_handle);
+            }
+            result.into_result()
+        })
     })
 }
 
@@ -296,11 +307,15 @@ extern "system" fn create_action(
     info: *const sys::ActionCreateInfo,
     out: *mut sys::Action,
 ) -> sys::Result {
-    xr_wrap_trace("create_action", || {
+    xr_wrap(|| {
         let r = LAYER.read()?;
         let instance = subresource_read_instance(&r, |l| &l.action_sets, action_set_handle)?;
-        let result = unsafe { (instance.fp().create_action)(action_set_handle, info, out) };
-        result.into_result()
+        instance.trace.wrap(|| {
+            let _span = trace_span!("create_action").entered();
+
+            let result = unsafe { (instance.fp().create_action)(action_set_handle, info, out) };
+            result.into_result()
+        })
     })
 }
 
@@ -309,13 +324,17 @@ extern "system" fn string_to_path(
     path_string_raw: *const c_char,
     path: *mut sys::Path,
 ) -> sys::Result {
-    xr_wrap_trace("string_to_path", || {
+    xr_wrap(|| {
         let r = LAYER.read()?;
         let instance = read_instance(&r, instance_handle)?;
 
-        let result =
-            unsafe { (instance.fp().string_to_path)(instance_handle, path_string_raw, path) };
-        result.into_result()
+        instance.trace.wrap(|| {
+            let _span = trace_span!("string_to_path").entered();
+
+            let result =
+                unsafe { (instance.fp().string_to_path)(instance_handle, path_string_raw, path) };
+            result.into_result()
+        })
     })
 }
 
@@ -323,17 +342,21 @@ extern "system" fn suggest_interaction_profile_bindings(
     instance_handle: sys::Instance,
     suggested_bindings: *const sys::InteractionProfileSuggestedBinding,
 ) -> sys::Result {
-    xr_wrap_trace("suggest_interaction_profile_bindings", || {
+    xr_wrap(|| {
         let r = LAYER.read()?;
         let instance = read_instance(&r, instance_handle)?;
 
-        let result = unsafe {
-            (instance.fp().suggest_interaction_profile_bindings)(
-                instance_handle,
-                suggested_bindings,
-            )
-        };
-        result.into_result()
+        instance.trace.wrap(|| {
+            let _span = trace_span!("suggest_interaction_profile_bindings").entered();
+
+            let result = unsafe {
+                (instance.fp().suggest_interaction_profile_bindings)(
+                    instance_handle,
+                    suggested_bindings,
+                )
+            };
+            result.into_result()
+        })
     })
 }
 
@@ -342,53 +365,61 @@ extern "system" fn create_session(
     create_info_ptr: *const sys::SessionCreateInfo,
     session_ptr: *mut sys::Session,
 ) -> sys::Result {
-    xr_wrap_trace("create_session", || {
+    xr_wrap(|| {
         let mut w = LAYER.write()?;
         let layer = read_layer_mut(&mut w)?;
         let instance = read_instance_layer_mut(&mut layer.instances, instance_handle)?;
 
-        let result = unsafe {
-            (instance.fp().create_session)(instance_handle, create_info_ptr, session_ptr)
-        };
-        if result.into_result().is_ok() {
-            let session_handle = unsafe { *session_ptr };
-            layer
-                .instance_refs
-                .sessions
-                .insert(session_handle, instance_handle);
-            let session = unsafe {
-                // Note: this is slightly wrong, but works unless we use graphics
-                // api. We do not do that and do immediately convert it to AnyGraphics.
-                safe_openxr::Session::<safe_openxr::Vulkan>::from_raw(
-                    instance.instance.clone(),
-                    session_handle,
-                    Box::new(()),
-                )
-            }
-            .0
-            .into_any_graphics();
+        instance.trace.clone().wrap(|| {
+            let _span = trace_span!("create_session").entered();
 
-            instance
-                .sessions
-                .insert(session_handle, Session::new(session)?);
-        }
-        result.into_result()
+            let result = unsafe {
+                (instance.fp().create_session)(instance_handle, create_info_ptr, session_ptr)
+            };
+            if result.into_result().is_ok() {
+                let session_handle = unsafe { *session_ptr };
+                layer
+                    .instance_refs
+                    .sessions
+                    .insert(session_handle, instance_handle);
+                let session = unsafe {
+                    // Note: this is slightly wrong, but works unless we use graphics
+                    // api. We do not do that and do immediately convert it to AnyGraphics.
+                    safe_openxr::Session::<safe_openxr::Vulkan>::from_raw(
+                        instance.instance.clone(),
+                        session_handle,
+                        Box::new(()),
+                    )
+                }
+                .0
+                .into_any_graphics();
+
+                instance
+                    .sessions
+                    .insert(session_handle, Session::new(session, &instance.trace)?);
+            }
+            result.into_result()
+        })
     })
 }
 
 extern "system" fn destroy_session(session_handle: sys::Session) -> sys::Result {
-    xr_wrap_trace("destroy_session", || {
+    xr_wrap(|| {
         let mut w = LAYER.write()?;
         let instance = instance_ref_delete(&mut w, |l| &mut l.sessions, session_handle)?;
 
-        instance
-            .sessions
-            .remove(&session_handle)
-            .ok_or(sys::Result::ERROR_HANDLE_INVALID)?;
-        Ok(())
-        // already handled:
-        //let result = unsafe { (instance.fp().destroy_session)(session_handle) };
-        //result.into_result()
+        instance.trace.wrap(|| {
+            let _span = trace_span!("destroy_session").entered();
+
+            instance
+                .sessions
+                .remove(&session_handle)
+                .ok_or(sys::Result::ERROR_HANDLE_INVALID)?;
+            Ok(())
+            // already handled:
+            //let result = unsafe { (instance.fp().destroy_session)(session_handle) };
+            //result.into_result()
+        })
     })
 }
 
@@ -396,22 +427,27 @@ extern "system" fn begin_session(
     session_handle: sys::Session,
     begin_info_ptr: *const sys::SessionBeginInfo,
 ) -> sys::Result {
-    xr_wrap_trace("begin_session", || {
+    xr_wrap(|| {
         let mut w = LAYER.write()?;
         let instance = subresource_read_instance_mut(&mut w, |l| &mut l.sessions, session_handle)?;
-        let begin_session = instance.fp().begin_session;
 
-        let begin_info = unsafe { *begin_info_ptr };
-        let session = instance
-            .sessions
-            .get_mut(&session_handle)
-            .ok_or(sys::Result::ERROR_HANDLE_INVALID)?;
+        instance.trace.clone().wrap(|| {
+            let _span = trace_span!("begin_session").entered();
 
-        let result = unsafe { (begin_session)(session_handle, begin_info_ptr) }.into_result();
-        if result.is_ok() {
-            session.view_configuration_type = begin_info.primary_view_configuration_type;
-        }
-        result
+            let begin_session = instance.fp().begin_session;
+
+            let begin_info = unsafe { *begin_info_ptr };
+            let session = instance
+                .sessions
+                .get_mut(&session_handle)
+                .ok_or(sys::Result::ERROR_HANDLE_INVALID)?;
+
+            let result = unsafe { (begin_session)(session_handle, begin_info_ptr) }.into_result();
+            if result.is_ok() {
+                session.view_configuration_type = begin_info.primary_view_configuration_type;
+            }
+            result
+        })
     })
 }
 
@@ -419,13 +455,17 @@ extern "system" fn attach_session_action_sets(
     session_handle: sys::Session,
     attach_info: *const sys::SessionActionSetsAttachInfo,
 ) -> sys::Result {
-    xr_wrap_trace("attach_session_action_sets", || {
+    xr_wrap(|| {
         let r = LAYER.read()?;
         let instance = subresource_read_instance(&r, |l| &l.sessions, session_handle)?;
 
-        let result =
-            unsafe { (instance.fp().attach_session_action_sets)(session_handle, attach_info) };
-        result.into_result()
+        instance.trace.wrap(|| {
+            let _span = trace_span!("attach_session_action_sets").entered();
+
+            let result =
+                unsafe { (instance.fp().attach_session_action_sets)(session_handle, attach_info) };
+            result.into_result()
+        })
     })
 }
 
@@ -433,28 +473,40 @@ extern "system" fn sync_actions(
     session_handle: sys::Session,
     sync_info: *const sys::ActionsSyncInfo,
 ) -> sys::Result {
-    xr_wrap_trace("sync_actions", || {
+    xr_wrap(|| {
         let r = LAYER.read()?;
         let instance = subresource_read_instance(&r, |l| &l.sessions, session_handle)?;
 
-        let result = unsafe { (instance.fp().sync_actions)(session_handle, sync_info) };
-        post_sync_actions(instance, unsafe { XrIterator::from_ptr(sync_info) });
-        result.into_result()
+        instance.trace.wrap(|| {
+            let _span = trace_span!("sync_actions").entered();
+
+            let result = unsafe { (instance.fp().sync_actions)(session_handle, sync_info) };
+            post_sync_actions(instance, unsafe { XrIterator::from_ptr(sync_info) });
+            result.into_result()
+        })
     })
 }
 
 extern "system" fn get_action_state_boolean(
     session_handle: sys::Session,
-    get_info: *const sys::ActionStateGetInfo,
+    get_info_ptr: *const sys::ActionStateGetInfo,
     state: *mut sys::ActionStateBoolean,
 ) -> sys::Result {
-    xr_wrap_trace("get_action_state_boolean", || {
+    xr_wrap(|| {
         let r = LAYER.read()?;
         let instance = subresource_read_instance(&r, |l| &l.sessions, session_handle)?;
 
-        let result =
-            unsafe { (instance.fp().get_action_state_boolean)(session_handle, get_info, state) };
-        result.into_result()
+        instance.trace.wrap(|| {
+            let get_info = unsafe { XrIterator::from_ptr(get_info_ptr) };
+            let _span = trace_span!("get_action_state_boolean").entered();
+
+            info!("{:?}", get_info.as_debug(&instance.instance));
+
+            let result = unsafe {
+                (instance.fp().get_action_state_boolean)(session_handle, get_info_ptr, state)
+            };
+            result.into_result()
+        })
     })
 }
 
@@ -463,13 +515,17 @@ extern "system" fn get_action_state_float(
     get_info: *const sys::ActionStateGetInfo,
     state: *mut sys::ActionStateFloat,
 ) -> sys::Result {
-    xr_wrap_trace("get_action_state_float", || {
+    xr_wrap(|| {
         let r = LAYER.read()?;
         let instance = subresource_read_instance(&r, |l| &l.sessions, session_handle)?;
 
-        let result =
-            unsafe { (instance.fp().get_action_state_float)(session_handle, get_info, state) };
-        result.into_result()
+        instance.trace.wrap(|| {
+            let _span = trace_span!("get_action_state_float").entered();
+
+            let result =
+                unsafe { (instance.fp().get_action_state_float)(session_handle, get_info, state) };
+            result.into_result()
+        })
     })
 }
 
@@ -478,13 +534,18 @@ extern "system" fn get_action_state_vector2f(
     get_info: *const sys::ActionStateGetInfo,
     state: *mut sys::ActionStateVector2f,
 ) -> sys::Result {
-    xr_wrap_trace("get_action_state_vector2f", || {
+    xr_wrap(|| {
         let r = LAYER.read()?;
         let instance = subresource_read_instance(&r, |l| &l.sessions, session_handle)?;
 
-        let result =
-            unsafe { (instance.fp().get_action_state_vector2f)(session_handle, get_info, state) };
-        result.into_result()
+        instance.trace.wrap(|| {
+            let _span = trace_span!("get_action_state_vector2f").entered();
+
+            let result = unsafe {
+                (instance.fp().get_action_state_vector2f)(session_handle, get_info, state)
+            };
+            result.into_result()
+        })
     })
 }
 
@@ -493,13 +554,17 @@ extern "system" fn get_action_state_pose(
     get_info: *const sys::ActionStateGetInfo,
     state: *mut sys::ActionStatePose,
 ) -> sys::Result {
-    xr_wrap_trace("get_action_state_pose", || {
+    xr_wrap(|| {
         let r = LAYER.read()?;
         let instance = subresource_read_instance(&r, |l| &l.sessions, session_handle)?;
 
-        let result =
-            unsafe { (instance.fp().get_action_state_pose)(session_handle, get_info, state) };
-        result.into_result()
+        instance.trace.wrap(|| {
+            let _span = trace_span!("get_action_state_pose").entered();
+
+            let result =
+                unsafe { (instance.fp().get_action_state_pose)(session_handle, get_info, state) };
+            result.into_result()
+        })
     })
 }
 
@@ -508,18 +573,22 @@ extern "system" fn apply_haptic_feedback(
     haptic_action_info: *const sys::HapticActionInfo,
     haptic_feedback: *const sys::HapticBaseHeader,
 ) -> sys::Result {
-    xr_wrap_trace("apply_haptic_feedback", || {
+    xr_wrap(|| {
         let r = LAYER.read()?;
         let instance = subresource_read_instance(&r, |l| &l.sessions, session_handle)?;
 
-        let result = unsafe {
-            (instance.fp().apply_haptic_feedback)(
-                session_handle,
-                haptic_action_info,
-                haptic_feedback,
-            )
-        };
-        result.into_result()
+        instance.trace.wrap(|| {
+            let _span = trace_span!("apply_haptic_feedback").entered();
+
+            let result = unsafe {
+                (instance.fp().apply_haptic_feedback)(
+                    session_handle,
+                    haptic_action_info,
+                    haptic_feedback,
+                )
+            };
+            result.into_result()
+        })
     })
 }
 
@@ -531,21 +600,25 @@ extern "system" fn locate_views(
     view_count_output: *mut u32,
     view: *mut sys::View,
 ) -> sys::Result {
-    xr_wrap_trace("locate_views", || {
+    xr_wrap(|| {
         let r = LAYER.read()?;
         let instance = subresource_read_instance(&r, |l| &l.sessions, session_handle)?;
 
-        let result = unsafe {
-            (instance.fp().locate_views)(
-                session_handle,
-                view_locate_info,
-                view_state,
-                view_capacity_input,
-                view_count_output,
-                view,
-            )
-        };
-        result.into_result()
+        instance.trace.wrap(|| {
+            let _span = trace_span!("wait_frame").entered();
+
+            let result = unsafe {
+                (instance.fp().locate_views)(
+                    session_handle,
+                    view_locate_info,
+                    view_state,
+                    view_capacity_input,
+                    view_count_output,
+                    view,
+                )
+            };
+            result.into_result()
+        })
     })
 }
 
@@ -555,7 +628,7 @@ where
 {
     let r = LAYER.read()?;
     let instance = read_instance(&r, handle)?;
-    cb(instance)
+    instance.trace.wrap(|| cb(instance))
 }
 
 extern "system" fn wait_frame(
@@ -563,21 +636,26 @@ extern "system" fn wait_frame(
     frame_wait_info: *const sys::FrameWaitInfo,
     frame_state_ptr: *mut sys::FrameState,
 ) -> sys::Result {
-    xr_wrap_trace("wait_frame", || {
+    xr_wrap(|| {
         let mut w = LAYER.write()?;
         let instance = subresource_read_instance_mut(&mut w, |l| &mut l.sessions, session_handle)?;
 
-        let result =
-            unsafe { (instance.fp().wait_frame)(session_handle, frame_wait_info, frame_state_ptr) }
-                .into_result();
+        instance.trace.clone().wrap(|| {
+            let _span = trace_span!("wait_frame").entered();
 
-        if result.is_ok() {
-            let frame_state = unsafe { *frame_state_ptr };
-            if let Some(session) = instance.sessions.get_mut(&session_handle) {
-                session.time = frame_state.predicted_display_time;
+            let result = unsafe {
+                (instance.fp().wait_frame)(session_handle, frame_wait_info, frame_state_ptr)
             }
-        }
+            .into_result();
 
-        result
+            if result.is_ok() {
+                let frame_state = unsafe { *frame_state_ptr };
+                if let Some(session) = instance.sessions.get_mut(&session_handle) {
+                    session.time = frame_state.predicted_display_time;
+                }
+            }
+
+            result
+        })
     })
 }
