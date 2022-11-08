@@ -75,20 +75,16 @@ impl Session {
 pub(crate) struct Instance {
     pub(crate) instance: safe_openxr::Instance,
     pub(crate) sessions: HashMap<sys::Session, Session>,
-    pub(crate) trace: Trace,
     _span: Span,
 }
 
 impl Instance {
     /// Initializes the structure.
     pub(crate) fn new(instance: safe_openxr::Instance) -> Self {
-        let trace = Trace::new();
-        let span = trace.wrap(|| span!(Level::TRACE, "Instance"));
         Self {
             instance,
             sessions: HashMap::default(),
-            trace,
-            _span: span,
+            _span: span!(Level::TRACE, "Instance"),
         }
     }
 
