@@ -128,15 +128,16 @@ public class IsblXRFeature : OpenXRFeature
     protected override void OnInstanceDestroy(ulong xrInstance)
     {
         Utils.Log("OnInstanceDestroy");
+        _tickTimer?.Stop();
+        _tickTimer?.Dispose();
+        _tickTimer = null;
+
         Lib?.Dispose();
         Lib = null;
         if (IsblRustLibrary.DoesUnload) RustLib.Unhook();
         RustLib?.Dispose();
         RustLib = null;
         _xrInstance = 0;
-        _tickTimer?.Stop();
-        _tickTimer?.Dispose();
-        _tickTimer = null;
     }
 
     protected override void OnSystemChange(ulong xrSystem)
