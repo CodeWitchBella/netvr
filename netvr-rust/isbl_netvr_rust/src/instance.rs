@@ -1,12 +1,13 @@
 use std::{
     collections::HashMap,
+    fmt::Debug,
     sync::{RwLock, RwLockReadGuard},
 };
 
-use tracing::{span, Level, Span};
+use tracing::trace_span;
 use xr_layer::{safe_openxr, sys};
 
-use crate::xr_wrap::{Trace, XrWrapError};
+use crate::xr_wrap::{LifetimeSpan, XrWrapError};
 
 /// This struct has 1-1 correspondence with each session the application creates
 /// It is used to hold the underlying session from runtime and extra data
@@ -16,22 +17,21 @@ pub(crate) struct Session {
     pub(crate) view_configuration_type: safe_openxr::ViewConfigurationType,
     pub(crate) space_stage: RwLock<Option<safe_openxr::Space>>,
     pub(crate) time: sys::Time,
-    _span: Span,
+    pub(crate) span: LifetimeSpan,
 }
 
 impl Session {
     /// Initializes the structure.
     pub(crate) fn new(
         session: safe_openxr::Session<safe_openxr::AnyGraphics>,
-        trace: &Trace,
     ) -> Result<Self, XrWrapError> {
         Ok(Self {
+            span: LifetimeSpan::new(trace_span!("Session")),
             session,
             // this will be set later
             view_configuration_type: sys::ViewConfigurationType::PRIMARY_MONO,
             space_stage: RwLock::new(None),
             time: sys::Time::from_nanos(-1),
-            _span: trace.wrap(|| span!(Level::TRACE, "Instance")),
         })
     }
 
@@ -75,16 +75,24 @@ impl Session {
 pub(crate) struct Instance {
     pub(crate) instance: safe_openxr::Instance,
     pub(crate) sessions: HashMap<sys::Session, Session>,
-    _span: Span,
+    pub(crate) span: LifetimeSpan,
+}
+
+impl Debug for Instance {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Instance")
+            .field("instance", &self.instance.as_raw())
+            .finish_non_exhaustive()
+    }
 }
 
 impl Instance {
     /// Initializes the structure.
     pub(crate) fn new(instance: safe_openxr::Instance) -> Self {
         Self {
+            span: LifetimeSpan::new(trace_span!("Instance")),
             instance,
             sessions: HashMap::default(),
-            _span: span!(Level::TRACE, "Instance"),
         }
     }
 

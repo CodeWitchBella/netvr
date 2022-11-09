@@ -1,3 +1,4 @@
+use tracing::instrument;
 use xr_layer::{log::LogInfo, safe_openxr, XrDebug, XrIterator};
 
 use crate::{
@@ -18,6 +19,7 @@ pub(crate) fn post_sync_actions(_: &Instance, infos: XrIterator) {
 }
 
 /// Should be periodically called from application. Sends data to network.
+#[instrument]
 pub(crate) fn tick(instance: &Instance) -> Result<(), XrWrapError> {
     LogInfo::string(format!("tick {:?}", instance.instance.as_raw()));
 

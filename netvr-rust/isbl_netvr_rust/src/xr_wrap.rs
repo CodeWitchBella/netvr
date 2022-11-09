@@ -1,7 +1,6 @@
-use std::sync::{Arc, Mutex};
 use std::{error::Error, panic, sync::PoisonError};
-use tracing::{dispatcher, Dispatch, Level};
-use tracing_chrome::{ChromeLayerBuilder, FlushGuard};
+use tracing::{dispatcher, info, Dispatch, Level, Subscriber};
+use tracing::{trace, Span};
 use tracing_subscriber::prelude::*;
 use tracing_subscriber::FmtSubscriber;
 use xr_layer::{
@@ -81,29 +80,58 @@ where
 #[derive(Clone)]
 pub(crate) struct Trace {
     pub(self) dispatch: tracing::Dispatch,
-    pub(self) _flush_guard: Arc<Mutex<FlushGuard>>,
 }
 
 impl Trace {
     pub(crate) fn new() -> Self {
-        let (chrome_layer, trace_flush_guard) = ChromeLayerBuilder::new().build();
+        let tracer = opentelemetry_jaeger::new_pipeline()
+            .with_service_name("netvr")
+            .with_collector_endpoint("http://localhost:14268/api/traces")
+            .install_simple()
+            .unwrap();
+        let telemetry = tracing_opentelemetry::layer().with_tracer(tracer);
+        let subscriber = FmtSubscriber::builder()
+            // all spans/events with a level higher than TRACE (e.g, debug, info, warn, etc.)
+            // will be written to stdout.
+            .with_max_level(Level::TRACE)
+            // completes the builder.
+            .finish()
+            //.with(chrome_layer)
+            .with(telemetry);
 
         Self {
-            dispatch: Dispatch::new(
-                FmtSubscriber::builder()
-                    // all spans/events with a level higher than TRACE (e.g, debug, info, warn, etc.)
-                    // will be written to stdout.
-                    .with_max_level(Level::TRACE)
-                    // completes the builder.
-                    .finish()
-                    .with(chrome_layer),
-            ),
-            _flush_guard: Arc::new(Mutex::new(trace_flush_guard)),
+            dispatch: Dispatch::new(subscriber),
         }
     }
 
     pub(crate) fn wrap<T>(&self, f: impl FnOnce() -> T) -> T {
         dispatcher::with_default(&self.dispatch, f)
+    }
+}
+
+pub(crate) struct LifetimeSpan {
+    span: Span,
+}
+
+impl LifetimeSpan {
+    pub(crate) fn new(span: Span) -> Self {
+        let entered = span.entered();
+        info!("new");
+
+        Self {
+            span: entered.exit(),
+        }
+    }
+
+    pub(crate) fn enter(&self) -> tracing::span::Entered {
+        self.span.enter()
+    }
+}
+
+impl Drop for LifetimeSpan {
+    fn drop(&mut self) {
+        let _guard = self.span.enter();
+        info!("drop");
     }
 }
 

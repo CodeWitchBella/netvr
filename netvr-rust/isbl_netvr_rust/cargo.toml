@@ -10,6 +10,9 @@ crate-type = ["cdylib"]
 [dependencies]
 lazy_static = "1.4.0"
 xr_layer = { path = "../xr_layer" }
-tracing-chrome = "0.6.0"
 tracing = "0.1.37"
 tracing-subscriber = "0.3.16"
+tracing-opentelemetry = { version = "0.17.4" }
+opentelemetry-jaeger = { version = "0.16.0", features = [
+	"reqwest_blocking_collector_client",
+] }

@@ -3,8 +3,8 @@ use crate::{
     instance::{Instance, Session},
     xr_wrap::{xr_wrap, ResultConvertible, Trace, XrWrapError},
 };
-use std::{collections::HashMap, os::raw::c_char, panic::AssertUnwindSafe, sync::RwLock};
-use tracing::{info, trace_span, Span};
+use std::{collections::HashMap, os::raw::c_char, sync::RwLock};
+use tracing::{info, span::Entered, trace_span};
 use xr_layer::{
     log::{LogError, LogTrace, LogWarn},
     safe_openxr::{self, InstanceExtensions},
@@ -99,7 +99,7 @@ pub(crate) fn init(
 pub(crate) fn deinit() {
     LogTrace::str("deinit");
     let mut w = LAYER.write().unwrap();
-    *w = None;
+    w.take();
 }
 
 fn wrap<O>(f: O) -> sys::Result
@@ -208,11 +208,12 @@ extern "system" fn destroy_instance(instance_handle: sys::Instance) -> sys::Resu
 fn read_instance(
     layer: &Layer,
     instance_handle: sys::Instance,
-) -> Result<&Instance, xr_layer::sys::Result> {
-    layer
+) -> Result<(&Instance, Entered), xr_layer::sys::Result> {
+    let instance = layer
         .instances
         .get(&instance_handle)
-        .ok_or(sys::Result::ERROR_INSTANCE_LOST)
+        .ok_or(sys::Result::ERROR_INSTANCE_LOST)?;
+    Ok((instance, instance.span.enter()))
 }
 
 fn read_instance_layer_mut(
@@ -274,8 +275,8 @@ extern "system" fn poll_event(
     event_data: *mut sys::EventDataBuffer,
 ) -> sys::Result {
     wrap(|layer| {
+        let (instance, _guard) = read_instance(layer, instance_handle)?;
         let _span = trace_span!("poll_event").entered();
-        let instance = read_instance(layer, instance_handle)?;
 
         let result = unsafe { (instance.fp().poll_event)(instance_handle, event_data) };
         result.into_result()
@@ -324,8 +325,8 @@ extern "system" fn string_to_path(
     path: *mut sys::Path,
 ) -> sys::Result {
     wrap(|layer| {
+        let (instance, _guard) = read_instance(layer, instance_handle)?;
         let _span = trace_span!("string_to_path").entered();
-        let instance = read_instance(layer, instance_handle)?;
 
         let result =
             unsafe { (instance.fp().string_to_path)(instance_handle, path_string_raw, path) };
@@ -338,8 +339,8 @@ extern "system" fn suggest_interaction_profile_bindings(
     suggested_bindings: *const sys::InteractionProfileSuggestedBinding,
 ) -> sys::Result {
     wrap(|layer| {
+        let (instance, _guard) = read_instance(layer, instance_handle)?;
         let _span = trace_span!("suggest_interaction_profile_bindings").entered();
-        let instance = read_instance(layer, instance_handle)?;
 
         let result = unsafe {
             (instance.fp().suggest_interaction_profile_bindings)(
@@ -383,7 +384,7 @@ extern "system" fn create_session(
 
             instance
                 .sessions
-                .insert(session_handle, Session::new(session, &layer.trace)?);
+                .insert(session_handle, Session::new(session)?);
         }
         result.into_result()
     })
@@ -574,8 +575,11 @@ where
 {
     let r = LAYER.read()?;
     let layer = (*r).as_ref().ok_or(sys::Result::ERROR_RUNTIME_FAILURE)?;
-    let instance = read_instance(layer, handle)?;
-    layer.trace.wrap(|| cb(instance))
+
+    layer.trace.wrap(|| {
+        let (instance, _guard) = read_instance(layer, handle)?;
+        cb(instance)
+    })
 }
 
 extern "system" fn wait_frame(
