@@ -86,7 +86,8 @@ pub(crate) struct Trace {
 
 impl Trace {
     pub(crate) fn new() -> Self {
-        let (chrome_layer, trace_flush_guard) = ChromeLayerBuilder::new().build();
+        let (chrome_layer, trace_flush_guard) =
+            ChromeLayerBuilder::new().include_args(true).build();
 
         Self {
             dispatch: Dispatch::new(

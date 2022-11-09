@@ -3,8 +3,8 @@ use crate::{
     instance::{Instance, Session},
     xr_wrap::{xr_wrap, ResultConvertible, Trace, XrWrapError},
 };
-use std::{collections::HashMap, os::raw::c_char, panic::AssertUnwindSafe, sync::RwLock};
-use tracing::{info, trace_span, Span};
+use std::{collections::HashMap, ffi::CStr, os::raw::c_char, sync::RwLock};
+use tracing::{field, info, trace_span};
 use xr_layer::{
     log::{LogError, LogTrace, LogWarn},
     safe_openxr::{self, InstanceExtensions},
@@ -324,11 +324,17 @@ extern "system" fn string_to_path(
     path: *mut sys::Path,
 ) -> sys::Result {
     wrap(|layer| {
-        let _span = trace_span!("string_to_path").entered();
+        let span =
+            trace_span!("string_to_path", string = field::Empty, path = field::Empty).entered();
+        span.record(
+            "string",
+            format!("{:?}", unsafe { CStr::from_ptr(path_string_raw) }),
+        );
         let instance = read_instance(layer, instance_handle)?;
 
         let result =
             unsafe { (instance.fp().string_to_path)(instance_handle, path_string_raw, path) };
+        span.record("path", format!("{:?}", unsafe { *path }));
         result.into_result()
     })
 }
