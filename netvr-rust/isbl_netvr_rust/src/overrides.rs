@@ -232,10 +232,7 @@ fn subresource_read_instance<T: std::hash::Hash + std::cmp::Eq>(
     let instance_handle = reader(&layer.instance_refs)
         .get(&handle)
         .ok_or(sys::Result::ERROR_HANDLE_INVALID)?;
-    layer
-        .instances
-        .get(instance_handle)
-        .ok_or(sys::Result::ERROR_INSTANCE_LOST)
+    read_instance(layer, *instance_handle)
 }
 
 fn subresource_read_instance_mut<T: std::hash::Hash + std::cmp::Eq>(
@@ -247,9 +244,7 @@ fn subresource_read_instance_mut<T: std::hash::Hash + std::cmp::Eq>(
     let instance_handle = reader(&mut layer.instance_refs)
         .get(&handle)
         .ok_or(sys::Result::ERROR_HANDLE_INVALID)?;
-    instances
-        .get_mut(instance_handle)
-        .ok_or(sys::Result::ERROR_INSTANCE_LOST)
+    read_instance_layer_mut(instances, *instance_handle)
 }
 
 fn instance_ref_delete<T: std::hash::Hash + std::cmp::Eq>(
@@ -263,10 +258,7 @@ fn instance_ref_delete<T: std::hash::Hash + std::cmp::Eq>(
     let instance_handle = reader(&mut layer.instance_refs)
         .remove(&handle)
         .ok_or(sys::Result::ERROR_HANDLE_INVALID)?;
-    layer
-        .instances
-        .get_mut(&instance_handle)
-        .ok_or(sys::Result::ERROR_INSTANCE_LOST)
+    read_instance_layer_mut(&mut layer.instances, instance_handle)
 }
 
 extern "system" fn poll_event(
