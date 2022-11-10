@@ -1,5 +1,6 @@
 use std::{
     collections::HashMap,
+    fmt::Debug,
     sync::{RwLock, RwLockReadGuard},
 };
 
@@ -69,6 +70,16 @@ impl Session {
     }
 }
 
+impl Debug for Session {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Session")
+            .field("session", &self.session.as_raw())
+            .field("view_configuration_type", &self.view_configuration_type)
+            .field("time", &self.time)
+            .finish_non_exhaustive()
+    }
+}
+
 /// This struct has 1-1 correspondence with each XrInstance the application creates
 /// It is used to hold the underlying instance from runtime and extra data
 /// required by the netvr layer.
@@ -91,5 +102,13 @@ impl Instance {
     /// Convenience function serving as a shortcut.
     pub(crate) fn fp(&self) -> &xr_layer::raw::Instance {
         self.instance.fp()
+    }
+}
+
+impl Debug for Instance {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Instance")
+            .field("instance", &self.instance.as_raw())
+            .finish_non_exhaustive()
     }
 }

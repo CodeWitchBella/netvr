@@ -1,7 +1,7 @@
 use std::sync::{Arc, Mutex};
 use std::{error::Error, panic, sync::PoisonError};
 use tracing::{dispatcher, Dispatch, Level};
-use tracing_chrome::{ChromeLayerBuilder, FlushGuard};
+use tracing_chrome::{ChromeLayerBuilder, EventOrSpan, FlushGuard, TraceStyle};
 use tracing_subscriber::prelude::*;
 use tracing_subscriber::FmtSubscriber;
 use xr_layer::{
@@ -86,8 +86,19 @@ pub(crate) struct Trace {
 
 impl Trace {
     pub(crate) fn new() -> Self {
-        let (chrome_layer, trace_flush_guard) =
-            ChromeLayerBuilder::new().include_args(true).build();
+        let (chrome_layer, trace_flush_guard) = ChromeLayerBuilder::new()
+            .include_args(true)
+            //.trace_style(TraceStyle::Async)
+            .include_locations(true)
+            /*  .name_fn(Box::new(|event_or_span| match event_or_span {
+                EventOrSpan::Event(ev) => ev
+                    .metadata()
+                    .fields()
+                    .field("message")
+                    .map_or_else(|| ev.metadata().name().into(), |val| val.to_string()),
+                EventOrSpan::Span(s) => s.metadata().name().into(),
+            }))*/
+            .build();
 
         Self {
             dispatch: Dispatch::new(
