@@ -197,7 +197,9 @@ extern "system" fn destroy_instance(instance_handle: sys::Instance) -> sys::Resu
         let _ = layer
             .instances
             .remove(&instance_handle)
-            .ok_or(sys::Result::ERROR_INSTANCE_LOST)?;
+            // Note: ERROR_INSTANCE_LOST is incorrect, because it implies that
+            // destroy instance needs to be called later, which will not succeed
+            .ok_or(sys::Result::ERROR_HANDLE_INVALID)?;
         // This is already done by above's drop:
         //let result = unsafe { (instance.fp().destroy_instance)(instance_handle) };
         //result.into_result()
@@ -212,7 +214,9 @@ fn read_instance(
     layer
         .instances
         .get(&instance_handle)
-        .ok_or(sys::Result::ERROR_INSTANCE_LOST)
+        // Note: ERROR_INSTANCE_LOST is incorrect, because it implies that
+        // destroy instance needs to be called later, which will not succeed
+        .ok_or(sys::Result::ERROR_HANDLE_INVALID)
 }
 
 fn read_instance_layer_mut(
@@ -221,7 +225,9 @@ fn read_instance_layer_mut(
 ) -> Result<&mut Instance, xr_layer::sys::Result> {
     instances
         .get_mut(&instance_handle)
-        .ok_or(sys::Result::ERROR_INSTANCE_LOST)
+        // Note: ERROR_INSTANCE_LOST is incorrect, because it implies that
+        // destroy instance needs to be called later, which will not succeed
+        .ok_or(sys::Result::ERROR_HANDLE_INVALID)
 }
 
 fn subresource_read_instance<T: std::hash::Hash + std::cmp::Eq>(
