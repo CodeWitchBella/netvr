@@ -1,6 +1,7 @@
 using System;
 using System.Collections.Generic;
 using System.Timers;
+using System.Threading;
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
@@ -26,15 +27,15 @@ public class IsblXRFeature : OpenXRFeature
     /// </summary>
     public const string FeatureId = "cz.isbl.netvr";
 
-    ulong _xrInstance;
+    ulong _xrInstance = 0;
     internal IsblNetvrLibrary Lib { get; private set; }
     internal IsblRustLibrary RustLib { get; private set; }
 
     static string _log = "";
-    static Timer _timer;
+    static System.Timers.Timer _timer;
     const bool InstantLog = false;
 
-    static Timer _tickTimer;
+    static Thread _tickThread;
 
     [AOT.MonoPInvokeCallback(typeof(IsblNetvrLibrary.Logger_Delegate))]
     static void Logger(string value)
@@ -42,7 +43,7 @@ public class IsblXRFeature : OpenXRFeature
         _log += "\n" + value;
         if (_timer == null)
         {
-            _timer = new Timer(1000);
+            _timer = new(1000);
             _timer.Elapsed += (source, evt) =>
             {
                 Utils.Log($"From C++:{_log}\nEND");
@@ -55,7 +56,7 @@ public class IsblXRFeature : OpenXRFeature
     }
 
     static string _logRust = "";
-    static Timer _timerRust;
+    static System.Timers.Timer _timerRust;
     [AOT.MonoPInvokeCallback(typeof(IsblNetvrLibrary.Logger_Delegate))]
     static void LoggerRust(Int32 level, string value, string stack)
     {
@@ -68,7 +69,7 @@ public class IsblXRFeature : OpenXRFeature
             _logRust += "\n" + (level == 2 ? "[trace] " : "[info] ") + value.Replace("\n", "\n  ");
             if (_timerRust == null)
             {
-                _timerRust = new Timer(1000);
+                _timerRust = new(1000);
                 _timerRust.Elapsed += (source, evt) => InfoLogProcess();
                 _timerRust.Enabled = true;
             }
@@ -116,26 +117,36 @@ public class IsblXRFeature : OpenXRFeature
             RustLib = new();
             RustLib.SetLogger(LoggerRust);
         }
-        if (_tickTimer == null)
+        if (_tickThread == null)
         {
-            _tickTimer = new(10);
-            _tickTimer.Elapsed += (source, evt) =>
-            {
-                RustLib?.Tick(xrInstance);
-                _tickTimer.Start();
-            };
-            _tickTimer.Enabled = true;
-            _tickTimer.AutoReset = false;
+            _tickThread = new(TickingThread);
+            _tickThread.Start();
         }
         return true;
+    }
+
+    void TickingThread()
+    {
+        try
+        {
+            while (true)
+            {
+                Thread.Sleep(10);
+                if (_xrInstance > 0) RustLib?.Tick(_xrInstance);
+            }
+        }
+        catch (ThreadAbortException) { /* this is expected */ }
+        finally
+        {
+            Utils.Log("Finishing TickingThread");
+        }
     }
 
     protected override void OnInstanceDestroy(ulong xrInstance)
     {
         Utils.Log("OnInstanceDestroy");
-        _tickTimer?.Stop();
-        _tickTimer?.Dispose();
-        _tickTimer = null;
+        _tickThread?.Abort();
+        _tickThread = null;
 
         Lib?.Dispose();
         Lib = null;
