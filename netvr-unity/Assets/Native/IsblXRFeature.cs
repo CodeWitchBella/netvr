@@ -119,8 +119,13 @@ public class IsblXRFeature : OpenXRFeature
         if (_tickTimer == null)
         {
             _tickTimer = new(10);
-            _tickTimer.Elapsed += (source, evt) => RustLib?.Tick(xrInstance);
+            _tickTimer.Elapsed += (source, evt) =>
+            {
+                RustLib?.Tick(xrInstance);
+                _tickTimer.Start();
+            };
             _tickTimer.Enabled = true;
+            _tickTimer.AutoReset = false;
         }
         return true;
     }
