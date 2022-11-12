@@ -1,5 +1,25 @@
 %YAML 1.1
 %TAG !u! tag:unity3d.com,2011:
+--- !u!114 &-9132579577819588660
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 0}
+  m_Name: NetVRRemoteHeadsetControllerProfile Android
+  m_EditorClassIdentifier: Isbl.NetVR:Isbl.NetVR:NetVRRemoteHeadsetControllerProfile
+  m_enabled: 0
+  nameUi: 
+  version: 
+  featureIdInternal: 
+  openxrExtensionStrings: 
+  company: 
+  priority: 0
+  required: 0
 --- !u!114 &-8337974926340133946
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -135,9 +155,29 @@ MonoBehaviour:
   m_Name: IsblOldNetXRFeature Standalone
   m_EditorClassIdentifier: 
   m_enabled: 0
-  nameUi: Isbl NetVR XR Feature
+  nameUi: Isbl Old NetVR XR Feature
   version: 0.0.1
   featureIdInternal: cz.isbl.old-netvr
+  openxrExtensionStrings: 
+  company: Isbl
+  priority: 0
+  required: 0
+--- !u!114 &-4441309263105485158
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 0}
+  m_Name: NetVRRemoteHeadsetControllerProfile Standalone
+  m_EditorClassIdentifier: Isbl.NetVR:Isbl.NetVR:NetVRRemoteHeadsetControllerProfile
+  m_enabled: 0
+  nameUi: NetVR Remote Headset Controller Profile
+  version: 0.0.1
+  featureIdInternal: cz.isbl.netvr.feature.input.headset
   openxrExtensionStrings: 
   company: Isbl
   priority: 0
@@ -457,7 +497,7 @@ MonoBehaviour:
   features:
   - {fileID: 7720092602780165281}
   - {fileID: -3913617698517783533}
-  - {fileID: 0}
+  - {fileID: 7706274102080453326}
   - {fileID: -2339375261965693577}
   - {fileID: -6948651536590334617}
   - {fileID: 3447582771640548276}
@@ -584,11 +624,11 @@ MonoBehaviour:
   m_Name: IsblOldNetXRFeature Android
   m_EditorClassIdentifier: 
   m_enabled: 0
-  nameUi: 
-  version: 
-  featureIdInternal: 
+  nameUi: Isbl Old NetVR XR Feature
+  version: 0.0.1
+  featureIdInternal: cz.isbl.old-netvr
   openxrExtensionStrings: 
-  company: 
+  company: Isbl
   priority: 0
   required: 0
 --- !u!114 &7720092602780165281
@@ -633,6 +673,7 @@ MonoBehaviour:
   - {fileID: 148644341140927224}
   - {fileID: 9032261568709070916}
   - {fileID: -7667623446982095282}
+  - {fileID: -4441309263105485158}
   - {fileID: 7461395375504407720}
   - {fileID: 5691381814485142551}
   - {fileID: -898579997707495670}
