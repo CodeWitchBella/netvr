@@ -182,6 +182,11 @@ fn debug_path(
     f: &mut fmt::Formatter,
     instance: &openxr::Instance,
 ) -> Result<fmt::Result, DebugPathError> {
+    if path.into_raw() == 0 {
+        // steamvr returns XR_RUNTIME_FAILURE for null paths
+        return Ok(f.debug_tuple("Path").field(&"null").finish());
+    }
+
     let mut size_u32: u32 = 0;
 
     unsafe {
@@ -221,7 +226,7 @@ impl XrDebug for openxr_sys::Path {
             Ok(result) => result,
             Err(err) => f
                 .debug_tuple("Path")
-                .field(&format!("<invalid: {:?}>", err))
+                .field(&format!("Invalid({}, {:?})", self.into_raw(), err))
                 .finish(),
         }
     }
