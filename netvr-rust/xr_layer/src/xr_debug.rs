@@ -1,4 +1,4 @@
-use std::{borrow::BorrowMut, ffi::CStr, fmt};
+use std::{borrow::BorrowMut, ffi::CStr, fmt, num::TryFromIntError, str::Utf8Error};
 
 use crate::{
     utils::ResultConvertible,
@@ -166,13 +166,22 @@ impl XrDebug for openxr_sys::ActiveActionSet {
     }
 }
 
+#[derive(Debug)]
+enum DebugPathError {
+    FromBytesWithNul(std::ffi::FromBytesWithNulError),
+    Utf8(Utf8Error),
+    GetPathLength(openxr_sys::Result),
+    GetPathString(openxr_sys::Result),
+    TryFromInt(TryFromIntError),
+}
+
 /// Utility function which takes openxr_sys::Path and prints it with formatter.
 /// If something goes wrong it returns empty error ().
 fn debug_path(
     path: &openxr_sys::Path,
     f: &mut fmt::Formatter,
     instance: &openxr::Instance,
-) -> Result<Result<(), fmt::Error>, ()> {
+) -> Result<fmt::Result, DebugPathError> {
     let mut size_u32: u32 = 0;
 
     unsafe {
@@ -184,8 +193,8 @@ fn debug_path(
             std::ptr::null_mut(),
         )
         .into_result()
-        .map_err(|_| ())?;
-        let size: usize = size_u32.try_into().map_err(|_| ())?;
+        .map_err(DebugPathError::GetPathLength)?;
+        let size: usize = size_u32.try_into().map_err(DebugPathError::TryFromInt)?;
 
         let mut vec = vec![0_u8; size];
         (instance.fp().path_to_string)(
@@ -196,12 +205,12 @@ fn debug_path(
             std::mem::transmute(vec.as_mut_ptr()),
         )
         .into_result()
-        .map_err(|_| ())?;
+        .map_err(DebugPathError::GetPathString)?;
 
         let str = CStr::from_bytes_with_nul(vec.as_slice())
-            .map_err(|_| ())?
+            .map_err(DebugPathError::FromBytesWithNul)?
             .to_str()
-            .map_err(|_| ())?;
+            .map_err(DebugPathError::Utf8)?;
         Ok(f.debug_tuple("Path").field(&str).finish())
     }
 }
@@ -210,7 +219,10 @@ impl XrDebug for openxr_sys::Path {
     fn xr_fmt(&self, f: &mut fmt::Formatter, instance: &openxr::Instance) -> fmt::Result {
         match debug_path(self, f, instance) {
             Ok(result) => result,
-            Err(_) => f.debug_tuple("Path").field(&"<invalid>").finish(),
+            Err(err) => f
+                .debug_tuple("Path")
+                .field(&format!("<invalid: {:?}>", err))
+                .finish(),
         }
     }
 }
@@ -250,6 +262,25 @@ impl XrDebug for xr_struct::ActionStateGetInfo<'_> {
         f.debug_struct("ActionStateGetInfo")
             .field("subaction_path", &self.subaction_path().as_debug(instance))
             .field("action", &self.action().as_debug(instance))
+            .finish()
+    }
+}
+
+impl XrDebug for xr_struct::EventDataInteractionProfileChanged<'_> {
+    fn xr_fmt(&self, f: &mut fmt::Formatter, instance: &openxr::Instance) -> fmt::Result {
+        f.debug_struct("EventDataInteractionProfileChanged")
+            .field("session", &self.session().as_debug(instance))
+            .finish()
+    }
+}
+
+impl XrDebug for xr_struct::InteractionProfileState<'_> {
+    fn xr_fmt(&self, f: &mut fmt::Formatter, instance: &openxr::Instance) -> fmt::Result {
+        f.debug_struct("InteractionProfileState")
+            .field(
+                "interaction_profile",
+                &self.interaction_profile().as_debug(instance),
+            )
             .finish()
     }
 }
@@ -344,6 +375,8 @@ implement_as_non_exhaustive!(
     //   - xr_struct::EventDataSessionStateChanged<'_>,
     //   - xr_struct::ActionStateGetInfo<'_>,
     //   - xr_struct::SessionCreateInfo<'_>,
+    //   - xr_struct::EventDataInteractionProfileChanged<'_>,
+    //   - xr_struct::InteractionProfileState<'_>,
     //
     // Following types are readable via XrIterator and do not have full implementation
     xr_struct::ActionSetCreateInfo<'_>,
@@ -374,7 +407,6 @@ implement_as_non_exhaustive!(
     xr_struct::EventDataDisplayRefreshRateChangedFB<'_>,
     xr_struct::EventDataEventsLost<'_>,
     xr_struct::EventDataInstanceLossPending<'_>,
-    xr_struct::EventDataInteractionProfileChanged<'_>,
     xr_struct::EventDataMainSessionVisibilityChangedEXTX<'_>,
     xr_struct::EventDataMarkerTrackingUpdateVARJO<'_>,
     xr_struct::EventDataPassthroughStateChangedFB<'_>,

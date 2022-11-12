@@ -156,6 +156,9 @@ implement_from!(openxr_sys::VulkanDeviceCreateInfoKHR);
 implement_from!(openxr_sys::VulkanGraphicsDeviceGetInfoKHR);
 implement_from!(openxr_sys::VulkanInstanceCreateInfoKHR);
 implement_from!(openxr_sys::VulkanSwapchainFormatListCreateInfoKHR);
+// I somehow missed this one in first version, which means that there likely are
+// more missing from the list.
+implement_from!(openxr_sys::InteractionProfileState);
 
 impl Iterator for XrIterator {
     type Item = XrStruct;
@@ -164,8 +167,8 @@ impl Iterator for XrIterator {
         if self.ptr.is_null() {
             return None;
         }
-        let res: *const openxr_sys::BaseInStructure = unsafe { std::mem::transmute(self.ptr) };
-        self.ptr = unsafe { std::mem::transmute((*res).next) };
+        let res: *const openxr_sys::BaseInStructure = self.ptr;
+        self.ptr = unsafe { (*res).next };
         Some(XrStruct::from(res))
     }
 }

@@ -179,6 +179,9 @@ implement_readers!(
     read_vulkan_graphics_device_get_info_khr reads VulkanGraphicsDeviceGetInfoKHR,
     read_vulkan_instance_create_info_khr reads VulkanInstanceCreateInfoKHR,
     read_vulkan_swapchain_format_list_create_info_khr reads VulkanSwapchainFormatListCreateInfoKHR,
+    // I somehow missed this one in first version, which means that there likely
+    // are more missing from the list.
+    read_interaction_profile_state reads InteractionProfileState,
 );
 
 impl XrStruct {
@@ -239,5 +242,17 @@ impl<'a> ActionStateGetInfo<'a> {
     }
     pub fn action(&self) -> openxr_sys::Action {
         self.0.action
+    }
+}
+
+impl<'a> EventDataInteractionProfileChanged<'a> {
+    pub fn session(&self) -> openxr_sys::Session {
+        self.0.session
+    }
+}
+
+impl<'a> InteractionProfileState<'a> {
+    pub fn interaction_profile(&self) -> openxr_sys::Path {
+        self.0.interaction_profile
     }
 }

@@ -44,6 +44,9 @@ impl Layer {
             .add_override(FnPtr::BeginSession(begin_session))
             .add_override(FnPtr::WaitFrame(wait_frame))
             .add_override(FnPtr::AttachSessionActionSets(attach_session_action_sets))
+            .add_override(FnPtr::GetCurrentInteractionProfile(
+                get_current_interaction_profile,
+            ))
             .add_override(FnPtr::SyncActions(sync_actions))
             .add_override(FnPtr::GetActionStateBoolean(get_action_state_boolean))
             .add_override(FnPtr::GetActionStateFloat(get_action_state_float))
@@ -451,6 +454,43 @@ extern "system" fn attach_session_action_sets(
         let result =
             unsafe { (instance.fp().attach_session_action_sets)(session_handle, attach_info) };
         result.into_result()
+    })
+}
+
+extern "system" fn get_current_interaction_profile(
+    session_handle: sys::Session,
+    top_level_user_path: sys::Path,
+    interaction_profile_ptr: *mut sys::InteractionProfileState,
+) -> sys::Result {
+    wrap(|layer| {
+        let span = trace_span!(
+            "get_current_interaction_profile",
+            top_level_user_path = tracing::field::Empty,
+            interaction_profile = tracing::field::Empty
+        )
+        .entered();
+        let instance = subresource_read_instance(layer, |l| &l.sessions, session_handle)?;
+        span.record_debug(
+            "top_level_user_path",
+            top_level_user_path.as_debug(&instance.instance),
+        );
+
+        let result = unsafe {
+            (instance.fp().get_current_interaction_profile)(
+                session_handle,
+                top_level_user_path,
+                interaction_profile_ptr,
+            )
+        }
+        .into_result();
+        if result.is_ok() {
+            span.record_debug(
+                "interaction_profile",
+                unsafe { XrIterator::from_ptr(interaction_profile_ptr) }
+                    .as_debug(&instance.instance),
+            );
+        }
+        result
     })
 }
 

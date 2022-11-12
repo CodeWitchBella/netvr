@@ -2,7 +2,7 @@ use std::sync::{Arc, Mutex};
 use std::{error::Error, panic, sync::PoisonError};
 use tracing::span::EnteredSpan;
 use tracing::{dispatcher, Dispatch, Level, Span};
-use tracing_chrome::{ChromeLayerBuilder, FlushGuard, TraceStyle};
+use tracing_chrome::{ChromeLayerBuilder, FlushGuard};
 use tracing_subscriber::prelude::*;
 use tracing_subscriber::FmtSubscriber;
 use xr_layer::{
@@ -89,7 +89,7 @@ impl Trace {
     pub(crate) fn new() -> Self {
         let (chrome_layer, trace_flush_guard) = ChromeLayerBuilder::new()
             .include_args(true)
-            //.trace_style(TraceStyle::Async)
+            //.trace_style(tracing_chrome::TraceStyle::Async)
             .include_locations(true)
             /*  .name_fn(Box::new(|event_or_span| match event_or_span {
                 EventOrSpan::Event(ev) => ev
