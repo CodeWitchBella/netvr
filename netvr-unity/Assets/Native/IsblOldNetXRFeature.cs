@@ -11,7 +11,7 @@ using UnityEngine.XR.OpenXR.Features;
 
 
 #if UNITY_EDITOR
-[UnityEditor.XR.OpenXR.Features.OpenXRFeature(UiName = "Isbl NetVR XR Feature",
+[UnityEditor.XR.OpenXR.Features.OpenXRFeature(UiName = "Isbl Old NetVR XR Feature",
     BuildTargetGroups = new[] { UnityEditor.BuildTargetGroup.Standalone, UnityEditor.BuildTargetGroup.Android },
     Company = "Isbl",
     Desc = "Noop extension.",
