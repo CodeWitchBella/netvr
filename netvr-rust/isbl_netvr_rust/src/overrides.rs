@@ -1,7 +1,7 @@
 use crate::{
     implementation::post_sync_actions,
     instance::{Instance, Session},
-    xr_wrap::{xr_wrap, ResultConvertible, Trace, XrWrapError},
+    xr_wrap::{xr_wrap, RecordDebug, ResultConvertible, Trace, XrWrapError},
 };
 use std::{collections::HashMap, ffi::CStr, os::raw::c_char, sync::RwLock};
 use tracing::{field, info, trace_span};
@@ -276,6 +276,13 @@ extern "system" fn poll_event(
         let instance = read_instance(layer, instance_handle)?;
 
         let result = unsafe { (instance.fp().poll_event)(instance_handle, event_data) };
+        if result != sys::Result::EVENT_UNAVAILABLE {
+            let span = trace_span!("event", event = tracing::field::Empty).entered();
+            span.record_debug(
+                "event",
+                unsafe { XrIterator::from_ptr(event_data) }.as_debug(&instance.instance),
+            );
+        }
         result.into_result()
     })
 }

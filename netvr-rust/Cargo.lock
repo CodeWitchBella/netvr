@@ -356,8 +356,7 @@ dependencies = [
 [[package]]
 name = "tracing-chrome"
 version = "0.6.0"
-source = "registry+https://github.com/rust-lang/crates.io-index"
-checksum = "d1ac1f6a3a47e9c755e65ef974653c978da2246487a16044a8ee1d9a0a67257c"
+source = "git+https://github.com/CodeWitchBella/tracing-chrome.git?rev=6f41686f89971d331542b39d91b4755b6a2ccbc5#6f41686f89971d331542b39d91b4755b6a2ccbc5"
 dependencies = [
  "crossbeam",
  "json",

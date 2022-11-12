@@ -1,7 +1,8 @@
 use std::sync::{Arc, Mutex};
 use std::{error::Error, panic, sync::PoisonError};
-use tracing::{dispatcher, Dispatch, Level};
-use tracing_chrome::{ChromeLayerBuilder, EventOrSpan, FlushGuard, TraceStyle};
+use tracing::span::EnteredSpan;
+use tracing::{dispatcher, Dispatch, Level, Span};
+use tracing_chrome::{ChromeLayerBuilder, FlushGuard, TraceStyle};
 use tracing_subscriber::prelude::*;
 use tracing_subscriber::FmtSubscriber;
 use xr_layer::{
@@ -116,6 +117,30 @@ impl Trace {
 
     pub(crate) fn wrap<T>(&self, f: impl FnOnce() -> T) -> T {
         dispatcher::with_default(&self.dispatch, f)
+    }
+}
+
+pub(crate) trait RecordDebug {
+    fn record_debug<T>(&self, field: &'static str, debug: T)
+    where
+        T: std::fmt::Debug;
+}
+
+impl RecordDebug for Span {
+    fn record_debug<T>(&self, field: &'static str, debug: T)
+    where
+        T: std::fmt::Debug,
+    {
+        self.record(field, tracing::field::debug(debug));
+    }
+}
+
+impl RecordDebug for EnteredSpan {
+    fn record_debug<T>(&self, field: &'static str, debug: T)
+    where
+        T: std::fmt::Debug,
+    {
+        self.record(field, tracing::field::debug(debug));
     }
 }
 

@@ -10,6 +10,6 @@ crate-type = ["cdylib"]
 [dependencies]
 lazy_static = "1.4.0"
 xr_layer = { path = "../xr_layer" }
-tracing-chrome = "0.6.0"
+tracing-chrome = { git = "https://github.com/CodeWitchBella/tracing-chrome.git", rev = "6f41686f89971d331542b39d91b4755b6a2ccbc5" }
 tracing = "0.1.37"
 tracing-subscriber = "0.3.16"

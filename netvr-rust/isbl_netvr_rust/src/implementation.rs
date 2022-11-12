@@ -1,4 +1,4 @@
-use tracing::{info, instrument, span};
+use tracing::{info, instrument};
 use xr_layer::{log::LogError, XrDebug, XrIterator};
 
 use crate::{
