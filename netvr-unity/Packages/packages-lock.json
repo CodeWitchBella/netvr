@@ -212,6 +212,12 @@
       },
       "url": "https://packages.unity.com"
     },
+    "cz.isbl.netvr": {
+      "version": "file:cz.isbl.netvr",
+      "depth": 0,
+      "source": "embedded",
+      "dependencies": {}
+    },
     "cz.isbl.picoopenxr": {
       "version": "file:PicoOpenXR",
       "depth": 0,

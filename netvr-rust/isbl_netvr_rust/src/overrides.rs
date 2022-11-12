@@ -1,5 +1,5 @@
 use crate::{
-    implementation::post_sync_actions,
+    implementation::{post_poll_event, post_sync_actions},
     instance::{Instance, Session},
     xr_wrap::{xr_wrap, RecordDebug, ResultConvertible, Trace, XrWrapError},
 };
@@ -279,12 +279,21 @@ extern "system" fn poll_event(
         let instance = read_instance(layer, instance_handle)?;
 
         let result = unsafe { (instance.fp().poll_event)(instance_handle, event_data) };
-        if result != sys::Result::EVENT_UNAVAILABLE {
+        if result == sys::Result::SUCCESS {
             let span = trace_span!("event", event = tracing::field::Empty).entered();
             span.record_debug(
                 "event",
                 unsafe { XrIterator::from_ptr(event_data) }.as_debug(&instance.instance),
             );
+        } else if result == sys::Result::EVENT_UNAVAILABLE {
+            let option = post_poll_event(instance).map_err(|err| {
+                LogError::string(format!("post_poll_event failed with error {:?}", err));
+                sys::Result::EVENT_UNAVAILABLE
+            })?;
+            if let Some(data) = option {
+                unsafe { std::ptr::write(event_data, *data.as_raw()) };
+                return sys::Result::SUCCESS.into_result();
+            }
         }
         result.into_result()
     })
@@ -465,6 +474,7 @@ extern "system" fn get_current_interaction_profile(
     wrap(|layer| {
         let span = trace_span!(
             "get_current_interaction_profile",
+            session = ?session_handle,
             top_level_user_path = tracing::field::Empty,
             interaction_profile = tracing::field::Empty
         )

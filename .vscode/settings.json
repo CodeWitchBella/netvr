@@ -114,5 +114,10 @@
       "description": "Words used in this project",
       "addWords": true
     }
+  },
+  "search.exclude": {
+    "netvr-rust/target/**": true,
+    "netvr-cpp/Android/**": true,
+    "netvr-unity/Library/**": true
   }
 }

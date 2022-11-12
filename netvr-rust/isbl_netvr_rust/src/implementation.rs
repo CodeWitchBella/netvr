@@ -1,5 +1,5 @@
 use tracing::{info, instrument};
-use xr_layer::{log::LogError, XrDebug, XrIterator};
+use xr_layer::{log::LogError, EventDataBuffer, XrDebug, XrIterator};
 
 use crate::{
     instance::{Instance, Session},
@@ -54,4 +54,8 @@ fn tick_session(instance: &Instance, session: &Session) -> Result<(), XrWrapErro
     }
 
     Ok(())
+}
+
+pub(crate) fn post_poll_event(instance: &Instance) -> Result<Option<EventDataBuffer>, XrWrapError> {
+    Ok(None)
 }

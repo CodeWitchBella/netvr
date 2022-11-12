@@ -1,7 +1,10 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
+using Isbl.NetVR;
 
+//[Obsolete("Part of old C++/C# based implementation. Will be removed.")]
 class IsblCalibration : System.IDisposable
 {
     IsblNetvrLibrary _lib;
@@ -9,7 +12,7 @@ class IsblCalibration : System.IDisposable
 
     public IsblCalibration()
     {
-        _lib = UnityEngine.XR.OpenXR.OpenXRSettings.Instance.GetFeature<IsblXRFeature>().Lib;
+        _lib = UnityEngine.XR.OpenXR.OpenXRSettings.Instance.GetFeature<IsblOldNetXRFeature>().Lib;
         _handle = _lib.CalibrationCreate();
     }
 

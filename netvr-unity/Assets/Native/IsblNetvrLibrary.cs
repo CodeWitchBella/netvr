@@ -2,7 +2,9 @@ using System;
 using System.IO;
 using System.Runtime.InteropServices;
 using UnityEngine;
+using Isbl.NetVR;
 
+//[Obsolete("Part of old C++/C# based implementation. Will be removed.")]
 class IsblNetvrLibrary : IDisposable
 {
     const string LibraryName = "isbl_netvr";
@@ -66,7 +68,7 @@ class IsblNetvrLibrary : IDisposable
 
     public IsblNetvrLibrary()
     {
-        this._l = new IsblDynamicLibrary(LibraryName, "Assets/Plugins/Windows/x64/");
+        this._l = new IsblDynamicLibrary(LibraryName, "Packages/cz.isbl.netvr/Runtime/Plugins/Windows/x64/");
 #if UNITY_EDITOR_WIN
         // get function pointers converted to delegates
         _l.GetDelegate("isbl_netvr_on_system_change", out OnSystemChange);

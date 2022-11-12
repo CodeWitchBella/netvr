@@ -42,7 +42,9 @@ fn main() {
         let _ = fs::copy(
             build_path.join(filename),
             root.join("netvr-unity")
-                .join("Assets")
+                .join("Packages")
+                .join("NetVR")
+                .join("Runtime")
                 .join("Plugins")
                 .join(dir1)
                 .join(dir2)

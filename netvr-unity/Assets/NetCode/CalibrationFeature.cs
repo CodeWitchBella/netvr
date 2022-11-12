@@ -4,6 +4,7 @@ using System.Text.Json;
 using System.Text.Json.Serialization;
 using UnityEngine;
 using System.Linq;
+using Isbl.NetVR;
 
 /*
  * Messages:

@@ -122,6 +122,26 @@ MonoBehaviour:
   company: Unity
   priority: 0
   required: 0
+--- !u!114 &-4799569417950236948
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 911dcced9d4f1744d9bc99ab17e8c2b9, type: 3}
+  m_Name: IsblOldNetXRFeature Standalone
+  m_EditorClassIdentifier: 
+  m_enabled: 0
+  nameUi: Isbl NetVR XR Feature
+  version: 0.0.1
+  featureIdInternal: cz.isbl.old-netvr
+  openxrExtensionStrings: 
+  company: Isbl
+  priority: 0
+  required: 0
 --- !u!114 &-4295933516180172870
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -162,6 +182,28 @@ MonoBehaviour:
   company: Unity
   priority: 0
   required: 0
+--- !u!114 &-3763416851168240900
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f739345f50deaf74ab2c0767d83c8799, type: 3}
+  m_Name: IsblOldNetFeature Android
+  m_EditorClassIdentifier: 
+  m_enabled: 0
+  <failedInitialization>k__BackingField: 0
+  nameUi: Isbl NetVR XR Feature
+  version: 0.0.1
+  featureIdInternal: cz.isbl.old-netvr
+  openxrExtensionStrings: 
+  company: Isbl
+  priority: 0
+  required: 0
+  _xrInstance: 0
 --- !u!114 &-3474587938445764710
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -202,6 +244,28 @@ MonoBehaviour:
   company: Isbl
   priority: 0
   required: 0
+--- !u!114 &-2313017188422448792
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f739345f50deaf74ab2c0767d83c8799, type: 3}
+  m_Name: IsblOldNetFeature Standalone
+  m_EditorClassIdentifier: 
+  m_enabled: 0
+  <failedInitialization>k__BackingField: 0
+  nameUi: Isbl NetVR XR Feature
+  version: 0.0.1
+  featureIdInternal: cz.isbl.old-netvr
+  openxrExtensionStrings: 
+  company: Isbl
+  priority: 0
+  required: 0
+  _xrInstance: 0
 --- !u!114 &-1920399770845522042
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -393,6 +457,7 @@ MonoBehaviour:
   features:
   - {fileID: 7720092602780165281}
   - {fileID: -3913617698517783533}
+  - {fileID: 0}
   - {fileID: -2339375261965693577}
   - {fileID: -6948651536590334617}
   - {fileID: 3447582771640548276}
@@ -506,6 +571,26 @@ MonoBehaviour:
   company: Isbl
   priority: 0
   required: 0
+--- !u!114 &7706274102080453326
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 911dcced9d4f1744d9bc99ab17e8c2b9, type: 3}
+  m_Name: IsblOldNetXRFeature Android
+  m_EditorClassIdentifier: 
+  m_enabled: 0
+  nameUi: 
+  version: 
+  featureIdInternal: 
+  openxrExtensionStrings: 
+  company: 
+  priority: 0
+  required: 0
 --- !u!114 &7720092602780165281
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -542,6 +627,7 @@ MonoBehaviour:
   - {fileID: 3740895273010186305}
   - {fileID: -1920399770845522042}
   - {fileID: -8090210824752771119}
+  - {fileID: -4799569417950236948}
   - {fileID: -4295933516180172870}
   - {fileID: 8659670685832646134}
   - {fileID: 148644341140927224}
