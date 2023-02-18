@@ -2,7 +2,7 @@
     "name": "Isbl.PicoOpenXR.PicoOpenXRSupport",
     "rootNamespace": "",
     "references": [
-        "GUID:4847341ff46394e83bb78fbd0652937e"
+        "Unity.XR.OpenXR"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],

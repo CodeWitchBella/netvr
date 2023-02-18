@@ -2,8 +2,8 @@
     "name": "Isbl.NetVR",
     "rootNamespace": "",
     "references": [
-        "GUID:4847341ff46394e83bb78fbd0652937e",
-        "GUID:75469ad4d38634e559750d17036d5f7c"
+        "Unity.XR.OpenXR",
+        "Unity.InputSystem"
     ],
     "includePlatforms": [],
     "excludePlatforms": [],
