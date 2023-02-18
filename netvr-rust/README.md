@@ -93,10 +93,10 @@ And only after doing so installing rust using rustup. Alternatively you can use 
 Then to build the project you have to create `.cargo/config.toml` file containing correct paths. Use `.cargo/config-example.toml` as a guide.
 
 ```bash
-# Install rust target for android
+# Install rust target for android (might not be necessary)
 rustup target add aarch64-linux-android
 # Compile
-cargo build --target aarch64-linux-android
+cargo post b --package isbl_netvr_rust --release --target aarch64-linux-android
 ```
 
 ## Suggested cargo commands
@@ -107,5 +107,5 @@ cargo install cargo-post cargo-watch cargo-edit
 # Watch for changes and compile
 cargo watch -cx "post b --package isbl_netvr_rust"
 # Build release version and copy to unity
-cargo post b --release
+cargo post b --package isbl_netvr_rust --release
 ```

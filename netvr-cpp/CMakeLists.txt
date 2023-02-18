@@ -48,12 +48,12 @@ if (EMSCRIPTEN)
 elseif(WIN32)
     add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:${PROJECT_NAME}>
-        ${CMAKE_CURRENT_SOURCE_DIR}/../netvr-unity/Assets/Plugins/Windows/${CMAKE_GENERATOR_PLATFORM}/$<TARGET_FILE_NAME:${PROJECT_NAME}>
+        ${CMAKE_CURRENT_SOURCE_DIR}/../netvr-unity/Packages/cz.isbl.netvr/Runtime/Plugins/Windows/${CMAKE_GENERATOR_PLATFORM}/$<TARGET_FILE_NAME:${PROJECT_NAME}>
     )
 elseif(ANDROID)
     add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD
         COMMAND ${CMAKE_COMMAND} -E copy $<TARGET_FILE:${PROJECT_NAME}>
-        ${CMAKE_CURRENT_SOURCE_DIR}/../netvr-unity/Assets/Plugins/Android/${CMAKE_ANDROID_ARCH_ABI}/$<TARGET_FILE_NAME:${PROJECT_NAME}>
+        ${CMAKE_CURRENT_SOURCE_DIR}/../netvr-unity/Packages/cz.isbl.netvr/Runtime/Plugins/Android/${CMAKE_ANDROID_ARCH_ABI}/$<TARGET_FILE_NAME:${PROJECT_NAME}>
     )
 endif()
 

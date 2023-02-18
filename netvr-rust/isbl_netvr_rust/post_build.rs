@@ -43,7 +43,7 @@ fn main() {
             build_path.join(filename),
             root.join("netvr-unity")
                 .join("Packages")
-                .join("NetVR")
+                .join("cz.isbl.netvr")
                 .join("Runtime")
                 .join("Plugins")
                 .join(dir1)
