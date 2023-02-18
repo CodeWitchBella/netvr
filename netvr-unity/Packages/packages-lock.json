@@ -212,6 +212,14 @@
       },
       "url": "https://packages.unity.com"
     },
+    "com.unity.xr.openxr.picoxr": {
+      "version": "file:PICO Unity OpenXR Plugin",
+      "depth": 0,
+      "source": "embedded",
+      "dependencies": {
+        "com.unity.xr.openxr": "1.3.0"
+      }
+    },
     "cz.isbl.netvr": {
       "version": "file:cz.isbl.netvr",
       "depth": 0,

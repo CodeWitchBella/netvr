@@ -20,6 +20,26 @@ MonoBehaviour:
   company: Isbl
   priority: 0
   required: 0
+--- !u!114 &-8984812801301500285
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 651ead225c5006a47a4c1b260324bcad, type: 3}
+  m_Name: PICOTouchControllerProfile Android
+  m_EditorClassIdentifier: 
+  m_enabled: 0
+  nameUi: 
+  version: 
+  featureIdInternal: 
+  openxrExtensionStrings: 
+  company: 
+  priority: 0
+  required: 0
 --- !u!114 &-8337974926340133946
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -142,6 +162,26 @@ MonoBehaviour:
   company: Unity
   priority: 0
   required: 0
+--- !u!114 &-5709904677538201691
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 651ead225c5006a47a4c1b260324bcad, type: 3}
+  m_Name: PICOTouchControllerProfile Standalone
+  m_EditorClassIdentifier: 
+  m_enabled: 0
+  nameUi: PICO Touch Controller Profile
+  version: 1.0.0
+  featureIdInternal: com.unity.openxr.feature.input.PICOtouch
+  openxrExtensionStrings: 
+  company: Unity
+  priority: 0
+  required: 0
 --- !u!114 &-5517324889911253710
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -195,11 +235,11 @@ MonoBehaviour:
   m_Name: NetVRRemoteHeadsetControllerProfile Android
   m_EditorClassIdentifier: Isbl.NetVR:Isbl.NetVR:NetVRRemoteHeadsetControllerProfile
   m_enabled: 0
-  nameUi: 
-  version: 
-  featureIdInternal: 
+  nameUi: NetVR Remote Headset Controller Profile
+  version: 0.0.1
+  featureIdInternal: cz.isbl.netvr.feature.input.headset
   openxrExtensionStrings: 
-  company: 
+  company: Isbl
   priority: 0
   required: 0
 --- !u!114 &-4441309263105485158
@@ -601,9 +641,9 @@ MonoBehaviour:
   - {fileID: -2339375261965693577}
   - {fileID: -6948651536590334617}
   - {fileID: 3447582771640548276}
+  - {fileID: -4670723027192146633}
   - {fileID: -7179675269632839200}
   - {fileID: -3474587938445764710}
-  - {fileID: 1630212783497216788}
   - {fileID: 7355699691889217522}
   m_renderMode: 1
   m_depthSubmissionMode: 0
@@ -667,6 +707,26 @@ MonoBehaviour:
   featureIdInternal: cz.isbl.netvr.feature.input.headset
   openxrExtensionStrings: 
   company: Isbl
+  priority: 0
+  required: 0
+--- !u!114 &7071401141947376151
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: baa5b568c4324bd4faad2da2e7ee7e84, type: 3}
+  m_Name: PICOFeature Android
+  m_EditorClassIdentifier: 
+  m_enabled: 0
+  nameUi: 
+  version: 
+  featureIdInternal: 
+  openxrExtensionStrings: 
+  company: 
   priority: 0
   required: 0
 --- !u!114 &7355699691889217522
@@ -795,6 +855,7 @@ MonoBehaviour:
   - {fileID: -7667623446982095282}
   - {fileID: -4441309263105485158}
   - {fileID: 7461395375504407720}
+  - {fileID: -5709904677538201691}
   - {fileID: 5691381814485142551}
   - {fileID: -898579997707495670}
   m_renderMode: 1
