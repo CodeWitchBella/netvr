@@ -45,8 +45,7 @@
     "com.unity.modules.vr": "1.0.0",
     "com.unity.modules.wind": "1.0.0",
     "com.unity.modules.xr": "1.0.0",
-    "cz.isbl.netvr": "file:./cz.isbl.netvr",
-    "cz.isbl.picoopenxr": "file:./PicoOpenXR"
+    "cz.isbl.netvr": "file:./cz.isbl.netvr"
   },
   "scopedRegistries": [
     {
