@@ -141,18 +141,6 @@ namespace Isbl
             return r;
         }
 
-        public static T FromJObjectCamelCase<T>(Newtonsoft.Json.Linq.JObject jobject)
-        {
-            return jobject.ToObject<T>(new Newtonsoft.Json.JsonSerializer()
-            { ContractResolver = new Newtonsoft.Json.Serialization.CamelCasePropertyNamesContractResolver() });
-        }
-
-        public static Newtonsoft.Json.Linq.JObject ToJObjectCamelCase<T>(T value)
-        {
-            return Newtonsoft.Json.Linq.JObject.FromObject(value, new Newtonsoft.Json.JsonSerializer()
-            { ContractResolver = new Newtonsoft.Json.Serialization.CamelCasePropertyNamesContractResolver() });
-        }
-
         public static JsonDocument ToJsonCamelCase<T>(T value)
         {
             return JsonDocument.Parse(JsonSerializer.Serialize(value, new JsonSerializerOptions
@@ -161,6 +149,17 @@ namespace Isbl
                 IncludeFields = true,
             }));
         }
+
+
+        public static T FromJsonElementCamelCase<T>(JsonElement value)
+        {
+            return JsonSerializer.Deserialize<T>(JsonSerializer.Serialize(value), new JsonSerializerOptions
+            {
+                PropertyNamingPolicy = JsonNamingPolicy.CamelCase,
+                IncludeFields = true,
+            });
+        }
+
         public static JsonElement JsonFromObject(object value)
         {
             var node = JsonDocument.Parse(JsonSerializer.Serialize(value));

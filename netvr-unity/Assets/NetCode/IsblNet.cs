@@ -118,7 +118,6 @@ public sealed class IsblNet : IDisposable
             //Utils.LogJson("Received message", text);
             try
             {
-                var obj = Newtonsoft.Json.Linq.JObject.Parse(text);
                 var node = JsonDocument.Parse(text).RootElement;
                 if (node.TryGetProperty("feature", out var featureElement))
                 {
@@ -138,7 +137,7 @@ public sealed class IsblNet : IDisposable
                     var action = actionElement.GetString();
                     if (action == "id's here" || action == "id ack")
                     {
-                        var serverVersion = obj.Value<int>("protocolVersion");
+                        int serverVersion = node.GetProperty("protocolVersion").GetInt32();
                         if (serverVersion != ProtocolVersion)
                         {
                             throw new Exception($"Protocol version mismatch. Client: {ProtocolVersion}, Server: {serverVersion}.");
@@ -146,8 +145,8 @@ public sealed class IsblNet : IDisposable
 
                         if (action == "id's here")
                         {
-                            SelfId = obj.Value<UInt16>("intValue");
-                            var idToken = obj.Value<string>("stringValue");
+                            SelfId = node.GetProperty("intValue").GetUInt16();
+                            var idToken = node.GetProperty("stringValue").GetString();
                             IsblConfig.Update((data) => data.AddConnection(
                                 socketUrl: SocketUrl,
                                 peerId: SelfId,
@@ -164,8 +163,9 @@ public sealed class IsblNet : IDisposable
                     }
                     else if (action == "patch")
                     {
-                        var patchString = Newtonsoft.Json.JsonConvert.SerializeObject(obj.Value<Newtonsoft.Json.Linq.JArray>("patches"));
-                        var patch = JsonSerializer.Deserialize<JsonPatch>(patchString);
+
+                        var patchNode = node.GetProperty("patches");
+                        var patch = JsonSerializer.Deserialize<JsonPatch>(JsonSerializer.Serialize(patchNode));
                         if (_serverStateJson.ValueKind != JsonValueKind.Object)
                             _serverStateJson = Isbl.NetUtils.JsonFromObject(ServerState); ;
 
@@ -280,9 +280,7 @@ public sealed class IsblNet : IDisposable
                         fastClient.Add(id, fastDevice);
                     }
 
-                    // TODO: remove Newtonsoft.Json here
-                    var newtonsoftJson = Newtonsoft.Json.Linq.JObject.Parse(JsonSerializer.Serialize(deviceJson));
-                    fastDevice.DeviceData.DeSerializeConfiguration(newtonsoftJson);
+                    fastDevice.DeviceData.DeSerializeConfiguration(deviceJson);
                 }
             }
         }

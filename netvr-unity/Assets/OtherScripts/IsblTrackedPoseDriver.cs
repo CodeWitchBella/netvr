@@ -5,6 +5,7 @@ using System.Collections.Generic;
 using System;
 using System.IO;
 using System.IO.Compression;
+using System.Text.Json;
 
 public class IsblTrackedPoseDriver : MonoBehaviour
 {
@@ -216,7 +217,7 @@ public class IsblTrackedPoseDriver : MonoBehaviour
                     Directory.CreateDirectory(Path.Combine(Isbl.Persistent.DataDirectory.Name, logDir));
                     _file = File.OpenWrite(Path.Combine(Isbl.Persistent.DataDirectory.Name, logDir, $"controller-{NetDevice.LocallyUniqueId}-{DateTime.UtcNow:o}.csv.gz".Replace(":", "-")));
                     _gzip = new(_file, System.IO.Compression.CompressionLevel.Optimal);
-                    _gzip.Write(System.Text.Encoding.UTF8.GetBytes("#" + Newtonsoft.Json.JsonConvert.SerializeObject(NetDevice.SerializeConfiguration()) + "\n"));
+                    _gzip.Write(System.Text.Encoding.UTF8.GetBytes("#" + JsonSerializer.Serialize(NetDevice.SerializeConfiguration()) + "\n"));
                     _gzip.Write(System.Text.Encoding.UTF8.GetBytes("iso time;timestamp;" + NetDevice.CSVHeader + "\n"));
                 }
                 var now = DateTime.UtcNow;

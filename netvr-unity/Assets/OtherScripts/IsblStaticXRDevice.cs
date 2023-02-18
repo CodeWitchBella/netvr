@@ -352,12 +352,12 @@ public class IsblStaticXRDevice
         });
     }
 
-    public void DeSerializeConfiguration(Newtonsoft.Json.Linq.JObject message)
+    public void DeSerializeConfiguration(JsonElement message)
     {
         Characteristics = 0;
-        foreach (var c in message.Value<Newtonsoft.Json.Linq.JArray>("characteristics"))
+        foreach (var c in message.GetProperty("characteristics").EnumerateArray())
         {
-            Characteristics |= (string)c switch
+            Characteristics |= c.GetString() switch
             {
                 "HeadMounted" => InputDeviceCharacteristics.HeadMounted,
                 "Camera" => InputDeviceCharacteristics.Camera,
@@ -374,22 +374,28 @@ public class IsblStaticXRDevice
             };
         }
 
-        var haptics = message.Value<Newtonsoft.Json.Linq.JObject>("haptics");
-        Haptics = haptics != null ? new StaticHaptics(haptics) : null;
+        if (message.TryGetProperty("haptics", out var haptics))
+        {
+            Haptics = new StaticHaptics(haptics);
+        }
+        else
+        {
+            Haptics = null;
+        }
 
-        _locations = Isbl.NetUtils.FromJObjectCamelCase<Locations>(message.Value<Newtonsoft.Json.Linq.JObject>("locations"));
-        Name = message.Value<string>("name");
-        LocallyUniqueId = message.Value<UInt16>("localId");
-        SerialNumber = message.Value<string>("serialNumber");
-        var lengths = message.Value<Newtonsoft.Json.Linq.JObject>("lengths");
-        _dataQuaternion = new Quaternion[lengths.Value<int>("quaternion")];
-        _dataVector3 = new Vector3[lengths.Value<int>("vector3")];
-        _dataVector2 = new Vector2[lengths.Value<int>("vector2")];
-        _dataFloat = new float[lengths.Value<int>("float")];
-        _dataBool = new bool[lengths.Value<int>("bool")];
-        _dataUint = new uint[lengths.Value<int>("uint")];
-        _dataHand = new Hand[lengths.Value<int>("hand")]; // HAND_NETCODE: already implemented
-        _dataEyes = new Eyes[lengths.Value<int>("eyes")]; // EYES_NETCODE: already implemented
+        _locations = Isbl.NetUtils.FromJsonElementCamelCase<Locations>(message.GetProperty("locations"));
+        Name = message.GetProperty("name").GetString();
+        LocallyUniqueId = message.GetProperty("localId").GetUInt16();
+        SerialNumber = message.GetProperty("serialNumber").GetString();
+        var lengths = message.GetProperty("lengths");
+        _dataQuaternion = new Quaternion[lengths.GetProperty("quaternion").GetInt32()];
+        _dataVector3 = new Vector3[lengths.GetProperty("vector3").GetInt32()];
+        _dataVector2 = new Vector2[lengths.GetProperty("vector2").GetInt32()];
+        _dataFloat = new float[lengths.GetProperty("float").GetInt32()];
+        _dataBool = new bool[lengths.GetProperty("bool").GetInt32()];
+        _dataUint = new uint[lengths.GetProperty("uint").GetInt32()];
+        _dataHand = new Hand[lengths.GetProperty("hand").GetInt32()]; // HAND_NETCODE: already implemented
+        _dataEyes = new Eyes[lengths.GetProperty("eyes").GetInt32()]; // EYES_NETCODE: already implemented
         // ADDING_NEW_TYPE:
         // Add line here
     }
@@ -419,14 +425,14 @@ public class IsblStaticXRDevice
             BufferMaxSize = caps.bufferMaxSize;
             BufferOptimalSize = caps.bufferOptimalSize;
         }
-        public StaticHaptics(Newtonsoft.Json.Linq.JObject caps)
+        public StaticHaptics(JsonElement caps)
         {
-            NumChannels = caps.Value<uint>("numChannels");
-            SupportsImpulse = caps.Value<bool>("supportsImpulse");
-            SupportsBuffer = caps.Value<bool>("supportsBuffer");
-            BufferFrequencyHz = caps.Value<uint>("bufferFrequencyHz");
-            BufferMaxSize = caps.Value<uint>("bufferMaxSize");
-            BufferOptimalSize = caps.Value<uint>("bufferOptimalSize");
+            NumChannels = caps.GetProperty("numChannels").GetUInt32();
+            SupportsImpulse = caps.GetProperty("supportsImpulse").GetBoolean();
+            SupportsBuffer = caps.GetProperty("supportsBuffer").GetBoolean();
+            BufferFrequencyHz = caps.GetProperty("bufferFrequencyHz").GetUInt32();
+            BufferMaxSize = caps.GetProperty("bufferMaxSize").GetUInt32();
+            BufferOptimalSize = caps.GetProperty("bufferOptimalSize").GetUInt32();
         }
     };
 
