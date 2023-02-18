@@ -116,7 +116,7 @@ MonoBehaviour:
   nameUi: Mock Runtime
   version: 0.0.2
   featureIdInternal: com.unity.openxr.feature.mockruntime
-  openxrExtensionStrings: XR_UNITY_null_gfx
+  openxrExtensionStrings: XR_UNITY_null_gfx XR_UNITY_android_present
   company: Unity
   priority: 0
   required: 0
@@ -162,6 +162,8 @@ MonoBehaviour:
   company: Unity
   priority: 0
   required: 0
+  targetQuest: 1
+  targetQuest2: 1
 --- !u!114 &-6948651536590334617
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -338,6 +340,26 @@ MonoBehaviour:
   nameUi: Isbl NetVR XR Feature
   version: 0.0.1
   featureIdInternal: cz.isbl.netvr
+  openxrExtensionStrings: 
+  company: Isbl
+  priority: 0
+  required: 0
+--- !u!114 &-4144128625535133450
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 0}
+  m_Name: NetVRRemoteHeadsetControllerProfile Android
+  m_EditorClassIdentifier: Isbl.NetVR:Isbl.NetVR:NetVRRemoteHeadsetControllerProfile
+  m_enabled: 0
+  nameUi: NetVR Remote Headset Controller Profile
+  version: 0.0.1
+  featureIdInternal: cz.isbl.netvr.feature.input.headset
   openxrExtensionStrings: 
   company: Isbl
   priority: 0
@@ -800,8 +822,10 @@ MonoBehaviour:
   - {fileID: 7706274102080453326}
   - {fileID: -2339375261965693577}
   - {fileID: -6948651536590334617}
+  - {fileID: 7460526345044051366}
   - {fileID: 3447582771640548276}
-  - {fileID: -3273373659593595253}
+  - {fileID: 6463949124547410629}
+  - {fileID: -4144128625535133450}
   - {fileID: -7179675269632839200}
   - {fileID: -3474587938445764710}
   - {fileID: -7947107964247557003}
@@ -851,6 +875,27 @@ MonoBehaviour:
   required: 0
   cacheSize: 1048576
   perThreadCacheSize: 51200
+--- !u!114 &6463949124547410629
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 7de993716e042c6499d0c18eed3a773c, type: 3}
+  m_Name: MockRuntime Android
+  m_EditorClassIdentifier: 
+  m_enabled: 0
+  nameUi: Mock Runtime
+  version: 0.0.2
+  featureIdInternal: com.unity.openxr.feature.mockruntime
+  openxrExtensionStrings: XR_UNITY_null_gfx XR_UNITY_android_present
+  company: Unity
+  priority: 0
+  required: 0
+  ignoreValidationErrors: 0
 --- !u!114 &6675175272708664558
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -913,6 +958,36 @@ MonoBehaviour:
   required: 0
   cacheSize: 1048576
   perThreadCacheSize: 51200
+--- !u!114 &7460526345044051366
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: f647cc0545697264a9878224faada6d5, type: 3}
+  m_Name: MetaQuestFeature Android
+  m_EditorClassIdentifier: 
+  m_enabled: 0
+  nameUi: Meta Quest Support
+  version: 1.0.0
+  featureIdInternal: com.unity.openxr.feature.metaquest
+  openxrExtensionStrings: XR_OCULUS_android_initialize_loader
+  company: Unity
+  priority: 0
+  required: 0
+  targetDevices:
+  - visibleName: Quest
+    manifestName: quest
+    enabled: 1
+  - visibleName: Quest 2
+    manifestName: quest2
+    enabled: 1
+  - visibleName: Quest Pro
+    manifestName: cambria
+    enabled: 1
 --- !u!114 &7461395375504407720
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1013,6 +1088,26 @@ MonoBehaviour:
   company: 
   priority: 0
   required: 0
+--- !u!114 &8584036574178164442
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 0}
+  m_Name: NetVRRemoteHeadsetControllerProfile Standalone
+  m_EditorClassIdentifier: Isbl.NetVR:Isbl.NetVR:NetVRRemoteHeadsetControllerProfile
+  m_enabled: 0
+  nameUi: NetVR Remote Headset Controller Profile
+  version: 0.0.1
+  featureIdInternal: cz.isbl.netvr.feature.input.headset
+  openxrExtensionStrings: 
+  company: Isbl
+  priority: 0
+  required: 0
 --- !u!114 &8626513323559954616
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1035,7 +1130,7 @@ MonoBehaviour:
   - {fileID: 148644341140927224}
   - {fileID: 9032261568709070916}
   - {fileID: -7667623446982095282}
-  - {fileID: 3429887512291779294}
+  - {fileID: 8584036574178164442}
   - {fileID: 7461395375504407720}
   - {fileID: -5709904677538201691}
   - {fileID: 5691381814485142551}

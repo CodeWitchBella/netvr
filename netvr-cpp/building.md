@@ -62,7 +62,7 @@ and run following commands (you'll have to replace paths with correct ones for
 your unity install).
 
 ```powershell
-$ANDROID_NDK="D:\Stuff\UnityEditors\2021.3.8f1\Editor\Data\PlaybackEngines\AndroidPlayer\NDK"
+$ANDROID_NDK="D:\Stuff\UnityEditors\2021.3.19f1\Editor\Data\PlaybackEngines\AndroidPlayer\NDK"
 cd C:\Source\netvr\netvr-cpp
 cmake . "-DCMAKE_TOOLCHAIN_FILE=$ANDROID_NDK\build\cmake\android.toolchain.cmake" -DCMAKE_SYSTEM_NAME="Android" "-DANDROID_NDK=$ANDROID_NDK" -DANDROID_PLATFORM=android-29 -DANDROID_ABI="arm64-v8a" -B Android -GNinja
 cmake --build Android
