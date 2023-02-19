@@ -256,3 +256,17 @@ impl<'a> InteractionProfileState<'a> {
         self.0.interaction_profile
     }
 }
+
+impl<'a> InteractionProfileSuggestedBinding<'a> {
+    pub fn interaction_profile(&self) -> openxr::Path {
+        self.0.interaction_profile
+    }
+
+    pub fn suggested_bindings(
+        &self,
+    ) -> SizedArrayValueIterator<openxr_sys::ActionSuggestedBinding> {
+        unsafe {
+            SizedArrayValueIterator::new(self.0.count_suggested_bindings, self.0.suggested_bindings)
+        }
+    }
+}

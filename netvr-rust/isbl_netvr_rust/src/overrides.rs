@@ -327,8 +327,12 @@ extern "system" fn create_action(
     out: *mut sys::Action,
 ) -> sys::Result {
     wrap(|layer| {
-        let _span = trace_span!("create_action").entered();
+        let span = trace_span!("create_action", info = tracing::field::Empty).entered();
         let instance = subresource_read_instance(layer, |l| &l.action_sets, action_set_handle)?;
+        span.record_debug(
+            "info",
+            unsafe { XrIterator::from_ptr(info) }.as_debug(&instance.instance),
+        );
 
         let result = unsafe { (instance.fp().create_action)(action_set_handle, info, out) };
         result.into_result()
@@ -361,8 +365,16 @@ extern "system" fn suggest_interaction_profile_bindings(
     suggested_bindings: *const sys::InteractionProfileSuggestedBinding,
 ) -> sys::Result {
     wrap(|layer| {
-        let _span = trace_span!("suggest_interaction_profile_bindings").entered();
+        let span = trace_span!(
+            "suggest_interaction_profile_bindings",
+            suggested_bindings = tracing::field::Empty
+        )
+        .entered();
         let instance = read_instance(layer, instance_handle)?;
+        span.record_debug(
+            "suggested_bindings",
+            unsafe { XrIterator::from_ptr(suggested_bindings) }.as_debug(&instance.instance),
+        );
 
         let result = unsafe {
             (instance.fp().suggest_interaction_profile_bindings)(

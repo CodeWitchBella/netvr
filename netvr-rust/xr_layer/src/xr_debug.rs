@@ -166,6 +166,15 @@ impl XrDebug for openxr_sys::ActiveActionSet {
     }
 }
 
+impl XrDebug for openxr_sys::ActionSuggestedBinding {
+    fn xr_fmt(&self, f: &mut fmt::Formatter, instance: &openxr::Instance) -> fmt::Result {
+        f.debug_struct("ActionSuggestedBinding")
+            .field("action", &self.action.as_debug(instance))
+            .field("binding", &self.binding.as_debug(instance))
+            .finish()
+    }
+}
+
 #[derive(Debug)]
 enum DebugPathError {
     FromBytesWithNul(std::ffi::FromBytesWithNulError),
@@ -285,6 +294,21 @@ impl XrDebug for xr_struct::InteractionProfileState<'_> {
             .field(
                 "interaction_profile",
                 &self.interaction_profile().as_debug(instance),
+            )
+            .finish()
+    }
+}
+
+impl XrDebug for xr_struct::InteractionProfileSuggestedBinding<'_> {
+    fn xr_fmt(&self, f: &mut fmt::Formatter, instance: &openxr::Instance) -> fmt::Result {
+        f.debug_struct("InteractionProfileSuggestedBinding")
+            .field(
+                "interaction_profile",
+                &self.interaction_profile().as_debug(instance),
+            )
+            .field(
+                "suggested_bindings",
+                &self.suggested_bindings().as_debug(instance),
             )
             .finish()
     }
@@ -444,7 +468,6 @@ implement_as_non_exhaustive!(
     xr_struct::InputSourceLocalizedNameGetInfo<'_>,
     xr_struct::InstanceCreateInfo<'_>,
     xr_struct::InteractionProfileAnalogThresholdVALVE<'_>,
-    xr_struct::InteractionProfileSuggestedBinding<'_>,
     xr_struct::MarkerSpaceCreateInfoVARJO<'_>,
     xr_struct::PassthroughColorMapMonoToMonoFB<'_>,
     xr_struct::PassthroughColorMapMonoToRgbaFB<'_>,
