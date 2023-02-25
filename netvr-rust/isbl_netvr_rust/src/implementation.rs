@@ -12,11 +12,7 @@ use crate::{
 ///
 /// This could also be opportunity to update data to be sent from local info.
 ///
-pub(crate) fn post_sync_actions(_: &Instance, infos: XrStructChain) {
-    for action_info in infos {
-        info!("post_sync_actions {:?}", action_info.ty);
-    }
-}
+pub(crate) fn post_sync_actions(_: &Instance, _infos: XrStructChain) {}
 
 /// Should be periodically called from application. Sends data to network.
 pub(crate) fn tick(instance: &Instance) -> Result<(), XrWrapError> {
@@ -56,6 +52,8 @@ fn tick_session(instance: &Instance, session: &Session) -> Result<(), XrWrapErro
     Ok(())
 }
 
-pub(crate) fn post_poll_event(instance: &Instance) -> Result<Option<EventDataBuffer>, XrWrapError> {
+pub(crate) fn post_poll_event(
+    _instance: &Instance,
+) -> Result<Option<EventDataBuffer>, XrWrapError> {
     Ok(None)
 }

@@ -3,7 +3,6 @@ use std::{borrow::BorrowMut, ffi::CStr, fmt, num::TryFromIntError, str::Utf8Erro
 use crate::{
     utils::ResultConvertible,
     xr_struct::{self, ActionCreateInfo},
-    XrStructChain,
 };
 
 pub struct XrDebugValue<'a, T: XrDebug>(pub(crate) openxr::Instance, pub(crate) &'a T);
@@ -39,16 +38,6 @@ pub trait XrDebug {
         Self: std::marker::Sized + XrDebug,
     {
         XrDebugValue(instance.clone(), self)
-    }
-}
-
-impl XrDebug for XrStructChain {
-    fn xr_fmt(&self, f: &mut fmt::Formatter, instance: &openxr::Instance) -> fmt::Result {
-        let mut f = f.debug_list();
-        for item in unsafe { self.unsafe_clone() } {
-            f.entry(&item.as_debug(instance));
-        }
-        f.finish()
     }
 }
 

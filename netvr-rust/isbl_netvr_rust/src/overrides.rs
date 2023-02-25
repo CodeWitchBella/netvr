@@ -4,7 +4,7 @@ use crate::{
     xr_wrap::{xr_wrap, RecordDebug, ResultConvertible, Trace, XrWrapError},
 };
 use std::{collections::HashMap, ffi::CStr, os::raw::c_char, sync::RwLock};
-use tracing::{field, info, trace, trace_span};
+use tracing::{field, info, trace_span};
 use xr_layer::{
     log::{LogError, LogTrace, LogWarn},
     safe_openxr::{self, InstanceExtensions},
@@ -335,13 +335,11 @@ extern "system" fn create_action(
         );
 
         // TODO: check that it only contains /isbl/head
-        for i in unsafe { XrStructChain::from_ptr(info) } {
-            if let Some(info) = i.read_action_create_info() {
-                for p in info.subaction_paths() {
-                    if p == instance.isbl_head {
-                        info!("saved /isbl/head");
-                        return sys::Result::SUCCESS.into_result();
-                    }
+        if let Some(info) = unsafe { XrStructChain::from_ptr(info) }.read_action_create_info() {
+            for p in info.subaction_paths() {
+                if p == instance.isbl_head {
+                    info!("saved /isbl/head");
+                    return sys::Result::SUCCESS.into_result();
                 }
             }
         }
@@ -408,12 +406,12 @@ extern "system" fn suggest_interaction_profile_bindings(
             unsafe { XrStructChain::from_ptr(suggested_bindings) }.as_debug(&instance.instance),
         );
 
-        for i in unsafe { XrStructChain::from_ptr(suggested_bindings) } {
-            if let Some(sugg) = i.read_interaction_profile_suggested_binding() {
-                if sugg.interaction_profile() == instance.isbl_remote_headset {
-                    info!("saved /interaction_profiles/isbl/remote_headset");
-                    return sys::Result::SUCCESS.into_result();
-                }
+        if let Some(sugg) = unsafe { XrStructChain::from_ptr(suggested_bindings) }
+            .read_interaction_profile_suggested_binding()
+        {
+            if sugg.interaction_profile() == instance.isbl_remote_headset {
+                info!("saved /interaction_profiles/isbl/remote_headset");
+                return sys::Result::SUCCESS.into_result();
             }
         }
 

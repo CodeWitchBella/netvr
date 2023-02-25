@@ -1,4 +1,4 @@
-use crate::xr_struct::XrStruct;
+use crate::{xr_struct::XrStruct, XrDebug};
 
 #[derive(Clone)]
 pub struct XrStructChain {
@@ -8,16 +8,6 @@ pub struct XrStructChain {
 impl XrStructChain {
     unsafe fn new(ptr: &openxr_sys::BaseInStructure) -> Self {
         Self { ptr }
-    }
-
-    /// .
-    ///
-    /// # Safety
-    ///
-    /// You must make sure that the clone does not outlive its parent because it
-    /// is actually a reference in a trench coat.
-    pub(crate) unsafe fn unsafe_clone(&self) -> Self {
-        Self { ptr: self.ptr }
     }
 }
 
@@ -31,142 +21,172 @@ pub trait UnsafeFrom<T> {
     unsafe fn from_ptr(ptr: T) -> Self;
 }
 
-macro_rules! implement_from {
-    ($t: ty) => {
-        impl UnsafeFrom<*const $t> for XrStructChain {
-            unsafe fn from_ptr(input: *const $t) -> Self {
+macro_rules! implement {
+    ($method: ident reads $id: ident) => {
+        impl UnsafeFrom<*const openxr_sys::$id> for XrStructChain {
+            unsafe fn from_ptr(input: *const openxr_sys::$id) -> Self {
                 XrStructChain::new(&*(input as *const openxr_sys::BaseInStructure))
             }
         }
-        impl UnsafeFrom<*mut $t> for XrStructChain {
-            unsafe fn from_ptr(input: *mut $t) -> Self {
+        impl UnsafeFrom<*mut openxr_sys::$id> for XrStructChain {
+            unsafe fn from_ptr(input: *mut openxr_sys::$id) -> Self {
                 XrStructChain::new(&*(input as *const openxr_sys::BaseInStructure))
+            }
+        }
+
+        impl<'a> XrStructChain {
+            pub fn $method(&self) -> Option<crate::xr_struct::$id<'a>> {
+                None
             }
         }
     };
 }
 
+impl XrStructChain {
+    pub fn test(&self) -> Option<crate::xr_struct::ActionCreateInfo> {
+        let mut ptr = self.ptr;
+        while !ptr.is_null() {
+            let val = unsafe { ptr.read() };
+
+            if val.ty == openxr_sys::ActionCreateInfo::TYPE {
+                return Some(crate::xr_struct::ActionCreateInfo(unsafe {
+                    &*std::mem::transmute::<
+                        *const openxr_sys::BaseInStructure,
+                        *const openxr_sys::ActionCreateInfo,
+                    >(ptr)
+                }));
+            }
+            ptr = val.next;
+        }
+        None
+    }
+}
+
 // Following are missing because they are android-only and I did not want to
 // spend time to try and figure out how to integrate them, since I do not
 // need them (for now).
-//   - implement_from!(openxr_sys::AndroidSurfaceSwapchainCreateInfoFB);
-//   - implement_from!(openxr_sys::GraphicsBindingOpenGLESAndroidKHR);
-//   - implement_from!(openxr_sys::InstanceCreateInfoAndroidKHR);
-//   - implement_from!(openxr_sys::LoaderInitInfoAndroidKHR);
+//   - AndroidSurfaceSwapchainCreateInfoFB
+//   - GraphicsBindingOpenGLESAndroidKHR
+//   - InstanceCreateInfoAndroidKHR
+//   - LoaderInitInfoAndroidKHR
+// Similarly, following are Win32-only.
+//   - GraphicsBindingD3D11KHR
+//   - GraphicsBindingD3D12KHR
+//   - GraphicsBindingOpenGLWin32KHR
+//   - HolographicWindowAttachmentMSFT
+// And linux-only
+//   - GraphicsBindingOpenGLXcbKHR
 //
 // List of openxr_sys types which can be converted into XrStructChain
-implement_from!(openxr_sys::ActionCreateInfo);
-implement_from!(openxr_sys::ActionSetCreateInfo);
-implement_from!(openxr_sys::ActionSpaceCreateInfo);
-implement_from!(openxr_sys::ActionsSyncInfo);
-implement_from!(openxr_sys::ActionStateGetInfo);
-implement_from!(openxr_sys::BindingModificationsKHR);
-implement_from!(openxr_sys::BoundSourcesForActionEnumerateInfo);
-implement_from!(openxr_sys::CompositionLayerColorScaleBiasKHR);
-implement_from!(openxr_sys::CompositionLayerCubeKHR);
-implement_from!(openxr_sys::CompositionLayerCylinderKHR);
-implement_from!(openxr_sys::CompositionLayerDepthInfoKHR);
-implement_from!(openxr_sys::CompositionLayerDepthTestVARJO);
-implement_from!(openxr_sys::CompositionLayerEquirect2KHR);
-implement_from!(openxr_sys::CompositionLayerEquirectKHR);
-implement_from!(openxr_sys::CompositionLayerPassthroughFB);
-implement_from!(openxr_sys::CompositionLayerProjection);
-implement_from!(openxr_sys::CompositionLayerProjectionView);
-implement_from!(openxr_sys::CompositionLayerQuad);
-implement_from!(openxr_sys::CompositionLayerReprojectionInfoMSFT);
-implement_from!(openxr_sys::CompositionLayerReprojectionPlaneOverrideMSFT);
-implement_from!(openxr_sys::CompositionLayerSecureContentFB);
-implement_from!(openxr_sys::CompositionLayerSpaceWarpInfoFB);
-implement_from!(openxr_sys::DebugUtilsLabelEXT);
-implement_from!(openxr_sys::DebugUtilsMessengerCallbackDataEXT);
-implement_from!(openxr_sys::DebugUtilsMessengerCreateInfoEXT);
-implement_from!(openxr_sys::DebugUtilsObjectNameInfoEXT);
-implement_from!(openxr_sys::DigitalLensControlALMALENCE);
-implement_from!(openxr_sys::EventDataBuffer);
-implement_from!(openxr_sys::EventDataDisplayRefreshRateChangedFB);
-implement_from!(openxr_sys::EventDataEventsLost);
-implement_from!(openxr_sys::EventDataInstanceLossPending);
-implement_from!(openxr_sys::EventDataInteractionProfileChanged);
-implement_from!(openxr_sys::EventDataMainSessionVisibilityChangedEXTX);
-implement_from!(openxr_sys::EventDataMarkerTrackingUpdateVARJO);
-implement_from!(openxr_sys::EventDataPassthroughStateChangedFB);
-implement_from!(openxr_sys::EventDataPerfSettingsEXT);
-implement_from!(openxr_sys::EventDataReferenceSpaceChangePending);
-implement_from!(openxr_sys::EventDataSessionStateChanged);
-implement_from!(openxr_sys::EventDataVisibilityMaskChangedKHR);
-implement_from!(openxr_sys::EventDataViveTrackerConnectedHTCX);
-implement_from!(openxr_sys::FacialExpressionsHTC);
-implement_from!(openxr_sys::FacialTrackerCreateInfoHTC);
-implement_from!(openxr_sys::FrameEndInfo);
-implement_from!(openxr_sys::GeometryInstanceCreateInfoFB);
-implement_from!(openxr_sys::GeometryInstanceTransformFB);
-//implement_from!(openxr_sys::GraphicsBindingD3D11KHR);
-//implement_from!(openxr_sys::GraphicsBindingD3D12KHR);
-implement_from!(openxr_sys::GraphicsBindingEGLMNDX);
-implement_from!(openxr_sys::GraphicsBindingOpenGLWaylandKHR);
-//implement_from!(openxr_sys::GraphicsBindingOpenGLWin32KHR);
-implement_from!(openxr_sys::GraphicsBindingOpenGLXcbKHR);
-implement_from!(openxr_sys::GraphicsBindingOpenGLXlibKHR);
-implement_from!(openxr_sys::GraphicsBindingVulkanKHR);
-implement_from!(openxr_sys::HandJointsLocateInfoEXT);
-implement_from!(openxr_sys::HandJointsMotionRangeInfoEXT);
-implement_from!(openxr_sys::HandMeshSpaceCreateInfoMSFT);
-implement_from!(openxr_sys::HandMeshUpdateInfoMSFT);
-implement_from!(openxr_sys::HandPoseTypeInfoMSFT);
-implement_from!(openxr_sys::HandTrackerCreateInfoEXT);
-implement_from!(openxr_sys::HapticActionInfo);
-implement_from!(openxr_sys::HapticVibration);
-//implement_from!(openxr_sys::HolographicWindowAttachmentMSFT);
-implement_from!(openxr_sys::InputSourceLocalizedNameGetInfo);
-implement_from!(openxr_sys::InstanceCreateInfo);
-implement_from!(openxr_sys::InteractionProfileAnalogThresholdVALVE);
-implement_from!(openxr_sys::InteractionProfileSuggestedBinding);
-implement_from!(openxr_sys::MarkerSpaceCreateInfoVARJO);
-implement_from!(openxr_sys::PassthroughColorMapMonoToMonoFB);
-implement_from!(openxr_sys::PassthroughColorMapMonoToRgbaFB);
-implement_from!(openxr_sys::PassthroughCreateInfoFB);
-implement_from!(openxr_sys::PassthroughKeyboardHandsIntensityFB);
-implement_from!(openxr_sys::PassthroughLayerCreateInfoFB);
-implement_from!(openxr_sys::PassthroughStyleFB);
-implement_from!(openxr_sys::ReferenceSpaceCreateInfo);
-implement_from!(openxr_sys::SecondaryViewConfigurationFrameEndInfoMSFT);
-implement_from!(openxr_sys::SecondaryViewConfigurationLayerInfoMSFT);
-implement_from!(openxr_sys::SecondaryViewConfigurationSessionBeginInfoMSFT);
-implement_from!(openxr_sys::SecondaryViewConfigurationSwapchainCreateInfoMSFT);
-implement_from!(openxr_sys::SessionActionSetsAttachInfo);
-implement_from!(openxr_sys::SessionBeginInfo);
-implement_from!(openxr_sys::SessionCreateInfo);
-implement_from!(openxr_sys::SessionCreateInfoOverlayEXTX);
-implement_from!(openxr_sys::SpatialAnchorCreateInfoMSFT);
-implement_from!(openxr_sys::SpatialAnchorFromPersistedAnchorCreateInfoMSFT);
-implement_from!(openxr_sys::SpatialAnchorPersistenceInfoMSFT);
-implement_from!(openxr_sys::SpatialAnchorSpaceCreateInfoMSFT);
-implement_from!(openxr_sys::SpatialGraphNodeSpaceCreateInfoMSFT);
-implement_from!(openxr_sys::SwapchainCreateInfo);
-implement_from!(openxr_sys::SwapchainImageWaitInfo);
-implement_from!(openxr_sys::SystemGetInfo);
-implement_from!(openxr_sys::SystemPassthroughPropertiesFB);
-implement_from!(openxr_sys::TriangleMeshCreateInfoFB);
-implement_from!(openxr_sys::ViewConfigurationViewFovEPIC);
-implement_from!(openxr_sys::ViewLocateFoveatedRenderingVARJO);
-implement_from!(openxr_sys::ViewLocateInfo);
-implement_from!(openxr_sys::VulkanDeviceCreateInfoKHR);
-implement_from!(openxr_sys::VulkanGraphicsDeviceGetInfoKHR);
-implement_from!(openxr_sys::VulkanInstanceCreateInfoKHR);
-implement_from!(openxr_sys::VulkanSwapchainFormatListCreateInfoKHR);
+implement!(read_action_create_info reads ActionCreateInfo);
+implement!(read_action_set_create_info reads ActionSetCreateInfo);
+implement!(read_action_space_create_info reads ActionSpaceCreateInfo);
+implement!(read_actions_sync_info reads ActionsSyncInfo);
+implement!(read_action_state_get_info reads ActionStateGetInfo);
+implement!(read_binding_modifications_khr reads BindingModificationsKHR);
+implement!(read_bound_sources_for_action_enumerate_info reads BoundSourcesForActionEnumerateInfo);
+implement!(read_composition_layer_color_scale_bias_khr reads CompositionLayerColorScaleBiasKHR);
+implement!(read_composition_layer_cube_khr reads CompositionLayerCubeKHR);
+implement!(read_composition_layer_cylinder_khr reads CompositionLayerCylinderKHR);
+implement!(read_composition_layer_depth_info_khr reads CompositionLayerDepthInfoKHR);
+implement!(read_composition_layer_depth_test_varjo reads CompositionLayerDepthTestVARJO);
+implement!(read_composition_layer_equirect2_khr reads CompositionLayerEquirect2KHR);
+implement!(read_composition_layer_equirect_khr reads CompositionLayerEquirectKHR);
+implement!(read_composition_layer_passthrough_fb reads CompositionLayerPassthroughFB);
+implement!(read_composition_layer_projection reads CompositionLayerProjection);
+implement!(read_composition_layer_projection_view reads CompositionLayerProjectionView);
+implement!(read_composition_layer_quad reads CompositionLayerQuad);
+implement!(read_composition_layer_reprojection_info_msft reads CompositionLayerReprojectionInfoMSFT);
+implement!(read_composition_layer_reprojection_plane_override_msft reads CompositionLayerReprojectionPlaneOverrideMSFT);
+implement!(read_composition_layer_secure_content_fb reads CompositionLayerSecureContentFB);
+implement!(read_composition_layer_space_warp_info_fb reads CompositionLayerSpaceWarpInfoFB);
+implement!(read_debug_utils_label_ext reads DebugUtilsLabelEXT);
+implement!(read_debug_utils_messenger_callback_data_ext reads DebugUtilsMessengerCallbackDataEXT);
+implement!(read_debug_utils_messenger_create_info_ext reads DebugUtilsMessengerCreateInfoEXT);
+implement!(read_debug_utils_object_name_info_ext reads DebugUtilsObjectNameInfoEXT);
+implement!(read_digital_lens_control_almalence reads DigitalLensControlALMALENCE);
+implement!(read_event_data_buffer reads EventDataBuffer);
+implement!(read_event_data_display_refresh_rate_changed_fb reads EventDataDisplayRefreshRateChangedFB);
+implement!(read_event_data_events_lost reads EventDataEventsLost);
+implement!(read_event_data_instance_loss_pending reads EventDataInstanceLossPending);
+implement!(read_event_data_interaction_profile_changed reads EventDataInteractionProfileChanged);
+implement!(read_event_data_main_session_visibility_changed_extx reads EventDataMainSessionVisibilityChangedEXTX);
+implement!(read_event_data_marker_tracking_update_varjo reads EventDataMarkerTrackingUpdateVARJO);
+implement!(read_event_data_passthrough_state_changed_fb reads EventDataPassthroughStateChangedFB);
+implement!(read_event_data_perf_settings_ext reads EventDataPerfSettingsEXT);
+implement!(read_event_data_reference_space_change_pending reads EventDataReferenceSpaceChangePending);
+implement!(read_event_data_session_state_changed reads EventDataSessionStateChanged);
+implement!(read_event_data_visibility_mask_changed_khr reads EventDataVisibilityMaskChangedKHR);
+implement!(read_event_data_vive_tracker_connected_htcx reads EventDataViveTrackerConnectedHTCX);
+implement!(read_facial_expressions_htc reads FacialExpressionsHTC);
+implement!(read_facial_tracker_create_info_htc reads FacialTrackerCreateInfoHTC);
+implement!(read_frame_end_info reads FrameEndInfo);
+implement!(read_geometry_instance_create_info_fb reads GeometryInstanceCreateInfoFB);
+implement!(read_geometry_instance_transform_fb reads GeometryInstanceTransformFB);
+implement!(read_graphics_binding_eglmndx reads GraphicsBindingEGLMNDX);
+implement!(read_graphics_binding_open_gl_wayland_khr reads GraphicsBindingOpenGLWaylandKHR);
+
+implement!(read_graphics_binding_open_gl_xlib_khr reads GraphicsBindingOpenGLXlibKHR);
+implement!(read_graphics_binding_vulkan_khr reads GraphicsBindingVulkanKHR);
+implement!(read_hand_joints_locate_info_ext reads HandJointsLocateInfoEXT);
+implement!(read_hand_joints_motion_range_info_ext reads HandJointsMotionRangeInfoEXT);
+implement!(read_hand_mesh_space_create_info_msft reads HandMeshSpaceCreateInfoMSFT);
+implement!(read_hand_mesh_update_info_msft reads HandMeshUpdateInfoMSFT);
+implement!(read_hand_pose_type_info_msft reads HandPoseTypeInfoMSFT);
+implement!(read_hand_tracker_create_info_ext reads HandTrackerCreateInfoEXT);
+implement!(read_haptic_action_info reads HapticActionInfo);
+implement!(read_haptic_vibration reads HapticVibration);
+implement!(read_input_source_localized_name_get_info reads InputSourceLocalizedNameGetInfo);
+implement!(read_instance_create_info reads InstanceCreateInfo);
+implement!(read_interaction_profile_analog_threshold_valve reads InteractionProfileAnalogThresholdVALVE);
+implement!(read_interaction_profile_suggested_binding reads InteractionProfileSuggestedBinding);
+implement!(read_marker_space_create_info_varjo reads MarkerSpaceCreateInfoVARJO);
+implement!(read_passthrough_color_map_mono_to_mono_fb reads PassthroughColorMapMonoToMonoFB);
+implement!(read_passthrough_color_map_mono_to_rgba_fb reads PassthroughColorMapMonoToRgbaFB);
+implement!(read_passthrough_create_info_fb reads PassthroughCreateInfoFB);
+implement!(read_passthrough_keyboard_hands_intensity_fb reads PassthroughKeyboardHandsIntensityFB);
+implement!(read_passthrough_layer_create_info_fb reads PassthroughLayerCreateInfoFB);
+implement!(read_passthrough_style_fb reads PassthroughStyleFB);
+implement!(read_reference_space_create_info reads ReferenceSpaceCreateInfo);
+implement!(read_secondary_view_configuration_frame_end_info_msft reads SecondaryViewConfigurationFrameEndInfoMSFT);
+implement!(read_secondary_view_configuration_layer_info_msft reads SecondaryViewConfigurationLayerInfoMSFT);
+implement!(read_secondary_view_configuration_session_begin_info_msft reads SecondaryViewConfigurationSessionBeginInfoMSFT);
+implement!(read_secondary_view_configuration_swapchain_create_info_msft reads SecondaryViewConfigurationSwapchainCreateInfoMSFT);
+implement!(read_session_action_sets_attach_info reads SessionActionSetsAttachInfo);
+implement!(read_session_begin_info reads SessionBeginInfo);
+implement!(read_session_create_info reads SessionCreateInfo);
+implement!(read_session_create_info_overlay_extx reads SessionCreateInfoOverlayEXTX);
+implement!(read_spatial_anchor_create_info_msft reads SpatialAnchorCreateInfoMSFT);
+implement!(read_spatial_anchor_from_persisted_anchor_create_info_msft reads SpatialAnchorFromPersistedAnchorCreateInfoMSFT);
+implement!(read_spatial_anchor_persistence_info_msft reads SpatialAnchorPersistenceInfoMSFT);
+implement!(read_spatial_anchor_space_create_info_msft reads SpatialAnchorSpaceCreateInfoMSFT);
+implement!(read_spatial_graph_node_space_create_info_msft reads SpatialGraphNodeSpaceCreateInfoMSFT);
+implement!(read_swapchain_create_info reads SwapchainCreateInfo);
+implement!(read_swapchain_image_wait_info reads SwapchainImageWaitInfo);
+implement!(read_system_get_info reads SystemGetInfo);
+implement!(read_system_passthrough_properties_fb reads SystemPassthroughPropertiesFB);
+implement!(read_triangle_mesh_create_info_fb reads TriangleMeshCreateInfoFB);
+implement!(read_view_configuration_view_fov_epic reads ViewConfigurationViewFovEPIC);
+implement!(read_view_locate_foveated_rendering_varjo reads ViewLocateFoveatedRenderingVARJO);
+implement!(read_view_locate_info reads ViewLocateInfo);
+implement!(read_vulkan_device_create_info_khr reads VulkanDeviceCreateInfoKHR);
+implement!(read_vulkan_graphics_device_get_info_khr reads VulkanGraphicsDeviceGetInfoKHR);
+implement!(read_vulkan_instance_create_info_khr reads VulkanInstanceCreateInfoKHR);
+implement!(read_vulkan_swapchain_format_list_create_info_khr reads VulkanSwapchainFormatListCreateInfoKHR);
 // I somehow missed this one in first version, which means that there likely are
 // more missing from the list.
-implement_from!(openxr_sys::InteractionProfileState);
+implement!(read_interaction_profile_state reads InteractionProfileState);
 
-impl Iterator for XrStructChain {
-    type Item = XrStruct;
-
-    fn next(&mut self) -> Option<Self::Item> {
-        if self.ptr.is_null() {
-            return None;
+impl XrDebug for XrStructChain {
+    fn xr_fmt(&self, f: &mut std::fmt::Formatter, instance: &openxr::Instance) -> std::fmt::Result {
+        let mut f = f.debug_list();
+        let mut ptr = self.ptr;
+        while !ptr.is_null() {
+            let val = unsafe { ptr.read() };
+            f.entry(&XrStruct::from(ptr).as_debug(instance));
+            ptr = val.next;
         }
-        let res: *const openxr_sys::BaseInStructure = self.ptr;
-        self.ptr = unsafe { (*res).next };
-        Some(XrStruct::from(res))
+
+        f.finish()
     }
 }
