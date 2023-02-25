@@ -4,7 +4,7 @@ use crate::{
     xr_wrap::{xr_wrap, RecordDebug, ResultConvertible, Trace, XrWrapError},
 };
 use std::{collections::HashMap, ffi::CStr, os::raw::c_char, sync::RwLock};
-use tracing::{field, info, trace_span};
+use tracing::{field, info, trace, trace_span};
 use xr_layer::{
     log::{LogError, LogTrace, LogWarn},
     safe_openxr::{self, InstanceExtensions},
@@ -222,7 +222,7 @@ fn read_instance(
         .ok_or(sys::Result::ERROR_HANDLE_INVALID)
 }
 
-fn read_instance_layer_mut(
+fn read_instance_mut(
     instances: &mut HashMap<sys::Instance, Instance>,
     instance_handle: sys::Instance,
 ) -> Result<&mut Instance, xr_layer::sys::Result> {
@@ -253,7 +253,7 @@ fn subresource_read_instance_mut<T: std::hash::Hash + std::cmp::Eq>(
     let instance_handle = reader(&mut layer.instance_refs)
         .get(&handle)
         .ok_or(sys::Result::ERROR_HANDLE_INVALID)?;
-    read_instance_layer_mut(instances, *instance_handle)
+    read_instance_mut(instances, *instance_handle)
 }
 
 fn instance_ref_delete<T: std::hash::Hash + std::cmp::Eq>(
@@ -267,7 +267,7 @@ fn instance_ref_delete<T: std::hash::Hash + std::cmp::Eq>(
     let instance_handle = reader(&mut layer.instance_refs)
         .remove(&handle)
         .ok_or(sys::Result::ERROR_HANDLE_INVALID)?;
-    read_instance_layer_mut(&mut layer.instances, instance_handle)
+    read_instance_mut(&mut layer.instances, instance_handle)
 }
 
 extern "system" fn poll_event(
@@ -306,7 +306,7 @@ extern "system" fn create_action_set(
 ) -> sys::Result {
     wrap_mut(|layer| {
         let _span = trace_span!("create_action_set").entered();
-        let instance = read_instance_layer_mut(&mut layer.instances, instance_handle)?;
+        let instance = read_instance_mut(&mut layer.instances, instance_handle)?;
 
         let result =
             unsafe { (instance.fp().create_action_set)(instance_handle, info, action_set_ptr) };
@@ -334,6 +334,18 @@ extern "system" fn create_action(
             unsafe { XrIterator::from_ptr(info) }.as_debug(&instance.instance),
         );
 
+        // TODO: check that it only contains /isbl/head
+        for i in unsafe { XrIterator::from_ptr(info) } {
+            if let Some(info) = i.read_action_create_info() {
+                for p in info.subaction_paths() {
+                    if p == instance.isbl_head {
+                        info!("saved /isbl/head");
+                        return sys::Result::SUCCESS.into_result();
+                    }
+                }
+            }
+        }
+
         let result = unsafe { (instance.fp().create_action)(action_set_handle, info, out) };
         result.into_result()
     })
@@ -344,19 +356,39 @@ extern "system" fn string_to_path(
     path_string_raw: *const c_char,
     path: *mut sys::Path,
 ) -> sys::Result {
-    wrap(|layer| {
+    xr_wrap(|| {
         let span =
             trace_span!("string_to_path", string = field::Empty, path = field::Empty).entered();
-        span.record(
-            "string",
-            format!("{:?}", unsafe { CStr::from_ptr(path_string_raw) }),
-        );
-        let instance = read_instance(layer, instance_handle)?;
+        let str = unsafe { CStr::from_ptr(path_string_raw) }
+            .to_str()
+            .map_err(|_| sys::Result::ERROR_PATH_INVALID)?;
+        span.record("string", format!("{:?}", str));
+        if str == "/isbl/head" || str == "/interaction_profiles/isbl/remote_headset" {
+            let mut w = LAYER.write()?;
+            let layer = (*w).as_mut().ok_or(sys::Result::ERROR_RUNTIME_FAILURE)?;
+            let instance = read_instance_mut(&mut layer.instances, instance_handle)?;
 
-        let result =
-            unsafe { (instance.fp().string_to_path)(instance_handle, path_string_raw, path) };
-        span.record("path", format!("{:?}", unsafe { *path }));
-        result.into_result()
+            let result =
+                unsafe { (instance.fp().string_to_path)(instance_handle, path_string_raw, path) };
+            let deref = unsafe { *path };
+            span.record("path", format!("{:?}", deref));
+            if str == "/isbl/head" {
+                instance.isbl_head = deref;
+            } else {
+                instance.isbl_remote_headset = deref;
+            }
+            result.into_result()
+        } else {
+            let r = LAYER.read()?;
+            let layer = (*r).as_ref().ok_or(sys::Result::ERROR_RUNTIME_FAILURE)?;
+
+            let instance = read_instance(layer, instance_handle)?;
+
+            let result =
+                unsafe { (instance.fp().string_to_path)(instance_handle, path_string_raw, path) };
+            span.record("path", format!("{:?}", unsafe { *path }));
+            result.into_result()
+        }
     })
 }
 
@@ -376,6 +408,15 @@ extern "system" fn suggest_interaction_profile_bindings(
             unsafe { XrIterator::from_ptr(suggested_bindings) }.as_debug(&instance.instance),
         );
 
+        for i in unsafe { XrIterator::from_ptr(suggested_bindings) } {
+            if let Some(sugg) = i.read_interaction_profile_suggested_binding() {
+                if sugg.interaction_profile() == instance.isbl_remote_headset {
+                    info!("saved /interaction_profiles/isbl/remote_headset");
+                    return sys::Result::SUCCESS.into_result();
+                }
+            }
+        }
+
         let result = unsafe {
             (instance.fp().suggest_interaction_profile_bindings)(
                 instance_handle,
@@ -393,7 +434,7 @@ extern "system" fn create_session(
 ) -> sys::Result {
     wrap_mut(|layer| {
         let _span = trace_span!("create_session").entered();
-        let instance = read_instance_layer_mut(&mut layer.instances, instance_handle)?;
+        let instance = read_instance_mut(&mut layer.instances, instance_handle)?;
 
         let result = unsafe {
             (instance.fp().create_session)(instance_handle, create_info_ptr, session_ptr)
@@ -521,11 +562,21 @@ extern "system" fn sync_actions(
     sync_info: *const sys::ActionsSyncInfo,
 ) -> sys::Result {
     wrap(|layer| {
-        let _span = trace_span!("sync_actions").entered();
+        let span = trace_span!(
+            "sync_actions",
+            info = tracing::field::Empty,
+            result = tracing::field::Empty
+        )
+        .entered();
         let instance = subresource_read_instance(layer, |l| &l.sessions, session_handle)?;
+        span.record_debug(
+            "info",
+            unsafe { XrIterator::from_ptr(sync_info) }.as_debug(&instance.instance),
+        );
 
         let result = unsafe { (instance.fp().sync_actions)(session_handle, sync_info) };
         post_sync_actions(instance, unsafe { XrIterator::from_ptr(sync_info) });
+        span.record_debug("result", result.into_result());
         result.into_result()
     })
 }

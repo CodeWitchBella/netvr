@@ -86,6 +86,8 @@ impl Debug for Session {
 pub(crate) struct Instance {
     pub(crate) instance: safe_openxr::Instance,
     pub(crate) sessions: HashMap<sys::Session, Session>,
+    pub(crate) isbl_head: sys::Path,
+    pub(crate) isbl_remote_headset: sys::Path,
     _span: Span,
 }
 
@@ -95,6 +97,8 @@ impl Instance {
         Self {
             instance,
             sessions: HashMap::default(),
+            isbl_head: sys::Path::default(),
+            isbl_remote_headset: sys::Path::default(),
             _span: span!(Level::TRACE, "Instance"),
         }
     }
