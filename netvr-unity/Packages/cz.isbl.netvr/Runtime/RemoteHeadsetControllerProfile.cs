@@ -160,10 +160,8 @@ namespace Isbl.NetVR
                 {
                     new DeviceConfig()
                     {
-                        // TODO
-                        characteristics = (InputDeviceCharacteristics)(InputDeviceCharacteristics.HeldInHand | InputDeviceCharacteristics.TrackedDevice | InputDeviceCharacteristics.Controller | InputDeviceCharacteristics.Left),
-                        // TODO
-                        userPath = UserPaths.leftHand
+                        characteristics = (InputDeviceCharacteristics)(InputDeviceCharacteristics.TrackedDevice | InputDeviceCharacteristics.Controller),
+                        userPath = "/isbl/head"
                     },
                 },
                 actions = new List<ActionConfig>()
