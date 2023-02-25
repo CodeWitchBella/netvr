@@ -3,11 +3,11 @@ use std::fmt;
 use crate::{xr_struct::XrStruct, XrDebug, XrDebugValue};
 
 #[derive(Clone)]
-pub struct XrIterator {
+pub struct XrStructChain {
     ptr: *const openxr_sys::BaseInStructure,
 }
 
-impl XrIterator {
+impl XrStructChain {
     unsafe fn new(ptr: &openxr_sys::BaseInStructure) -> Self {
         Self { ptr }
     }
@@ -35,14 +35,14 @@ pub trait UnsafeFrom<T> {
 
 macro_rules! implement_from {
     ($t: ty) => {
-        impl UnsafeFrom<*const $t> for XrIterator {
+        impl UnsafeFrom<*const $t> for XrStructChain {
             unsafe fn from_ptr(input: *const $t) -> Self {
-                XrIterator::new(&*(input as *const openxr_sys::BaseInStructure))
+                XrStructChain::new(&*(input as *const openxr_sys::BaseInStructure))
             }
         }
-        impl UnsafeFrom<*mut $t> for XrIterator {
+        impl UnsafeFrom<*mut $t> for XrStructChain {
             unsafe fn from_ptr(input: *mut $t) -> Self {
-                XrIterator::new(&*(input as *const openxr_sys::BaseInStructure))
+                XrStructChain::new(&*(input as *const openxr_sys::BaseInStructure))
             }
         }
     };
@@ -56,7 +56,7 @@ macro_rules! implement_from {
 //   - implement_from!(openxr_sys::InstanceCreateInfoAndroidKHR);
 //   - implement_from!(openxr_sys::LoaderInitInfoAndroidKHR);
 //
-// List of openxr_sys types which can be converted into XrIterator
+// List of openxr_sys types which can be converted into XrStructChain
 implement_from!(openxr_sys::ActionCreateInfo);
 implement_from!(openxr_sys::ActionSetCreateInfo);
 implement_from!(openxr_sys::ActionSpaceCreateInfo);
@@ -160,7 +160,7 @@ implement_from!(openxr_sys::VulkanSwapchainFormatListCreateInfoKHR);
 // more missing from the list.
 implement_from!(openxr_sys::InteractionProfileState);
 
-impl Iterator for XrIterator {
+impl Iterator for XrStructChain {
     type Item = XrStruct;
 
     fn next(&mut self) -> Option<Self::Item> {

@@ -1,4 +1,4 @@
-use crate::{utils::ResultConvertible, UnsafeFrom, XrDebug, XrIterator, XrResult};
+use crate::{utils::ResultConvertible, UnsafeFrom, XrDebug, XrResult, XrStructChain};
 use std::fmt;
 
 pub struct GetActionState {
@@ -9,8 +9,8 @@ pub struct GetActionState {
 
 /// Shared implementations between GetActionState*
 impl GetActionState {
-    pub fn get_info(&self) -> XrIterator {
-        unsafe { XrIterator::from_ptr(self.get_info) }
+    pub fn get_info(&self) -> XrStructChain {
+        unsafe { XrStructChain::from_ptr(self.get_info) }
     }
 
     fn partial_fmt<T: XrDebug>(
@@ -53,7 +53,7 @@ macro_rules! implement {
                 .into_result()
             }
 
-            pub fn get_info(&self) -> XrIterator {
+            pub fn get_info(&self) -> XrStructChain {
                 self.base.get_info()
             }
         }

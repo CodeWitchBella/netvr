@@ -7,9 +7,9 @@ mod impl_interface;
 mod loader;
 pub mod log;
 mod xr_debug;
-mod xr_iterator;
 mod xr_listings;
 mod xr_struct;
+mod xr_struct_chain;
 pub use impl_interface::*;
 pub use loader::*;
 // note that I am not reexporting openxr, since it is dangerous because most of
@@ -20,6 +20,6 @@ pub use openxr_sys as sys;
 pub use openxr_sys::pfn;
 pub use utils::*;
 pub use xr_debug::*;
-pub use xr_iterator::*;
 pub use xr_listings::*;
 pub use xr_struct::*;
+pub use xr_struct_chain::*;

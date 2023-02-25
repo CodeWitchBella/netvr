@@ -1,4 +1,4 @@
-use crate::{utils::ResultConvertible, UnsafeFrom, XrDebug, XrIterator, XrResult};
+use crate::{utils::ResultConvertible, UnsafeFrom, XrDebug, XrResult, XrStructChain};
 
 pub struct SyncActions {
     pub(crate) instance: openxr::Instance,
@@ -16,8 +16,8 @@ impl SyncActions {
         &self.instance
     }
 
-    pub fn sync_info(&self) -> XrIterator {
-        unsafe { XrIterator::from_ptr(self.sync_info) }
+    pub fn sync_info(&self) -> XrStructChain {
+        unsafe { XrStructChain::from_ptr(self.sync_info) }
     }
 }
 

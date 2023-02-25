@@ -8,7 +8,7 @@ use tracing::{field, info, trace, trace_span};
 use xr_layer::{
     log::{LogError, LogTrace, LogWarn},
     safe_openxr::{self, InstanceExtensions},
-    sys, Entry, FnPtr, UnsafeFrom, XrDebug, XrIterator,
+    sys, Entry, FnPtr, UnsafeFrom, XrDebug, XrStructChain,
 };
 
 struct InstanceRefs {
@@ -283,7 +283,7 @@ extern "system" fn poll_event(
             let span = trace_span!("event", event = tracing::field::Empty).entered();
             span.record_debug(
                 "event",
-                unsafe { XrIterator::from_ptr(event_data) }.as_debug(&instance.instance),
+                unsafe { XrStructChain::from_ptr(event_data) }.as_debug(&instance.instance),
             );
         } else if result == sys::Result::EVENT_UNAVAILABLE {
             let option = post_poll_event(instance).map_err(|err| {
@@ -331,11 +331,11 @@ extern "system" fn create_action(
         let instance = subresource_read_instance(layer, |l| &l.action_sets, action_set_handle)?;
         span.record_debug(
             "info",
-            unsafe { XrIterator::from_ptr(info) }.as_debug(&instance.instance),
+            unsafe { XrStructChain::from_ptr(info) }.as_debug(&instance.instance),
         );
 
         // TODO: check that it only contains /isbl/head
-        for i in unsafe { XrIterator::from_ptr(info) } {
+        for i in unsafe { XrStructChain::from_ptr(info) } {
             if let Some(info) = i.read_action_create_info() {
                 for p in info.subaction_paths() {
                     if p == instance.isbl_head {
@@ -405,10 +405,10 @@ extern "system" fn suggest_interaction_profile_bindings(
         let instance = read_instance(layer, instance_handle)?;
         span.record_debug(
             "suggested_bindings",
-            unsafe { XrIterator::from_ptr(suggested_bindings) }.as_debug(&instance.instance),
+            unsafe { XrStructChain::from_ptr(suggested_bindings) }.as_debug(&instance.instance),
         );
 
-        for i in unsafe { XrIterator::from_ptr(suggested_bindings) } {
+        for i in unsafe { XrStructChain::from_ptr(suggested_bindings) } {
             if let Some(sugg) = i.read_interaction_profile_suggested_binding() {
                 if sugg.interaction_profile() == instance.isbl_remote_headset {
                     info!("saved /interaction_profiles/isbl/remote_headset");
@@ -549,7 +549,7 @@ extern "system" fn get_current_interaction_profile(
         if result.is_ok() {
             span.record_debug(
                 "interaction_profile",
-                unsafe { XrIterator::from_ptr(interaction_profile_ptr) }
+                unsafe { XrStructChain::from_ptr(interaction_profile_ptr) }
                     .as_debug(&instance.instance),
             );
         }
@@ -571,11 +571,11 @@ extern "system" fn sync_actions(
         let instance = subresource_read_instance(layer, |l| &l.sessions, session_handle)?;
         span.record_debug(
             "info",
-            unsafe { XrIterator::from_ptr(sync_info) }.as_debug(&instance.instance),
+            unsafe { XrStructChain::from_ptr(sync_info) }.as_debug(&instance.instance),
         );
 
         let result = unsafe { (instance.fp().sync_actions)(session_handle, sync_info) };
-        post_sync_actions(instance, unsafe { XrIterator::from_ptr(sync_info) });
+        post_sync_actions(instance, unsafe { XrStructChain::from_ptr(sync_info) });
         span.record_debug("result", result.into_result());
         result.into_result()
     })
@@ -590,7 +590,7 @@ extern "system" fn get_action_state_boolean(
         let _span = trace_span!("get_action_state_boolean").entered();
         let instance = subresource_read_instance(layer, |l| &l.sessions, session_handle)?;
 
-        let get_info = unsafe { XrIterator::from_ptr(get_info_ptr) };
+        let get_info = unsafe { XrStructChain::from_ptr(get_info_ptr) };
 
         info!("{:?}", get_info.as_debug(&instance.instance));
 

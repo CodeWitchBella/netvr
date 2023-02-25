@@ -3,7 +3,7 @@ use std::{borrow::BorrowMut, ffi::CStr, fmt, num::TryFromIntError, str::Utf8Erro
 use crate::{
     utils::ResultConvertible,
     xr_struct::{self, ActionCreateInfo},
-    XrIterator,
+    XrStructChain,
 };
 
 pub struct XrDebugValue<'a, T: XrDebug>(pub(crate) openxr::Instance, pub(crate) &'a T);
@@ -42,7 +42,7 @@ pub trait XrDebug {
     }
 }
 
-impl XrDebug for XrIterator {
+impl XrDebug for XrStructChain {
     fn xr_fmt(&self, f: &mut fmt::Formatter, instance: &openxr::Instance) -> fmt::Result {
         let mut f = f.debug_list();
         for item in unsafe { self.unsafe_clone() } {
@@ -407,7 +407,7 @@ implement_as_non_exhaustive!(
     //   - xr_struct::EventDataInteractionProfileChanged<'_>,
     //   - xr_struct::InteractionProfileState<'_>,
     //
-    // Following types are readable via XrIterator and do not have full implementation
+    // Following types are readable via XrStructChain and do not have full implementation
     xr_struct::ActionSetCreateInfo<'_>,
     xr_struct::ActionSpaceCreateInfo<'_>,
     xr_struct::BindingModificationsKHR<'_>,

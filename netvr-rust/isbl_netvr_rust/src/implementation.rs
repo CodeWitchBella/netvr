@@ -1,5 +1,5 @@
 use tracing::{info, instrument};
-use xr_layer::{log::LogError, EventDataBuffer, XrDebug, XrIterator};
+use xr_layer::{log::LogError, EventDataBuffer, XrDebug, XrStructChain};
 
 use crate::{
     instance::{Instance, Session},
@@ -12,7 +12,7 @@ use crate::{
 ///
 /// This could also be opportunity to update data to be sent from local info.
 ///
-pub(crate) fn post_sync_actions(_: &Instance, infos: XrIterator) {
+pub(crate) fn post_sync_actions(_: &Instance, infos: XrStructChain) {
     for action_info in infos {
         info!("post_sync_actions {:?}", action_info.ty);
     }

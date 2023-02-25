@@ -1,4 +1,4 @@
-use crate::{utils::ResultConvertible, UnsafeFrom, XrDebug, XrIterator, XrResult};
+use crate::{utils::ResultConvertible, UnsafeFrom, XrDebug, XrResult, XrStructChain};
 
 pub struct CreateAction {
     pub(crate) instance: openxr::Instance,
@@ -17,8 +17,8 @@ impl CreateAction {
         &self.instance
     }
 
-    pub fn info(&self) -> XrIterator {
-        unsafe { XrIterator::from_ptr(self.info) }
+    pub fn info(&self) -> XrStructChain {
+        unsafe { XrStructChain::from_ptr(self.info) }
     }
 }
 
@@ -30,10 +30,7 @@ impl std::fmt::Debug for CreateAction {
                 "action_set",
                 &self.action_set_handle.as_debug(&self.instance),
             )
-            .field(
-                "info",
-                &self.info().as_debug(&self.instance),
-            )
+            .field("info", &self.info().as_debug(&self.instance))
             .field(
                 "out",
                 &unsafe { self.out.as_ref() }.as_debug(&self.instance),
