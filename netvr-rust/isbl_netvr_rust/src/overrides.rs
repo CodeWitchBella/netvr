@@ -334,8 +334,8 @@ extern "system" fn create_action(
             unsafe { XrStructChain::from_ptr(info) }.as_debug(&instance.instance),
         );
 
-        // TODO: check that it only contains /isbl/head
-        if let Some(info) = unsafe { XrStructChain::from_ptr(info) }.read_action_create_info() {
+        // TODO: check that it ONLY contains /isbl/head
+        if let Some(info) = unsafe { XrStructChain::from_ptr(info) }?.read_action_create_info() {
             for p in info.subaction_paths() {
                 if p == instance.isbl_head {
                     info!("saved /isbl/head");
@@ -406,7 +406,7 @@ extern "system" fn suggest_interaction_profile_bindings(
             unsafe { XrStructChain::from_ptr(suggested_bindings) }.as_debug(&instance.instance),
         );
 
-        if let Some(sugg) = unsafe { XrStructChain::from_ptr(suggested_bindings) }
+        if let Some(sugg) = unsafe { XrStructChain::from_ptr(suggested_bindings) }?
             .read_interaction_profile_suggested_binding()
         {
             if sugg.interaction_profile() == instance.isbl_remote_headset {
@@ -573,7 +573,7 @@ extern "system" fn sync_actions(
         );
 
         let result = unsafe { (instance.fp().sync_actions)(session_handle, sync_info) };
-        post_sync_actions(instance, unsafe { XrStructChain::from_ptr(sync_info) });
+        post_sync_actions(instance, unsafe { XrStructChain::from_ptr(sync_info) }?);
         span.record_debug("result", result.into_result());
         result.into_result()
     })

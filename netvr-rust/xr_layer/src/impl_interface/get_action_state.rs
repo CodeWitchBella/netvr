@@ -9,7 +9,7 @@ pub struct GetActionState {
 
 /// Shared implementations between GetActionState*
 impl GetActionState {
-    pub fn get_info(&self) -> XrStructChain {
+    pub fn get_info(&self) -> Result<XrStructChain, openxr_sys::Result> {
         unsafe { XrStructChain::from_ptr(self.get_info) }
     }
 
@@ -53,7 +53,7 @@ macro_rules! implement {
                 .into_result()
             }
 
-            pub fn get_info(&self) -> XrStructChain {
+            pub fn get_info(&self) -> Result<XrStructChain, openxr_sys::Result> {
                 self.base.get_info()
             }
         }

@@ -55,7 +55,17 @@ where
     T: XrDebug,
 {
     fn xr_fmt(&self, f: &mut fmt::Formatter, _: &openxr::Instance) -> fmt::Result {
-        f.debug_struct("None").finish()
+        f.debug_struct("TODO::Option<T>").finish()
+    }
+}
+
+impl<T> XrDebug for Result<T, openxr_sys::Result>
+where
+    T: XrDebug,
+{
+    fn xr_fmt(&self, f: &mut fmt::Formatter, _: &openxr::Instance) -> fmt::Result {
+        f.debug_struct("TODO::Result<T, openxr_sys::Result>")
+            .finish()
     }
 }
 

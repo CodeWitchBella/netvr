@@ -16,7 +16,7 @@ impl SyncActions {
         &self.instance
     }
 
-    pub fn sync_info(&self) -> XrStructChain {
+    pub fn sync_info(&self) -> Result<XrStructChain, openxr_sys::Result> {
         unsafe { XrStructChain::from_ptr(self.sync_info) }
     }
 }

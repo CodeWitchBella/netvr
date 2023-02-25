@@ -5,12 +5,6 @@ pub struct XrStructChain {
     ptr: *const openxr_sys::BaseInStructure,
 }
 
-impl XrStructChain {
-    unsafe fn new(ptr: &openxr_sys::BaseInStructure) -> Self {
-        Self { ptr }
-    }
-}
-
 pub trait UnsafeFrom<T> {
     /// .
     ///
@@ -18,19 +12,33 @@ pub trait UnsafeFrom<T> {
     ///
     /// ptr must be valid and point to structure conforming to OpenXR structure
     /// definition (type, next, ...)
-    unsafe fn from_ptr(ptr: T) -> Self;
+    ///
+    /// But, it does check for null ptr
+    unsafe fn from_ptr(ptr: T) -> Result<Self, openxr_sys::Result>
+    where
+        Self: Sized;
 }
 
 macro_rules! implement {
     ($method: ident reads $id: ident) => {
         impl UnsafeFrom<*const openxr_sys::$id> for XrStructChain {
-            unsafe fn from_ptr(input: *const openxr_sys::$id) -> Self {
-                XrStructChain::new(&*(input as *const openxr_sys::BaseInStructure))
+            unsafe fn from_ptr(input: *const openxr_sys::$id) -> Result<Self, openxr_sys::Result> {
+                if input.is_null() {
+                    return Err(openxr_sys::Result::ERROR_VALIDATION_FAILURE);
+                }
+                Ok(XrStructChain {
+                    ptr: unsafe { std::mem::transmute(input) },
+                })
             }
         }
         impl UnsafeFrom<*mut openxr_sys::$id> for XrStructChain {
-            unsafe fn from_ptr(input: *mut openxr_sys::$id) -> Self {
-                XrStructChain::new(&*(input as *const openxr_sys::BaseInStructure))
+            unsafe fn from_ptr(input: *mut openxr_sys::$id) -> Result<Self, openxr_sys::Result> {
+                if input.is_null() {
+                    return Err(openxr_sys::Result::ERROR_VALIDATION_FAILURE);
+                }
+                Ok(XrStructChain {
+                    ptr: unsafe { &*(input as *const openxr_sys::BaseInStructure) },
+                })
             }
         }
 
