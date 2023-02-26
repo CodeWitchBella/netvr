@@ -1,0 +1,9 @@
+{
+  "name": "com.unity.xr.openxr.vive_tracker",
+  "displayName": "Vive Tracker",
+  "version": "0.0.0",
+  "unity": "2021.3",
+  "description": "Vive Tracker support",
+  "keywords": [],
+  "dependencies": {}
+}

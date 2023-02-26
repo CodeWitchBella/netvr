@@ -176,6 +176,12 @@
         "com.unity.xr.openxr": "1.3.0"
       }
     },
+    "com.unity.xr.openxr.vive_tracker": {
+      "version": "file:ViveTracker",
+      "depth": 0,
+      "source": "embedded",
+      "dependencies": {}
+    },
     "cz.isbl.netvr": {
       "version": "file:cz.isbl.netvr",
       "depth": 0,

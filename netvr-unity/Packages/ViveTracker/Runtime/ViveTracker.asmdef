@@ -1,13 +1,11 @@
 {
-    "name": "Isbl.NetVR.Editor",
+    "name": "ViveTracker",
     "rootNamespace": "",
     "references": [
-        "Unity.XR.OpenXR.Editor",
-        "Isbl.PicoOpenXR.PicoOpenXRSupport"
+        "Unity.XR.OpenXR",
+        "Unity.InputSystem"
     ],
-    "includePlatforms": [
-        "Editor"
-    ],
+    "includePlatforms": [],
     "excludePlatforms": [],
     "allowUnsafeCode": false,
     "overrideReferences": false,

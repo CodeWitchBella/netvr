@@ -1,0 +1,1 @@
+Packaged version of a script from this post: https://forum.unity.com/threads/openxr-and-openvr-together.1113136/#post-7803057
