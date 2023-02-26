@@ -14,7 +14,7 @@ pub trait UnsafeFrom<T> {
     /// definition (type, next, ...)
     ///
     /// But, it does check for null ptr
-    unsafe fn from_ptr(ptr: T) -> Result<Self, openxr_sys::Result>
+    unsafe fn from_ptr(ptr: T) -> Self
     where
         Self: Sized;
 }
@@ -22,52 +22,39 @@ pub trait UnsafeFrom<T> {
 macro_rules! implement {
     ($method: ident reads $id: ident) => {
         impl UnsafeFrom<*const openxr_sys::$id> for XrStructChain {
-            unsafe fn from_ptr(input: *const openxr_sys::$id) -> Result<Self, openxr_sys::Result> {
-                if input.is_null() {
-                    return Err(openxr_sys::Result::ERROR_VALIDATION_FAILURE);
-                }
-                Ok(XrStructChain {
+            unsafe fn from_ptr(input: *const openxr_sys::$id) -> Self {
+                XrStructChain {
                     ptr: unsafe { std::mem::transmute(input) },
-                })
+                }
             }
         }
         impl UnsafeFrom<*mut openxr_sys::$id> for XrStructChain {
-            unsafe fn from_ptr(input: *mut openxr_sys::$id) -> Result<Self, openxr_sys::Result> {
-                if input.is_null() {
-                    return Err(openxr_sys::Result::ERROR_VALIDATION_FAILURE);
-                }
-                Ok(XrStructChain {
+            unsafe fn from_ptr(input: *mut openxr_sys::$id) -> Self {
+                XrStructChain {
                     ptr: unsafe { &*(input as *const openxr_sys::BaseInStructure) },
-                })
+                }
             }
         }
 
         impl<'a> XrStructChain {
-            pub fn $method(&self) -> Option<crate::xr_struct::$id<'a>> {
-                None
+            pub fn $method(&self) -> Result<crate::xr_struct::$id<'a>, openxr_sys::Result> {
+                let mut ptr = self.ptr;
+                while !ptr.is_null() {
+                    let val = unsafe { ptr.read() };
+                    if val.ty == openxr_sys::$id::TYPE {
+                        return Ok(crate::xr_struct::$id(unsafe {
+                            &*std::mem::transmute::<
+                                *const openxr_sys::BaseInStructure,
+                                *const openxr_sys::$id,
+                            >(ptr)
+                        }));
+                    }
+                    ptr = val.next;
+                }
+                Err(openxr_sys::Result::ERROR_VALIDATION_FAILURE)
             }
         }
     };
-}
-
-impl XrStructChain {
-    pub fn test(&self) -> Option<crate::xr_struct::ActionCreateInfo> {
-        let mut ptr = self.ptr;
-        while !ptr.is_null() {
-            let val = unsafe { ptr.read() };
-
-            if val.ty == openxr_sys::ActionCreateInfo::TYPE {
-                return Some(crate::xr_struct::ActionCreateInfo(unsafe {
-                    &*std::mem::transmute::<
-                        *const openxr_sys::BaseInStructure,
-                        *const openxr_sys::ActionCreateInfo,
-                    >(ptr)
-                }));
-            }
-            ptr = val.next;
-        }
-        None
-    }
 }
 
 // Following are missing because they are android-only and I did not want to

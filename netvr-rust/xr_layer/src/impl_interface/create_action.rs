@@ -17,7 +17,7 @@ impl CreateAction {
         &self.instance
     }
 
-    pub fn info(&self) -> Result<XrStructChain, openxr_sys::Result> {
+    pub fn info(&self) -> XrStructChain {
         unsafe { XrStructChain::from_ptr(self.info) }
     }
 }

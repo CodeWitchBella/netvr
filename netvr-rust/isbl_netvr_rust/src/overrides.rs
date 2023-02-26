@@ -1,5 +1,5 @@
 use crate::{
-    implementation::{post_poll_event, post_sync_actions},
+    implementation::post_poll_event,
     instance::{Instance, Session},
     xr_wrap::{xr_wrap, RecordDebug, ResultConvertible, Trace, XrWrapError},
 };
@@ -323,7 +323,7 @@ extern "system" fn create_action_set(
 
 extern "system" fn create_action(
     action_set_handle: sys::ActionSet,
-    info: *const sys::ActionCreateInfo,
+    info_in: *const sys::ActionCreateInfo,
     out: *mut sys::Action,
 ) -> sys::Result {
     wrap(|layer| {
@@ -331,20 +331,19 @@ extern "system" fn create_action(
         let instance = subresource_read_instance(layer, |l| &l.action_sets, action_set_handle)?;
         span.record_debug(
             "info",
-            unsafe { XrStructChain::from_ptr(info) }.as_debug(&instance.instance),
+            unsafe { XrStructChain::from_ptr(info_in) }.as_debug(&instance.instance),
         );
 
         // TODO: check that it ONLY contains /isbl/head
-        if let Some(info) = unsafe { XrStructChain::from_ptr(info) }?.read_action_create_info() {
-            for p in info.subaction_paths() {
-                if p == instance.isbl_head {
-                    info!("saved /isbl/head");
-                    return sys::Result::SUCCESS.into_result();
-                }
+        let info = unsafe { XrStructChain::from_ptr(info_in) }.read_action_create_info()?;
+        for p in info.subaction_paths() {
+            if p == instance.isbl_head {
+                info!("saved /isbl/head");
+                return sys::Result::SUCCESS.into_result();
             }
         }
 
-        let result = unsafe { (instance.fp().create_action)(action_set_handle, info, out) };
+        let result = unsafe { (instance.fp().create_action)(action_set_handle, info_in, out) };
         result.into_result()
     })
 }
@@ -406,13 +405,11 @@ extern "system" fn suggest_interaction_profile_bindings(
             unsafe { XrStructChain::from_ptr(suggested_bindings) }.as_debug(&instance.instance),
         );
 
-        if let Some(sugg) = unsafe { XrStructChain::from_ptr(suggested_bindings) }?
-            .read_interaction_profile_suggested_binding()
-        {
-            if sugg.interaction_profile() == instance.isbl_remote_headset {
-                info!("saved /interaction_profiles/isbl/remote_headset");
-                return sys::Result::SUCCESS.into_result();
-            }
+        let sugg = unsafe { XrStructChain::from_ptr(suggested_bindings) }
+            .read_interaction_profile_suggested_binding()?;
+        if sugg.interaction_profile() == instance.isbl_remote_headset {
+            info!("saved /interaction_profiles/isbl/remote_headset");
+            return sys::Result::SUCCESS.into_result();
         }
 
         let result = unsafe {
@@ -557,7 +554,7 @@ extern "system" fn get_current_interaction_profile(
 
 extern "system" fn sync_actions(
     session_handle: sys::Session,
-    sync_info: *const sys::ActionsSyncInfo,
+    sync_info_in: *const sys::ActionsSyncInfo,
 ) -> sys::Result {
     wrap(|layer| {
         let span = trace_span!(
@@ -569,11 +566,31 @@ extern "system" fn sync_actions(
         let instance = subresource_read_instance(layer, |l| &l.sessions, session_handle)?;
         span.record_debug(
             "info",
-            unsafe { XrStructChain::from_ptr(sync_info) }.as_debug(&instance.instance),
+            unsafe { XrStructChain::from_ptr(sync_info_in) }.as_debug(&instance.instance),
         );
 
-        let result = unsafe { (instance.fp().sync_actions)(session_handle, sync_info) };
-        post_sync_actions(instance, unsafe { XrStructChain::from_ptr(sync_info) }?);
+        let sync_info =
+            unsafe { XrStructChain::from_ptr(sync_info_in) }.read_actions_sync_info()?;
+
+        let inner_sets: Vec<sys::ActiveActionSet> = sync_info
+            .active_action_sets()
+            .filter_map(|set| {
+                if set.subaction_path == instance.isbl_head {
+                    None
+                } else {
+                    Some(set)
+                }
+            })
+            .collect();
+
+        let inner = sys::ActionsSyncInfo {
+            ty: sys::ActionsSyncInfo::TYPE,
+            next: unsafe { std::mem::transmute(sync_info_in) },
+            count_active_action_sets: inner_sets.len() as u32,
+            active_action_sets: inner_sets.as_ptr(),
+        };
+
+        let result = unsafe { (instance.fp().sync_actions)(session_handle, &inner) };
         span.record_debug("result", result.into_result());
         result.into_result()
     })

@@ -63,9 +63,11 @@ impl<T> XrDebug for Result<T, openxr_sys::Result>
 where
     T: XrDebug,
 {
-    fn xr_fmt(&self, f: &mut fmt::Formatter, _: &openxr::Instance) -> fmt::Result {
-        f.debug_struct("TODO::Result<T, openxr_sys::Result>")
-            .finish()
+    fn xr_fmt(&self, f: &mut fmt::Formatter, instance: &openxr::Instance) -> fmt::Result {
+        match self {
+            Ok(val) => f.debug_tuple("Ok").field(&val.as_debug(instance)).finish(),
+            Err(err) => f.debug_tuple("Err").field(err).finish(),
+        }
     }
 }
 
