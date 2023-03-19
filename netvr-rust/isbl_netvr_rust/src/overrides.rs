@@ -34,24 +34,60 @@ impl Layer {
         layer
             .add_override(FnPtr::ApplyHapticFeedback(apply_haptic_feedback))
             .add_override(FnPtr::AttachSessionActionSets(attach_session_action_sets))
+            .add_override(FnPtr::BeginFrame(begin_frame))
             .add_override(FnPtr::BeginSession(begin_session))
             .add_override(FnPtr::CreateAction(create_action))
             .add_override(FnPtr::CreateActionSet(create_action_set))
+            .add_override(FnPtr::CreateActionSpace(create_action_space))
             .add_override(FnPtr::CreateInstance(create_instance))
+            .add_override(FnPtr::CreateReferenceSpace(create_reference_space))
             .add_override(FnPtr::CreateSession(create_session))
             .add_override(FnPtr::DestroySession(destroy_session))
+            .add_override(FnPtr::EndFrame(end_frame))
+            .add_override(FnPtr::EndSession(end_session))
             .add_override(FnPtr::EnumerateBoundSourcesForAction(enumerate_bound_sources_for_action))
+            .add_override(FnPtr::EnumerateEnvironmentBlendModes(enumerate_environment_blend_modes))
+            .add_override(FnPtr::EnumerateReferenceSpaces(enumerate_reference_spaces))
+            .add_override(FnPtr::EnumerateViewConfigurations(enumerate_view_configurations))
+            .add_override(FnPtr::EnumerateViewConfigurationViews(enumerate_view_configuration_views))
             .add_override(FnPtr::GetActionStateBoolean(get_action_state_boolean))
             .add_override(FnPtr::GetActionStateFloat(get_action_state_float))
             .add_override(FnPtr::GetActionStatePose(get_action_state_pose))
             .add_override(FnPtr::GetActionStateVector2f(get_action_state_vector2f))
             .add_override(FnPtr::GetCurrentInteractionProfile(get_current_interaction_profile))
+            .add_override(FnPtr::GetInputSourceLocalizedName(get_input_source_localized_name))
+            .add_override(FnPtr::GetInstanceProperties(get_instance_properties))
+            .add_override(FnPtr::GetReferenceSpaceBoundsRect(get_reference_space_bounds_rect))
+            .add_override(FnPtr::GetSystem(get_system))
+            .add_override(FnPtr::GetSystemProperties(get_system_properties))
+            .add_override(FnPtr::GetViewConfigurationProperties(get_view_configuration_properties))
             .add_override(FnPtr::LocateViews(locate_views))
+            .add_override(FnPtr::LocateViews(locate_views))
+            .add_override(FnPtr::PathToString(path_to_string))
             .add_override(FnPtr::PollEvent(poll_event))
+            .add_override(FnPtr::RequestExitSession(request_exit_session))
+            .add_override(FnPtr::ResultToString(result_to_string))
+            .add_override(FnPtr::StopHapticFeedback(stop_haptic_feedback))
             .add_override(FnPtr::StringToPath(string_to_path))
+            .add_override(FnPtr::StructureTypeToString(structure_type_to_string))
             .add_override(FnPtr::SuggestInteractionProfileBindings(suggest_interaction_profile_bindings))
             .add_override(FnPtr::SyncActions(sync_actions))
             .add_override(FnPtr::WaitFrame(wait_frame))
+            // Maybe TODO?:
+            //.add_override(FnPtr::DestroySpace(destroy_space))
+            //.add_override(FnPtr::DestroyAction(destroy_action))
+            //.add_override(FnPtr::DestroyActionSet(destroy_action_set))
+            //.add_override(FnPtr::EnumerateApiLayerProperties(enumerate_api_layer_properties))
+            //.add_override(FnPtr::EnumerateInstanceExtensionProperties(enumerate_instance_extension_properties))
+            //.add_override(FnPtr::LocateSpace(locate_space))
+            // Swapchain-related functions are of no interest to me
+            //.add_override(FnPtr::AcquireSwapchainImage(acquire_swapchain_image))
+            //.add_override(FnPtr::CreateSwapchain(create_swapchain))
+            //.add_override(FnPtr::DestroySwapchain(destroy_swapchain))
+            //.add_override(FnPtr::EnumerateSwapchainFormats(enumerate_swapchain_formats))
+            //.add_override(FnPtr::EnumerateSwapchainImages(enumerate_swapchain_images))
+            //.add_override(FnPtr::ReleaseSwapchainImage(release_swapchain_image))
+            //.add_override(FnPtr::WaitSwapchainImage(wait_swapchain_image))
             ;
         if !manual_unhook {
             layer.add_override(FnPtr::DestroyInstance(destroy_instance));
@@ -499,44 +535,6 @@ extern "system" fn begin_session(
     })
 }
 
-extern "system" fn attach_session_action_sets(
-    session_handle: sys::Session,
-    attach_info: *const sys::SessionActionSetsAttachInfo,
-) -> sys::Result {
-    wrap(|layer| {
-        let _span = trace_span!("attach_session_action_sets").entered();
-        let instance = subresource_read_instance(layer, |l| &l.sessions, session_handle)?;
-
-        let result =
-            unsafe { (instance.fp().attach_session_action_sets)(session_handle, attach_info) };
-        result.into_result()
-    })
-}
-
-extern "system" fn enumerate_bound_sources_for_action(
-    session_handle: sys::Session,
-    enumerate_info: *const sys::BoundSourcesForActionEnumerateInfo,
-    source_capacity_input: u32,
-    source_count_output: *mut u32,
-    sources: *mut sys::Path,
-) -> sys::Result {
-    wrap(|layer| {
-        let instance = subresource_read_instance(layer, |l| &l.sessions, session_handle)?;
-        let result = unsafe {
-            (instance.fp().enumerate_bound_sources_for_action)(
-                session_handle,
-                enumerate_info,
-                source_capacity_input,
-                source_count_output,
-                sources,
-            )
-        }
-        .into_result();
-
-        result
-    })
-}
-
 extern "system" fn get_current_interaction_profile(
     session_handle: sys::Session,
     top_level_user_path: sys::Path,
@@ -635,21 +633,6 @@ extern "system" fn get_action_state_boolean(
         let result = unsafe {
             (instance.fp().get_action_state_boolean)(session_handle, get_info_ptr, state)
         };
-        result.into_result()
-    })
-}
-
-extern "system" fn get_action_state_float(
-    session_handle: sys::Session,
-    get_info: *const sys::ActionStateGetInfo,
-    state: *mut sys::ActionStateFloat,
-) -> sys::Result {
-    wrap(|layer| {
-        let _span = trace_span!("get_action_state_float").entered();
-        let instance = subresource_read_instance(layer, |l| &l.sessions, session_handle)?;
-
-        let result =
-            unsafe { (instance.fp().get_action_state_float)(session_handle, get_info, state) };
         result.into_result()
     })
 }
@@ -763,3 +746,157 @@ extern "system" fn wait_frame(
         result
     })
 }
+
+macro_rules! simple_s {
+    ($id: ident ($farg: ident: $fty: ty, $($arg: ident: $ty: ty, ) *)) => {
+        extern "system" fn $id(
+            $farg: $fty,
+            $($arg: $ty, )*
+        ) -> sys::Result {
+            wrap(|layer| {
+                let _span = trace_span!(stringify!($id)).entered();
+                let instance = subresource_read_instance(layer, |l| &l.sessions, $farg)?;
+                let result = unsafe { (instance.fp().$id)($farg, $($arg,)*) }
+                .into_result();
+                result
+            })
+        }
+    };
+}
+
+macro_rules! simple_i {
+    ($id: ident ($farg: ident: $fty: ty, $($arg: ident: $ty: ty), *,)) => {
+        #[allow(dead_code)]
+        extern "system" fn $id(
+            $farg: $fty,
+            $($arg: $ty, )*
+        ) -> sys::Result {
+            wrap(|layer| {
+                let _span = trace_span!(stringify!($id)).entered();
+                let instance = read_instance(layer, $farg)?;
+                let result = unsafe { (instance.fp().$id)($farg, $($arg,)*) }
+                .into_result();
+                result
+            })
+        }
+    };
+}
+
+simple_s!(get_action_state_float(
+    session_handle: sys::Session,
+    get_info: *const sys::ActionStateGetInfo,
+    state: *mut sys::ActionStateFloat,
+));
+simple_s!(attach_session_action_sets(
+    session_handle: sys::Session,
+    attach_info: *const sys::SessionActionSetsAttachInfo,
+));
+simple_i!(result_to_string(
+    instance: sys::Instance,
+    value: sys::Result,
+    buffer: *mut c_char,
+));
+simple_i!(structure_type_to_string(
+    instance: sys::Instance,
+    value: sys::StructureType,
+    buffer: *mut c_char,
+));
+simple_i!(get_instance_properties(
+    instance: sys::Instance,
+    instance_properties: *mut sys::InstanceProperties,
+));
+simple_i!(get_system(
+    instance: sys::Instance,
+    get_info: *const sys::SystemGetInfo,
+    system_id: *mut sys::SystemId,
+));
+simple_i!(get_system_properties(
+    instance: sys::Instance,
+    system_id: sys::SystemId,
+    properties: *mut sys::SystemProperties,
+));
+simple_s!(end_session(session: sys::Session,));
+simple_s!(request_exit_session(session: sys::Session,));
+simple_s!(enumerate_reference_spaces(
+    session: sys::Session,
+    space_capacity_input: u32,
+    space_count_output: *mut u32,
+    spaces: *mut sys::ReferenceSpaceType,
+));
+simple_s!(create_reference_space(
+    session: sys::Session,
+    create_info: *const sys::ReferenceSpaceCreateInfo,
+    space: *mut sys::Space,
+));
+simple_s!(create_action_space(
+    session: sys::Session,
+    create_info: *const sys::ActionSpaceCreateInfo,
+    space: *mut sys::Space,
+));
+simple_i!(enumerate_view_configurations(
+    instance: sys::Instance,
+    system_id: sys::SystemId,
+    view_configuration_type_capacity_input: u32,
+    view_configuration_type_count_output: *mut u32,
+    view_configuration_types: *mut sys::ViewConfigurationType,
+));
+simple_i!(enumerate_environment_blend_modes(
+    instance: sys::Instance,
+    system_id: sys::SystemId,
+    view_configuration_type: sys::ViewConfigurationType,
+    environment_blend_mode_capacity_input: u32,
+    environment_blend_mode_count_output: *mut u32,
+    environment_blend_modes: *mut sys::EnvironmentBlendMode,
+));
+simple_i!(get_view_configuration_properties(
+    instance: sys::Instance,
+    system_id: sys::SystemId,
+    view_configuration_type: sys::ViewConfigurationType,
+    configuration_properties: *mut sys::ViewConfigurationProperties,
+));
+simple_i!(enumerate_view_configuration_views(
+    instance: sys::Instance,
+    system_id: sys::SystemId,
+    view_configuration_type: sys::ViewConfigurationType,
+    view_capacity_input: u32,
+    view_count_output: *mut u32,
+    views: *mut sys::ViewConfigurationView,
+));
+simple_s!(begin_frame(
+    session: sys::Session,
+    frame_begin_info: *const sys::FrameBeginInfo,
+));
+simple_s!(end_frame(
+    session: sys::Session,
+    frame_end_info: *const sys::FrameEndInfo,
+));
+simple_s!(stop_haptic_feedback(
+    session: sys::Session,
+    haptic_action_info: *const sys::HapticActionInfo,
+));
+simple_i!(path_to_string(
+    instance: sys::Instance,
+    path: sys::Path,
+    buffer_capacity_input: u32,
+    buffer_count_output: *mut u32,
+    buffer: *mut c_char,
+));
+simple_s!(get_reference_space_bounds_rect(
+    session: sys::Session,
+    reference_space_type: sys::ReferenceSpaceType,
+    bounds: *mut sys::Extent2Df,
+));
+simple_s!(get_input_source_localized_name(
+    session: sys::Session,
+    get_info: *const sys::InputSourceLocalizedNameGetInfo,
+    buffer_capacity_input: u32,
+    buffer_count_output: *mut u32,
+    buffer: *mut c_char,
+));
+simple_s!(enumerate_bound_sources_for_action(
+    session_handle: sys::Session,
+    enumerate_info: *const sys::BoundSourcesForActionEnumerateInfo,
+    source_capacity_input: u32,
+    source_count_output: *mut u32,
+    sources: *mut sys::Path,
+));
