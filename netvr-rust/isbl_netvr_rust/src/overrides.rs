@@ -47,6 +47,9 @@ impl Layer {
             .add_override(FnPtr::GetCurrentInteractionProfile(
                 get_current_interaction_profile,
             ))
+            .add_override(FnPtr::EnumerateBoundSourcesForAction(
+                enumerate_bound_sources_for_action,
+            ))
             .add_override(FnPtr::SyncActions(sync_actions))
             .add_override(FnPtr::GetActionStateBoolean(get_action_state_boolean))
             .add_override(FnPtr::GetActionStateFloat(get_action_state_float))
@@ -511,6 +514,30 @@ extern "system" fn attach_session_action_sets(
         let result =
             unsafe { (instance.fp().attach_session_action_sets)(session_handle, attach_info) };
         result.into_result()
+    })
+}
+
+extern "system" fn enumerate_bound_sources_for_action(
+    session_handle: sys::Session,
+    enumerate_info: *const sys::BoundSourcesForActionEnumerateInfo,
+    source_capacity_input: u32,
+    source_count_output: *mut u32,
+    sources: *mut sys::Path,
+) -> sys::Result {
+    wrap(|layer| {
+        let instance = subresource_read_instance(layer, |l| &l.sessions, session_handle)?;
+        let result = unsafe {
+            (instance.fp().enumerate_bound_sources_for_action)(
+                session_handle,
+                enumerate_info,
+                source_capacity_input,
+                source_count_output,
+                sources,
+            )
+        }
+        .into_result();
+
+        result
     })
 }
 

@@ -1,6 +1,5 @@
 using System.Collections.Generic;
 using UnityEngine.Scripting;
-using UnityEngine.XR.OpenXR.Input;
 using UnityEngine.InputSystem.Layouts;
 using UnityEngine.InputSystem.Controls;
 using UnityEngine.InputSystem.XR;
@@ -12,7 +11,7 @@ using System;
 using UnityEditor;
 #endif
 
-using PoseControl = UnityEngine.XR.OpenXR.Input.PoseControl;
+using PoseControl = UnityEngine.InputSystem.XR.PoseControl;
 
 namespace UnityEngine.XR.OpenXR.Features.Interactions
 {
@@ -203,7 +202,6 @@ namespace UnityEngine.XR.OpenXR.Features.Interactions
                 else if ((deviceDescriptor.characteristics & (InputDeviceCharacteristics)InputDeviceTrackerCharacteristics.TrackerKeyboard) != 0)
                     InputSystem.InputSystem.SetDeviceUsage(this, "Keyboard");
 
-                Debug.Log("Device added");
             }
         }
 
