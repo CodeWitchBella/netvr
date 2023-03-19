@@ -30,33 +30,29 @@ impl Layer {
     /// Sets up all required plumbing to be able to run the layer
     pub(self) fn new(func_in: sys::pfn::GetInstanceProcAddr, manual_unhook: bool) -> Self {
         let mut layer = unsafe { xr_layer::Layer::new(func_in) };
+        #[rustfmt::skip]
         layer
-            .add_override(FnPtr::CreateInstance(create_instance))
-            .add_override(FnPtr::PollEvent(poll_event))
-            .add_override(FnPtr::CreateActionSet(create_action_set))
+            .add_override(FnPtr::ApplyHapticFeedback(apply_haptic_feedback))
+            .add_override(FnPtr::AttachSessionActionSets(attach_session_action_sets))
+            .add_override(FnPtr::BeginSession(begin_session))
             .add_override(FnPtr::CreateAction(create_action))
-            .add_override(FnPtr::StringToPath(string_to_path))
-            .add_override(FnPtr::SuggestInteractionProfileBindings(
-                suggest_interaction_profile_bindings,
-            ))
+            .add_override(FnPtr::CreateActionSet(create_action_set))
+            .add_override(FnPtr::CreateInstance(create_instance))
             .add_override(FnPtr::CreateSession(create_session))
             .add_override(FnPtr::DestroySession(destroy_session))
-            .add_override(FnPtr::BeginSession(begin_session))
-            .add_override(FnPtr::WaitFrame(wait_frame))
-            .add_override(FnPtr::AttachSessionActionSets(attach_session_action_sets))
-            .add_override(FnPtr::GetCurrentInteractionProfile(
-                get_current_interaction_profile,
-            ))
-            .add_override(FnPtr::EnumerateBoundSourcesForAction(
-                enumerate_bound_sources_for_action,
-            ))
-            .add_override(FnPtr::SyncActions(sync_actions))
+            .add_override(FnPtr::EnumerateBoundSourcesForAction(enumerate_bound_sources_for_action))
             .add_override(FnPtr::GetActionStateBoolean(get_action_state_boolean))
             .add_override(FnPtr::GetActionStateFloat(get_action_state_float))
-            .add_override(FnPtr::GetActionStateVector2f(get_action_state_vector2f))
             .add_override(FnPtr::GetActionStatePose(get_action_state_pose))
-            .add_override(FnPtr::ApplyHapticFeedback(apply_haptic_feedback))
-            .add_override(FnPtr::LocateViews(locate_views));
+            .add_override(FnPtr::GetActionStateVector2f(get_action_state_vector2f))
+            .add_override(FnPtr::GetCurrentInteractionProfile(get_current_interaction_profile))
+            .add_override(FnPtr::LocateViews(locate_views))
+            .add_override(FnPtr::PollEvent(poll_event))
+            .add_override(FnPtr::StringToPath(string_to_path))
+            .add_override(FnPtr::SuggestInteractionProfileBindings(suggest_interaction_profile_bindings))
+            .add_override(FnPtr::SyncActions(sync_actions))
+            .add_override(FnPtr::WaitFrame(wait_frame))
+            ;
         if !manual_unhook {
             layer.add_override(FnPtr::DestroyInstance(destroy_instance));
         }
