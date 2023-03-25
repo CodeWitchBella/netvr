@@ -3,8 +3,8 @@ extern crate lazy_static;
 
 use implementation::tick;
 use overrides::with_layer;
-use std::backtrace::Backtrace;
 use std::panic;
+use std::{backtrace::Backtrace, ffi::c_void};
 use tracing::{span, Level};
 
 //use implementation::ImplementationInstance;
@@ -71,4 +71,17 @@ pub extern "C" fn netvr_tick(instance_handle: sys::Instance) {
             tick(instance)
         })
     });
+}
+
+#[no_mangle]
+pub extern "C" fn netvr_read_remote_device_data(
+    instance_handle: sys::Instance,
+    length: u32,
+    data: c_void,
+) {
+}
+
+#[no_mangle]
+pub extern "C" fn netvr_read_remote_device_count(instance_handle: sys::Instance) -> u32 {
+    0
 }
