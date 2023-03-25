@@ -60,6 +60,26 @@ MonoBehaviour:
   company: 
   priority: 0
   required: 0
+--- !u!114 &-8576595028964646041
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 02a7943769539ef4f8f29ad4f14b1f9c, type: 3}
+  m_Name: NetVRRemoteHeadsetControllerProfile Android
+  m_EditorClassIdentifier: 
+  m_enabled: 0
+  nameUi: 
+  version: 
+  featureIdInternal: 
+  openxrExtensionStrings: 
+  company: 
+  priority: 0
+  required: 0
 --- !u!114 &-8337974926340133946
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -444,6 +464,26 @@ MonoBehaviour:
   company: Isbl
   priority: 0
   required: 0
+--- !u!114 &-4036314567741787162
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c4b862ee14fb479fbfe5fffe655d3ed3, type: 3}
+  m_Name: MetaQuestTouchProControllerProfile Android
+  m_EditorClassIdentifier: 
+  m_enabled: 0
+  nameUi: 
+  version: 
+  featureIdInternal: 
+  openxrExtensionStrings: 
+  company: 
+  priority: 0
+  required: 0
 --- !u!114 &-3913617698517783533
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -546,6 +586,26 @@ MonoBehaviour:
   company: Isbl
   priority: 0
   required: 0
+--- !u!114 &-3018365188757195433
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: c4b862ee14fb479fbfe5fffe655d3ed3, type: 3}
+  m_Name: MetaQuestTouchProControllerProfile Standalone
+  m_EditorClassIdentifier: 
+  m_enabled: 0
+  nameUi: Meta Quest Touch Pro Controller Profile
+  version: 0.0.1
+  featureIdInternal: com.unity.openxr.feature.input.metaquestpro
+  openxrExtensionStrings: XR_FB_touch_controller_pro
+  company: Unity
+  priority: 0
+  required: 0
 --- !u!114 &-2824575505139558832
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -564,6 +624,26 @@ MonoBehaviour:
   featureIdInternal: cz.isbl.netvr.feature.input.headset
   openxrExtensionStrings: 
   company: Isbl
+  priority: 0
+  required: 0
+--- !u!114 &-2645778269032969327
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 3e91ee7cae11faf41a8d115249b08c4b, type: 3}
+  m_Name: HTCViveTrackerProfile Standalone
+  m_EditorClassIdentifier: 
+  m_enabled: 0
+  nameUi: HTC Vive Tracker Profile
+  version: 0.0.1
+  featureIdInternal: com.massive.openxr.feature.input.htcvivetracker
+  openxrExtensionStrings: XR_HTCX_vive_tracker_interaction
+  company: MASSIVE
   priority: 0
   required: 0
 --- !u!114 &-2416882496286316919
@@ -965,7 +1045,7 @@ MonoBehaviour:
   - {fileID: 7460526345044051366}
   - {fileID: 3447582771640548276}
   - {fileID: 6463949124547410629}
-  - {fileID: 6222056804145386260}
+  - {fileID: 0}
   - {fileID: -7179675269632839200}
   - {fileID: -3474587938445764710}
   - {fileID: -7947107964247557003}
@@ -1268,6 +1348,26 @@ MonoBehaviour:
   company: Unity
   priority: 0
   required: 0
+--- !u!114 &7817075248803477817
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 0}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 02a7943769539ef4f8f29ad4f14b1f9c, type: 3}
+  m_Name: NetVRRemoteHeadsetControllerProfile Standalone
+  m_EditorClassIdentifier: 
+  m_enabled: 0
+  nameUi: NetVR Remote Headset Controller Profile
+  version: 0.0.1
+  featureIdInternal: cz.isbl.netvr.feature.input.headset
+  openxrExtensionStrings: 
+  company: Isbl
+  priority: 0
+  required: 0
 --- !u!114 &7995812268164265387
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1344,13 +1444,15 @@ MonoBehaviour:
   - {fileID: 3740895273010186305}
   - {fileID: -1920399770845522042}
   - {fileID: -8090210824752771119}
+  - {fileID: -2645778269032969327}
   - {fileID: -4799569417950236948}
   - {fileID: -4295933516180172870}
   - {fileID: 8659670685832646134}
+  - {fileID: -3018365188757195433}
   - {fileID: 148644341140927224}
   - {fileID: 9032261568709070916}
   - {fileID: -7667623446982095282}
-  - {fileID: -2416882496286316919}
+  - {fileID: 7817075248803477817}
   - {fileID: 7461395375504407720}
   - {fileID: -5709904677538201691}
   - {fileID: 5691381814485142551}
