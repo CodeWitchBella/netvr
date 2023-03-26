@@ -24,13 +24,15 @@ namespace Isbl.NetVR
 #endif
     public class IsblXRFeature : OpenXRFeature
     {
+        public static IsblXRFeature Instance => OpenXRSettings.Instance.GetFeature<IsblXRFeature>();
+
         public const string ExtHandTracking = "XR_EXT_hand_tracking";
         /// <summary>
         /// The feature id string. This is used to give the feature a well known id for reference.
         /// </summary>
         public const string FeatureId = "cz.isbl.netvr";
 
-        ulong _xrInstance = 0;
+        internal ulong XrInstance { get; private set; }
         internal IsblRustLibrary RustLib { get; private set; }
 
 
@@ -90,7 +92,7 @@ namespace Isbl.NetVR
         protected override bool OnInstanceCreate(ulong xrInstance)
         {
             Utils.Log("OnInstanceCreate");
-            _xrInstance = xrInstance;
+            XrInstance = xrInstance;
 
             if (RustLib == null)
             {
@@ -112,7 +114,7 @@ namespace Isbl.NetVR
                 while (true)
                 {
                     Thread.Sleep(10);
-                    if (_xrInstance > 0) RustLib?.Tick(_xrInstance);
+                    if (XrInstance > 0) RustLib?.Tick(XrInstance);
                 }
             }
             catch (ThreadAbortException) { /* this is expected */ }
@@ -132,7 +134,7 @@ namespace Isbl.NetVR
             if (IsblRustLibrary.DoesUnload) RustLib.Unhook();
             RustLib?.Dispose();
             RustLib = null;
-            _xrInstance = 0;
+            XrInstance = 0;
         }
 
         protected override IntPtr HookGetInstanceProcAddr(IntPtr func)

@@ -53,6 +53,12 @@ where
     }
 }
 
+impl From<std::num::TryFromIntError> for XrWrapError {
+    fn from(error: std::num::TryFromIntError) -> Self {
+        Self::Generic(Box::new(error))
+    }
+}
+
 /// Makes sure that layer never crashes. Catches panics. Also allows for more
 /// ergonomic handle writing using ? operator.
 pub(crate) fn xr_wrap<O>(function: O) -> sys::Result

@@ -26,7 +26,7 @@ namespace Isbl.NetVR
         public delegate void Tick_Delegate(ulong xrInstance);
         public readonly Tick_Delegate Tick;
 
-        private delegate void ReadRemoteDeviceData_Delegate(ulong xrInstance, System.UInt32 length, Span<byte> data);
+        private unsafe delegate System.Int32 ReadRemoteDeviceData_Delegate(ulong xrInstance, System.UInt32 length, byte* data);
         private readonly ReadRemoteDeviceData_Delegate ReadRemoteDeviceData;
 
         private delegate System.UInt32 ReadRemoteDeviceCount_Delegate(ulong xrInstance);
@@ -47,7 +47,7 @@ namespace Isbl.NetVR
         static extern void Tick_Native(ulong xrInstance);
 
         [DllImport(LibraryName, EntryPoint = "netvr_read_remote_device_data")]
-        static extern void ReadRemoteDeviceData_Native(ulong xrInstance, System.UInt32 length, IntPtr data);
+        static unsafe extern System.Int32 ReadRemoteDeviceData_Native(ulong xrInstance, System.UInt32 length, byte* data);
 
         [DllImport(LibraryName, EntryPoint = "netvr_read_remote_device_count")]
         static extern System.UInt32 ReadRemoteDeviceCount_Native(ulong xrInstance);
@@ -83,18 +83,31 @@ namespace Isbl.NetVR
         }
 
         public struct RemoteDevice {
+            public UInt32 id;
             public Vector3 pos;
             public Quaternion quat;
         }
         public RemoteDevice[] ReadRemoteDevices(ulong xrInstance) {
             var count = ReadRemoteDeviceCount(xrInstance);
-            const int device_bytes = 4 * 7;
+            if (count < 1) return new RemoteDevice[0];
+            const int device_bytes = 4 * 8;
             var bytes = new byte[count * device_bytes];
-            ReadRemoteDeviceData(xrInstance, count, bytes);
+            MemoryStream stream = new(bytes);
+            BinaryReader reader = new(stream);
+            Int32 code;
+            unsafe {
+                fixed (byte* p = bytes)
+                {
+                    code = ReadRemoteDeviceData(xrInstance, (UInt32)bytes.Length, p);
+                }
+            }
+            if (code != 0) throw new Exception($"ReadRemoteDeviceData failed with error {code}");
             var devices = new RemoteDevice[count];
             for (var i = 0; i < count; ++i) {
-                devices[i].pos = new Vector3(bytes[device_bytes*i + 0], bytes[device_bytes*i + 4], bytes[device_bytes*i + 8]);
-                devices[i].quat = new Quaternion(bytes[device_bytes*i + 12], bytes[device_bytes*i + 16], bytes[device_bytes*i + 20], bytes[device_bytes*i + 24]);
+                devices[i].id = reader.ReadUInt32();
+                devices[i].pos = new Vector3(reader.ReadSingle(), reader.ReadSingle(), reader.ReadSingle());
+                devices[i].quat = new Quaternion(reader.ReadSingle(), reader.ReadSingle(), reader.ReadSingle(), reader.ReadSingle());
+                if(stream.Position != device_bytes*(i+1)) throw new Exception($"Incorrect Position. Expected: {device_bytes*i} got: {stream.Position}");
             }
             return devices;
         }
