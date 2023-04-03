@@ -1,8 +1,11 @@
+#![feature(array_chunks)]
+#![feature(const_option)]
 #[macro_use]
 extern crate lazy_static;
 
-use binary_layout::prelude::*;
-use implementation::tick;
+use implementation::{
+    device, read_remote_device_data, read_remote_device_data_count, tick, DEVICE_SIZE_CONST,
+};
 use overrides::with_layer;
 use std::backtrace::Backtrace;
 use std::panic;
@@ -76,48 +79,36 @@ pub extern "C" fn netvr_tick(instance_handle: sys::Instance) {
     });
 }
 
-define_layout!(device, LittleEndian, {
-    id: u32,
-    x: f32,
-    y: f32,
-    z: f32,
-    qx: f32,
-    qy: f32,
-    qz: f32,
-    qw: f32,
-});
-
 #[no_mangle]
 pub unsafe extern "C" fn netvr_read_remote_device_data(
-    _instance_handle: sys::Instance,
+    instance_handle: sys::Instance,
     length: u32,
     data: *mut u8,
 ) -> sys::Result {
     xr_wrap::xr_wrap(|| {
-        let device_size: usize = device::SIZE.unwrap();
-        let length: usize = length.try_into()?;
-        if length % device_size != 0 {
-            LogError::str("Not divisible by per_item");
-            return sys::Result::ERROR_SIZE_INSUFFICIENT.into_result();
-        }
+        with_layer(instance_handle, |instance| {
+            let length: usize = length.try_into()?;
+            if length % DEVICE_SIZE_CONST != 0 {
+                LogError::str("Not divisible by per_item");
+                return sys::Result::ERROR_SIZE_INSUFFICIENT.into_result();
+            }
 
-        let slice = &mut *std::ptr::slice_from_raw_parts_mut(data, length);
-        for i in 0..(length / device_size) {
-            let mut view = device::View::new(&mut slice[i * device_size..device_size]);
-            view.id_mut().write(1);
-            view.x_mut().write(0.0);
-            view.y_mut().write(1.0);
-            view.z_mut().write(0.0);
-            view.qx_mut().write(0.0);
-            view.qy_mut().write(0.0);
-            view.qz_mut().write(0.0);
-            view.qw_mut().write(1.0);
-        }
-        sys::Result::SUCCESS.into_result()
+            let slice = &mut *std::ptr::slice_from_raw_parts_mut(data, length);
+            let mut devices = slice
+                .array_chunks_mut::<DEVICE_SIZE_CONST>()
+                .map(|v| device::View::new(v))
+                .collect();
+            read_remote_device_data(instance, &mut devices)
+        })
     })
 }
 
 #[no_mangle]
-pub extern "C" fn netvr_read_remote_device_count(_instance_handle: sys::Instance) -> u32 {
-    1
+pub extern "C" fn netvr_read_remote_device_count(instance_handle: sys::Instance) -> u32 {
+    xr_wrap::xr_wrap_option(|| {
+        with_layer(instance_handle, |instance| {
+            read_remote_device_data_count(instance).map(|v| -> u32 { v.try_into().unwrap() })
+        })
+    })
+    .unwrap_or(0)
 }

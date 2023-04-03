@@ -36,11 +36,19 @@ pub(crate) enum XrWrapError {
     Expected(sys::Result),
     /// Internal error in the application. Corresponds to sys::Result::ERROR_RUNTIME_FAILURE
     Generic(Box<dyn Error>),
+    /// Internal error in the application. Corresponds to sys::Result::ERROR_RUNTIME_FAILURE
+    String(String),
 }
 
 impl From<sys::Result> for XrWrapError {
     fn from(result: sys::Result) -> Self {
         Self::Expected(result)
+    }
+}
+
+impl From<String> for XrWrapError {
+    fn from(error: String) -> Self {
+        Self::String(error)
     }
 }
 
@@ -76,11 +84,44 @@ where
                     LogError::string(format!("Call failed with error: {:?}", poison));
                     sys::Result::ERROR_RUNTIME_FAILURE
                 }
+                XrWrapError::String(string) => {
+                    LogError::string(format!("Call failed with error: {:?}", string));
+                    sys::Result::ERROR_RUNTIME_FAILURE
+                }
             },
         },
         Err(panic) => {
             print_panic(panic);
             sys::Result::ERROR_RUNTIME_FAILURE
+        }
+    }
+}
+
+/// Makes sure that layer never crashes. Catches panics.
+pub(crate) fn xr_wrap_option<T, O>(function: O) -> Option<T>
+where
+    O: FnOnce() -> Result<T, XrWrapError>,
+    O: std::panic::UnwindSafe,
+{
+    let maybe_panicked = panic::catch_unwind(function);
+    match maybe_panicked {
+        Ok(result) => match result {
+            Ok(val) => Some(val),
+            Err(err) => match err {
+                XrWrapError::Expected(result) => None,
+                XrWrapError::Generic(poison) => {
+                    LogError::string(format!("Call failed with error: {:?}", poison));
+                    None
+                }
+                XrWrapError::String(string) => {
+                    LogError::string(format!("Call failed with error: {:?}", string));
+                    None
+                }
+            },
+        },
+        Err(panic) => {
+            print_panic(panic);
+            None
         }
     }
 }

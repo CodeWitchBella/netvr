@@ -109,8 +109,8 @@ namespace Isbl.NetVR
             for (var i = 0; i < count; ++i)
             {
                 devices[i].id = reader.ReadUInt32();
-                devices[i].pos = new Vector3(reader.ReadSingle(), reader.ReadSingle(), reader.ReadSingle());
-                devices[i].quat = new Quaternion(reader.ReadSingle(), reader.ReadSingle(), reader.ReadSingle(), reader.ReadSingle());
+                devices[i].pos = BinaryReaderOpenXR.ReadPos(reader);
+                devices[i].quat = BinaryReaderOpenXR.ReadRot(reader);
                 if (stream.Position != device_bytes * (i + 1)) throw new Exception($"Incorrect Position. Expected: {device_bytes * i} got: {stream.Position}");
             }
             return devices;

@@ -1,7 +1,7 @@
 use std::{
     collections::HashMap,
     fmt::Debug,
-    sync::{RwLock, RwLockReadGuard},
+    sync::{Mutex, RwLock, RwLockReadGuard},
 };
 
 use tracing::{span, Level, Span};
@@ -80,6 +80,11 @@ impl Debug for Session {
     }
 }
 
+pub(crate) struct ViewData {
+    pub pose: sys::Posef,
+    pub fov: sys::Fovf,
+}
+
 /// This struct has 1-1 correspondence with each XrInstance the application creates
 /// It is used to hold the underlying instance from runtime and extra data
 /// required by the netvr layer.
@@ -88,6 +93,7 @@ pub(crate) struct Instance {
     pub(crate) sessions: HashMap<sys::Session, Session>,
     pub(crate) isbl_head: sys::Path,
     pub(crate) isbl_remote_headset: sys::Path,
+    pub(crate) views: Mutex<Vec<ViewData>>,
     _span: Span,
 }
 
@@ -99,6 +105,7 @@ impl Instance {
             sessions: HashMap::default(),
             isbl_head: sys::Path::default(),
             isbl_remote_headset: sys::Path::default(),
+            views: Mutex::new(vec![]),
             _span: span!(Level::TRACE, "Instance"),
         }
     }

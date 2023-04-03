@@ -1,6 +1,6 @@
 use crate::{
     implementation::post_poll_event,
-    instance::{Instance, Session},
+    instance::{Instance, Session, ViewData},
     xr_wrap::{xr_wrap, RecordDebug, ResultConvertible, Trace, XrWrapError},
 };
 use std::{collections::HashMap, ffi::CStr, os::raw::c_char, sync::RwLock};
@@ -61,7 +61,6 @@ impl Layer {
             .add_override(FnPtr::GetSystem(get_system))
             .add_override(FnPtr::GetSystemProperties(get_system_properties))
             .add_override(FnPtr::GetViewConfigurationProperties(get_view_configuration_properties))
-            .add_override(FnPtr::LocateViews(locate_views))
             .add_override(FnPtr::LocateViews(locate_views))
             .add_override(FnPtr::PathToString(path_to_string))
             .add_override(FnPtr::PollEvent(poll_event))
@@ -708,14 +707,28 @@ extern "system" fn locate_views(
                 view_count_output,
                 view,
             )
-        };
-        result.into_result()
+        }
+        .into_result();
+        if result.is_ok() {
+            let mut vec = instance.views.lock().map_err(|err| err.to_string())?;
+            vec.clear();
+            let size: usize =
+                std::cmp::min(unsafe { *view_count_output }, view_capacity_input).try_into()?;
+            for i in 0..size {
+                let view = unsafe { *view.add(i) };
+                vec.push(ViewData {
+                    fov: view.fov,
+                    pose: view.pose,
+                });
+            }
+        }
+        result
     })
 }
 
-pub(crate) fn with_layer<T>(handle: sys::Instance, cb: T) -> Result<(), XrWrapError>
+pub(crate) fn with_layer<T, R>(handle: sys::Instance, cb: T) -> Result<R, XrWrapError>
 where
-    T: FnOnce(&Instance) -> Result<(), XrWrapError>,
+    T: FnOnce(&Instance) -> Result<R, XrWrapError>,
 {
     let r = LAYER.read()?;
     let layer = (*r).as_ref().ok_or(sys::Result::ERROR_RUNTIME_FAILURE)?;
