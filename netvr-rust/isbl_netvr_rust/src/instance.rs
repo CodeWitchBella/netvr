@@ -91,8 +91,6 @@ pub(crate) struct ViewData {
 pub(crate) struct Instance {
     pub(crate) instance: safe_openxr::Instance,
     pub(crate) sessions: HashMap<sys::Session, Session>,
-    pub(crate) isbl_head: sys::Path,
-    pub(crate) isbl_remote_headset: sys::Path,
     pub(crate) views: Mutex<Vec<ViewData>>,
     _span: Span,
 }
@@ -103,8 +101,6 @@ impl Instance {
         Self {
             instance,
             sessions: HashMap::default(),
-            isbl_head: sys::Path::default(),
-            isbl_remote_headset: sys::Path::default(),
             views: Mutex::new(vec![]),
             _span: span!(Level::TRACE, "Instance"),
         }

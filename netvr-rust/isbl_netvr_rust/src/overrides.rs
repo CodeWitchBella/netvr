@@ -368,15 +368,6 @@ extern "system" fn create_action(
             unsafe { XrStructChain::from_ptr(info_in) }.as_debug(&instance.instance),
         );
 
-        // TODO: check that it ONLY contains /isbl/head
-        let info = unsafe { XrStructChain::from_ptr(info_in) }.read_action_create_info()?;
-        for p in info.subaction_paths() {
-            if p == instance.isbl_head {
-                info!("saved /isbl/head");
-                return sys::Result::SUCCESS.into_result();
-            }
-        }
-
         let result = unsafe { (instance.fp().create_action)(action_set_handle, info_in, out) };
         result.into_result()
     })
@@ -394,32 +385,16 @@ extern "system" fn string_to_path(
             .to_str()
             .map_err(|_| sys::Result::ERROR_PATH_INVALID)?;
         span.record("string", format!("{:?}", str));
-        if str == "/isbl/head" || str == "/interaction_profiles/isbl/remote_headset" {
-            let mut w = LAYER.write()?;
-            let layer = (*w).as_mut().ok_or(sys::Result::ERROR_RUNTIME_FAILURE)?;
-            let instance = read_instance_mut(&mut layer.instances, instance_handle)?;
 
-            let result =
-                unsafe { (instance.fp().string_to_path)(instance_handle, path_string_raw, path) };
-            let deref = unsafe { *path };
-            span.record("path", format!("{:?}", deref));
-            if str == "/isbl/head" {
-                instance.isbl_head = deref;
-            } else {
-                instance.isbl_remote_headset = deref;
-            }
-            result.into_result()
-        } else {
-            let r = LAYER.read()?;
-            let layer = (*r).as_ref().ok_or(sys::Result::ERROR_RUNTIME_FAILURE)?;
+        let r = LAYER.read()?;
+        let layer = (*r).as_ref().ok_or(sys::Result::ERROR_RUNTIME_FAILURE)?;
 
-            let instance = read_instance(layer, instance_handle)?;
+        let instance = read_instance(layer, instance_handle)?;
 
-            let result =
-                unsafe { (instance.fp().string_to_path)(instance_handle, path_string_raw, path) };
-            span.record("path", format!("{:?}", unsafe { *path }));
-            result.into_result()
-        }
+        let result =
+            unsafe { (instance.fp().string_to_path)(instance_handle, path_string_raw, path) };
+        span.record("path", format!("{:?}", unsafe { *path }));
+        result.into_result()
     })
 }
 
@@ -438,13 +413,6 @@ extern "system" fn suggest_interaction_profile_bindings(
             "suggested_bindings",
             unsafe { XrStructChain::from_ptr(suggested_bindings) }.as_debug(&instance.instance),
         );
-
-        let sugg = unsafe { XrStructChain::from_ptr(suggested_bindings) }
-            .read_interaction_profile_suggested_binding()?;
-        if sugg.interaction_profile() == instance.isbl_remote_headset {
-            info!("saved /interaction_profiles/isbl/remote_headset");
-            return sys::Result::SUCCESS.into_result();
-        }
 
         let result = unsafe {
             (instance.fp().suggest_interaction_profile_bindings)(
@@ -574,7 +542,7 @@ extern "system" fn get_current_interaction_profile(
 
 extern "system" fn sync_actions(
     session_handle: sys::Session,
-    sync_info_in: *const sys::ActionsSyncInfo,
+    sync_info: *const sys::ActionsSyncInfo,
 ) -> sys::Result {
     wrap(|layer| {
         let span = trace_span!(
@@ -586,31 +554,10 @@ extern "system" fn sync_actions(
         let instance = subresource_read_instance(layer, |l| &l.sessions, session_handle)?;
         span.record_debug(
             "info",
-            unsafe { XrStructChain::from_ptr(sync_info_in) }.as_debug(&instance.instance),
+            unsafe { XrStructChain::from_ptr(sync_info) }.as_debug(&instance.instance),
         );
 
-        let sync_info =
-            unsafe { XrStructChain::from_ptr(sync_info_in) }.read_actions_sync_info()?;
-
-        let inner_sets: Vec<sys::ActiveActionSet> = sync_info
-            .active_action_sets()
-            .filter_map(|set| {
-                if set.subaction_path == instance.isbl_head {
-                    None
-                } else {
-                    Some(set)
-                }
-            })
-            .collect();
-
-        let inner = sys::ActionsSyncInfo {
-            ty: sys::ActionsSyncInfo::TYPE,
-            next: unsafe { std::mem::transmute(sync_info_in) },
-            count_active_action_sets: inner_sets.len() as u32,
-            active_action_sets: inner_sets.as_ptr(),
-        };
-
-        let result = unsafe { (instance.fp().sync_actions)(session_handle, &inner) };
+        let result = unsafe { (instance.fp().sync_actions)(session_handle, sync_info) };
         span.record_debug("result", result.into_result());
         result.into_result()
     })
