@@ -82,12 +82,14 @@ namespace Isbl.NetVR
             _l.Dispose();
         }
 
-        public struct RemoteDevice {
+        public struct RemoteDevice
+        {
             public UInt32 id;
             public Vector3 pos;
             public Quaternion quat;
         }
-        public RemoteDevice[] ReadRemoteDevices(ulong xrInstance) {
+        public RemoteDevice[] ReadRemoteDevices(ulong xrInstance)
+        {
             var count = ReadRemoteDeviceCount(xrInstance);
             if (count < 1) return new RemoteDevice[0];
             const int device_bytes = 4 * 8;
@@ -95,7 +97,8 @@ namespace Isbl.NetVR
             MemoryStream stream = new(bytes);
             BinaryReader reader = new(stream);
             Int32 code;
-            unsafe {
+            unsafe
+            {
                 fixed (byte* p = bytes)
                 {
                     code = ReadRemoteDeviceData(xrInstance, (UInt32)bytes.Length, p);
@@ -103,11 +106,12 @@ namespace Isbl.NetVR
             }
             if (code != 0) throw new Exception($"ReadRemoteDeviceData failed with error {code}");
             var devices = new RemoteDevice[count];
-            for (var i = 0; i < count; ++i) {
+            for (var i = 0; i < count; ++i)
+            {
                 devices[i].id = reader.ReadUInt32();
                 devices[i].pos = new Vector3(reader.ReadSingle(), reader.ReadSingle(), reader.ReadSingle());
                 devices[i].quat = new Quaternion(reader.ReadSingle(), reader.ReadSingle(), reader.ReadSingle(), reader.ReadSingle());
-                if(stream.Position != device_bytes*(i+1)) throw new Exception($"Incorrect Position. Expected: {device_bytes*i} got: {stream.Position}");
+                if (stream.Position != device_bytes * (i + 1)) throw new Exception($"Incorrect Position. Expected: {device_bytes * i} got: {stream.Position}");
             }
             return devices;
         }

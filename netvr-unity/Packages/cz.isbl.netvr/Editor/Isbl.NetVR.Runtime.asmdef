@@ -1,13 +1,14 @@
 {
-    "name": "Isbl.NetVR",
-    "rootNamespace": "Isbl.NetVR",
+    "name": "Isbl.NetVR.Editor",
+    "rootNamespace": "Isbl.NetVR.Editor",
     "references": [
-        "Unity.XR.OpenXR",
-        "Unity.InputSystem"
+        "Isbl.NetVR"
     ],
-    "includePlatforms": [],
+    "includePlatforms": [
+        "Editor"
+    ],
     "excludePlatforms": [],
-    "allowUnsafeCode": true,
+    "allowUnsafeCode": false,
     "overrideReferences": false,
     "precompiledReferences": [],
     "autoReferenced": true,
