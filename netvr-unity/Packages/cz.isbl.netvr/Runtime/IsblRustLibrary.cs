@@ -9,7 +9,7 @@ namespace Isbl.NetVR
 
     class IsblRustLibrary : IDisposable
     {
-        const string LibraryName = "isbl_netvr_rust";
+        const string LibraryName = "netvr_plugin";
 
         private readonly IsblDynamicLibrary _l;
 
