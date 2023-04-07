@@ -23,7 +23,7 @@ namespace Bincode
 
         public override int deserialize_variant_index() => reader.ReadInt32();
 
-        public override void check_that_key_slices_are_increasing(Range key1, Range key2)
+        public override void check_that_key_slices_are_increasing(Serde.Range key1, Serde.Range key2)
         {
             // Not required by the format.
         }

@@ -39,7 +39,7 @@ namespace Bcs
 
         public override int deserialize_variant_index() => deserialize_uleb128_as_u32();
 
-        public override void check_that_key_slices_are_increasing(Range key1, Range key2)
+        public override void check_that_key_slices_are_increasing(Serde.Range key1, Serde.Range key2)
         {
             if (Verification.CompareLexicographic(input.Slice(key1), input.Slice(key2)) >= 0)
             {
