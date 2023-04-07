@@ -1,4 +1,3 @@
-use netvr_data::Device;
 use serde_reflection::{Tracer, TracerConfig};
 use std::env;
 use std::path::Path;
@@ -15,7 +14,12 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Obtain the Serde format
     let mut tracer = Tracer::new(TracerConfig::default());
-    tracer.trace_simple_type::<Device>().unwrap();
+    tracer
+        .trace_simple_type::<netvr_data::RemoteDevice>()
+        .unwrap();
+    tracer
+        .trace_simple_type::<netvr_data::RemoteDevices>()
+        .unwrap();
     let registry = tracer.registry().unwrap();
 
     // Create C# class

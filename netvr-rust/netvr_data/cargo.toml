@@ -5,8 +5,10 @@ edition = "2021"
 
 
 [dependencies]
+openxr-sys = "0.9.3"
 serde = "1.0.159"
 
 [build-dependencies]
 serde = "1.0.159"
 serde-reflection = "0.3.6"
+openxr-sys = "0.9.3"

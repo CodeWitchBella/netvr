@@ -1,3 +1,4 @@
+use std::alloc::LayoutError;
 use std::sync::{Arc, Mutex};
 use std::{error::Error, panic, sync::PoisonError};
 use tracing::span::EnteredSpan;
@@ -63,6 +64,18 @@ where
 
 impl From<std::num::TryFromIntError> for XrWrapError {
     fn from(error: std::num::TryFromIntError) -> Self {
+        Self::Generic(Box::new(error))
+    }
+}
+
+impl From<Box<bincode::ErrorKind>> for XrWrapError {
+    fn from(error: Box<bincode::ErrorKind>) -> Self {
+        Self::Generic(Box::new(error))
+    }
+}
+
+impl From<LayoutError> for XrWrapError {
+    fn from(error: LayoutError) -> Self {
         Self::Generic(Box::new(error))
     }
 }

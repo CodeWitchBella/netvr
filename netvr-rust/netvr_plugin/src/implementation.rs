@@ -1,4 +1,3 @@
-use binary_layout::prelude::*;
 use tracing::{info, instrument};
 use xr_layer::{log::LogError, EventDataBuffer, XrDebug};
 
@@ -19,48 +18,22 @@ pub(crate) fn tick(instance: &Instance) -> Result<(), XrWrapError> {
     Ok(())
 }
 
-define_layout!(device, LittleEndian, {
-    id: u32,
-    x: f32,
-    y: f32,
-    z: f32,
-    qx: f32,
-    qy: f32,
-    qz: f32,
-    qw: f32,
-});
-
-pub(crate) const DEVICE_SIZE_CONST: usize = device::SIZE.unwrap();
-
 pub(crate) fn read_remote_device_data(
     instance: &Instance,
-    devices: &mut Vec<device::View<&mut [u8; DEVICE_SIZE_CONST]>>,
-) -> Result<(), XrWrapError> {
+) -> Result<netvr_data::RemoteDevices, XrWrapError> {
+    let mut devices = netvr_data::RemoteDevices::default();
     let vec = instance.views.lock().map_err(|err| err.to_string())?;
-    for i in 0..devices.len() {
-        let device = &mut devices[i];
-        if let Some(v) = vec.get(i) {
-            device.id_mut().write((i + 1).try_into().unwrap());
-            device.x_mut().write(v.pose.position.x);
-            device.y_mut().write(v.pose.position.y);
-            device.z_mut().write(v.pose.position.z);
-            device.qx_mut().write(v.pose.orientation.x);
-            device.qy_mut().write(v.pose.orientation.y);
-            device.qz_mut().write(v.pose.orientation.z);
-            device.qw_mut().write(v.pose.orientation.w);
-        } else {
-            device.id_mut().write(0);
-            device.x_mut().write(0.0);
-            device.y_mut().write(1.0);
-            device.z_mut().write(0.0);
-            device.qx_mut().write(0.0);
-            device.qy_mut().write(0.0);
-            device.qz_mut().write(0.0);
-            device.qw_mut().write(1.0);
-        }
+    let mut i = 0;
+    for v in vec.iter() {
+        i += 1;
+        let mut device = netvr_data::RemoteDevice {
+            id: i.try_into().unwrap(),
+            pos: v.pose.position.into(),
+            rot: v.pose.orientation.into(),
+        };
+        devices.devices.push(device);
     }
-    for device in devices {}
-    Ok(())
+    Ok(devices)
 }
 
 pub(crate) fn read_remote_device_data_count(instance: &Instance) -> Result<usize, XrWrapError> {

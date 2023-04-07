@@ -26,11 +26,11 @@ namespace Isbl.NetVR
         public delegate void Tick_Delegate(ulong xrInstance);
         public readonly Tick_Delegate Tick;
 
-        private unsafe delegate System.Int32 ReadRemoteDeviceData_Delegate(ulong xrInstance, System.UInt32 length, byte* data);
+        private delegate System.Int32 ReadRemoteDeviceData_Delegate(ulong xrInstance, out System.UInt32 length, out IntPtr data);
         private readonly ReadRemoteDeviceData_Delegate ReadRemoteDeviceData;
 
-        private delegate System.UInt32 ReadRemoteDeviceCount_Delegate(ulong xrInstance);
-        private readonly ReadRemoteDeviceCount_Delegate ReadRemoteDeviceCount;
+        private delegate void Cleanup_Delegate(System.UInt32 length, IntPtr data);
+        private readonly Cleanup_Delegate Cleanup;
         // ADD_FUNC: add delegate and public field above this line
 
 #if !UNITY_EDITOR_WIN
@@ -47,10 +47,10 @@ namespace Isbl.NetVR
         static extern void Tick_Native(ulong xrInstance);
 
         [DllImport(LibraryName, EntryPoint = "netvr_read_remote_device_data")]
-        static unsafe extern System.Int32 ReadRemoteDeviceData_Native(ulong xrInstance, System.UInt32 length, byte* data);
+        static extern System.Int32 ReadRemoteDeviceData_Native(ulong xrInstance, out System.UInt32 length, out IntPtr data);
 
-        [DllImport(LibraryName, EntryPoint = "netvr_read_remote_device_count")]
-        static extern System.UInt32 ReadRemoteDeviceCount_Native(ulong xrInstance);
+        [DllImport(LibraryName, EntryPoint = "netvr_cleanup")]
+        static extern System.UInt32 Cleanup_Native(System.UInt32 length, IntPtr data);
         // ADD_FUNC: add static extern above this line
 #endif // !UNITY_EDITOR_WIN
 
@@ -64,7 +64,7 @@ namespace Isbl.NetVR
             _l.GetDelegate("netvr_unhook", out Unhook);
             _l.GetDelegate("netvr_tick", out Tick);
             _l.GetDelegate("netvr_read_remote_device_data", out ReadRemoteDeviceData);
-            _l.GetDelegate("netvr_read_remote_device_count", out ReadRemoteDeviceCount);
+            _l.GetDelegate("netvr_cleanup", out  Cleanup);
             // ADD_FUNC: add GetDelegate call above this line
 #else
             SetLogger = SetLogger_Native;
@@ -72,7 +72,7 @@ namespace Isbl.NetVR
             Unhook = Unhook_Native;
             Tick = Tick_Native;
             ReadRemoteDeviceData = ReadRemoteDeviceData_Native;
-            ReadRemoteDeviceCount = ReadRemoteDeviceCount_Native;
+            Cleanup = Cleanup_Native;
             // ADD_FUNC: add a statement above this line
 #endif
         }
@@ -88,32 +88,19 @@ namespace Isbl.NetVR
             public Vector3 pos;
             public Quaternion quat;
         }
-        public RemoteDevice[] ReadRemoteDevices(ulong xrInstance)
+        public Isbl.NetVR.Binary.RemoteDevices ReadRemoteDevices(ulong xrInstance)
         {
-            var count = ReadRemoteDeviceCount(xrInstance);
-            if (count < 1) return new RemoteDevice[0];
-            const int device_bytes = 4 * 8;
-            var bytes = new byte[count * device_bytes];
-            MemoryStream stream = new(bytes);
-            BinaryReader reader = new(stream);
-            Int32 code;
+            byte[] bytes = null;
             unsafe
             {
-                fixed (byte* p = bytes)
-                {
-                    code = ReadRemoteDeviceData(xrInstance, (UInt32)bytes.Length, p);
-                }
+                var code = ReadRemoteDeviceData(xrInstance, out var byte_count, out var data);
+                if (code != 0) throw new Exception($"ReadRemoteDeviceData failed with error {code}");
+                bytes = new byte[byte_count];
+                Marshal.Copy(data, bytes, 0, (Int32)byte_count);
+                //ReadRemoteDeviceCleanup(byte_count, data);
             }
-            if (code != 0) throw new Exception($"ReadRemoteDeviceData failed with error {code}");
-            var devices = new RemoteDevice[count];
-            for (var i = 0; i < count; ++i)
-            {
-                devices[i].id = reader.ReadUInt32();
-                devices[i].pos = BinaryReaderOpenXR.ReadPos(reader);
-                devices[i].quat = BinaryReaderOpenXR.ReadRot(reader);
-                if (stream.Position != device_bytes * (i + 1)) throw new Exception($"Incorrect Position. Expected: {device_bytes * i} got: {stream.Position}");
-            }
-            return devices;
+
+            return Isbl.NetVR.Binary.RemoteDevices.BincodeDeserialize(bytes);
         }
 
         public const bool DoesUnload = IsblDynamicLibrary.DoesUnload;

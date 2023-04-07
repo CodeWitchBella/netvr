@@ -3,12 +3,10 @@
 #[macro_use]
 extern crate lazy_static;
 
-use implementation::{
-    device, read_remote_device_data, read_remote_device_data_count, tick, DEVICE_SIZE_CONST,
-};
+use implementation::{read_remote_device_data, read_remote_device_data_count, tick};
 use overrides::with_layer;
-use std::backtrace::Backtrace;
 use std::panic;
+use std::{alloc, backtrace::Backtrace};
 use tracing::{span, Level};
 use xr_layer::log::LogError;
 use xr_wrap::ResultConvertible;
@@ -82,33 +80,32 @@ pub extern "C" fn netvr_tick(instance_handle: sys::Instance) {
 #[no_mangle]
 pub unsafe extern "C" fn netvr_read_remote_device_data(
     instance_handle: sys::Instance,
-    length: u32,
-    data: *mut u8,
+    length: *mut u32,
+    data: *mut *mut u8,
 ) -> sys::Result {
     xr_wrap::xr_wrap(|| {
         with_layer(instance_handle, |instance| {
-            let length: usize = length.try_into()?;
-            if length % DEVICE_SIZE_CONST != 0 {
-                LogError::str("Not divisible by per_item");
-                return sys::Result::ERROR_SIZE_INSUFFICIENT.into_result();
-            }
+            let devices = read_remote_device_data(instance)?;
+            let encoded: Vec<u8> = bincode::serialize(&devices)?;
+            let u32len: u32 = encoded.len().try_into()?;
 
-            let slice = &mut *std::ptr::slice_from_raw_parts_mut(data, length);
-            let mut devices = slice
-                .array_chunks_mut::<DEVICE_SIZE_CONST>()
-                .map(|v| device::View::new(v))
-                .collect();
-            read_remote_device_data(instance, &mut devices)
+            let layout = alloc::Layout::from_size_align(encoded.len(), 1)?;
+            let ptr = alloc::alloc(layout);
+            if ptr.is_null() {
+                return sys::Result::ERROR_OUT_OF_MEMORY.into_result();
+            }
+            unsafe { std::ptr::copy(encoded.as_ptr(), ptr, encoded.len()) };
+            length.write(u32len);
+            data.write(ptr);
+            Ok(())
         })
     })
 }
 
 #[no_mangle]
-pub extern "C" fn netvr_read_remote_device_count(instance_handle: sys::Instance) -> u32 {
-    xr_wrap::xr_wrap_option(|| {
-        with_layer(instance_handle, |instance| {
-            read_remote_device_data_count(instance).map(|v| -> u32 { v.try_into().unwrap() })
-        })
-    })
-    .unwrap_or(0)
+pub extern "C" fn netvr_cleanup(length: u32, data: *mut u8) {
+    let layout = alloc::Layout::from_size_align(length.try_into().unwrap(), 1).unwrap();
+    unsafe {
+        alloc::dealloc(data.try_into().unwrap(), layout);
+    }
 }

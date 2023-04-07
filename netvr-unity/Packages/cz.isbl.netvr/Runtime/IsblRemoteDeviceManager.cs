@@ -23,7 +23,7 @@ namespace Isbl.NetVR
                 _devices.Clear();
                 return;
             }
-            var remoteDevices = feature.RustLib.ReadRemoteDevices(instance);
+            var remoteDevices = feature.RustLib.ReadRemoteDevices(instance).devices.ToArray();
             Debug.Log($"Devices: {remoteDevices.Length}");
 
             var toRemove = _devices.Where(device =>
@@ -48,8 +48,8 @@ namespace Isbl.NetVR
                     device.Id = remoteDevice.id;
                     _devices.Add(remoteDevice.id, device);
                 }
-                device.transform.position = remoteDevice.pos;
-                device.transform.rotation = remoteDevice.quat;
+                device.transform.position = Convertor.Vector3(remoteDevice.pos);
+                device.transform.rotation = Convertor.Quaternion(remoteDevice.rot);
             }
             //foreach()
         }
