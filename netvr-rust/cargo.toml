@@ -1,7 +1,8 @@
 [workspace]
 
 members = [
+    "codegen",
+    "netvr_plugin",
+    "netvr_data",
     "xr_layer",
-    "isbl_netvr_rust"
 ]
-

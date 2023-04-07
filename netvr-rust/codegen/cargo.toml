@@ -1,0 +1,10 @@
+[package]
+name = "codegen"
+version = "0.1.0"
+edition = "2021"
+
+[build-dependencies]
+serde = "1.0.159"
+serde-reflection = "0.3.6"
+netvr_data = { path = "../netvr_data" }
+serde-generate = { version = "0.25.1", features = ["csharp"], default-features = false }

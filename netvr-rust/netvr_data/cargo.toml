@@ -1,0 +1,12 @@
+[package]
+name = "netvr_data"
+version = "0.1.0"
+edition = "2021"
+
+
+[dependencies]
+serde = "1.0.159"
+
+[build-dependencies]
+serde = "1.0.159"
+serde-reflection = "0.3.6"
