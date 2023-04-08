@@ -4,7 +4,6 @@
 extern crate lazy_static;
 
 use implementation::{read_remote_devices, tick};
-use netvr_data::ReadRemoteDevicesInput;
 use overrides::with_layer;
 use std::panic;
 use std::{alloc, backtrace::Backtrace};
@@ -119,29 +118,40 @@ pub extern "C" fn netvr_cleanup(length: u32, data: *mut u8) {
     }
 }
 
-unsafe extern "C" fn netvr_read_remote_devices(
-    length: *mut u32,
-    data: *mut *mut u8,
-) -> sys::Result {
-    bincode_abi(length, data, |input: ReadRemoteDevicesInput| {
-        with_layer(input.instance, read_remote_devices)
-    })
+macro_rules! bincode_expose {
+    ($($id: ident), *,) => {
+        mod abi {
+            use super::*;
+            $(
+                pub(super) unsafe extern "C" fn $id(
+                    length: *mut u32,
+                    data: *mut *mut u8,
+                ) -> sys::Result {
+                    bincode_abi(length, data, super::$id)
+                }
+            )*
+        }
+
+        #[no_mangle]
+        pub unsafe extern "C" fn netvr_get_fn(
+            name_cstr: *const std::ffi::c_char,
+            function: *mut Option<unsafe extern "C" fn(*mut u32, *mut *mut u8) -> sys::Result>,
+        ) {
+            LogInfo::cstr(name_cstr);
+            function.write(None);
+            if let Ok(name) = unsafe { std::ffi::CStr::from_ptr(name_cstr) }.to_str() {
+                LogInfo::string(format!("Getting {name:?}"));
+                match name {
+                    $(
+                        stringify!($id) => {
+                            function.write(Some(abi::$id));
+                        }
+                    )*
+                    default => {}
+                };
+            }
+        }
+    };
 }
 
-#[no_mangle]
-pub unsafe extern "C" fn netvr_get_fn(
-    name_cstr: *const std::ffi::c_char,
-    function: *mut Option<unsafe extern "C" fn(*mut u32, *mut *mut u8) -> sys::Result>,
-) {
-    LogInfo::cstr(name_cstr);
-    function.write(None);
-    if let Ok(name) = unsafe { std::ffi::CStr::from_ptr(name_cstr) }.to_str() {
-        LogInfo::string(format!("Getting {name:?}"));
-        match name {
-            "read_remote_devices" => {
-                function.write(Some(netvr_read_remote_devices));
-            }
-            default => {}
-        };
-    }
-}
+bincode_expose!(read_remote_devices,);

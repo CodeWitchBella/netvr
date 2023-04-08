@@ -1,8 +1,10 @@
+use netvr_data::ReadRemoteDevicesInput;
 use tracing::{info, instrument};
 use xr_layer::{log::LogError, EventDataBuffer, XrDebug};
 
 use crate::{
     instance::{Instance, Session},
+    overrides::with_layer,
     xr_wrap::XrWrapError,
 };
 
@@ -19,21 +21,23 @@ pub(crate) fn tick(instance: &Instance) -> Result<(), XrWrapError> {
 }
 
 pub(crate) fn read_remote_devices(
-    instance: &Instance,
+    input: ReadRemoteDevicesInput,
 ) -> Result<netvr_data::ReadRemoteDevicesOutput, XrWrapError> {
-    let mut devices = netvr_data::ReadRemoteDevicesOutput::default();
-    let vec = instance.views.lock().map_err(|err| err.to_string())?;
-    let mut i = 0;
-    for v in vec.iter() {
-        i += 1;
-        let device = netvr_data::RemoteDevice {
-            id: i.try_into().unwrap(),
-            pos: v.pose.position.into(),
-            rot: v.pose.orientation.into(),
-        };
-        devices.devices.push(device);
-    }
-    Ok(devices)
+    with_layer(input.instance, |instance| {
+        let mut devices = netvr_data::ReadRemoteDevicesOutput::default();
+        let vec = instance.views.lock().map_err(|err| err.to_string())?;
+        let mut i = 0;
+        for v in vec.iter() {
+            i += 1;
+            let device = netvr_data::RemoteDevice {
+                id: i.try_into().unwrap(),
+                pos: v.pose.position.into(),
+                rot: v.pose.orientation.into(),
+            };
+            devices.devices.push(device);
+        }
+        Ok(devices)
+    })
 }
 
 /// Called for each session once per tick.
