@@ -23,7 +23,7 @@ namespace Isbl.NetVR
                 _devices.Clear();
                 return;
             }
-            var remoteDevices = feature.RustLib.ReadRemoteDevices(instance).devices.ToArray();
+            var remoteDevices = feature.RustLib.ReadRemoteDevices(new Binary.JustInstance(instance)).devices.ToArray();
             Debug.Log($"Devices: {remoteDevices.Length}");
 
             var toRemove = _devices.Where(device =>

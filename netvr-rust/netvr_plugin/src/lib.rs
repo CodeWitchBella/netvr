@@ -3,13 +3,13 @@
 #[macro_use]
 extern crate lazy_static;
 
-use implementation::{read_remote_device_data, read_remote_device_data_count, tick};
+use implementation::{read_remote_devices, tick};
+use netvr_data::ReadRemoteDevicesInput;
 use overrides::with_layer;
 use std::panic;
 use std::{alloc, backtrace::Backtrace};
 use tracing::{span, Level};
-use xr_layer::log::LogError;
-use xr_wrap::ResultConvertible;
+use xr_wrap::{ResultConvertible, XrWrapError};
 
 //use implementation::ImplementationInstance;
 use xr_layer::{
@@ -77,28 +77,46 @@ pub extern "C" fn netvr_tick(instance_handle: sys::Instance) {
     });
 }
 
-#[no_mangle]
-pub unsafe extern "C" fn netvr_read_remote_device_data(
-    instance_handle: sys::Instance,
+fn bincode_abi<'de, O, Input, Output>(
     length: *mut u32,
     data: *mut *mut u8,
-) -> sys::Result {
+    function: O,
+) -> sys::Result
+where
+    O: FnOnce(Input) -> Result<Output, XrWrapError>,
+    O: std::panic::UnwindSafe,
+    Input: serde::Deserialize<'de>,
+    Output: serde::Serialize,
+{
     xr_wrap::xr_wrap(|| {
-        with_layer(instance_handle, |instance| {
-            let devices = read_remote_device_data(instance)?;
-            let encoded: Vec<u8> = bincode::serialize(&devices)?;
-            let u32len: u32 = encoded.len().try_into()?;
+        let slice = unsafe { std::slice::from_raw_parts(*data, { *length }.try_into()?) };
+        let input: Input = bincode::deserialize(slice)?;
 
-            let layout = alloc::Layout::from_size_align(encoded.len(), 1)?;
+        let output = function(input)?;
+        let encoded: Vec<u8> = bincode::serialize(&output)?;
+        let u32len: u32 = encoded.len().try_into()?;
+
+        let layout = alloc::Layout::from_size_align(encoded.len(), 1)?;
+        unsafe {
             let ptr = alloc::alloc(layout);
             if ptr.is_null() {
                 return sys::Result::ERROR_OUT_OF_MEMORY.into_result();
             }
-            unsafe { std::ptr::copy(encoded.as_ptr(), ptr, encoded.len()) };
+            std::ptr::copy(encoded.as_ptr(), ptr, encoded.len());
             length.write(u32len);
             data.write(ptr);
-            Ok(())
-        })
+        };
+        Ok(())
+    })
+}
+
+#[no_mangle]
+pub unsafe extern "C" fn netvr_read_remote_devices(
+    length: *mut u32,
+    data: *mut *mut u8,
+) -> sys::Result {
+    bincode_abi(length, data, |input: ReadRemoteDevicesInput| {
+        with_layer(input.instance, read_remote_devices)
     })
 }
 

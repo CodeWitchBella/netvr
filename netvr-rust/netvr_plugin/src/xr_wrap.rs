@@ -110,35 +110,6 @@ where
     }
 }
 
-/// Makes sure that layer never crashes. Catches panics.
-pub(crate) fn xr_wrap_option<T, O>(function: O) -> Option<T>
-where
-    O: FnOnce() -> Result<T, XrWrapError>,
-    O: std::panic::UnwindSafe,
-{
-    let maybe_panicked = panic::catch_unwind(function);
-    match maybe_panicked {
-        Ok(result) => match result {
-            Ok(val) => Some(val),
-            Err(err) => match err {
-                XrWrapError::Expected(result) => None,
-                XrWrapError::Generic(poison) => {
-                    LogError::string(format!("Call failed with error: {:?}", poison));
-                    None
-                }
-                XrWrapError::String(string) => {
-                    LogError::string(format!("Call failed with error: {:?}", string));
-                    None
-                }
-            },
-        },
-        Err(panic) => {
-            print_panic(panic);
-            None
-        }
-    }
-}
-
 #[derive(Clone)]
 pub(crate) struct Trace {
     pub(self) dispatch: tracing::Dispatch,

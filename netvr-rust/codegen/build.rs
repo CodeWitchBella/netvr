@@ -15,10 +15,7 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Obtain the Serde format
     let mut tracer = Tracer::new(TracerConfig::default());
     tracer
-        .trace_simple_type::<netvr_data::RemoteDevice>()
-        .unwrap();
-    tracer
-        .trace_simple_type::<netvr_data::RemoteDevices>()
+        .trace_simple_type::<netvr_data::CodegenRoot>()
         .unwrap();
     let registry = tracer.registry().unwrap();
 

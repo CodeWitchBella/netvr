@@ -25,14 +25,14 @@ namespace Isbl.NetVR
 
         public delegate void Tick_Delegate(ulong xrInstance);
         public readonly Tick_Delegate Tick;
-
-        private delegate System.Int32 ReadRemoteDeviceData_Delegate(ulong xrInstance, out System.UInt32 length, out IntPtr data);
-        private readonly ReadRemoteDeviceData_Delegate ReadRemoteDeviceData;
-
-        private delegate void Cleanup_Delegate(System.UInt32 length, IntPtr data);
-        private readonly Cleanup_Delegate Cleanup;
         // ADD_FUNC: add delegate and public field above this line
 
+        private unsafe delegate System.Int32 BincodeABI_Delegate(ref System.UInt32 length, ref byte* data);
+        private unsafe delegate void Cleanup_Delegate(System.UInt32 length, byte* data);
+        private readonly Cleanup_Delegate Cleanup;
+
+        private readonly BincodeABI_Delegate Bincode_ReadRemoteDevices;
+        // ADD_BINCODE: Add a line above this one
 #if !UNITY_EDITOR_WIN
         [DllImport(LibraryName, EntryPoint = "netvr_set_logger")]
         static extern void SetLogger_Native(Logger_Delegate logger);
@@ -46,12 +46,13 @@ namespace Isbl.NetVR
         [DllImport(LibraryName, EntryPoint = "netvr_tick")]
         static extern void Tick_Native(ulong xrInstance);
 
-        [DllImport(LibraryName, EntryPoint = "netvr_read_remote_device_data")]
-        static extern System.Int32 ReadRemoteDeviceData_Native(ulong xrInstance, out System.UInt32 length, out IntPtr data);
-
         [DllImport(LibraryName, EntryPoint = "netvr_cleanup")]
-        static extern System.UInt32 Cleanup_Native(System.UInt32 length, IntPtr data);
+        static extern System.UInt32 Cleanup_Native(System.UInt32 length, byte* data);
         // ADD_FUNC: add static extern above this line
+
+        [DllImport(LibraryName, EntryPoint = "netvr_read_remote_devices")]
+        static extern System.Int32 ReadRemoteDevices_Native(ref System.UInt32 length, ref byte* data);
+        // ADD_BINCODE: Add a line above this one
 #endif // !UNITY_EDITOR_WIN
 
         public IsblRustLibrary()
@@ -63,17 +64,21 @@ namespace Isbl.NetVR
             _l.GetDelegate("netvr_hook_get_instance_proc_addr", out HookGetInstanceProcAddr);
             _l.GetDelegate("netvr_unhook", out Unhook);
             _l.GetDelegate("netvr_tick", out Tick);
-            _l.GetDelegate("netvr_read_remote_device_data", out ReadRemoteDeviceData);
             _l.GetDelegate("netvr_cleanup", out  Cleanup);
             // ADD_FUNC: add GetDelegate call above this line
+
+            _l.GetDelegate("netvr_read_remote_devices", out Bincode_ReadRemoteDevices);
+            // ADD_BINCODE: Add a line above this one
 #else
             SetLogger = SetLogger_Native;
             HookGetInstanceProcAddr = HookGetInstanceProcAddr_Native;
             Unhook = Unhook_Native;
             Tick = Tick_Native;
-            ReadRemoteDeviceData = ReadRemoteDeviceData_Native;
             Cleanup = Cleanup_Native;
             // ADD_FUNC: add a statement above this line
+
+            Bincode_ReadRemoteDevices = ReadRemoteDevices_Native;
+            // ADD_BINCODE: Add a line above this one
 #endif
         }
 
@@ -82,26 +87,28 @@ namespace Isbl.NetVR
             _l.Dispose();
         }
 
-        public struct RemoteDevice
+        private byte[] FunctionCall(byte[] value, BincodeABI_Delegate func)
         {
-            public UInt32 id;
-            public Vector3 pos;
-            public Quaternion quat;
-        }
-        public Isbl.NetVR.Binary.RemoteDevices ReadRemoteDevices(ulong xrInstance)
-        {
-            byte[] bytes = null;
+            byte[] bytes = value == null ? null : value;
             unsafe
             {
-                var code = ReadRemoteDeviceData(xrInstance, out var byte_count, out var data);
-                if (code != 0) throw new Exception($"ReadRemoteDeviceData failed with error {code}");
-                bytes = new byte[byte_count];
-                Marshal.Copy(data, bytes, 0, (Int32)byte_count);
-                //ReadRemoteDeviceCleanup(byte_count, data);
+                fixed (byte* bytes_ptr = bytes)
+                {
+                    byte* data = bytes_ptr;
+                    var byte_count = (UInt32)bytes.Length;
+                    var code = func(ref byte_count, ref data);
+                    if (code != 0) throw new Exception($"ReadRemoteDeviceData failed with error {code}");
+                    if (data == null || data == bytes_ptr) return null;
+                    bytes = new byte[byte_count];
+                    Marshal.Copy((IntPtr)data, bytes, 0, (Int32)byte_count);
+                    Cleanup(byte_count, data);
+                };
             }
-
-            return Isbl.NetVR.Binary.RemoteDevices.BincodeDeserialize(bytes);
+            return bytes;
         }
+
+        public Isbl.NetVR.Binary.RemoteDevices ReadRemoteDevices(Isbl.NetVR.Binary.JustInstance input) => Isbl.NetVR.Binary.RemoteDevices.BincodeDeserialize(FunctionCall(input.BincodeSerialize(), Bincode_ReadRemoteDevices));
+        // ADD_BINCODE: Add a line above this one
 
         public const bool DoesUnload = IsblDynamicLibrary.DoesUnload;
     }

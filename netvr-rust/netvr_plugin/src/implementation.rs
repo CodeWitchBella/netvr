@@ -18,15 +18,15 @@ pub(crate) fn tick(instance: &Instance) -> Result<(), XrWrapError> {
     Ok(())
 }
 
-pub(crate) fn read_remote_device_data(
+pub(crate) fn read_remote_devices(
     instance: &Instance,
-) -> Result<netvr_data::RemoteDevices, XrWrapError> {
-    let mut devices = netvr_data::RemoteDevices::default();
+) -> Result<netvr_data::ReadRemoteDevicesOutput, XrWrapError> {
+    let mut devices = netvr_data::ReadRemoteDevicesOutput::default();
     let vec = instance.views.lock().map_err(|err| err.to_string())?;
     let mut i = 0;
     for v in vec.iter() {
         i += 1;
-        let mut device = netvr_data::RemoteDevice {
+        let device = netvr_data::RemoteDevice {
             id: i.try_into().unwrap(),
             pos: v.pose.position.into(),
             rot: v.pose.orientation.into(),
@@ -34,10 +34,6 @@ pub(crate) fn read_remote_device_data(
         devices.devices.push(device);
     }
     Ok(devices)
-}
-
-pub(crate) fn read_remote_device_data_count(instance: &Instance) -> Result<usize, XrWrapError> {
-    Ok(instance.views.lock().map_err(|err| err.to_string())?.len())
 }
 
 /// Called for each session once per tick.
