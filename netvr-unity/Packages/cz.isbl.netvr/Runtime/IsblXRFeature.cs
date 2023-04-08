@@ -96,8 +96,7 @@ namespace Isbl.NetVR
 
             if (RustLib == null)
             {
-                RustLib = new();
-                RustLib.SetLogger(LoggerRust);
+                RustLib = new(LoggerRust);
             }
             if (_tickThread == null)
             {
@@ -141,8 +140,7 @@ namespace Isbl.NetVR
         {
             if (RustLib == null)
             {
-                RustLib = new();
-                RustLib.SetLogger(LoggerRust);
+                RustLib = new(LoggerRust);
             }
             return RustLib.HookGetInstanceProcAddr(func, manualUnhook: IsblRustLibrary.DoesUnload);
         }

@@ -9,6 +9,7 @@ use overrides::with_layer;
 use std::panic;
 use std::{alloc, backtrace::Backtrace};
 use tracing::{span, Level};
+use xr_layer::log::LogInfo;
 use xr_wrap::{ResultConvertible, XrWrapError};
 
 //use implementation::ImplementationInstance;
@@ -111,7 +112,14 @@ where
 }
 
 #[no_mangle]
-pub unsafe extern "C" fn netvr_read_remote_devices(
+pub extern "C" fn netvr_cleanup(length: u32, data: *mut u8) {
+    let layout = alloc::Layout::from_size_align(length.try_into().unwrap(), 1).unwrap();
+    unsafe {
+        alloc::dealloc(data.try_into().unwrap(), layout);
+    }
+}
+
+unsafe extern "C" fn netvr_read_remote_devices(
     length: *mut u32,
     data: *mut *mut u8,
 ) -> sys::Result {
@@ -121,9 +129,19 @@ pub unsafe extern "C" fn netvr_read_remote_devices(
 }
 
 #[no_mangle]
-pub extern "C" fn netvr_cleanup(length: u32, data: *mut u8) {
-    let layout = alloc::Layout::from_size_align(length.try_into().unwrap(), 1).unwrap();
-    unsafe {
-        alloc::dealloc(data.try_into().unwrap(), layout);
+pub unsafe extern "C" fn netvr_get_fn(
+    name_cstr: *const std::ffi::c_char,
+    function: *mut Option<unsafe extern "C" fn(*mut u32, *mut *mut u8) -> sys::Result>,
+) {
+    LogInfo::cstr(name_cstr);
+    function.write(None);
+    if let Ok(name) = unsafe { std::ffi::CStr::from_ptr(name_cstr) }.to_str() {
+        LogInfo::string(format!("Getting {name:?}"));
+        match name {
+            "read_remote_devices" => {
+                function.write(Some(netvr_read_remote_devices));
+            }
+            default => {}
+        };
     }
 }

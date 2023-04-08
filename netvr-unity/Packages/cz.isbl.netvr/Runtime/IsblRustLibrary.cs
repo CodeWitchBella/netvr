@@ -15,13 +15,16 @@ namespace Isbl.NetVR
 
         public delegate void Logger_Delegate(Int32 level, [MarshalAs(UnmanagedType.LPStr)] string message, [MarshalAs(UnmanagedType.LPStr)] string stack);
         public delegate void SetLogger_Delegate(Logger_Delegate logger);
-        public readonly SetLogger_Delegate SetLogger;
+        private readonly SetLogger_Delegate SetLogger;
 
         public delegate IntPtr HookGetInstanceProcAddr_Delegate(IntPtr func, bool manualUnhook);
         public readonly HookGetInstanceProcAddr_Delegate HookGetInstanceProcAddr;
 
         public delegate void Unhook_Delegate();
         public readonly Unhook_Delegate Unhook;
+
+        private delegate void GetFn_Delegate([MarshalAs(UnmanagedType.LPStr)] string name, out BincodeABI_Delegate fn);
+        private readonly GetFn_Delegate GetFn;
 
         public delegate void Tick_Delegate(ulong xrInstance);
         public readonly Tick_Delegate Tick;
@@ -31,8 +34,7 @@ namespace Isbl.NetVR
         private unsafe delegate void Cleanup_Delegate(System.UInt32 length, byte* data);
         private readonly Cleanup_Delegate Cleanup;
 
-        private readonly BincodeABI_Delegate Bincode_ReadRemoteDevices;
-        // ADD_BINCODE: Add a line above this one
+
 #if !UNITY_EDITOR_WIN
         [DllImport(LibraryName, EntryPoint = "netvr_set_logger")]
         static extern void SetLogger_Native(Logger_Delegate logger);
@@ -48,37 +50,34 @@ namespace Isbl.NetVR
 
         [DllImport(LibraryName, EntryPoint = "netvr_cleanup")]
         static extern System.UInt32 Cleanup_Native(System.UInt32 length, byte* data);
-        // ADD_FUNC: add static extern above this line
 
-        [DllImport(LibraryName, EntryPoint = "netvr_read_remote_devices")]
-        static extern System.Int32 ReadRemoteDevices_Native(ref System.UInt32 length, ref byte* data);
-        // ADD_BINCODE: Add a line above this one
+        [DllImport(LibraryName, EntryPoint = "netvr_get_fn")]
+        static extern void GetFn_Native([MarshalAs(UnmanagedType.LPStr)] string name, IntPtr fn);
+        // ADD_FUNC: add static extern above this line
 #endif // !UNITY_EDITOR_WIN
 
-        public IsblRustLibrary()
+        public IsblRustLibrary(Logger_Delegate logger)
         {
             this._l = new IsblDynamicLibrary(LibraryName, "../netvr-rust/target/debug/");
 #if UNITY_EDITOR_WIN
             // get function pointers converted to delegates
             _l.GetDelegate("netvr_set_logger", out SetLogger);
+            SetLogger(logger);
             _l.GetDelegate("netvr_hook_get_instance_proc_addr", out HookGetInstanceProcAddr);
             _l.GetDelegate("netvr_unhook", out Unhook);
             _l.GetDelegate("netvr_tick", out Tick);
-            _l.GetDelegate("netvr_cleanup", out  Cleanup);
+            _l.GetDelegate("netvr_cleanup", out Cleanup);
+            _l.GetDelegate("netvr_get_fn", out GetFn);
             // ADD_FUNC: add GetDelegate call above this line
-
-            _l.GetDelegate("netvr_read_remote_devices", out Bincode_ReadRemoteDevices);
-            // ADD_BINCODE: Add a line above this one
 #else
             SetLogger = SetLogger_Native;
+            SetLogger(logger);
             HookGetInstanceProcAddr = HookGetInstanceProcAddr_Native;
             Unhook = Unhook_Native;
             Tick = Tick_Native;
             Cleanup = Cleanup_Native;
+            GetFn = GetFn_Native;
             // ADD_FUNC: add a statement above this line
-
-            Bincode_ReadRemoteDevices = ReadRemoteDevices_Native;
-            // ADD_BINCODE: Add a line above this one
 #endif
         }
 
@@ -87,8 +86,11 @@ namespace Isbl.NetVR
             _l.Dispose();
         }
 
-        private byte[] FunctionCall(byte[] value, BincodeABI_Delegate func)
+        private byte[] FunctionCall(byte[] value, ref BincodeABI_Delegate func, string name)
         {
+            if (func == null) GetFn(name, out func);
+            if (func == null) throw new Exception($"Function {name} not found");
+
             byte[] bytes = value == null ? null : value;
             unsafe
             {
@@ -107,8 +109,9 @@ namespace Isbl.NetVR
             return bytes;
         }
 
-        public Isbl.NetVR.Binary.RemoteDevices ReadRemoteDevices(Isbl.NetVR.Binary.JustInstance input) => Isbl.NetVR.Binary.RemoteDevices.BincodeDeserialize(FunctionCall(input.BincodeSerialize(), Bincode_ReadRemoteDevices));
-        // ADD_BINCODE: Add a line above this one
+        private BincodeABI_Delegate Cache_ReadRemoteDevices;
+        public Isbl.NetVR.Binary.RemoteDevices ReadRemoteDevices(Isbl.NetVR.Binary.JustInstance input) => Isbl.NetVR.Binary.RemoteDevices.BincodeDeserialize(FunctionCall(input.BincodeSerialize(), ref Cache_ReadRemoteDevices, "read_remote_devices"));
+        // ADD_BINCODE: Duplicate the above two lines below this line and change the relevant parameters
 
         public const bool DoesUnload = IsblDynamicLibrary.DoesUnload;
     }
