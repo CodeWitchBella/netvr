@@ -1,5 +1,7 @@
+use netvr_plugin::codegen;
 use serde_reflection::{Tracer, TracerConfig};
 use std::env;
+use std::fs;
 use std::path::Path;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
@@ -24,6 +26,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
         .with_encodings(vec![serde_generate::Encoding::Bincode]);
     let generator = serde_generate::csharp::CodeGenerator::new(&config);
 
-    generator.write_source_files(dest_path, &registry)?;
+    let pkg_path = generator.write_source_files(dest_path, &registry)?;
+
+    // write string to file
+    fs::write(pkg_path.join("RPC.cs"), codegen())?;
     Ok(())
 }

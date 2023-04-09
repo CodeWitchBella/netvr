@@ -1,4 +1,4 @@
-use netvr_data::ReadRemoteDevicesInput;
+use netvr_data::JustInstance;
 use tracing::{info, instrument};
 use xr_layer::{log::LogError, EventDataBuffer, XrDebug};
 
@@ -9,19 +9,21 @@ use crate::{
 };
 
 /// Should be periodically called from application. Sends data to network.
-pub(crate) fn tick(instance: &Instance) -> Result<(), XrWrapError> {
-    info!("tick {:?}", instance.instance.as_raw());
+pub(crate) fn tick(input: JustInstance) -> Result<(), XrWrapError> {
+    with_layer(input.instance, |instance| {
+        info!("tick {:?}", instance.instance.as_raw());
 
-    for session in instance.sessions.values() {
-        if let Err(error) = tick_session(instance, session) {
-            LogError::string(format!("session_tick failed with: {:?}", error));
+        for session in instance.sessions.values() {
+            if let Err(error) = tick_session(instance, session) {
+                LogError::string(format!("session_tick failed with: {:?}", error));
+            }
         }
-    }
-    Ok(())
+        Ok(())
+    })
 }
 
 pub(crate) fn read_remote_devices(
-    input: ReadRemoteDevicesInput,
+    input: JustInstance,
 ) -> Result<netvr_data::ReadRemoteDevicesOutput, XrWrapError> {
     with_layer(input.instance, |instance| {
         let mut devices = netvr_data::ReadRemoteDevicesOutput::default();

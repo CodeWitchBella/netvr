@@ -34,6 +34,7 @@ namespace Isbl.NetVR
 
         internal ulong XrInstance { get; private set; }
         internal IsblRustLibrary RustLib { get; private set; }
+        internal Binary.RPC RPC { get; private set; }
 
 
         static System.Timers.Timer _timer;
@@ -97,6 +98,7 @@ namespace Isbl.NetVR
             if (RustLib == null)
             {
                 RustLib = new(LoggerRust);
+                RPC = new(RustLib.GetFn, RustLib.Cleanup);
             }
             if (_tickThread == null)
             {
@@ -113,7 +115,7 @@ namespace Isbl.NetVR
                 while (true)
                 {
                     Thread.Sleep(10);
-                    if (XrInstance > 0) RustLib?.Tick(XrInstance);
+                    if (XrInstance > 0) RPC?.Tick(new(XrInstance));
                 }
             }
             catch (ThreadAbortException) { /* this is expected */ }
@@ -133,6 +135,7 @@ namespace Isbl.NetVR
             if (IsblRustLibrary.DoesUnload) RustLib.Unhook();
             RustLib?.Dispose();
             RustLib = null;
+            RPC = null;
             XrInstance = 0;
         }
 
@@ -141,6 +144,7 @@ namespace Isbl.NetVR
             if (RustLib == null)
             {
                 RustLib = new(LoggerRust);
+                RPC = new(RustLib.GetFn, RustLib.Cleanup);
             }
             return RustLib.HookGetInstanceProcAddr(func, manualUnhook: IsblRustLibrary.DoesUnload);
         }

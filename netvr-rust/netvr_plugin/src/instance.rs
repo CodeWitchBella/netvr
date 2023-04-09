@@ -82,6 +82,7 @@ impl Debug for Session {
 
 pub(crate) struct ViewData {
     pub pose: sys::Posef,
+    #[allow(dead_code)]
     pub fov: sys::Fovf,
 }
 

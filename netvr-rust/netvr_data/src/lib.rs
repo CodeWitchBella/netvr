@@ -51,14 +51,17 @@ pub struct ReadRemoteDevicesOutput {
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct ReadRemoteDevicesInput {
+pub struct JustInstance {
     #[serde(with = "handle_serializer::instance")]
     pub instance: openxr_sys::Instance,
 }
+
+#[derive(Serialize, Deserialize)]
+pub struct Nothing(u8);
 
 /// This structure is not meant to be used directly but rather as a holder for
 /// all other structures that are used for serialization. This is to make sure
 /// that required code is generated for all structures without having to update
 /// the list in build.rs.
 #[derive(Serialize, Deserialize)]
-pub struct CodegenRoot(pub ReadRemoteDevicesOutput, pub ReadRemoteDevicesInput);
+pub struct CodegenRoot(pub ReadRemoteDevicesOutput, pub JustInstance);

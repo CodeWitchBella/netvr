@@ -46,6 +46,7 @@ name = "codegen"
 version = "0.1.0"
 dependencies = [
  "netvr_data",
+ "netvr_plugin",
  "serde",
  "serde-generate",
  "serde-reflection",

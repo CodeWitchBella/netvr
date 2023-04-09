@@ -23,16 +23,11 @@ namespace Isbl.NetVR
         public delegate void Unhook_Delegate();
         public readonly Unhook_Delegate Unhook;
 
-        private delegate void GetFn_Delegate([MarshalAs(UnmanagedType.LPStr)] string name, out BincodeABI_Delegate fn);
-        private readonly GetFn_Delegate GetFn;
-
-        public delegate void Tick_Delegate(ulong xrInstance);
-        public readonly Tick_Delegate Tick;
+        internal readonly Binary.RPC.GetFn_Delegate GetFn;
         // ADD_FUNC: add delegate and public field above this line
 
-        private unsafe delegate System.Int32 BincodeABI_Delegate(ref System.UInt32 length, ref byte* data);
-        private unsafe delegate void Cleanup_Delegate(System.UInt32 length, byte* data);
-        private readonly Cleanup_Delegate Cleanup;
+
+        public readonly Binary.RPC.Cleanup_Delegate Cleanup;
 
 
 #if !UNITY_EDITOR_WIN
@@ -45,14 +40,12 @@ namespace Isbl.NetVR
         [DllImport(LibraryName, EntryPoint = "netvr_unhook")]
         static extern void Unhook_Native();
 
-        [DllImport(LibraryName, EntryPoint = "netvr_tick")]
-        static extern void Tick_Native(ulong xrInstance);
 
         [DllImport(LibraryName, EntryPoint = "netvr_cleanup")]
-        static extern System.UInt32 Cleanup_Native(System.UInt32 length, byte* data);
+        static extern unsafe void Cleanup_Native(System.UInt32 length, byte* data);
 
         [DllImport(LibraryName, EntryPoint = "netvr_get_fn")]
-        static extern void GetFn_Native([MarshalAs(UnmanagedType.LPStr)] string name, IntPtr fn);
+        static extern void GetFn_Native([MarshalAs(UnmanagedType.LPStr)] string name, out Binary.RPC.BincodeABI_Delegate fn);
         // ADD_FUNC: add static extern above this line
 #endif // !UNITY_EDITOR_WIN
 
@@ -65,7 +58,6 @@ namespace Isbl.NetVR
             SetLogger(logger);
             _l.GetDelegate("netvr_hook_get_instance_proc_addr", out HookGetInstanceProcAddr);
             _l.GetDelegate("netvr_unhook", out Unhook);
-            _l.GetDelegate("netvr_tick", out Tick);
             _l.GetDelegate("netvr_cleanup", out Cleanup);
             _l.GetDelegate("netvr_get_fn", out GetFn);
             // ADD_FUNC: add GetDelegate call above this line
@@ -74,8 +66,10 @@ namespace Isbl.NetVR
             SetLogger(logger);
             HookGetInstanceProcAddr = HookGetInstanceProcAddr_Native;
             Unhook = Unhook_Native;
-            Tick = Tick_Native;
-            Cleanup = Cleanup_Native;
+            unsafe
+            {
+                Cleanup = Cleanup_Native;
+            };
             GetFn = GetFn_Native;
             // ADD_FUNC: add a statement above this line
 #endif
@@ -86,32 +80,6 @@ namespace Isbl.NetVR
             _l.Dispose();
         }
 
-        private byte[] FunctionCall(byte[] value, ref BincodeABI_Delegate func, string name)
-        {
-            if (func == null) GetFn(name, out func);
-            if (func == null) throw new Exception($"Function {name} not found");
-
-            byte[] bytes = value == null ? null : value;
-            unsafe
-            {
-                fixed (byte* bytes_ptr = bytes)
-                {
-                    byte* data = bytes_ptr;
-                    var byte_count = (UInt32)bytes.Length;
-                    var code = func(ref byte_count, ref data);
-                    if (code != 0) throw new Exception($"ReadRemoteDeviceData failed with error {code}");
-                    if (data == null || data == bytes_ptr) return null;
-                    bytes = new byte[byte_count];
-                    Marshal.Copy((IntPtr)data, bytes, 0, (Int32)byte_count);
-                    Cleanup(byte_count, data);
-                };
-            }
-            return bytes;
-        }
-
-        private BincodeABI_Delegate Cache_ReadRemoteDevices;
-        public Isbl.NetVR.Binary.RemoteDevices ReadRemoteDevices(Isbl.NetVR.Binary.JustInstance input) => Isbl.NetVR.Binary.RemoteDevices.BincodeDeserialize(FunctionCall(input.BincodeSerialize(), ref Cache_ReadRemoteDevices, "read_remote_devices"));
-        // ADD_BINCODE: Duplicate the above two lines below this line and change the relevant parameters
 
         public const bool DoesUnload = IsblDynamicLibrary.DoesUnload;
     }
