@@ -2,7 +2,9 @@
 
 members = [
     "codegen",
-    "netvr_plugin",
     "netvr_data",
+    "netvr_discover",
+    "netvr_plugin",
+    "netvr_server",
     "xr_layer",
 ]
