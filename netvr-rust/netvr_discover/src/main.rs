@@ -1,33 +1,20 @@
-use futures_util::{pin_mut, stream::StreamExt};
-use mdns::{Error, Record, RecordKind};
-use std::{net::IpAddr, time::Duration};
+use mdns::Error;
+use simple_mdns::async_discovery::ServiceDiscovery;
+use std::{net::SocketAddr, str::FromStr};
 
-const SERVICE_NAME: &'static str = "_netvr._udp.local";
+const SERVICE_NAME: &'static str = "_spotify-connect._tcp.local";
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
-    println!("Hello there! I'm looking for NetVR devices...");
-    // Iterate through responses from each Cast device, asking for new devices every 15s
-    let stream = mdns::discover::all(SERVICE_NAME, Duration::from_secs(5))?.listen();
-    pin_mut!(stream);
-
-    while let Some(Ok(response)) = stream.next().await {
-        let addr = response.records().filter_map(self::to_ip_addr).next();
-
-        if let Some(addr) = addr {
-            println!("found cast device at {}", addr);
-        } else {
-            println!("cast device does not advertise address");
+    let mut discovery =
+        ServiceDiscovery::new("_my_inst", SERVICE_NAME, 15).expect("Invalid Service Name");
+    let _ = discovery
+        .add_service_info(SocketAddr::from_str("192.168.1.22:8090").unwrap().into())
+        .await;
+    loop {
+        let known = discovery.get_known_services().await;
+        for service in known {
+            println!("Found service: {:?}", service);
         }
-    }
-
-    Ok(())
-}
-
-fn to_ip_addr(record: &Record) -> Option<IpAddr> {
-    match record.kind {
-        RecordKind::A(addr) => Some(addr.into()),
-        RecordKind::AAAA(addr) => Some(addr.into()),
-        _ => None,
     }
 }
