@@ -1,33 +1,25 @@
-use futures_util::{pin_mut, stream::StreamExt};
-use mdns::{Error, Record, RecordKind};
-use std::{net::IpAddr, time::Duration};
+use trust_dns_resolver::{config::*, dns_sd::DnsSdHandle, Name, TokioAsyncResolver};
 
-const SERVICE_NAME: &'static str = "_netvr._udp.local";
+const SERVICE_NAME: &'static str = "_spotify-connect._tcp.local.";
 
-#[tokio::main]
-async fn main() -> Result<(), Error> {
-    println!("Hello there! I'm looking for NetVR devices...");
-    // Iterate through responses from each Cast device, asking for new devices every 15s
-    let stream = mdns::discover::all(SERVICE_NAME, Duration::from_secs(5))?.listen();
-    pin_mut!(stream);
+#[tokio::main()]
+async fn main() -> Result<(), Box<dyn std::error::Error>> {
+    println!("Hello there! I'm looking for {SERVICE_NAME}");
 
-    while let Some(Ok(response)) = stream.next().await {
-        let addr = response.records().filter_map(self::to_ip_addr).next();
+    // Construct a new Resolver with default configuration options
+    let resolver = TokioAsyncResolver::tokio(ResolverConfig::default(), ResolverOpts::default())?;
 
-        if let Some(addr) = addr {
-            println!("found cast device at {}", addr);
-        } else {
-            println!("cast device does not advertise address");
-        }
+    // Lookup the IP addresses associated with a name.
+    // This returns a future that will lookup the IP addresses, it must be run in the Core to
+    //  to get the actual result.
+    let response = resolver
+        .list_services(Name::from_utf8(SERVICE_NAME)?)
+        .await?;
+
+    // There can be many addresses associated with the name
+    for service in response.iter() {
+        println!("service: {:?}", service);
     }
 
     Ok(())
-}
-
-fn to_ip_addr(record: &Record) -> Option<IpAddr> {
-    match record.kind {
-        RecordKind::A(addr) => Some(addr.into()),
-        RecordKind::AAAA(addr) => Some(addr.into()),
-        _ => None,
-    }
 }
