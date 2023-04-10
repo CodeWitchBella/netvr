@@ -7,7 +7,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     let _svc = responder.register(
         "_netvr._udp".to_owned(),
         "NetVR Server".to_owned(),
-        80,
+        12345,
         &["path=/"],
     );
 
