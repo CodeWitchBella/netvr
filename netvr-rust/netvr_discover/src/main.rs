@@ -2,7 +2,7 @@ use mdns::Error;
 use simple_mdns::async_discovery::ServiceDiscovery;
 use std::{net::SocketAddr, str::FromStr};
 
-const SERVICE_NAME: &'static str = "_spotify-connect._tcp.local";
+const SERVICE_NAME: &'static str = "_netvr._udp.local";
 
 #[tokio::main]
 async fn main() -> Result<(), Error> {
@@ -15,6 +15,13 @@ async fn main() -> Result<(), Error> {
         let known = discovery.get_known_services().await;
         for service in known {
             println!("Found service: {:?}", service);
+            let addrs = service
+                .get_socket_addresses()
+                .map(|addr| addr.to_string())
+                .collect::<Vec<_>>()
+                .join(", ");
+            println!("    {:?}", addrs);
         }
+        tokio::time::sleep(std::time::Duration::from_secs(5)).await;
     }
 }
