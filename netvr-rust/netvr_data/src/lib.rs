@@ -65,3 +65,7 @@ pub struct Nothing(u8);
 /// the list in build.rs.
 #[derive(Serialize, Deserialize)]
 pub struct CodegenRoot(pub ReadRemoteDevicesOutput, pub JustInstance);
+
+pub mod net;
+pub use bincode;
+pub use serde;

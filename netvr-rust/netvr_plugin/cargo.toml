@@ -13,7 +13,6 @@ xr_layer = { path = "../xr_layer" }
 tracing-chrome = { git = "https://github.com/CodeWitchBella/tracing-chrome.git", rev = "6f41686f89971d331542b39d91b4755b6a2ccbc5" }
 tracing = "0.1.37"
 tracing-subscriber = "0.3.16"
-serde = "1.0.159"
 serde-reflection = "0.3.6"
 netvr_data = { path = "../netvr_data" }
-bincode = "1.3.3"
+netvr_client = { path = "../netvr_client" }

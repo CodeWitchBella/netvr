@@ -6,5 +6,6 @@ edition = "2021"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-libmdns = "0.7"
 tokio = { version = "1.27.0", features = ["full"] }
+socket2 = { version = "0.3.4", features = ["reuseport"] }
+netvr_data = { path = "../netvr_data" }

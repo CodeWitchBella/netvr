@@ -23,14 +23,14 @@ pub trait XrDebug {
     /// This is usually how you consume object which implements XrDebug trait.
     ///
     /// If conversion to string and/or printing the object is desired
-    /// ```
+    /// ```ignore
     /// format!("{:?}", object.as_debug(&self.instance))
     /// ```
     ///
     /// Or if you are implementing Debug or XrDebug (usually depending on the
     /// availability of openxr::Instance reference)
     ///
-    /// ```
+    /// ```ignore
     /// f.field("field", &self.field.as_debug(instance))
     /// ```
     fn as_debug(&self, instance: &openxr::Instance) -> XrDebugValue<Self>
