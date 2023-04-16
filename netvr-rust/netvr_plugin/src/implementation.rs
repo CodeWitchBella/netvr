@@ -1,4 +1,4 @@
-use netvr_data::JustInstance;
+use netvr_data::{JustInstance, Nothing};
 use tracing::{info, instrument};
 use xr_layer::{log::LogError, EventDataBuffer, XrDebug};
 
@@ -9,7 +9,7 @@ use crate::{
 };
 
 /// Should be periodically called from application. Sends data to network.
-pub(crate) fn tick(input: JustInstance) -> Result<(), XrWrapError> {
+pub(crate) fn tick(input: JustInstance) -> Result<Nothing, XrWrapError> {
     with_layer(input.instance, |instance| {
         info!("tick {:?}", instance.instance.as_raw());
 
@@ -18,7 +18,7 @@ pub(crate) fn tick(input: JustInstance) -> Result<(), XrWrapError> {
                 LogError::string(format!("session_tick failed with: {:?}", error));
             }
         }
-        Ok(())
+        Ok(Nothing::default())
     })
 }
 

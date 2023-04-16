@@ -56,7 +56,7 @@ pub struct JustInstance {
     pub instance: openxr_sys::Instance,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Default)]
 pub struct Nothing(u8);
 
 /// This structure is not meant to be used directly but rather as a holder for
@@ -64,7 +64,7 @@ pub struct Nothing(u8);
 /// that required code is generated for all structures without having to update
 /// the list in build.rs.
 #[derive(Serialize, Deserialize)]
-pub struct CodegenRoot(pub ReadRemoteDevicesOutput, pub JustInstance);
+pub struct CodegenRoot(pub ReadRemoteDevicesOutput, pub JustInstance, pub Nothing);
 
 pub mod net;
 pub use bincode;

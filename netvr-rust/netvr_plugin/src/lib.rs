@@ -65,5 +65,5 @@ pub use bincode_abi::netvr_cleanup;
 
 bincode_expose!(
     expose read_remote_devices as ReadRemoteDevices taking JustInstance and outputting ReadRemoteDevicesOutput,
-    expose tick as Tick taking JustInstance and outputting ReadRemoteDevicesOutput,
+    expose tick as Tick taking JustInstance and outputting Nothing,
 );

@@ -5,7 +5,7 @@ use xr_layer::sys;
 
 /// Utility function to handle the bincode ABI. Deserializes input, calls the
 /// function, serializes the output and handles errors and panics.
-pub(crate) fn bincode_abi<'de, O, Input, Output>(
+pub(crate) fn bincode_abi<'de, Input, Output, O>(
     length: *mut u32,
     data: *mut *mut u8,
     function: O,
@@ -63,7 +63,7 @@ macro_rules! bincode_expose {
                     length: *mut u32,
                     data: *mut *mut u8,
                 ) -> sys::Result {
-                    bincode_abi(length, data, super::$id)
+                    bincode_abi::<netvr_data::$input, netvr_data::$output, _>(length, data, super::$id)
                 }
             )*
         }
