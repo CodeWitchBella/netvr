@@ -20,9 +20,8 @@ impl Default for DiscoveryResponse {
 }
 
 #[derive(Serialize, Deserialize)]
-pub struct ConfigurationUp {
-    header: [u8; 5],
-    pub port: u16,
+pub enum ConfigurationUp {
+    Hello,
 }
 
 #[derive(Serialize, Deserialize)]

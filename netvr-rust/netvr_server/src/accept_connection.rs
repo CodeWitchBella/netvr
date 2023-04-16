@@ -9,7 +9,6 @@ use std::sync::Arc;
 use tokio::{
     spawn,
     sync::{broadcast, Mutex},
-    time::timeout,
 };
 use tokio_util::sync::CancellationToken;
 
@@ -22,10 +21,10 @@ pub(crate) async fn accept_connection(
     let _ = token.clone().drop_guard();
     match connecting.await {
         Ok(connection) => {
-            let _ = ws.send(DashboardMessage::ConnectionEstablished(
-                connection.remote_address(),
-                connection.stable_id(),
-            ));
+            let _ = ws.send(DashboardMessage::ConnectionEstablished {
+                addr: connection.remote_address(),
+                stable_id: connection.stable_id(),
+            });
             println!("Connection established: {:?}", connection.remote_address());
 
             // Create client struct
@@ -40,8 +39,7 @@ pub(crate) async fn accept_connection(
             ));
 
             // Start receiving configuration messages
-            let configuration_up_stream =
-                timeout(tokio::time::Duration::from_secs(5), connection.accept_uni()).await??;
+            let configuration_up_stream = connection.accept_uni().await?;
             let configuration_up_client = client.clone();
             let task_conf = spawn(run_configuration_up(
                 configuration_up_stream,
@@ -51,6 +49,9 @@ pub(crate) async fn accept_connection(
             // Start receiving datagrams
             let task_datagram = spawn(run_datagram_up(connection.clone(), client));
 
+            let _ = ws.send(DashboardMessage::FullyConnected {
+                stable_id: connection.stable_id(),
+            });
             println!("Fully connected: {:?}", connection.remote_address());
 
             // Wait for some task to finish
@@ -64,7 +65,9 @@ pub(crate) async fn accept_connection(
             token.cancel();
 
             // Report to dashboard and console
-            ws.send(DashboardMessage::ConnectionClosed)?;
+            ws.send(DashboardMessage::ConnectionClosed {
+                stable_id: connection.stable_id(),
+            })?;
             println!("Connection closed: {:?}", connection.remote_address());
         }
         Err(e) => {

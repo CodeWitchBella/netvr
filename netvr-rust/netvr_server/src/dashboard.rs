@@ -9,10 +9,22 @@ use warp::{
 };
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
+#[serde(tag = "type")]
 pub(crate) enum DashboardMessage {
     Binary(Vec<u8>),
-    ConnectionEstablished(SocketAddr, usize),
-    ConnectionClosed,
+    #[serde(rename_all = "camelCase")]
+    ConnectionEstablished {
+        addr: SocketAddr,
+        stable_id: usize,
+    },
+    #[serde(rename_all = "camelCase")]
+    FullyConnected {
+        stable_id: usize,
+    },
+    #[serde(rename_all = "camelCase")]
+    ConnectionClosed {
+        stable_id: usize,
+    },
 }
 
 async fn dashboard_connected(
