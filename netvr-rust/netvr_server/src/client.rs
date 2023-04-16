@@ -5,11 +5,16 @@ use netvr_data::{
 };
 use quinn::{Connection, SendStream};
 use std::sync::Arc;
-use tokio::sync::Mutex;
+use tokio::sync::{broadcast, Mutex};
+use tokio_util::sync::CancellationToken;
+
+use crate::dashboard::DashboardMessage;
 
 struct InnerClient {
     connection: Connection,
     configuration_down: Mutex<SendStream>,
+    ws: broadcast::Sender<DashboardMessage>,
+    token: CancellationToken,
 }
 
 #[derive(Clone)]
@@ -18,11 +23,17 @@ pub struct Client {
 }
 
 impl Client {
-    pub async fn new(connection: Connection) -> Result<Self> {
+    pub(crate) async fn new(
+        connection: Connection,
+        ws: broadcast::Sender<DashboardMessage>,
+        token: CancellationToken,
+    ) -> Result<Self> {
         Ok(Self {
             inner: Arc::new(InnerClient {
                 connection: connection.clone(),
                 configuration_down: Mutex::new(connection.open_uni().await?),
+                ws,
+                token,
             }),
         })
     }
@@ -45,5 +56,19 @@ impl Client {
     pub async fn send_datagram(&self, message: DatagramDown) -> Result<()> {
         let message = bincode::serialize(&message)?;
         Ok(self.inner.connection.send_datagram(message.into())?)
+    }
+
+    #[allow(dead_code)]
+    pub(crate) fn ws(&self) -> &broadcast::Sender<DashboardMessage> {
+        &self.inner.ws
+    }
+
+    #[allow(dead_code)]
+    pub(crate) fn cancelled(&self) -> tokio_util::sync::WaitForCancellationFuture {
+        self.inner.token.cancelled()
+    }
+    #[allow(dead_code)]
+    pub(crate) fn is_cancelled(&self) -> bool {
+        self.inner.token.is_cancelled()
     }
 }

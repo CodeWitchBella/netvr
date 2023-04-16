@@ -1,5 +1,5 @@
 use crate::{
-    client::Client,
+    accept_connection::accept_connection,
     dashboard::{serve_dashboard, DashboardMessage},
     discovery_server::{init_discovery_server, run_discovery_server},
     my_socket::MySocket,
@@ -14,6 +14,7 @@ use tokio::{
     sync::{broadcast, Mutex},
 };
 
+mod accept_connection;
 mod client;
 mod dashboard;
 mod discovery_server;
@@ -38,11 +39,18 @@ async fn main() -> Result<()> {
     let connections = spawn(async move {
         loop {
             if let Some(connecting) = endpoint.accept().await {
-                spawn(Client::accept_connection(
-                    connecting,
-                    server.clone(),
-                    tx.clone(),
-                ));
+                let tx = tx.clone();
+                let server = server.clone();
+                spawn(async move {
+                    match accept_connection(connecting, server, tx).await {
+                        Ok(_) => {
+                            println!("Connection finished ok");
+                        }
+                        Err(e) => {
+                            println!("Connection finished with error: {:?}", e);
+                        }
+                    }
+                });
             }
         }
     });

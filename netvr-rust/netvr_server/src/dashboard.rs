@@ -12,6 +12,7 @@ use warp::{
 pub(crate) enum DashboardMessage {
     Binary(Vec<u8>),
     ConnectionEstablished(SocketAddr, usize),
+    ConnectionClosed,
 }
 
 async fn dashboard_connected(
