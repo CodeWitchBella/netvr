@@ -6,3 +6,8 @@ edition = "2021"
 [dependencies] 
 tokio = { version = "1.27.0", features = ["full"] }
 netvr_data = { path = "../netvr_data" }
+quinn = { version = "0.9.3" }
+# must be the same versions as used by quinn
+quinn-udp = { version = "0.3.2" }
+quinn-proto = { version = "0.9.3" }
+rustls = { version = "0.20.8", features = ["quic", "dangerous_configuration"] }

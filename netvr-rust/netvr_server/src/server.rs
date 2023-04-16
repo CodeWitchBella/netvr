@@ -1,25 +1,91 @@
-use std::{collections::HashMap, net::SocketAddr, sync::Arc};
+use crate::client::Client;
+use anyhow::Result;
+use netvr_data::{
+    bincode,
+    net::{ConfigurationUp, DatagramUp},
+};
+use quinn::{Connecting, Connection, RecvStream};
+use std::sync::Arc;
+use tokio::{spawn, sync::Mutex};
 
-use netvr_data::net::UdpDatagramUp;
-use tokio::sync::Mutex;
-
-struct InnerClient {
-    addr: SocketAddr,
+pub struct Server {
+    clients: Vec<Client>,
 }
 
-#[derive(Clone)]
-pub struct Client {
-    inner: Arc<Mutex<InnerClient>>,
+impl Server {
+    pub fn new() -> Self {
+        Self { clients: vec![] }
+    }
 }
 
 impl Client {
-    pub fn new(addr: SocketAddr) -> Self {
-        Self {
-            inner: Arc::new(Mutex::new(InnerClient { addr })),
+    pub async fn accept_connection(
+        connecting: Connecting,
+        server: Arc<Mutex<Server>>,
+    ) -> Result<()> {
+        match connecting.await {
+            Ok(connection) => {
+                println!("Connection established: {:?}", connection);
+                let client = Client::new(connection.clone()).await?;
+                server.lock().await.clients.push(client.clone());
+
+                let configuration_up_stream = connection.accept_uni().await?;
+                let configuration_up_client = client.clone();
+                spawn(run_configuration_up(
+                    configuration_up_stream,
+                    configuration_up_client,
+                ));
+
+                run_datagram_up(connection, client).await;
+            }
+            Err(e) => {
+                println!("Connection failed: {:?}", e);
+            }
+        }
+        Ok(())
+    }
+}
+
+async fn run_configuration_up(mut configuration_up: RecvStream, client: Client) {
+    let mut buf = [0u8; 65535];
+    loop {
+        match configuration_up.read(&mut buf).await {
+            Ok(amt) => {
+                if let Some(amt) = amt {
+                    match bincode::deserialize::<ConfigurationUp>(&buf[..amt]) {
+                        Ok(message) => {
+                            client.handle_configuration_up(message).await;
+                        }
+                        Err(e) => {
+                            println!("Failed to decode configuration message: {:?}", e);
+                        }
+                    }
+                } else {
+                    println!("Connection closed");
+                    return;
+                }
+            }
+            Err(e) => {
+                println!("Error reading configuration: {:?}", e);
+            }
         }
     }
+}
 
-    pub async fn handle_udp(self, buf: UdpDatagramUp) {
-        todo!()
+async fn run_datagram_up(connection: Connection, client: Client) {
+    loop {
+        match connection.read_datagram().await {
+            Ok(bytes) => match bincode::deserialize::<DatagramUp>(&bytes) {
+                Ok(message) => {
+                    client.handle_datagram_up(message).await;
+                }
+                Err(e) => {
+                    println!("Failed to decode configuration message: {:?}", e);
+                }
+            },
+            Err(e) => {
+                println!("Error reading datagram: {:?}", e);
+            }
+        }
     }
 }

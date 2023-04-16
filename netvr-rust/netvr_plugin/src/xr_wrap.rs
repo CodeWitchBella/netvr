@@ -1,4 +1,4 @@
-use netvr_data::{bincode, serde};
+use netvr_data::bincode;
 use std::alloc::LayoutError;
 use std::sync::{Arc, Mutex};
 use std::{error::Error, panic, sync::PoisonError};
