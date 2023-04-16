@@ -6,6 +6,7 @@ netvr-unity-win
 netvr-android
 /netvr-unity/user-data
 node_modules
+.yarn
 dist
 deno-dist
 *.exe
