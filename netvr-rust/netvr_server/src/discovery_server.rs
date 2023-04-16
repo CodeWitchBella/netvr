@@ -23,7 +23,7 @@ pub(crate) async fn init_discovery_server(
 }
 
 /// Starts the discovery server and runs it forever.
-pub(crate) async fn run_discovery_server(context: &Context, data: (UdpSocket, Vec<u8>)) {
+pub(crate) async fn run_discovery_server(context: Context, data: (UdpSocket, Vec<u8>)) {
     let (discovery_socket, discovery_response) = data;
     let mut buf = [0u8; 65535];
     loop {

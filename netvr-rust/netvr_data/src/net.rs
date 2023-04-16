@@ -17,3 +17,9 @@ impl DiscoveryResponse {
         self.header == [b'n', b'e', b't', b'v', b'r']
     }
 }
+
+#[derive(Serialize, Deserialize)]
+pub struct UdpDatagramUp {
+    header: [u8; 5],
+    pub port: u16,
+}

@@ -120,5 +120,6 @@
     "netvr-cpp/Android/**": true,
     "netvr-unity/Library/**": true
   },
-  "rust-analyzer.linkedProjects": [".\\netvr-rust\\netvr_server\\Cargo.toml"]
+  "rust-analyzer.linkedProjects": [".\\netvr-rust\\netvr_server\\Cargo.toml"],
+  "rust-analyzer.showUnlinkedFileNotification": false
 }
