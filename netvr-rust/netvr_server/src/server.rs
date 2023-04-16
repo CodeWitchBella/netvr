@@ -1,4 +1,4 @@
-use crate::client::Client;
+use crate::{client::Client, dashboard::DashboardMessage};
 use anyhow::Result;
 use netvr_data::{
     bincode,
@@ -6,7 +6,10 @@ use netvr_data::{
 };
 use quinn::{Connecting, Connection, RecvStream};
 use std::sync::Arc;
-use tokio::{spawn, sync::Mutex};
+use tokio::{
+    spawn,
+    sync::{broadcast, Mutex},
+};
 
 pub struct Server {
     clients: Vec<Client>,
@@ -19,12 +22,17 @@ impl Server {
 }
 
 impl Client {
-    pub async fn accept_connection(
+    pub(crate) async fn accept_connection(
         connecting: Connecting,
         server: Arc<Mutex<Server>>,
+        ws: broadcast::Sender<DashboardMessage>,
     ) -> Result<()> {
         match connecting.await {
             Ok(connection) => {
+                let _ = ws.send(DashboardMessage::ConnectionEstablished(
+                    connection.remote_address(),
+                    connection.stable_id(),
+                ));
                 println!("Connection established: {:?}", connection);
                 let client = Client::new(connection.clone()).await?;
                 server.lock().await.clients.push(client.clone());

@@ -27,9 +27,10 @@ impl Client {
         })
     }
 
-    pub async fn handle_configuration_up(&self, message: ConfigurationUp) {}
-    pub async fn handle_datagram_up(&self, message: DatagramUp) {}
+    pub async fn handle_configuration_up(&self, _message: ConfigurationUp) {}
+    pub async fn handle_datagram_up(&self, _message: DatagramUp) {}
 
+    #[allow(dead_code)]
     pub async fn send_configuration(&self, message: ConfigurationDown) -> Result<()> {
         Ok(self
             .inner
@@ -40,6 +41,7 @@ impl Client {
             .await?)
     }
 
+    #[allow(dead_code)]
     pub async fn send_datagram(&self, message: DatagramDown) -> Result<()> {
         let message = bincode::serialize(&message)?;
         Ok(self.inner.connection.send_datagram(message.into())?)

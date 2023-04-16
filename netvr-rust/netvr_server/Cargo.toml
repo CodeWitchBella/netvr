@@ -8,6 +8,8 @@ edition = "2021"
 [dependencies]
 tokio = { version = "1.27.0", features = ["full"] }
 netvr_data = { path = "../netvr_data" }
+serde = "1.0.159" # This should be the same version as used by netvr_data
+serde_json = "1.0.96"
 rcgen = "0.10.0"
 quinn = { version = "0.9.3" }
 # must be the same versions as used by quinn
@@ -15,3 +17,5 @@ quinn-udp = { version = "0.3.2" }
 quinn-proto = { version = "0.9.3" }
 rustls = { version = "0.20.8", features = ["quic"] }
 anyhow = "1.0.70"
+warp = "0.3.4"
+futures-util = "0.3.28"

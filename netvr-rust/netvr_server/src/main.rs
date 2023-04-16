@@ -1,5 +1,6 @@
 use crate::{
     client::Client,
+    dashboard::{serve_dashboard, DashboardMessage},
     discovery_server::{init_discovery_server, run_discovery_server},
     my_socket::MySocket,
     quinn_server::make_server_endpoint,
@@ -7,9 +8,14 @@ use crate::{
 };
 use anyhow::Result;
 use std::sync::Arc;
-use tokio::{net::UdpSocket, spawn, sync::Mutex};
+use tokio::{
+    net::UdpSocket,
+    spawn,
+    sync::{broadcast, Mutex},
+};
 
 mod client;
+mod dashboard;
 mod discovery_server;
 mod my_socket;
 mod quinn_server;
@@ -20,16 +26,36 @@ async fn main() -> Result<()> {
     let server_udp = Arc::new(UdpSocket::bind("0.0.0.0:0").await?);
     let endpoint = make_server_endpoint(MySocket::new(server_udp.clone()))?;
     let server_port = endpoint.local_addr()?.port();
+    let (tx, mut rx) = broadcast::channel::<DashboardMessage>(16);
 
     println!("Server port: {:?}", server_port);
 
     let discovery_server = init_discovery_server().await?;
-    spawn(run_discovery_server(server_udp.clone(), discovery_server));
+    let discovery = spawn(run_discovery_server(server_udp.clone(), discovery_server));
+    let dashboard = spawn(serve_dashboard(tx.clone()));
 
     let server = Arc::new(Mutex::new(Server::new()));
-    loop {
-        if let Some(connecting) = endpoint.accept().await {
-            spawn(Client::accept_connection(connecting, server.clone()));
+    let connections = spawn(async move {
+        loop {
+            if let Some(connecting) = endpoint.accept().await {
+                spawn(Client::accept_connection(
+                    connecting,
+                    server.clone(),
+                    tx.clone(),
+                ));
+            }
         }
-    }
+    });
+
+    // black-hole all the messages so that channel does not get closed
+    spawn(async move {
+        loop {
+            let _ = rx.recv().await;
+        }
+    });
+
+    dashboard.await?;
+    discovery.await?;
+    connections.await?;
+    Ok(())
 }

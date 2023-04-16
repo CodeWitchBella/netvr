@@ -32,7 +32,7 @@ function getSocketUrl() {
   const socketUrl = new URL(window.location.toString())
   socketUrl.pathname = '/ws'
   socketUrl.protocol = socketUrl.protocol === 'https:' ? 'wss:' : 'ws:'
-  if (socketUrl.port === '3000') socketUrl.port = '10000'
+  if (socketUrl.port === '3000') socketUrl.port = '13161'
   return socketUrl.toString()
 }
 
