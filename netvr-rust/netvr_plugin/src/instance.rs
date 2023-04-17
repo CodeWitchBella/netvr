@@ -4,7 +4,6 @@ use std::{
     sync::{mpsc, Mutex, RwLock, RwLockReadGuard},
 };
 
-use tokio::select;
 use tokio_util::sync::CancellationToken;
 use tracing::{span, Level, Span};
 use xr_layer::{log::LogInfo, safe_openxr, sys};
@@ -117,17 +116,8 @@ impl Instance {
                 .unwrap();
 
             let _ = tx.send((rt.handle().clone(), token.clone()));
-            rt.block_on(async {
-                // run forever
-                loop {
-                    select! {
-                        _ = token.cancelled() => { break; }
-                        _ = tokio::time::sleep(std::time::Duration::from_secs(1)) => {
-                            LogInfo::str("once a second");
-                        }
-                    }
-                }
-            });
+            // Run here until cancelled.
+            rt.block_on(token.cancelled());
             rt.shutdown_background();
             let _ = finished_tx.send(());
         });

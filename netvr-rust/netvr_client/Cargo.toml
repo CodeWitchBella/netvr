@@ -11,3 +11,4 @@ quinn = { version = "0.9.3" }
 quinn-udp = { version = "0.3.2" }
 quinn-proto = { version = "0.9.3" }
 rustls = { version = "0.20.8", features = ["quic", "dangerous_configuration"] }
+thiserror = "1.0.40"

@@ -1,10 +1,12 @@
-use std::{error::Error, net::SocketAddr, sync::Arc};
+use std::{net::SocketAddr, sync::Arc};
 
 use quinn::{ClientConfig, Connection, Endpoint};
 
+use crate::error::Error;
+
 pub(crate) async fn quinn_connect(
     server_addr: SocketAddr,
-) -> Result<(Endpoint, Connection), Box<dyn Error>> {
+) -> Result<(Endpoint, Connection), Error> {
     let client_cfg = configure_client();
     let mut endpoint = Endpoint::client(SocketAddr::new(server_addr.ip(), 0))?;
     endpoint.set_default_client_config(client_cfg);

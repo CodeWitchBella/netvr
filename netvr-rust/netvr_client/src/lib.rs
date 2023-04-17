@@ -1,3 +1,4 @@
+mod error;
 mod quinn_connect;
 
 use std::{
@@ -5,6 +6,7 @@ use std::{
     time::Duration,
 };
 
+use error::Error;
 use netvr_data::{bincode, net};
 use quinn::{Connection, Endpoint, RecvStream, SendStream};
 use tokio::{net::UdpSocket, select};
@@ -20,7 +22,7 @@ pub struct NetVRConnection {
 
 /// Performs server discovery and returns a socket bound to correct address and
 /// port.
-pub async fn connect() -> Result<NetVRConnection, Box<dyn std::error::Error>> {
+pub async fn connect() -> Result<NetVRConnection, Error> {
     let socket: UdpSocket = UdpSocket::bind("0.0.0.0:0").await?;
     socket.set_broadcast(true)?;
     println!("[discovery] Broadcasting as {:?}", socket.local_addr()?);
@@ -49,7 +51,7 @@ pub async fn connect() -> Result<NetVRConnection, Box<dyn std::error::Error>> {
                         println!("[discovery] Connection established.");
                         let heartbeat = connection.accept_uni().await?;
                         let mut configuration_up = connection.open_uni().await?;
-                        configuration_up.write(&bincode::serialize(&net::ConfigurationUp::Hello)?).await ?;
+                        configuration_up.write(&bincode::serialize(&net::ConfigurationUp::Hello)?).await?;
                         println!("[discovery] Channels opened.");
 
                         return Ok(NetVRConnection {
