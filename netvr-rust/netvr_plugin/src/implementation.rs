@@ -1,6 +1,10 @@
 use netvr_data::{JustInstance, Nothing};
+use tokio::select;
 use tracing::{info, instrument};
-use xr_layer::{log::LogError, EventDataBuffer, XrDebug};
+use xr_layer::{
+    log::{LogError, LogInfo},
+    EventDataBuffer, XrDebug,
+};
 
 use crate::{
     instance::{Instance, Session},
@@ -17,10 +21,12 @@ pub(crate) fn start(input: JustInstance) -> Result<Nothing, XrWrapError> {
         let token = instance.token.clone();
         instance.tokio.spawn(async move {
             loop {
-                if token.is_cancelled() {
-                    break;
+                select! {
+                    _ = token.cancelled() => { break; }
+                    _ = run_net_client() => {
+                        LogInfo::str("net_client finished");
+                    }
                 }
-                run_net_client(token.clone()).await;
             }
         });
 
