@@ -67,6 +67,7 @@ impl Layer {
 
     /// here we can return something different to override any openxr function
     /// https://registry.khronos.org/OpenXR/specs/1.0/html/xrspec.html#function-pointers
+    #[allow(clippy::not_unsafe_ptr_arg_deref)]
     pub fn get_instance_proc_addr(
         &self,
         instance_handle: openxr_sys::Instance,

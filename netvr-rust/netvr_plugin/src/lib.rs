@@ -15,6 +15,7 @@ use xr_layer::{
 mod bincode_abi;
 mod implementation;
 mod instance;
+mod net_client;
 mod overrides;
 mod xr_wrap;
 

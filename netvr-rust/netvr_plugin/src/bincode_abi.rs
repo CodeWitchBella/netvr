@@ -42,11 +42,14 @@ where
 
 /// Part of the bincode ABI. This is called from the caller to free the memory
 /// used to pass data back to the caller.
+///
+/// # Safety
+/// Data must be pointer to a function allocated by another netvr function.
 #[no_mangle]
-pub extern "C" fn netvr_cleanup(length: u32, data: *mut u8) {
+pub unsafe extern "C" fn netvr_cleanup(length: u32, data: *mut u8) {
     let layout = alloc::Layout::from_size_align(length.try_into().unwrap(), 1).unwrap();
     unsafe {
-        alloc::dealloc(data.try_into().unwrap(), layout);
+        alloc::dealloc(data, layout);
     }
 }
 
@@ -70,12 +73,14 @@ macro_rules! bincode_expose {
             )*
         }
 
+        ///
+        /// # Safety
+        /// function must be a valid pointer to a variable containing a function pointer.
         #[no_mangle]
         pub unsafe extern "C" fn netvr_get_fn(
             name_cstr: *const std::ffi::c_char,
             function: *mut Option<unsafe extern "C" fn(*mut u32, *mut *mut u8) -> xr_layer::sys::Result>,
         ) {
-            crate::log::LogInfo::cstr(name_cstr);
             function.write(None);
             if let Ok(name) = unsafe { std::ffi::CStr::from_ptr(name_cstr) }.to_str() {
                 crate::log::LogInfo::string(format!("Getting {name:?}"));

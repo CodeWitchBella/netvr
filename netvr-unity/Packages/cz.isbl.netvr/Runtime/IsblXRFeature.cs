@@ -98,7 +98,7 @@ namespace Isbl.NetVR
             if (RustLib == null)
             {
                 RustLib = new(LoggerRust);
-                RPC = new(RustLib.GetFn, RustLib.Cleanup);
+                if (RustLib.GetFn != null) RPC = new(RustLib.GetFn, RustLib.Cleanup);
             }
             if (_tickThread == null)
             {
@@ -112,6 +112,7 @@ namespace Isbl.NetVR
         {
             try
             {
+                RPC?.Start(new(XrInstance));
                 while (true)
                 {
                     Thread.Sleep(10);
@@ -144,7 +145,7 @@ namespace Isbl.NetVR
             if (RustLib == null)
             {
                 RustLib = new(LoggerRust);
-                RPC = new(RustLib.GetFn, RustLib.Cleanup);
+                if (RustLib.GetFn != null) RPC = new(RustLib.GetFn, RustLib.Cleanup);
             }
             return RustLib.HookGetInstanceProcAddr(func, manualUnhook: IsblRustLibrary.DoesUnload);
         }

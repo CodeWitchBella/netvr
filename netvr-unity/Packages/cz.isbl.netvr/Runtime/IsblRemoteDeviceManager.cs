@@ -24,7 +24,7 @@ namespace Isbl.NetVR
                 return;
             }
             var remoteDevices = feature.RPC.ReadRemoteDevices(new(instance)).devices.ToArray();
-            Debug.Log($"Devices: {remoteDevices.Length}");
+            //Debug.Log($"Devices: {remoteDevices.Length}");
 
             var toRemove = _devices.Where(device =>
             {

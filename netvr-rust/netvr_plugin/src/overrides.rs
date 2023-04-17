@@ -2,7 +2,7 @@ use std::{collections::HashMap, ffi::CStr, os::raw::c_char, sync::RwLock};
 
 use tracing::{field, info, trace_span};
 use xr_layer::{
-    log::{LogError, LogTrace, LogWarn},
+    log::{LogError, LogInfo, LogTrace, LogWarn},
     safe_openxr::{self, InstanceExtensions},
     sys, Entry, FnPtr, UnsafeFrom, XrDebug, XrStructChain,
 };
@@ -208,6 +208,7 @@ extern "system" fn create_instance(
 ) -> sys::Result {
     wrap_mut(|layer| {
         let _span = trace_span!("create_instance").entered();
+        LogInfo::str("create_instance");
         let result = unsafe { (layer.entry.fp().create_instance)(create_info, instance_ptr) };
         if result == sys::Result::SUCCESS {
             let instance_handle = unsafe { *instance_ptr };

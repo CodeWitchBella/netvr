@@ -1,11 +1,13 @@
 use std::{
     collections::HashMap,
     fmt::Debug,
-    sync::{Mutex, RwLock, RwLockReadGuard},
+    sync::{mpsc, Mutex, RwLock, RwLockReadGuard},
 };
 
+use tokio::select;
+use tokio_util::sync::CancellationToken;
 use tracing::{span, Level, Span};
-use xr_layer::{safe_openxr, sys};
+use xr_layer::{log::LogInfo, safe_openxr, sys};
 
 use crate::xr_wrap::{Trace, XrWrapError};
 
@@ -91,7 +93,9 @@ pub(crate) struct ViewData {
 /// data required by the netvr layer.
 pub(crate) struct Instance {
     pub(crate) instance: safe_openxr::Instance,
-    pub(crate) rt: tokio::runtime::Runtime,
+    pub(crate) tokio: tokio::runtime::Handle,
+    pub(crate) token: CancellationToken,
+    pub(crate) finished_rx: Mutex<mpsc::Receiver<()>>,
     pub(crate) sessions: HashMap<sys::Session, Session>,
     pub(crate) views: Mutex<Vec<ViewData>>,
     _span: Span,
@@ -100,13 +104,41 @@ pub(crate) struct Instance {
 impl Instance {
     /// Initializes the structure.
     pub(crate) fn new(instance: safe_openxr::Instance) -> Self {
-        Self {
-            instance,
+        let (tx, rx) = mpsc::channel();
+        let (finished_tx, finished_rx) = mpsc::channel();
+        std::thread::spawn(move || {
+            let token = CancellationToken::new();
             // We want to run netvr plugin on one thread so as not to waste
             // resources available to the application.
-            rt: tokio::runtime::Builder::new_current_thread()
+            let rt = tokio::runtime::Builder::new_current_thread()
+                .enable_time()
+                .enable_io()
                 .build()
-                .unwrap(),
+                .unwrap();
+
+            let _ = tx.send((rt.handle().clone(), token.clone()));
+            rt.block_on(async {
+                // run forever
+                loop {
+                    select! {
+                        _ = token.cancelled() => { break; }
+                        _ = tokio::time::sleep(std::time::Duration::from_secs(1)) => {
+                            LogInfo::str("once a second");
+                        }
+                    }
+                }
+            });
+            rt.shutdown_background();
+            let _ = finished_tx.send(());
+        });
+        let (tokio, token) = rx.recv().unwrap();
+        LogInfo::str("you should see this message");
+        Self {
+            instance,
+
+            tokio,
+            token,
+            finished_rx: Mutex::new(finished_rx),
             sessions: HashMap::default(),
             views: Mutex::new(vec![]),
             _span: span!(Level::TRACE, "Instance"),
@@ -124,5 +156,12 @@ impl Debug for Instance {
         f.debug_struct("Instance")
             .field("instance", &self.instance.as_raw())
             .finish_non_exhaustive()
+    }
+}
+
+impl Drop for Instance {
+    fn drop(&mut self) {
+        self.token.cancel();
+        self.finished_rx.lock().unwrap().recv().unwrap();
     }
 }

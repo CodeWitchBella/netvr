@@ -1,12 +1,10 @@
 use netvr_data::{JustInstance, Nothing};
 use tracing::{info, instrument};
-use xr_layer::{
-    log::{LogError, LogInfo},
-    EventDataBuffer, XrDebug,
-};
+use xr_layer::{log::LogError, EventDataBuffer, XrDebug};
 
 use crate::{
     instance::{Instance, Session},
+    net_client::run_net_client,
     overrides::with_layer,
     xr_wrap::XrWrapError,
 };
@@ -16,16 +14,13 @@ pub(crate) fn start(input: JustInstance) -> Result<Nothing, XrWrapError> {
     with_layer(input.instance, |instance| {
         info!("start {:?}", instance.instance.as_raw());
 
-        instance.rt.spawn(async {
+        let token = instance.token.clone();
+        instance.tokio.spawn(async move {
             loop {
-                if let Ok(connection) = netvr_client::connect().await {
-                    LogInfo::string(format!(
-                        "Connected to netvr server: {:?}",
-                        connection.connection.remote_address()
-                    ));
-                } else {
-                    LogError::str("Failed to connect to netvr server");
+                if token.is_cancelled() {
+                    break;
                 }
+                run_net_client(token.clone()).await;
             }
         });
 
