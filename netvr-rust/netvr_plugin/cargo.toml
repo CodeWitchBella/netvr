@@ -16,3 +16,4 @@ tracing-subscriber = "0.3.16"
 serde-reflection = "0.3.6"
 netvr_data = { path = "../netvr_data" }
 netvr_client = { path = "../netvr_client" }
+tokio = { version = "1.27.0", features = ["rt"] }

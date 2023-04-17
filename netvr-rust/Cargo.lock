@@ -660,6 +660,7 @@ dependencies = [
  "netvr_client",
  "netvr_data",
  "serde-reflection",
+ "tokio",
  "tracing",
  "tracing-chrome",
  "tracing-subscriber",

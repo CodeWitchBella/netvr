@@ -91,6 +91,7 @@ pub(crate) struct ViewData {
 /// required by the netvr layer.
 pub(crate) struct Instance {
     pub(crate) instance: safe_openxr::Instance,
+    pub(crate) rt: tokio::runtime::Runtime,
     pub(crate) sessions: HashMap<sys::Session, Session>,
     pub(crate) views: Mutex<Vec<ViewData>>,
     _span: Span,
@@ -101,6 +102,11 @@ impl Instance {
     pub(crate) fn new(instance: safe_openxr::Instance) -> Self {
         Self {
             instance,
+            // We want to run netvr plugin on one thread so as not to waste
+            // resources available to the application.
+            rt: tokio::runtime::Builder::new_current_thread()
+                .build()
+                .unwrap(),
             sessions: HashMap::default(),
             views: Mutex::new(vec![]),
             _span: span!(Level::TRACE, "Instance"),

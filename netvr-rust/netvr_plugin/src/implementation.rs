@@ -8,6 +8,21 @@ use crate::{
     xr_wrap::XrWrapError,
 };
 
+/// Starts the netvr client. Should be called after xrCreateInstance.
+pub(crate) fn start(input: JustInstance) -> Result<Nothing, XrWrapError> {
+    with_layer(input.instance, |instance| {
+        info!("start {:?}", instance.instance.as_raw());
+
+        instance.rt.spawn(async {
+            loop {
+                let connection = netvr_client::connect().await;
+            }
+        });
+
+        Ok(Nothing::default())
+    })
+}
+
 /// Should be periodically called from application. Sends data to network.
 pub(crate) fn tick(input: JustInstance) -> Result<Nothing, XrWrapError> {
     with_layer(input.instance, |instance| {
