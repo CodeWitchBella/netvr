@@ -1,6 +1,4 @@
-use std::path::Path;
-use std::time::SystemTime;
-use std::{env, fs};
+use std::{env, fs, path::Path, time::SystemTime};
 
 fn main() {
     let build_path = Path::new(&env::var("OUT_DIR").unwrap())

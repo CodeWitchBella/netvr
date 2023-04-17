@@ -1,6 +1,7 @@
+use std::{net::Ipv4Addr, sync::Arc};
+
 use anyhow::Result;
 use netvr_data::{bincode, net};
-use std::{net::Ipv4Addr, sync::Arc};
 use tokio::net::UdpSocket;
 
 /// Initializes the discovery server and returns the data needed to run it.

@@ -1,7 +1,9 @@
-use crate::xr_wrap::{xr_wrap, ResultConvertible, XrWrapError};
-use netvr_data::{bincode, serde};
 use std::alloc;
+
+use netvr_data::{bincode, serde};
 use xr_layer::sys;
+
+use crate::xr_wrap::{xr_wrap, ResultConvertible, XrWrapError};
 
 /// Utility function to handle the bincode ABI. Deserializes input, calls the
 /// function, serializes the output and handles errors and panics.

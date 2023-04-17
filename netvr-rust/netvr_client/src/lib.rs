@@ -1,11 +1,12 @@
 mod quinn_connect;
 
-use netvr_data::{bincode, net};
-use quinn::{Connection, Endpoint, RecvStream, SendStream};
 use std::{
     net::{Ipv4Addr, SocketAddrV4},
     time::Duration,
 };
+
+use netvr_data::{bincode, net};
+use quinn::{Connection, Endpoint, RecvStream, SendStream};
 use tokio::{net::UdpSocket, select};
 
 use crate::quinn_connect::quinn_connect;
@@ -17,7 +18,8 @@ pub struct NetVRConnection {
     pub configuration_up: SendStream,
 }
 
-/// Performs server discovery and returns a socket bound to correct address and port.
+/// Performs server discovery and returns a socket bound to correct address and
+/// port.
 pub async fn connect() -> Result<NetVRConnection, Box<dyn std::error::Error>> {
     let socket: UdpSocket = UdpSocket::bind("0.0.0.0:0").await?;
     socket.set_broadcast(true)?;

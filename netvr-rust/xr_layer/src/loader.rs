@@ -1,7 +1,8 @@
-use crate::{log::LogWarn, sys, utils::ResultConvertible, xr_listings::FnPtr};
+use std::{collections::HashMap, error::Error, ffi::CStr, os::raw::c_char};
 
 use openxr_sys::pfn;
-use std::{collections::HashMap, error::Error, ffi::CStr, os::raw::c_char};
+
+use crate::{log::LogWarn, sys, utils::ResultConvertible, xr_listings::FnPtr};
 
 pub struct Layer {
     map: HashMap<&'static str, pfn::VoidFunction>,

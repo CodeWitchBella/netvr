@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 
 macro_rules! handle {
-    ($mod: ident, $id: ident) => {
+    ($mod:ident, $id:ident) => {
         pub(crate) mod $mod {
             use serde::{self, Deserialize, Deserializer, Serializer};
 

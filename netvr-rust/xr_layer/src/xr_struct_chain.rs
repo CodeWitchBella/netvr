@@ -20,7 +20,7 @@ pub trait UnsafeFrom<T> {
 }
 
 macro_rules! implement {
-    ($method: ident reads $id: ident) => {
+    ($method:ident reads $id:ident) => {
         impl UnsafeFrom<*const openxr_sys::$id> for XrStructChain {
             unsafe fn from_ptr(input: *const openxr_sys::$id) -> Self {
                 XrStructChain {

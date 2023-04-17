@@ -1,5 +1,4 @@
-use std::env;
-use std::time::SystemTime;
+use std::{env, time::SystemTime};
 
 fn main() {
     let profile = env::var("PROFILE").unwrap();

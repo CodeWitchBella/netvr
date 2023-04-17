@@ -1,8 +1,7 @@
+use std::{env, fs, path::Path};
+
 use netvr_plugin::codegen;
 use serde_reflection::{Tracer, TracerConfig};
-use std::env;
-use std::fs;
-use std::path::Path;
 
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let out_dir = env::var("CARGO_MANIFEST_DIR").unwrap();

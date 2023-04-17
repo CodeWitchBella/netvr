@@ -1,10 +1,11 @@
+use std::sync::Arc;
+
 use anyhow::Result;
 use netvr_data::{
     bincode,
     net::{ConfigurationDown, ConfigurationUp, DatagramDown, DatagramUp},
 };
 use quinn::{Connection, SendStream};
-use std::sync::Arc;
 use tokio::sync::{broadcast, Mutex};
 use tokio_util::sync::CancellationToken;
 
@@ -39,6 +40,7 @@ impl Client {
     }
 
     pub async fn handle_configuration_up(&self, _message: ConfigurationUp) {}
+
     pub async fn handle_datagram_up(&self, _message: DatagramUp) {}
 
     #[allow(dead_code)]
@@ -67,6 +69,7 @@ impl Client {
     pub(crate) fn cancelled(&self) -> tokio_util::sync::WaitForCancellationFuture {
         self.inner.token.cancelled()
     }
+
     #[allow(dead_code)]
     pub(crate) fn is_cancelled(&self) -> bool {
         self.inner.token.is_cancelled()

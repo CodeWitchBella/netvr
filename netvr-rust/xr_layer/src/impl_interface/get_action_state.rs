@@ -1,5 +1,6 @@
-use crate::{utils::ResultConvertible, UnsafeFrom, XrDebug, XrResult, XrStructChain};
 use std::fmt;
+
+use crate::{utils::ResultConvertible, UnsafeFrom, XrDebug, XrResult, XrStructChain};
 
 pub struct GetActionState {
     pub(crate) instance: openxr::Instance,
@@ -35,7 +36,7 @@ impl GetActionState {
 }
 
 macro_rules! implement {
-    ($id: ident $xr: ident $fn: ident) => {
+    ($id:ident $xr:ident $fn:ident) => {
         pub struct $id {
             pub(crate) base: GetActionState,
             pub(crate) state: *mut openxr_sys::$xr,

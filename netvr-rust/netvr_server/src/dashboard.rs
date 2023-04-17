@@ -1,7 +1,8 @@
+use std::{env, net::SocketAddr};
+
 use anyhow::{anyhow, Result};
 use futures_util::SinkExt;
 use netvr_data::serde::{Deserialize, Serialize};
-use std::{env, net::SocketAddr};
 use tokio::sync::broadcast;
 use warp::{
     ws::{Message, WebSocket},
@@ -59,13 +60,13 @@ async fn dashboard_connected(
                 }
             },
         }
-        /*
-        let Some(msg) = ws.next().await else { break };
-        let Ok(msg) = msg else { println!("Failed to receive message: {:?}", msg.err()); continue };
-        if let Err(err) = ws.send(msg).await {
-            println!("failed to send message: {}", err);
-        }
-        */
+        // ```
+        // let Some(msg) = ws.next().await else { break };
+        // let Ok(msg) = msg else { println!("Failed to receive message: {:?}", msg.err()); continue };
+        // if let Err(err) = ws.send(msg).await {
+        //     println!("failed to send message: {}", err);
+        // }
+        // ```
     }
 }
 

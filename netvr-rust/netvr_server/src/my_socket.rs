@@ -1,8 +1,9 @@
-use quinn::AsyncUdpSocket;
 use std::{
     sync::Arc,
     task::{Context, Poll},
 };
+
+use quinn::AsyncUdpSocket;
 use tokio::io::{self, Interest};
 
 /// Implementation of `quinn::AsyncUdpSocket` for `tokio::net::UdpSocket`, but

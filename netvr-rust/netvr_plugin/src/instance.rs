@@ -86,9 +86,9 @@ pub(crate) struct ViewData {
     pub fov: sys::Fovf,
 }
 
-/// This struct has 1-1 correspondence with each XrInstance the application creates
-/// It is used to hold the underlying instance from runtime and extra data
-/// required by the netvr layer.
+/// This struct has 1-1 correspondence with each XrInstance the application
+/// creates It is used to hold the underlying instance from runtime and extra
+/// data required by the netvr layer.
 pub(crate) struct Instance {
     pub(crate) instance: safe_openxr::Instance,
     pub(crate) rt: tokio::runtime::Runtime,

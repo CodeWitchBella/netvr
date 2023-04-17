@@ -3,9 +3,9 @@
 #[macro_use]
 extern crate lazy_static;
 
+use std::{backtrace::Backtrace, panic};
+
 use implementation::{read_remote_devices, start, tick};
-use std::backtrace::Backtrace;
-use std::panic;
 use xr_layer::{
     log::{self, LogPanic},
     pfn,
@@ -18,8 +18,9 @@ mod instance;
 mod overrides;
 mod xr_wrap;
 
-/// this gets called from unity to give us option to override basically any openxr function
-/// it only calls into loader and is what injects our safe rust implementation
+/// this gets called from unity to give us option to override basically any
+/// openxr function it only calls into loader and is what injects our safe rust
+/// implementation
 #[no_mangle]
 pub extern "C" fn netvr_hook_get_instance_proc_addr(
     func_in: Option<pfn::GetInstanceProcAddr>,

@@ -1,16 +1,18 @@
-use crate::{client::Client, dashboard::DashboardMessage, server::Server};
+use std::sync::Arc;
+
 use anyhow::Result;
 use netvr_data::{
     bincode,
     net::{ConfigurationUp, DatagramUp},
 };
 use quinn::{Connecting, Connection, RecvStream, SendStream};
-use std::sync::Arc;
 use tokio::{
     spawn,
     sync::{broadcast, Mutex},
 };
 use tokio_util::sync::CancellationToken;
+
+use crate::{client::Client, dashboard::DashboardMessage, server::Server};
 
 pub(crate) async fn accept_connection(
     connecting: Connecting,

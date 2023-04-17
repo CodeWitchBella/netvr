@@ -1,14 +1,16 @@
-use crate::{
-    implementation::post_poll_event,
-    instance::{Instance, Session, ViewData},
-    xr_wrap::{xr_wrap, RecordDebug, ResultConvertible, Trace, XrWrapError},
-};
 use std::{collections::HashMap, ffi::CStr, os::raw::c_char, sync::RwLock};
+
 use tracing::{field, info, trace_span};
 use xr_layer::{
     log::{LogError, LogTrace, LogWarn},
     safe_openxr::{self, InstanceExtensions},
     sys, Entry, FnPtr, UnsafeFrom, XrDebug, XrStructChain,
+};
+
+use crate::{
+    implementation::post_poll_event,
+    instance::{Instance, Session, ViewData},
+    xr_wrap::{xr_wrap, RecordDebug, ResultConvertible, Trace, XrWrapError},
 };
 
 struct InstanceRefs {
@@ -238,8 +240,8 @@ extern "system" fn destroy_instance(instance_handle: sys::Instance) -> sys::Resu
             // destroy instance needs to be called later, which will not succeed
             .ok_or(sys::Result::ERROR_HANDLE_INVALID)?;
         // This is already done by above's drop:
-        //let result = unsafe { (instance.fp().destroy_instance)(instance_handle) };
-        //result.into_result()
+        // let result = unsafe { (instance.fp().destroy_instance)(instance_handle) };
+        // result.into_result()
         Ok(())
     })
 }
@@ -473,8 +475,10 @@ extern "system" fn destroy_session(session_handle: sys::Session) -> sys::Result 
             .ok_or(sys::Result::ERROR_HANDLE_INVALID)?;
         Ok(())
         // already handled:
-        //let result = unsafe { (instance.fp().destroy_session)(session_handle) };
-        //result.into_result()
+        // ```
+        // let result = unsafe { (instance.fp().destroy_session)(session_handle) };
+        // result.into_result()
+        // ```
     })
 }
 

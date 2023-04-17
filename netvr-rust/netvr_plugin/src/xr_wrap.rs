@@ -1,12 +1,14 @@
+use std::{
+    alloc::LayoutError,
+    error::Error,
+    panic,
+    sync::{Arc, Mutex, PoisonError},
+};
+
 use netvr_data::bincode;
-use std::alloc::LayoutError;
-use std::sync::{Arc, Mutex};
-use std::{error::Error, panic, sync::PoisonError};
-use tracing::span::EnteredSpan;
-use tracing::{dispatcher, Dispatch, Level, Span};
+use tracing::{dispatcher, span::EnteredSpan, Dispatch, Level, Span};
 use tracing_chrome::{ChromeLayerBuilder, FlushGuard};
-use tracing_subscriber::prelude::*;
-use tracing_subscriber::FmtSubscriber;
+use tracing_subscriber::{prelude::*, FmtSubscriber};
 use xr_layer::{
     log::{LogError, LogPanic},
     sys,
@@ -36,9 +38,11 @@ fn print_panic(panic: Box<dyn std::any::Any + Send>) {
 pub(crate) enum XrWrapError {
     /// Error that is expected to happen, or is outside layer's control.
     Expected(sys::Result),
-    /// Internal error in the application. Corresponds to sys::Result::ERROR_RUNTIME_FAILURE
+    /// Internal error in the application. Corresponds to
+    /// sys::Result::ERROR_RUNTIME_FAILURE
     Generic(Box<dyn Error>),
-    /// Internal error in the application. Corresponds to sys::Result::ERROR_RUNTIME_FAILURE
+    /// Internal error in the application. Corresponds to
+    /// sys::Result::ERROR_RUNTIME_FAILURE
     String(String),
 }
 
@@ -123,21 +127,21 @@ impl Trace {
             .include_args(true)
             //.trace_style(tracing_chrome::TraceStyle::Async)
             .include_locations(true)
-            /*  .name_fn(Box::new(|event_or_span| match event_or_span {
-                EventOrSpan::Event(ev) => ev
-                    .metadata()
-                    .fields()
-                    .field("message")
-                    .map_or_else(|| ev.metadata().name().into(), |val| val.to_string()),
-                EventOrSpan::Span(s) => s.metadata().name().into(),
-            }))*/
+            // .name_fn(Box::new(|event_or_span| match event_or_span {
+            //     EventOrSpan::Event(ev) => ev
+            //         .metadata()
+            //         .fields()
+            //         .field("message")
+            //         .map_or_else(|| ev.metadata().name().into(), |val| val.to_string()),
+            //     EventOrSpan::Span(s) => s.metadata().name().into(),
+            // }))
             .build();
 
         Self {
             dispatch: Dispatch::new(
                 FmtSubscriber::builder()
-                    // all spans/events with a level higher than TRACE (e.g, debug, info, warn, etc.)
-                    // will be written to stdout.
+                    // all spans/events with a level higher than TRACE (e.g, debug, info, warn,
+                    // etc.) will be written to stdout.
                     .with_max_level(Level::TRACE)
                     // completes the builder.
                     .finish()

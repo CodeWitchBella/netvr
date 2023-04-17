@@ -1,5 +1,6 @@
-use quinn::{ClientConfig, Connection, Endpoint};
 use std::{error::Error, net::SocketAddr, sync::Arc};
+
+use quinn::{ClientConfig, Connection, Endpoint};
 
 pub(crate) async fn quinn_connect(
     server_addr: SocketAddr,
@@ -28,7 +29,8 @@ fn configure_client() -> ClientConfig {
 }
 
 /// Dummy certificate verifier that treats any certificate as valid.
-/// NOTE, such verification is vulnerable to MITM attacks, but convenient for testing.
+/// NOTE, such verification is vulnerable to MITM attacks, but convenient for
+/// testing.
 struct SkipServerVerification;
 
 impl SkipServerVerification {

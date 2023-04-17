@@ -1,8 +1,11 @@
+use std::{
+    backtrace::Backtrace,
+    error::Error,
+    ffi::{CStr, CString},
+    sync::RwLock,
+};
+
 use super::utils;
-use std::backtrace::Backtrace;
-use std::error::Error;
-use std::ffi::{CStr, CString};
-use std::sync::RwLock;
 
 pub type LoggerFn = Option<unsafe extern "C" fn(i32, utils::Cstr, utils::Cstr)>;
 lazy_static! {
@@ -10,7 +13,7 @@ lazy_static! {
 }
 
 macro_rules! cstr {
-    ( $s:literal ) => {{
+    ($s:literal) => {{
         unsafe { std::mem::transmute::<_, &std::ffi::CStr>(concat!($s, "\0")) }
     }};
 }
@@ -62,16 +65,18 @@ fn _string(level: Level, text: String) {
 }
 
 macro_rules! implement {
-    ($id: ident, $level: expr) => {
+    ($id:ident, $level:expr) => {
         pub struct $id {}
         #[allow(dead_code)]
         impl $id {
             pub fn cstr(text: utils::Cstr) {
                 _cstr($level, text);
             }
+
             pub fn str(text: &str) {
                 _str($level, text);
             }
+
             pub fn string(text: String) {
                 _string($level, text);
             }

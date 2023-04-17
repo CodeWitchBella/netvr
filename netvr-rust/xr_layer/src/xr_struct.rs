@@ -226,6 +226,7 @@ impl<'a> ActionStateGetInfo<'a> {
     pub fn subaction_path(&self) -> openxr::Path {
         self.0.subaction_path
     }
+
     pub fn action(&self) -> openxr_sys::Action {
         self.0.action
     }

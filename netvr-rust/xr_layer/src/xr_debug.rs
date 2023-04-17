@@ -316,7 +316,7 @@ impl XrDebug for xr_struct::InteractionProfileSuggestedBinding<'_> {
 }
 
 macro_rules! implement_as_action_state {
-    ($id: ident) => {
+    ($id:ident) => {
         impl XrDebug for openxr_sys::$id {
             fn xr_fmt(&self, f: &mut fmt::Formatter, _: &openxr::Instance) -> fmt::Result {
                 f.debug_struct(stringify!($id))
@@ -390,7 +390,6 @@ macro_rules! implement_as_non_exhaustive {
 }
 
 implement_as_non_exhaustive!(
-    //
     // Following are missing because they are android-only and I did not want to
     // spend time to try and figure out how to integrate them, since I do not
     // need them (for now).
@@ -449,12 +448,12 @@ implement_as_non_exhaustive!(
     xr_struct::FrameEndInfo<'_>,
     xr_struct::GeometryInstanceCreateInfoFB<'_>,
     xr_struct::GeometryInstanceTransformFB<'_>,
-    //xr_struct::GraphicsBindingD3D11KHR<'_>,
-    //xr_struct::GraphicsBindingD3D12KHR<'_>,
+    // xr_struct::GraphicsBindingD3D11KHR<'_>,
+    // xr_struct::GraphicsBindingD3D12KHR<'_>,
     xr_struct::GraphicsBindingEGLMNDX<'_>,
     xr_struct::GraphicsBindingOpenGLWaylandKHR<'_>,
-    //xr_struct::GraphicsBindingOpenGLWin32KHR<'_>,
-    //xr_struct::GraphicsBindingOpenGLXcbKHR<'_>,
+    // xr_struct::GraphicsBindingOpenGLWin32KHR<'_>,
+    // xr_struct::GraphicsBindingOpenGLXcbKHR<'_>,
     xr_struct::GraphicsBindingOpenGLXlibKHR<'_>,
     xr_struct::GraphicsBindingVulkanKHR<'_>,
     xr_struct::HandJointsLocateInfoEXT<'_>,
@@ -465,7 +464,7 @@ implement_as_non_exhaustive!(
     xr_struct::HandTrackerCreateInfoEXT<'_>,
     xr_struct::HapticActionInfo<'_>,
     xr_struct::HapticVibration<'_>,
-    //xr_struct::HolographicWindowAttachmentMSFT<'_>,
+    // xr_struct::HolographicWindowAttachmentMSFT<'_>,
     xr_struct::InputSourceLocalizedNameGetInfo<'_>,
     xr_struct::InstanceCreateInfo<'_>,
     xr_struct::InteractionProfileAnalogThresholdVALVE<'_>,
