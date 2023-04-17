@@ -70,16 +70,15 @@ macro_rules! bincode_expose {
             )*
         }
 
-        #[cfg(crate_type = "lib")]
         #[no_mangle]
         pub unsafe extern "C" fn netvr_get_fn(
             name_cstr: *const std::ffi::c_char,
-            function: *mut Option<unsafe extern "C" fn(*mut u32, *mut *mut u8) -> sys::Result>,
+            function: *mut Option<unsafe extern "C" fn(*mut u32, *mut *mut u8) -> xr_layer::sys::Result>,
         ) {
-            LogInfo::cstr(name_cstr);
+            crate::log::LogInfo::cstr(name_cstr);
             function.write(None);
             if let Ok(name) = unsafe { std::ffi::CStr::from_ptr(name_cstr) }.to_str() {
-                LogInfo::string(format!("Getting {name:?}"));
+                crate::log::LogInfo::string(format!("Getting {name:?}"));
                 match name {
                     $(
                         stringify!($id) => {
