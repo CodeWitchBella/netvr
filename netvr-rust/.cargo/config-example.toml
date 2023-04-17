@@ -1,2 +1,0 @@
-[target.aarch64-linux-android]
-linker = "D:/Stuff/UnityEditors/2021.3.19f1/Editor/Data/PlaybackEngines/AndroidPlayer/NDK/toolchains/llvm/prebuilt/windows-x86_64/bin/aarch64-linux-android26-clang.cmd"

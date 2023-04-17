@@ -1,6 +1,9 @@
 use netvr_data::{JustInstance, Nothing};
 use tracing::{info, instrument};
-use xr_layer::{log::LogError, EventDataBuffer, XrDebug};
+use xr_layer::{
+    log::{LogError, LogInfo},
+    EventDataBuffer, XrDebug,
+};
 
 use crate::{
     instance::{Instance, Session},
@@ -15,7 +18,14 @@ pub(crate) fn start(input: JustInstance) -> Result<Nothing, XrWrapError> {
 
         instance.rt.spawn(async {
             loop {
-                let connection = netvr_client::connect().await;
+                if let Ok(connection) = netvr_client::connect().await {
+                    LogInfo::string(format!(
+                        "Connected to netvr server: {:?}",
+                        connection.connection.remote_address()
+                    ));
+                } else {
+                    LogError::str("Failed to connect to netvr server");
+                }
             }
         });
 

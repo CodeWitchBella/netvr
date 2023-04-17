@@ -83,20 +83,27 @@ check!(pfn::PollEvent, Self::override_poll_event);
 
 ## Compiling for Quest
 
-Make sure that your rust and unity installations are located in path without spaces. One way to do that for rust is to set following environment variables system-wide:
+I unfortunately couldn't get some dependencies to build using Unity's NDK, so
+you'll have to install another one. You can get it from [NDK Downloads](https://developer.android.com/ndk/downloads). Minimum version is 25. If you installed
+it using Android Studio, that one can be also used - see [cargo-ndk's docs](https://github.com/bbqsrc/cargo-ndk). Make sure that the path to it does not
+contain spaces. Set ANDROID_NDK_HOME to path to your NDK.
+
+Make sure that your rust installation is located in path without spaces. One way to do that for rust is to set following environment variables system-wide:
 
 - `CARGO_HOME` to `C:\Stuff\Rust\cargo`
 - `RUSTUP_HOME` to `C:\Stuff\Rust\rustup`
 
-And only after doing so installing rust using rustup. Alternatively you can use WSL.
-
-Then to build the project you have to create `.cargo/config.toml` file containing correct paths. Use `.cargo/config-example.toml` as a guide.
+And only after doing so installing rust using rustup. Alternatively you can use WSL (but I am not sure how to combine that with NDK installation).
 
 ```bash
 # Install rust target for android (might not be necessary)
 rustup target add aarch64-linux-android
+# Install cargo-ndk
+cargo install cargo-ndk
 # Compile
-cargo post b --package isbl_netvr_rust --release --target aarch64-linux-android
+cargo ndk -t arm64-v8a -p 26 b --package netvr_plugin --release --target aarch64-linux-android
+# Copy to unity project (cargo-post does not work with cargo-ndk)
+cp target/aarch64-linux-android/release/libnetvr_plugin.so ../netvr-unity/Packages/cz.isbl.netvr/Runtime/Plugins/Android/arm64-v8a/libnetvr_plugin.so
 ```
 
 ## Suggested cargo commands
@@ -105,7 +112,7 @@ cargo post b --package isbl_netvr_rust --release --target aarch64-linux-android
 # Install components
 cargo install cargo-post cargo-watch cargo-edit
 # Watch for changes and compile
-cargo watch -cx "post b --package isbl_netvr_rust"
+cargo watch -cx "post b --package netvr_plugin"
 # Build release version and copy to unity
-cargo post b --package isbl_netvr_rust --release
+cargo post b --package netvr_plugin --release
 ```

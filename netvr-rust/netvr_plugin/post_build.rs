@@ -1,6 +1,7 @@
-use std::env;
-use std::fs;
-use std::path::{Path, PathBuf};
+use std::{
+    env, fs,
+    path::{Path, PathBuf},
+};
 
 fn main() {
     let build_path_string = env::var("CRATE_OUT_DIR").unwrap();
@@ -55,7 +56,7 @@ fn main() {
     let profile = env::var("CRATE_PROFILE").unwrap();
     if profile == "release" {
         println!("Copying dynamic libraries to unity project");
-        copy("isbl_netvr_rust.dll", "Windows", "x64");
-        copy("libisbl_netvr_rust.so", "Android", "arm64-v8a");
+        copy("netvr_plugin.dll", "Windows", "x64");
+        copy("libnetvr_plugin.so", "Android", "arm64-v8a");
     }
 }
