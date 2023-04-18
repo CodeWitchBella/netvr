@@ -19,3 +19,4 @@ netvr_client = { path = "../netvr_client" }
 tokio = { version = "1.27.0", features = ["rt"] }
 tokio-util = { version = "0.7.7" }
 anyhow = "1.0.70"
+thiserror = "1.0.40"

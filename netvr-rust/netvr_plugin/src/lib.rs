@@ -13,6 +13,7 @@ use xr_layer::{
 
 #[macro_use]
 mod bincode_abi;
+mod data;
 mod implementation;
 mod instance;
 mod net_client;

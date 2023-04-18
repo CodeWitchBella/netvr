@@ -1,11 +1,11 @@
 use std::{
     alloc::LayoutError,
-    error::Error,
     panic,
     sync::{Arc, Mutex, PoisonError},
 };
 
 use netvr_data::bincode;
+use thiserror::Error;
 use tracing::{dispatcher, span::EnteredSpan, Dispatch, Level, Span};
 use tracing_chrome::{ChromeLayerBuilder, FlushGuard};
 use tracing_subscriber::{prelude::*, FmtSubscriber};
@@ -34,16 +34,15 @@ fn print_panic(panic: Box<dyn std::any::Any + Send>) {
 /// Any override function can return this. It is useful to be able to use ?
 /// operator on basically anything. Each error is associated with behavior
 /// (like logging) and xr error code.
-#[derive(Debug)]
+#[derive(Debug, Error)]
 pub(crate) enum XrWrapError {
     /// Error that is expected to happen, or is outside layer's control.
+    #[error("OpenXR error: {0:?}")]
     Expected(sys::Result),
     /// Internal error in the application. Corresponds to
     /// sys::Result::ERROR_RUNTIME_FAILURE
-    Generic(Box<dyn Error>),
-    /// Internal error in the application. Corresponds to
-    /// sys::Result::ERROR_RUNTIME_FAILURE
-    String(String),
+    #[error("Internal Error")]
+    Generic(anyhow::Error),
 }
 
 impl From<sys::Result> for XrWrapError {
@@ -52,36 +51,27 @@ impl From<sys::Result> for XrWrapError {
     }
 }
 
-impl From<String> for XrWrapError {
-    fn from(error: String) -> Self {
-        Self::String(error)
-    }
-}
-
-impl<T: 'static> From<PoisonError<T>> for XrWrapError
-where
-    T: Sized,
-{
+impl<T> From<PoisonError<T>> for XrWrapError {
     fn from(error: PoisonError<T>) -> Self {
-        Self::Generic(Box::new(error))
+        Self::Generic(anyhow::Error::msg(error.to_string()))
     }
 }
 
 impl From<std::num::TryFromIntError> for XrWrapError {
     fn from(error: std::num::TryFromIntError) -> Self {
-        Self::Generic(Box::new(error))
+        Self::Generic(error.into())
     }
 }
 
 impl From<Box<bincode::ErrorKind>> for XrWrapError {
     fn from(error: Box<bincode::ErrorKind>) -> Self {
-        Self::Generic(Box::new(error))
+        Self::Generic(error.into())
     }
 }
 
 impl From<LayoutError> for XrWrapError {
     fn from(error: LayoutError) -> Self {
-        Self::Generic(Box::new(error))
+        Self::Generic(error.into())
     }
 }
 
@@ -98,12 +88,8 @@ where
             Ok(()) => sys::Result::SUCCESS,
             Err(err) => match err {
                 XrWrapError::Expected(result) => result,
-                XrWrapError::Generic(poison) => {
-                    LogError::string(format!("Call failed with error: {:?}", poison));
-                    sys::Result::ERROR_RUNTIME_FAILURE
-                }
-                XrWrapError::String(string) => {
-                    LogError::string(format!("Call failed with error: {:?}", string));
+                XrWrapError::Generic(error) => {
+                    LogError::string(format!("Call failed with error: {:?}", error));
                     sys::Result::ERROR_RUNTIME_FAILURE
                 }
             },

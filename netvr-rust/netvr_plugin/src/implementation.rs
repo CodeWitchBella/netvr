@@ -23,7 +23,7 @@ pub(crate) fn start(input: JustInstance) -> Result<Nothing, XrWrapError> {
             loop {
                 select! {
                     _ = token.cancelled() => { break; }
-                    _ = run_net_client() => {
+                    _ = run_net_client(input.instance) => {
                         LogInfo::str("net_client finished");
                     }
                 }
@@ -53,7 +53,7 @@ pub(crate) fn read_remote_devices(
 ) -> Result<netvr_data::ReadRemoteDevicesOutput, XrWrapError> {
     with_layer(input.instance, |instance| {
         let mut devices = netvr_data::ReadRemoteDevicesOutput::default();
-        let vec = instance.views.lock().map_err(|err| err.to_string())?;
+        let vec = instance.views.lock()?;
         let mut i = 0;
         for v in vec.iter() {
             i += 1;

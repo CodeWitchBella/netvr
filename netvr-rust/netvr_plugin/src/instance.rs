@@ -1,14 +1,17 @@
 use std::{
     collections::HashMap,
     fmt::Debug,
-    sync::{mpsc, Mutex, RwLock, RwLockReadGuard},
+    sync::{mpsc, Arc, Mutex, RwLock, RwLockReadGuard},
 };
 
 use tokio_util::sync::CancellationToken;
 use tracing::{span, Level, Span};
 use xr_layer::{log::LogInfo, safe_openxr, sys};
 
-use crate::xr_wrap::{Trace, XrWrapError};
+use crate::{
+    data::Data,
+    xr_wrap::{Trace, XrWrapError},
+};
 
 /// This struct has 1-1 correspondence with each session the application creates
 /// It is used to hold the underlying session from runtime and extra data
@@ -97,6 +100,9 @@ pub(crate) struct Instance {
     pub(crate) finished_rx: Mutex<mpsc::Receiver<()>>,
     pub(crate) sessions: HashMap<sys::Session, Session>,
     pub(crate) views: Mutex<Vec<ViewData>>,
+    /// This contains data that available to both the OpenXR part and the netvr
+    /// client part.
+    pub(crate) data: Arc<Data>,
     _span: Span,
 }
 
@@ -131,6 +137,7 @@ impl Instance {
             finished_rx: Mutex::new(finished_rx),
             sessions: HashMap::default(),
             views: Mutex::new(vec![]),
+            data: Arc::new(Data::new()),
             _span: span!(Level::TRACE, "Instance"),
         }
     }

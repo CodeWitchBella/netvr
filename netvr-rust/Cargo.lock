@@ -662,6 +662,7 @@ dependencies = [
  "netvr_client",
  "netvr_data",
  "serde-reflection",
+ "thiserror",
  "tokio",
  "tokio-util",
  "tracing",

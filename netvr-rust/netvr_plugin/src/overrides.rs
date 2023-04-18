@@ -662,7 +662,7 @@ extern "system" fn locate_views(
         }
         .into_result();
         if result.is_ok() {
-            let mut vec = instance.views.lock().map_err(|err| err.to_string())?;
+            let mut vec = instance.views.lock()?;
             vec.clear();
             let size: usize =
                 std::cmp::min(unsafe { *view_count_output }, view_capacity_input).try_into()?;
