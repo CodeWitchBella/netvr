@@ -53,7 +53,7 @@ namespace Isbl.NetVR
 #endif
             if (level <= 2 /* Info or Trace */)
             {
-                _logRust += "\n" + (level == 2 ? "[trace] " : "[info] ") + value.Replace("\n", "\n  ");
+                _logRust += "\n" + (level == 1 ? "[trace] " : "[info] ") + value.Replace("\n", "\n  ");
                 if (_timerRust == null)
                 {
                     _timerRust = new(1000);

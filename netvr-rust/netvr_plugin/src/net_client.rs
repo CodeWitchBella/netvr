@@ -1,14 +1,16 @@
 use anyhow::Result;
 use netvr_data::{bincode, net::DatagramUp};
-use xr_layer::{log::LogInfo, sys};
+use xr_layer::{log::LogTrace, sys};
 
 use crate::overrides::with_layer;
 
 /// Implements the netvr client state machine. Should be recalled if it exists
 /// to reconnect to the server.
 pub(crate) async fn run_net_client(instance_handle: sys::Instance) -> Result<()> {
-    let connection = netvr_client::connect().await?;
-    LogInfo::string(format!(
+    LogTrace::str("connecting to netvr server...");
+    let connection =
+        netvr_client::connect(|text| LogTrace::string(format!("[conn] {}", text))).await?;
+    LogTrace::string(format!(
         "Connected to netvr server: {:?}",
         connection.connection.remote_address()
     ));

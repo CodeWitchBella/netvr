@@ -6,7 +6,7 @@ use quinn::VarInt;
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("Hello there! I'm looking for NetVR devices...");
-    let conn = connect().await?;
+    let conn = connect(|text| println!("[discovery] {}", text)).await?;
     let connection = conn.connection;
     println!("  remote_address: {:?}", connection.remote_address());
     println!("  local: {:?}", connection.local_ip());

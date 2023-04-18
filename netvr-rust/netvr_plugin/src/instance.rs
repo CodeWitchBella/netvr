@@ -6,7 +6,7 @@ use std::{
 
 use tokio_util::sync::CancellationToken;
 use tracing::{span, Level, Span};
-use xr_layer::{log::LogInfo, safe_openxr, sys};
+use xr_layer::{log::LogTrace, safe_openxr, sys};
 
 use crate::{
     data::Data,
@@ -124,11 +124,13 @@ impl Instance {
             let _ = tx.send((rt.handle().clone(), token.clone()));
             // Run here until cancelled.
             rt.block_on(token.cancelled());
+            LogTrace::str("token cancelled");
             rt.shutdown_background();
             let _ = finished_tx.send(());
+            LogTrace::str("fully finished");
         });
         let (tokio, token) = rx.recv().unwrap();
-        LogInfo::str("you should see this message");
+        LogTrace::str("tokio handle received");
         Self {
             instance,
 

@@ -44,7 +44,7 @@ impl Client {
     }
 
     pub async fn handle_datagram_up(&self, message: DatagramUp) {
-        println!("Received datagram up {:?}", message);
+        println!("Received datagram {:?}", message);
     }
 
     #[allow(dead_code)]

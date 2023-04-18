@@ -2,7 +2,7 @@ mod error;
 mod quinn_connect;
 
 use std::{
-    net::{Ipv4Addr, SocketAddrV4},
+    net::{Ipv4Addr, SocketAddr, SocketAddrV4},
     time::Duration,
 };
 
@@ -22,13 +22,13 @@ pub struct NetVRConnection {
 
 /// Performs server discovery and returns a socket bound to correct address and
 /// port.
-pub async fn connect() -> Result<NetVRConnection, Error> {
+pub async fn connect(log: fn(String) -> ()) -> Result<NetVRConnection, Error> {
     let socket: UdpSocket = UdpSocket::bind("0.0.0.0:0").await?;
     socket.set_broadcast(true)?;
-    println!("[discovery] Broadcasting as {:?}", socket.local_addr()?);
+    log(format!("Broadcasting as {:?}", socket.local_addr()?));
 
     loop {
-        println!("[discovery] Sending request");
+        log("Sending request".to_string());
         socket
             .send_to(
                 "netvr".as_bytes(),
@@ -46,20 +46,7 @@ pub async fn connect() -> Result<NetVRConnection, Error> {
                     if !data.validate_header() {
                         tokio::time::sleep(Duration::from_millis(100)).await;
                     } else {
-                        println!("[discovery] Got valid response from {:?}", addr);
-                        let (endpoint, connection) = quinn_connect(addr).await?;
-                        println!("[discovery] Connection established.");
-                        let heartbeat = connection.accept_uni().await?;
-                        let mut configuration_up = connection.open_uni().await?;
-                        configuration_up.write(&bincode::serialize(&net::ConfigurationUp::Hello)?).await?;
-                        println!("[discovery] Channels opened.");
-
-                        return Ok(NetVRConnection {
-                            endpoint,
-                            connection,
-                            heartbeat,
-                            configuration_up,
-                        });
+                        return setup_connection(log, addr).await;
                     }
                 } else {
                     tokio::time::sleep(Duration::from_millis(100)).await;
@@ -67,4 +54,29 @@ pub async fn connect() -> Result<NetVRConnection, Error> {
             },
         };
     }
+}
+
+async fn setup_connection(
+    log: fn(String) -> (),
+    addr: SocketAddr,
+) -> Result<NetVRConnection, Error> {
+    log(format!("Got valid response from {:?}", addr));
+    let (endpoint, connection) = quinn_connect(addr).await?;
+    log("Connection established.".to_string());
+    log("Accepting heartbeat channel.".to_string());
+    let heartbeat = connection.accept_uni().await?;
+    log("Heartbeat channel opened.".to_string());
+    let mut configuration_up = connection.open_uni().await?;
+    log("Configuration channel opened.".to_string());
+    configuration_up
+        .write(&bincode::serialize(&net::ConfigurationUp::Hello)?)
+        .await?;
+    log("Channels opened.".to_string());
+
+    Ok(NetVRConnection {
+        endpoint,
+        connection,
+        heartbeat,
+        configuration_up,
+    })
 }

@@ -35,18 +35,19 @@ pub(crate) async fn accept_connection(
 
             // Start sending heartbeat
             let heartbeat_client = client.clone();
-            let task_heartbeat = spawn(run_heartbeat(
-                connection.open_uni().await?,
-                heartbeat_client,
-            ));
+            println!("Opening heartbeat channel");
+            let heartbeat_channel = connection.open_uni().await?;
+            let task_heartbeat = spawn(run_heartbeat(heartbeat_channel, heartbeat_client));
 
             // Start receiving configuration messages
+            println!("Accepting configuration channel");
             let configuration_up_stream = connection.accept_uni().await?;
             let configuration_up_client = client.clone();
             let task_conf = spawn(run_configuration_up(
                 configuration_up_stream,
                 configuration_up_client,
             ));
+            println!("Configuration channel opened");
 
             // Start receiving datagrams
             let task_datagram = spawn(run_datagram_up(connection.clone(), client));
@@ -89,7 +90,7 @@ pub(crate) async fn accept_connection(
 
 async fn run_heartbeat(mut heartbeat: SendStream, client: Client) {
     loop {
-        match heartbeat.write_all(b"").await {
+        match heartbeat.write_all(b"hello").await {
             Ok(v) => {
                 println!("Sent heartbeat {:?}", v);
             }
