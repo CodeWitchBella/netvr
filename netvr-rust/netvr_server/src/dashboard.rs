@@ -3,7 +3,7 @@ use std::{env, net::SocketAddr};
 use anyhow::{anyhow, Result};
 use futures_util::SinkExt;
 use netvr_data::{
-    net::DatagramUp,
+    net::LocalStateSnapshot,
     serde::{Deserialize, Serialize},
 };
 use tokio::sync::broadcast;
@@ -32,7 +32,7 @@ pub(crate) enum DashboardMessage {
     #[serde(rename_all = "camelCase")]
     DatagramUp {
         stable_id: usize,
-        message: DatagramUp,
+        message: LocalStateSnapshot,
     },
 }
 

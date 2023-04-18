@@ -32,11 +32,6 @@ pub struct ConfigurationDown {
     pub port: u16,
 }
 
-#[derive(Serialize, Deserialize, Debug, Clone)]
-pub struct DatagramUp {
-    pub state: LocalState,
-}
-
 #[derive(Serialize, Deserialize)]
 pub struct DatagramDown {
     header: [u8; 5],
@@ -44,7 +39,7 @@ pub struct DatagramDown {
 }
 
 #[derive(Serialize, Deserialize, Default, Clone, Debug)]
-pub struct LocalState {
+pub struct LocalStateSnapshot {
     pub controllers: Vec<Pose>,
     pub views: Vec<Pose>,
 }

@@ -1,5 +1,5 @@
 use anyhow::Result;
-use netvr_data::{bincode, net::DatagramUp};
+use netvr_data::bincode;
 use xr_layer::{log::LogTrace, sys};
 
 use crate::overrides::with_layer;
@@ -27,6 +27,6 @@ pub(crate) async fn run_net_client(instance_handle: sys::Instance) -> Result<()>
         let data = { data_ref.lock().unwrap().clone() };
         connection
             .connection
-            .send_datagram(bincode::serialize(&DatagramUp { state: data.state })?.into())?;
+            .send_datagram(bincode::serialize(&data.state)?.into())?;
     }
 }

@@ -37,22 +37,13 @@ async fn main() -> Result<()> {
     let discovery = spawn(run_discovery_server(server_udp.clone(), discovery_server));
     let dashboard = spawn(serve_dashboard(tx.clone()));
 
-    let server = Arc::new(Mutex::new(Server::new()));
+    let server = Server::start().await;
     let connections = spawn(async move {
         loop {
             if let Some(connecting) = endpoint.accept().await {
                 let tx = tx.clone();
                 let server = server.clone();
-                spawn(async move {
-                    match accept_connection(connecting, server, tx).await {
-                        Ok(_) => {
-                            println!("Connection finished ok");
-                        }
-                        Err(e) => {
-                            println!("Connection finished with error: {:?}", e);
-                        }
-                    }
-                });
+                spawn(accept_connection(connecting, server, tx));
             }
         }
     });

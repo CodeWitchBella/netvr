@@ -1,4 +1,4 @@
-use netvr_data::{net::LocalState, JustInstance, Nothing};
+use netvr_data::{net::LocalStateSnapshot, JustInstance, Nothing};
 use tokio::select;
 use tracing::{info, instrument};
 use xr_layer::{
@@ -89,7 +89,7 @@ fn tick_session(instance: &Instance, session: &Session) -> Result<(), XrWrapErro
             .locate_views(session.view_configuration_type, session.time, space)?;
 
     let new_data = Data {
-        state: LocalState {
+        state: LocalStateSnapshot {
             controllers: vec![],
             views: views.into_iter().map(|v| v.pose.into()).collect(),
         },
