@@ -32,7 +32,7 @@ pub struct ConfigurationDown {
     pub port: u16,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct DatagramUp {
     pub state: LocalState,
 }

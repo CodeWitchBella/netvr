@@ -45,6 +45,10 @@ impl Client {
 
     pub async fn handle_datagram_up(&self, message: DatagramUp) {
         println!("Received datagram {:?}", message);
+        let _ = self.ws().send(DashboardMessage::DatagramUp {
+            stable_id: self.inner.connection.stable_id(),
+            message,
+        });
     }
 
     #[allow(dead_code)]

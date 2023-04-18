@@ -36,7 +36,14 @@ export function JSONView({ data, shouldExpandNode, name }: Props) {
           (typeof value === 'object' &&
             value &&
             Array.isArray(value) &&
-            value.every((v) => typeof v === 'string'))
+            value.every((v) => typeof v === 'string')) ||
+          (typeof value === 'object' &&
+            value &&
+            Object.keys(value).length === 4 &&
+            typeof value.x === 'number' &&
+            typeof value.y === 'number' &&
+            typeof value.z === 'number' &&
+            typeof value.w === 'number')
         )
       }}
       valueRenderer={(valueAsString, value, key) => {
@@ -48,6 +55,15 @@ export function JSONView({ data, shouldExpandNode, name }: Props) {
                 title={JSON.stringify(value)}
               >
                 {value.join(', ')}
+              </span>
+            )
+          if (typeof value.w === 'number')
+            return (
+              <span
+                css={{ color: 'var(--base-9)' }}
+                title={JSON.stringify(value)}
+              >
+                Quaternion[{value.x}, {value.y}, {value.z}, {value.w}]
               </span>
             )
           return (

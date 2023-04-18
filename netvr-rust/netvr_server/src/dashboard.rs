@@ -2,7 +2,10 @@ use std::{env, net::SocketAddr};
 
 use anyhow::{anyhow, Result};
 use futures_util::SinkExt;
-use netvr_data::serde::{Deserialize, Serialize};
+use netvr_data::{
+    net::DatagramUp,
+    serde::{Deserialize, Serialize},
+};
 use tokio::sync::broadcast;
 use warp::{
     ws::{Message, WebSocket},
@@ -25,6 +28,11 @@ pub(crate) enum DashboardMessage {
     #[serde(rename_all = "camelCase")]
     ConnectionClosed {
         stable_id: usize,
+    },
+    #[serde(rename_all = "camelCase")]
+    DatagramUp {
+        stable_id: usize,
+        message: DatagramUp,
     },
 }
 
