@@ -2,7 +2,7 @@ mod handle_serializer;
 
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, Default)]
+#[derive(Serialize, Deserialize, Default, Clone, Debug)]
 pub struct Vec3 {
     pub x: f32,
     pub y: f32,
@@ -19,7 +19,7 @@ impl From<openxr_sys::Vector3f> for Vec3 {
     }
 }
 
-#[derive(Serialize, Deserialize, Default)]
+#[derive(Serialize, Deserialize, Default, Clone, Debug)]
 pub struct Quaternion {
     pub x: f32,
     pub y: f32,
@@ -43,6 +43,21 @@ pub struct RemoteDevice {
     pub id: u32,
     pub pos: Vec3,
     pub rot: Quaternion,
+}
+
+#[derive(Serialize, Deserialize, Default, Clone, Debug)]
+pub struct Pose {
+    pub position: Vec3,
+    pub orientation: Quaternion,
+}
+
+impl From<openxr_sys::Posef> for Pose {
+    fn from(v: openxr_sys::Posef) -> Self {
+        Self {
+            position: v.position.into(),
+            orientation: v.orientation.into(),
+        }
+    }
 }
 
 #[derive(Serialize, Deserialize, Default)]

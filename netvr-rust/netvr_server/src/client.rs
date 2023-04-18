@@ -39,9 +39,13 @@ impl Client {
         })
     }
 
-    pub async fn handle_configuration_up(&self, _message: ConfigurationUp) {}
+    pub async fn handle_configuration_up(&self, message: ConfigurationUp) {
+        println!("Received configuration up {:?}", message);
+    }
 
-    pub async fn handle_datagram_up(&self, _message: DatagramUp) {}
+    pub async fn handle_datagram_up(&self, message: DatagramUp) {
+        println!("Received datagram up {:?}", message);
+    }
 
     #[allow(dead_code)]
     pub async fn send_configuration(&self, message: ConfigurationDown) -> Result<()> {

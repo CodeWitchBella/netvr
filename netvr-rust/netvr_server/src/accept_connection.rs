@@ -20,7 +20,7 @@ pub(crate) async fn accept_connection(
     ws: broadcast::Sender<DashboardMessage>,
 ) -> Result<()> {
     let token = CancellationToken::new();
-    let _ = token.clone().drop_guard();
+    let _drop_guard = token.clone().drop_guard();
     match connecting.await {
         Ok(connection) => {
             let _ = ws.send(DashboardMessage::ConnectionEstablished {
@@ -58,10 +58,18 @@ pub(crate) async fn accept_connection(
 
             // Wait for some task to finish
             tokio::select! {
-                _ = connection.closed() => {},
-                _ = task_conf => {},
-                _ = task_datagram => {},
-                _ = task_heartbeat => {},
+                _ = connection.closed() => {
+                    println!("Closed");
+                },
+                _ = task_conf => {
+                    println!("Configuration closed");
+                },
+                _ = task_datagram => {
+                    println!("Datagram closed");
+                },
+                _ = task_heartbeat => {
+                    println!("Heartbeat ended");
+                },
             }
             // and cancel all other tasks
             token.cancel();

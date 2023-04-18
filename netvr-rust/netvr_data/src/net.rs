@@ -1,5 +1,7 @@
 use serde::{Deserialize, Serialize};
 
+use crate::Pose;
+
 #[derive(Serialize, Deserialize)]
 pub struct DiscoveryResponse {
     header: [u8; 5],
@@ -19,7 +21,7 @@ impl Default for DiscoveryResponse {
     }
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub enum ConfigurationUp {
     Hello,
 }
@@ -30,14 +32,19 @@ pub struct ConfigurationDown {
     pub port: u16,
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Debug)]
 pub struct DatagramUp {
-    header: [u8; 5],
-    pub port: u16,
+    pub state: LocalState,
 }
 
 #[derive(Serialize, Deserialize)]
 pub struct DatagramDown {
     header: [u8; 5],
     pub port: u16,
+}
+
+#[derive(Serialize, Deserialize, Default, Clone, Debug)]
+pub struct LocalState {
+    pub controllers: Vec<Pose>,
+    pub views: Vec<Pose>,
 }

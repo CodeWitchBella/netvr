@@ -102,7 +102,7 @@ pub(crate) struct Instance {
     pub(crate) views: Mutex<Vec<ViewData>>,
     /// This contains data that available to both the OpenXR part and the netvr
     /// client part.
-    pub(crate) data: Arc<Data>,
+    pub(crate) data: Arc<Mutex<Data>>,
     _span: Span,
 }
 
@@ -137,7 +137,7 @@ impl Instance {
             finished_rx: Mutex::new(finished_rx),
             sessions: HashMap::default(),
             views: Mutex::new(vec![]),
-            data: Arc::new(Data::new()),
+            data: Arc::new(Mutex::new(Data::new())),
             _span: span!(Level::TRACE, "Instance"),
         }
     }

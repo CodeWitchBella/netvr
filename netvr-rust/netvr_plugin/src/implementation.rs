@@ -1,12 +1,13 @@
-use netvr_data::{JustInstance, Nothing};
+use netvr_data::{net::LocalState, JustInstance, Nothing};
 use tokio::select;
 use tracing::{info, instrument};
 use xr_layer::{
     log::{LogError, LogInfo},
-    EventDataBuffer, XrDebug,
+    EventDataBuffer,
 };
 
 use crate::{
+    data::Data,
     instance::{Instance, Session},
     net_client::run_net_client,
     overrides::with_layer,
@@ -82,14 +83,21 @@ fn tick_session(instance: &Instance, session: &Session) -> Result<(), XrWrapErro
         return Ok(());
     }
 
-    let (info, views) =
+    let (_info, views) =
         session
             .session
             .locate_views(session.view_configuration_type, session.time, space)?;
-    info!(info = ?info, "views");
-    for view in views {
-        info!(view = ?view.pose.as_debug(&instance.instance), "view")
-    }
+
+    let new_data = Data {
+        state: LocalState {
+            controllers: vec![],
+            views: views.into_iter().map(|v| v.pose.into()).collect(),
+        },
+    };
+
+    // write data: lock, replace, unlock
+    let mut data = instance.data.lock()?;
+    drop(std::mem::replace(&mut *data, new_data));
 
     Ok(())
 }
