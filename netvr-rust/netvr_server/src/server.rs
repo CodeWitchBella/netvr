@@ -41,6 +41,12 @@ impl Server {
         snapshot_channel
     }
 
+    pub async fn send_snapshot(&self, id: usize, snapshot: LocalStateSnapshot) {
+        if let Err(err) = self.channel.send((id, snapshot)).await {
+            println!("Failed to send snapshot {:?}", err);
+        }
+    }
+
     pub async fn add_client(&self, client: Client) {
         let mut clients = self.clients.lock().await;
         clients.insert(client.id(), client);
@@ -49,5 +55,9 @@ impl Server {
     pub async fn remove_client(&self, id: usize) {
         let mut clients = self.clients.lock().await;
         clients.remove(&id);
+    }
+
+    pub async fn read_latest_snapshots(&self) -> HashMap<usize, LocalStateSnapshot> {
+        self.latest_snapshots.read().await.clone()
     }
 }

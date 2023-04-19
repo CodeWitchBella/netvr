@@ -1,9 +1,10 @@
 use anyhow::Result;
 use netvr_data::{
     bincode,
-    net::{ConfigurationUp, LocalStateSnapshot},
+    net::{ConfigurationUp, Heartbeat, LocalStateSnapshot},
+    RecvFrames, SendFrames,
 };
-use quinn::{Connecting, Connection, ReadError, RecvStream, SendStream};
+use quinn::{Connecting, Connection};
 use tokio::{spawn, sync::broadcast};
 use tokio_util::sync::CancellationToken;
 
@@ -15,57 +16,56 @@ pub(crate) async fn accept_connection(
     ws: broadcast::Sender<DashboardMessage>,
 ) {
     let token = CancellationToken::new();
-    match connecting.await {
-        Ok(connection) => {
-            let _ = ws.send(DashboardMessage::ConnectionEstablished {
-                addr: connection.remote_address(),
-                stable_id: connection.stable_id(),
-            });
-            println!("Connection established: {:?}", connection.remote_address());
 
-            // Create client struct
-            let client = Client::new(connection.clone(), ws.clone(), token.clone());
-            server.add_client(client.clone()).await;
-            match run_connection(client.clone(), connection, ws).await {
-                Ok(()) => {
-                    println!("Connection finished ok");
-                }
-                Err(e) => {
-                    println!("Connection finished with error: {:?}", e);
-                }
-            }
-            token.cancel();
-            server.remove_client(client.id()).await;
+    // Create client struct
+    let client = Client::new(ws.clone(), token.clone(), server.clone());
+    server.add_client(client.clone()).await;
+    match run_connection(connecting, client.clone(), ws, server.clone()).await {
+        Ok(()) => {
+            println!("Connection finished ok");
         }
         Err(e) => {
-            println!("Connection failed: {:?}", e);
+            println!("Connection finished with error: {:?}", e);
         }
     }
+    token.cancel();
+    server.remove_client(client.id()).await;
 }
 
 async fn run_connection(
-    client: Client,
-    connection: Connection,
+    connecting: Connecting,
+    mut client: Client,
     ws: broadcast::Sender<DashboardMessage>,
+    server: Server,
 ) -> Result<()> {
+    // Accept connection and open channels
+    let connection = connecting.await?;
+    client.set_id(connection.stable_id());
+    let heartbeat_channel = SendFrames::open(&connection, b"heartbee").await?;
+    let configuration_up_stream = RecvFrames::open(&connection, b"configur").await?;
+
+    // Report to dashboard and console
+    let _ = ws.send(DashboardMessage::ConnectionEstablished {
+        addr: connection.remote_address(),
+        stable_id: connection.stable_id(),
+    });
+    println!("Connection established: {:?}", connection.remote_address());
+
     // Start sending heartbeat
-    let heartbeat_client = client.clone();
-    println!("Opening heartbeat channel");
-    let heartbeat_channel = connection.open_uni().await?;
-    let task_heartbeat = spawn(run_heartbeat(heartbeat_channel, heartbeat_client));
+    let task_heartbeat = spawn(run_heartbeat(heartbeat_channel, client.clone()));
 
     // Start receiving configuration messages
-    println!("Accepting configuration channel");
-    let configuration_up_stream = connection.accept_uni().await?;
-    let configuration_up_client = client.clone();
     let task_conf = spawn(run_configuration_up(
         configuration_up_stream,
-        configuration_up_client,
+        client.clone(),
     ));
-    println!("Configuration channel opened");
 
     // Start receiving datagrams
-    let task_datagram = spawn(run_datagram_up(connection.clone(), client.clone()));
+    let task_datagram = spawn(run_datagram_up(
+        connection.clone(),
+        client.clone(),
+        server.clone(),
+    ));
 
     // TODO:
     // - rebroadcast configurations
@@ -100,9 +100,9 @@ async fn run_connection(
     Ok(())
 }
 
-async fn run_heartbeat(mut heartbeat: SendStream, client: Client) {
+async fn run_heartbeat(mut heartbeat: SendFrames<Heartbeat>, client: Client) {
     loop {
-        match heartbeat.write_all(b"hello").await {
+        match heartbeat.write(&Heartbeat::default()).await {
             Ok(v) => {
                 println!("Sent heartbeat {:?}", v);
             }
@@ -119,44 +119,26 @@ async fn run_heartbeat(mut heartbeat: SendStream, client: Client) {
     }
 }
 
-async fn run_configuration_up(mut configuration_up: RecvStream, client: Client) {
-    let mut buf = [0u8; 65535];
+async fn run_configuration_up(mut configuration_up: RecvFrames<ConfigurationUp>, client: Client) {
     loop {
         tokio::select! {
             _ = client.cancelled() => {
                 break;
             }
-            message = configuration_up.read(&mut buf) => match message {
-                Ok(amt) => {
-                    if let Some(amt) = amt {
-                        match bincode::deserialize::<ConfigurationUp>(&buf[..amt]) {
-                            Ok(message) => {
-                                client.handle_configuration_up(message).await;
-                            }
-                            Err(e) => {
-                                println!("Failed to decode configuration message: {:?}", e);
-                            }
-                        }
-                    } else {
-                        println!("Connection closed");
-                        break;
-                    }
+            message = configuration_up.read() => match message {
+                Ok(message) => {
+                    client.handle_configuration_up(message).await;
                 }
-                Err(e) => match e {
-                    ReadError::ConnectionLost(_) => {
-                        break;
-                    }
-                    _ => {
-                        if client.is_cancelled() { break; }
-                        println!("Error reading configuration: {:?}", e);
-                    }
+                Err(e) => {
+                    if client.is_cancelled() { break; }
+                    println!("Error reading configuration: {:?}", e);
                 }
             }
         }
     }
 }
 
-async fn run_datagram_up(connection: Connection, client: Client) {
+async fn run_datagram_up(connection: Connection, client: Client, server: Server) {
     loop {
         tokio::select! {
             _ = client.cancelled() => {
@@ -166,6 +148,7 @@ async fn run_datagram_up(connection: Connection, client: Client) {
                 Ok(bytes) => match bincode::deserialize::<LocalStateSnapshot>(&bytes) {
                     Ok(message) => {
                         client.handle_datagram_up(message.clone()).await;
+                        server.send_snapshot(client.id(), message).await;
                     }
                     Err(e) => {
                         println!("Failed to decode configuration message: {:?}", e);

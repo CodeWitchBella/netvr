@@ -7,8 +7,12 @@ use std::{
 };
 
 use error::Error;
-use netvr_data::{bincode, net};
-use quinn::{Connection, Endpoint, RecvStream, SendStream};
+use netvr_data::{
+    bincode,
+    net::{self, ConfigurationUp, Heartbeat},
+    RecvFrames, SendFrames,
+};
+use quinn::{Connection, Endpoint};
 use tokio::{net::UdpSocket, select};
 
 use crate::quinn_connect::quinn_connect;
@@ -16,8 +20,8 @@ use crate::quinn_connect::quinn_connect;
 pub struct NetVRConnection {
     pub endpoint: Endpoint,
     pub connection: Connection,
-    pub heartbeat: RecvStream,
-    pub configuration_up: SendStream,
+    pub heartbeat: RecvFrames<Heartbeat>,
+    pub configuration_up: SendFrames<ConfigurationUp>,
 }
 
 /// Performs server discovery and returns a socket bound to correct address and
@@ -64,13 +68,11 @@ async fn setup_connection(
     let (endpoint, connection) = quinn_connect(addr).await?;
     log("Connection established.".to_string());
     log("Accepting heartbeat channel.".to_string());
-    let heartbeat = connection.accept_uni().await?;
+    let heartbeat = RecvFrames::open(&connection, b"heartbee").await?;
     log("Heartbeat channel opened.".to_string());
-    let mut configuration_up = connection.open_uni().await?;
+    let configuration_up = SendFrames::open(&connection, b"configur").await?;
     log("Configuration channel opened.".to_string());
-    configuration_up
-        .write(&bincode::serialize(&net::ConfigurationUp::Hello)?)
-        .await?;
+
     log("Channels opened.".to_string());
 
     Ok(NetVRConnection {

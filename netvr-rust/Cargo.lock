@@ -649,8 +649,11 @@ version = "0.1.0"
 dependencies = [
  "bincode",
  "openxr-sys",
+ "quinn",
  "serde",
  "serde-reflection",
+ "thiserror",
+ "tokio",
 ]
 
 [[package]]

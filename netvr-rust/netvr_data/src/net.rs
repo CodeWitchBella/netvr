@@ -43,3 +43,15 @@ pub struct LocalStateSnapshot {
     pub controllers: Vec<Pose>,
     pub views: Vec<Pose>,
 }
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub struct Heartbeat {
+    _buf: [u8; 5],
+}
+impl Default for Heartbeat {
+    fn default() -> Self {
+        Self {
+            _buf: [b'h', b'e', b'l', b'l', b'o'],
+        }
+    }
+}

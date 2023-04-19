@@ -15,6 +15,9 @@ pub enum Error {
     #[error("QUIC write error")]
     WriteError(#[from] quinn::WriteError),
 
+    #[error("Framing Error")]
+    FramingError(#[from] netvr_data::FramingError),
+
     #[error("unknown netvr connect error")]
     Unknown,
 }

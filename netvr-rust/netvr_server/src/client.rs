@@ -1,42 +1,44 @@
-use std::sync::Arc;
-
-use anyhow::Result;
-use netvr_data::{
-    bincode,
-    net::{ConfigurationUp, DatagramDown, LocalStateSnapshot},
+use std::sync::{
+    atomic::{AtomicUsize, Ordering},
+    Arc,
 };
-use quinn::Connection;
+
+use netvr_data::net::{ConfigurationUp, LocalStateSnapshot};
 use tokio::sync::broadcast;
 use tokio_util::sync::CancellationToken;
 
-use crate::dashboard::DashboardMessage;
+use crate::{dashboard::DashboardMessage, server::Server};
 
 struct InnerClient {
-    id: usize,
-    connection: Connection,
+    id: AtomicUsize,
     ws: broadcast::Sender<DashboardMessage>,
     token: CancellationToken,
+    server: Server,
 }
 
 #[derive(Clone)]
-pub struct Client {
+pub(crate) struct Client {
     inner: Arc<InnerClient>,
 }
 
 impl Client {
     pub(crate) fn new(
-        connection: Connection,
         ws: broadcast::Sender<DashboardMessage>,
         token: CancellationToken,
+        server: Server,
     ) -> Self {
         Self {
             inner: Arc::new(InnerClient {
-                id: connection.stable_id(),
-                connection,
+                id: AtomicUsize::new(0),
                 ws,
                 token,
+                server,
             }),
         }
+    }
+
+    pub(crate) fn set_id(&mut self, id: usize) {
+        self.inner.id.store(id, Ordering::Relaxed);
     }
 
     pub async fn handle_configuration_up(&self, message: ConfigurationUp) {
@@ -46,15 +48,9 @@ impl Client {
     pub async fn handle_datagram_up(&self, message: LocalStateSnapshot) {
         println!("Received datagram {:?}", message);
         let _ = self.ws().send(DashboardMessage::DatagramUp {
-            stable_id: self.inner.connection.stable_id(),
+            stable_id: self.id(),
             message,
         });
-    }
-
-    #[allow(dead_code)]
-    pub async fn send_datagram(&self, message: DatagramDown) -> Result<()> {
-        let message = bincode::serialize(&message)?;
-        Ok(self.inner.connection.send_datagram(message.into())?)
     }
 
     #[allow(dead_code)]
@@ -74,6 +70,6 @@ impl Client {
 
     #[allow(dead_code)]
     pub(crate) fn id(&self) -> usize {
-        self.inner.id
+        self.inner.id.load(Ordering::Relaxed)
     }
 }

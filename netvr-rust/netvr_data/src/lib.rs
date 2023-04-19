@@ -1,3 +1,4 @@
+mod framing;
 mod handle_serializer;
 
 use serde::{Deserialize, Serialize};
@@ -83,4 +84,5 @@ pub struct CodegenRoot(pub ReadRemoteDevicesOutput, pub JustInstance, pub Nothin
 
 pub mod net;
 pub use bincode;
+pub use framing::*;
 pub use serde;

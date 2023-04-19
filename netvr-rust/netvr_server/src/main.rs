@@ -1,11 +1,7 @@
 use std::sync::Arc;
 
 use anyhow::Result;
-use tokio::{
-    net::UdpSocket,
-    spawn,
-    sync::{broadcast, Mutex},
-};
+use tokio::{net::UdpSocket, spawn, sync::broadcast};
 
 use crate::{
     accept_connection::accept_connection,
