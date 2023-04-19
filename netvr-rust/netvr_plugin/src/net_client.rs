@@ -26,47 +26,53 @@ pub(crate) async fn run_net_client(
 
     // forever
     loop {
-        let value = collect_state(instance_handle, session_handle)?;
-        connection
-            .connection
-            .send_datagram(bincode::serialize(&value)?.into())?;
+        if let Some(value) = collect_state(instance_handle, session_handle)? {
+            connection
+                .connection
+                .send_datagram(bincode::serialize(&value)?.into())?;
+        }
 
         tokio::time::sleep(std::time::Duration::from_millis(20)).await;
     }
 }
 
+/// Collects the state of the local devices. None means that the state could not
+/// be collected and that it should be tried again. Errors are non-recoverable
+/// and the connection loop should be ended.
 fn collect_state(
     instance_handle: sys::Instance,
     session_handle: sys::Session,
-) -> Result<LocalStateSnapshot> {
-    with_layer(instance_handle, |instance| {
+) -> Result<Option<LocalStateSnapshot>> {
+    Ok(with_layer(instance_handle, |instance| {
         Ok(collect_state_impl(
             instance
                 .sessions
                 .get(&session_handle)
                 .ok_or(anyhow!("Failed to get session data"))?,
         ))
-    })?
+    })?)
 }
 
-fn collect_state_impl(session: &Session) -> Result<LocalStateSnapshot> {
-    let r = session.read_space()?;
+/// Collects the state of the local devices. None means that the state could not
+/// be collected.
+fn collect_state_impl(session: &Session) -> Option<LocalStateSnapshot> {
+    let r = session.read_space().ok()?;
     let space = if let Some(val) = &*r {
         val
     } else {
-        return Err(anyhow::anyhow!("no space"));
+        return None;
     };
     let time = session.time;
     if time.as_nanos() < 0 {
-        return Err(anyhow::anyhow!("invalid time"));
+        return None;
     }
 
-    let (_info, views) =
-        session
-            .session
-            .locate_views(session.view_configuration_type, time, space)?;
+    let (_info, views) = session
+        .session
+        .locate_views(session.view_configuration_type, time, space)
+        .ok()?;
 
-    Ok(LocalStateSnapshot {
+    Some(LocalStateSnapshot {
         controllers: vec![],
         views: views.into_iter().map(|v| v.pose.into()).collect(),
     })

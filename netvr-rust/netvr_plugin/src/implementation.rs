@@ -17,8 +17,8 @@ pub(crate) fn start(input: InstanceAndSession) -> Result<Nothing, XrWrapError> {
             loop {
                 select! {
                     _ = token.cancelled() => { break; }
-                    _ = run_net_client(input.instance, input.session) => {
-                        LogInfo::str("net_client finished");
+                    res = run_net_client(input.instance, input.session) => {
+                        LogInfo::string(format!("net_client finished {:?}", res));
                     }
                 }
             }

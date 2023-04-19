@@ -154,7 +154,7 @@ async fn run_datagram_up(connection: Connection, client: Client, server: Server)
                         server.apply_snapshot(client.id(), message).await;
                     }
                     Err(e) => {
-                        println!("Failed to decode configuration message: {:?}", e);
+                        println!("Failed to decode snapshot: {:?}", e);
                     }
                 },
                 Err(e) => match e {
