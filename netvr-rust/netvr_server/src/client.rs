@@ -3,7 +3,12 @@ use std::sync::{
     Arc,
 };
 
-use netvr_data::net::{ConfigurationUp, LocalStateSnapshot};
+use anyhow::{Ok, Result};
+use netvr_data::{
+    bincode,
+    net::{ConfigurationUp, LocalStateSnapshot},
+};
+use quinn::Connection;
 use tokio::sync::broadcast;
 use tokio_util::sync::CancellationToken;
 
@@ -45,12 +50,21 @@ impl Client {
         println!("Received configuration up {:?}", message);
     }
 
-    pub async fn handle_datagram_up(&self, message: LocalStateSnapshot) {
+    pub async fn handle_recv_snapshot(
+        &self,
+        message: LocalStateSnapshot,
+        connection: &Connection,
+    ) -> Result<()> {
         println!("Received datagram {:?}", message);
         let _ = self.ws().send(DashboardMessage::DatagramUp {
             stable_id: self.id(),
             message,
         });
+        let snapshots = self.inner.server.read_latest_snapshots().await;
+        // TODO: snaphots.remove(&self.id());
+        // TODO: transform snaphots by Matrix
+        connection.send_datagram(bincode::serialize(&snapshots)?.into())?;
+        Ok(())
     }
 
     #[allow(dead_code)]

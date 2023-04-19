@@ -72,6 +72,14 @@ pub struct JustInstance {
     pub instance: openxr_sys::Instance,
 }
 
+#[derive(Serialize, Deserialize)]
+pub struct InstanceAndSession {
+    #[serde(with = "handle_serializer::instance")]
+    pub instance: openxr_sys::Instance,
+    #[serde(with = "handle_serializer::session")]
+    pub session: openxr_sys::Session,
+}
+
 #[derive(Serialize, Deserialize, Default)]
 pub struct Nothing(u8);
 
@@ -80,7 +88,12 @@ pub struct Nothing(u8);
 /// that required code is generated for all structures without having to update
 /// the list in build.rs.
 #[derive(Serialize, Deserialize)]
-pub struct CodegenRoot(pub ReadRemoteDevicesOutput, pub JustInstance, pub Nothing);
+pub struct CodegenRoot(
+    pub ReadRemoteDevicesOutput,
+    pub JustInstance,
+    pub Nothing,
+    pub InstanceAndSession,
+);
 
 pub mod net;
 pub use bincode;

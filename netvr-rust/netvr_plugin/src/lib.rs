@@ -5,7 +5,7 @@ extern crate lazy_static;
 
 use std::{backtrace::Backtrace, panic};
 
-use implementation::{read_remote_devices, start, tick};
+use implementation::{read_remote_devices, start};
 use xr_layer::{
     log::{self, LogPanic},
     pfn,
@@ -13,7 +13,6 @@ use xr_layer::{
 
 #[macro_use]
 mod bincode_abi;
-mod data;
 mod implementation;
 mod instance;
 mod net_client;
@@ -68,6 +67,5 @@ pub use bincode_abi::netvr_cleanup;
 
 bincode_expose!(
     expose read_remote_devices as ReadRemoteDevices taking JustInstance and outputting ReadRemoteDevicesOutput,
-    expose tick as Tick taking JustInstance and outputting Nothing,
-    expose start as Start taking JustInstance and outputting Nothing,
+    expose start as Start taking InstanceAndSession and outputting Nothing,
 );

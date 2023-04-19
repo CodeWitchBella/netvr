@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use serde::{Deserialize, Serialize};
 
 use crate::Pose;
@@ -32,16 +34,18 @@ pub struct ConfigurationDown {
     pub port: u16,
 }
 
-#[derive(Serialize, Deserialize)]
-pub struct DatagramDown {
-    header: [u8; 5],
-    pub port: u16,
-}
-
 #[derive(Serialize, Deserialize, Default, Clone, Debug)]
 pub struct LocalStateSnapshot {
     pub controllers: Vec<Pose>,
     pub views: Vec<Pose>,
+}
+
+#[derive(Serialize, Deserialize, Default, Clone, Debug)]
+pub struct RemoteStateSnapshot {
+    /// Makes sure that we do not apply older snapshots, if they arrive out of
+    /// order.
+    pub order: usize,
+    pub clients: HashMap<usize, LocalStateSnapshot>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]

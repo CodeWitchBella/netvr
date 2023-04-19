@@ -1,6 +1,6 @@
 use std::{collections::HashMap, sync::Arc};
 
-use netvr_data::net::LocalStateSnapshot;
+use netvr_data::net::{LocalStateSnapshot, RemoteStateSnapshot};
 use tokio::{
     spawn,
     sync::{Mutex, RwLock},
@@ -9,7 +9,7 @@ use tokio::{
 use crate::client::Client;
 
 pub(crate) type SnapshotChannel = tokio::sync::mpsc::Sender<(usize, LocalStateSnapshot)>;
-type LatestSnaphots = Arc<RwLock<HashMap<usize, LocalStateSnapshot>>>;
+type LatestSnaphots = Arc<RwLock<RemoteStateSnapshot>>;
 
 #[derive(Clone)]
 pub(crate) struct Server {
@@ -35,15 +35,16 @@ impl Server {
             loop {
                 let Some((id, snapshot)) = receiver.recv().await else { break };
                 let mut latest_snaphots = latest_snapshots.write().await;
-                latest_snaphots.insert(id, snapshot);
+                latest_snaphots.order += 1;
+                latest_snaphots.clients.insert(id, snapshot);
             }
         });
         snapshot_channel
     }
 
-    pub async fn send_snapshot(&self, id: usize, snapshot: LocalStateSnapshot) {
+    pub async fn apply_snapshot(&self, id: usize, snapshot: LocalStateSnapshot) {
         if let Err(err) = self.channel.send((id, snapshot)).await {
-            println!("Failed to send snapshot {:?}", err);
+            println!("Failed to send snapshot to be applied {:?}", err);
         }
     }
 
@@ -57,7 +58,7 @@ impl Server {
         clients.remove(&id);
     }
 
-    pub async fn read_latest_snapshots(&self) -> HashMap<usize, LocalStateSnapshot> {
+    pub async fn read_latest_snapshots(&self) -> RemoteStateSnapshot {
         self.latest_snapshots.read().await.clone()
     }
 }

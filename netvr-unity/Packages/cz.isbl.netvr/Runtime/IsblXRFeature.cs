@@ -33,14 +33,13 @@ namespace Isbl.NetVR
         public const string FeatureId = "cz.isbl.netvr";
 
         internal ulong XrInstance { get; private set; }
+        internal ulong XrSession { get; private set; }
         internal IsblRustLibrary RustLib { get; private set; }
         internal Binary.RPC RPC { get; private set; }
 
 
         static System.Timers.Timer _timer;
         const bool InstantLog = false;
-
-        static Thread _tickThread;
 
         static string _logRust = "";
         static System.Timers.Timer _timerRust;
@@ -100,37 +99,25 @@ namespace Isbl.NetVR
                 RustLib = new(LoggerRust);
                 if (RustLib.GetFn != null) RPC = new(RustLib.GetFn, RustLib.Cleanup);
             }
-            if (_tickThread == null)
-            {
-                _tickThread = new(TickingThread);
-                _tickThread.Start();
-            }
+
             return true;
         }
 
-        void TickingThread()
+        protected override void OnSessionBegin(ulong xrSession)
         {
-            try
-            {
-                RPC?.Start(new(XrInstance));
-                while (true)
-                {
-                    Thread.Sleep(10);
-                    if (XrInstance > 0) RPC?.Tick(new(XrInstance));
-                }
-            }
-            catch (ThreadAbortException) { /* this is expected */ }
-            finally
-            {
-                Utils.Log("Finishing TickingThread");
-            }
+            XrSession = xrSession;
+            RPC?.Start(new(XrInstance, XrSession));
         }
+
+        protected override void OnSessionEnd(ulong xrSession)
+        {
+            XrSession = 0;
+        }
+
 
         protected override void OnInstanceDestroy(ulong xrInstance)
         {
             Utils.Log("OnInstanceDestroy");
-            _tickThread?.Abort();
-            _tickThread = null;
 
 
             if (IsblRustLibrary.DoesUnload) RustLib.Unhook();

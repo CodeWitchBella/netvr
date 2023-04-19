@@ -147,8 +147,11 @@ async fn run_datagram_up(connection: Connection, client: Client, server: Server)
             datagram = connection.read_datagram() => match datagram {
                 Ok(bytes) => match bincode::deserialize::<LocalStateSnapshot>(&bytes) {
                     Ok(message) => {
-                        client.handle_datagram_up(message.clone()).await;
-                        server.send_snapshot(client.id(), message).await;
+                        if let Err(err) = client.handle_recv_snapshot(message.clone(), &connection).await {
+                            println!("Failed to handle snapshot: {:?}", err);
+                            return;
+                        }
+                        server.apply_snapshot(client.id(), message).await;
                     }
                     Err(e) => {
                         println!("Failed to decode configuration message: {:?}", e);
