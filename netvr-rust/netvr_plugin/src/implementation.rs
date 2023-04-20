@@ -1,4 +1,5 @@
-use netvr_data::{InstanceAndSession, JustInstance, Nothing};
+use anyhow::{anyhow, Result};
+use netvr_data::{InstanceAndSession, Nothing};
 use tokio::select;
 use tracing::info;
 use xr_layer::{log::LogInfo, EventDataBuffer};
@@ -8,7 +9,7 @@ use crate::{
 };
 
 /// Starts the netvr client. Should be called after xrCreateInstance.
-pub(crate) fn start(input: InstanceAndSession) -> Result<Nothing, XrWrapError> {
+pub(crate) fn start(input: InstanceAndSession) -> Result<Nothing> {
     with_layer(input.instance, |instance| {
         info!("start {:?}", instance.instance.as_raw());
 
@@ -29,11 +30,23 @@ pub(crate) fn start(input: InstanceAndSession) -> Result<Nothing, XrWrapError> {
 }
 
 pub(crate) fn read_remote_devices(
-    input: JustInstance,
-) -> Result<netvr_data::ReadRemoteDevicesOutput, XrWrapError> {
+    input: InstanceAndSession,
+) -> Result<netvr_data::ReadRemoteDevicesOutput> {
     with_layer(input.instance, |instance| {
+        let session = instance
+            .sessions
+            .get(&input.session)
+            .ok_or(anyhow!("Session not found"))?;
         let mut devices = netvr_data::ReadRemoteDevicesOutput::default();
-        let vec = instance.views.lock()?;
+        let state = session.remote_state.read().map_err(|err| {
+            anyhow::anyhow!("Failed to acquire read lock for remote_state: {:?}", err)
+        })?;
+        // TODO: use state instead of the following
+        // TODO: remove instance.views as it is not read anymore
+        let vec = instance
+            .views
+            .lock()
+            .map_err(|err| anyhow!("Failed to acquire view lock {:?}", err))?;
         let mut i = 0;
         for v in vec.iter() {
             i += 1;

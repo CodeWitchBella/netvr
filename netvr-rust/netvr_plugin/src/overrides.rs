@@ -678,11 +678,13 @@ extern "system" fn locate_views(
     })
 }
 
-pub(crate) fn with_layer<T, R>(handle: sys::Instance, cb: T) -> Result<R, XrWrapError>
+pub(crate) fn with_layer<T, R>(handle: sys::Instance, cb: T) -> anyhow::Result<R>
 where
-    T: FnOnce(&Instance) -> Result<R, XrWrapError>,
+    T: FnOnce(&Instance) -> anyhow::Result<R>,
 {
-    let r = LAYER.read()?;
+    let r = LAYER
+        .read()
+        .map_err(|err| anyhow::anyhow!("Failed to acquire read lock for layer: {:?}", err))?;
     let layer = (*r).as_ref().ok_or(sys::Result::ERROR_RUNTIME_FAILURE)?;
     let instance = read_instance(layer, handle)?;
     layer.trace.wrap(|| cb(instance))

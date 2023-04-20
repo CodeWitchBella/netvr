@@ -1,5 +1,6 @@
 use anyhow::{anyhow, Result};
 use netvr_data::{bincode, net::LocalStateSnapshot};
+use tokio::select;
 use xr_layer::{log::LogTrace, sys};
 
 use crate::{instance::Session, overrides::with_layer};
@@ -23,13 +24,56 @@ pub(crate) async fn run_net_client(
     // read data: lock, clone, unlock
 
     // TODO
+    let transmit = run_transmit_snapshots(
+        connection.connection.clone(),
+        instance_handle,
+        session_handle,
+    );
+    let receive = run_receive_snapshots(
+        connection.connection.clone(),
+        instance_handle,
+        session_handle,
+    );
+    select! {
+        value = transmit => value,
+        value = receive => value,
+    }
+}
 
-    // forever
+async fn run_receive_snapshots(
+    connection: quinn::Connection,
+    instance_handle: sys::Instance,
+    session_handle: sys::Session,
+) -> Result<()> {
+    loop {
+        let datagram = connection.read_datagram().await?;
+        let value: netvr_data::net::RemoteStateSnapshot = bincode::deserialize(&datagram)?;
+
+        with_layer(instance_handle, |instance| {
+            let session = instance
+                .sessions
+                .get(&session_handle)
+                .ok_or(anyhow!("Failed to read session from instance"))?;
+            let mut remote_state = session.remote_state.write().map_err(|err| {
+                anyhow::anyhow!("Failed to acquire write lock on remote_state: {:?}", err)
+            })?;
+            if value.order > remote_state.order {
+                *remote_state = value;
+            }
+
+            Ok(())
+        })?;
+    }
+}
+
+async fn run_transmit_snapshots(
+    connection: quinn::Connection,
+    instance_handle: sys::Instance,
+    session_handle: sys::Session,
+) -> Result<()> {
     loop {
         if let Some(value) = collect_state(instance_handle, session_handle)? {
-            connection
-                .connection
-                .send_datagram(bincode::serialize(&value)?.into())?;
+            connection.send_datagram(bincode::serialize(&value)?.into())?;
         }
 
         tokio::time::sleep(std::time::Duration::from_millis(20)).await;

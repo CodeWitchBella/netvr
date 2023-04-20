@@ -16,14 +16,15 @@ namespace Isbl.NetVR
         {
             var feature = IsblXRFeature.Instance;
             var instance = feature.XrInstance;
-            if (feature == null || instance == 0)
+            var session = feature.XrSession;
+            if (feature == null || instance == 0 || session == 0)
             {
                 foreach (var entry in _devices)
                     Destroy(entry.Value.gameObject);
                 _devices.Clear();
                 return;
             }
-            var remoteDevices = feature.RPC.ReadRemoteDevices(new(instance)).devices.ToArray();
+            var remoteDevices = feature.RPC.ReadRemoteDevices(new(instance, session)).devices.ToArray();
             //Debug.Log($"Devices: {remoteDevices.Length}");
 
             var toRemove = _devices.Where(device =>

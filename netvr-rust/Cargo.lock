@@ -664,6 +664,7 @@ dependencies = [
  "lazy_static",
  "netvr_client",
  "netvr_data",
+ "quinn",
  "serde-reflection",
  "thiserror",
  "tokio",

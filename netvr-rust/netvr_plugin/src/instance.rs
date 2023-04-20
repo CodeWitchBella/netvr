@@ -4,7 +4,7 @@ use std::{
     sync::{mpsc, Arc, Mutex, RwLock, RwLockReadGuard},
 };
 
-use netvr_data::net::{LocalStateSnapshot, RemoteStateSnapshot};
+use netvr_data::net::RemoteStateSnapshot;
 use tokio_util::sync::CancellationToken;
 use tracing::{span, Level, Span};
 use xr_layer::{log::LogTrace, safe_openxr, sys};
@@ -19,6 +19,9 @@ pub(crate) struct Session {
     pub(crate) view_configuration_type: safe_openxr::ViewConfigurationType,
     pub(crate) space_stage: RwLock<Option<safe_openxr::Space>>,
     pub(crate) time: sys::Time,
+    /// This contains data that is received from the server and is made
+    /// available to the application.
+    pub(crate) remote_state: Arc<RwLock<RemoteStateSnapshot>>,
     _span: Span,
 }
 
@@ -34,6 +37,7 @@ impl Session {
             view_configuration_type: sys::ViewConfigurationType::PRIMARY_MONO,
             space_stage: RwLock::new(None),
             time: sys::Time::from_nanos(-1),
+            remote_state: Arc::default(),
             _span: trace.wrap(|| span!(Level::TRACE, "Instance")),
         })
     }
@@ -98,9 +102,7 @@ pub(crate) struct Instance {
     pub(crate) finished_rx: Mutex<mpsc::Receiver<()>>,
     pub(crate) sessions: HashMap<sys::Session, Session>,
     pub(crate) views: Mutex<Vec<ViewData>>,
-    /// This contains data that is received from the server and is made
-    /// available to the application.
-    pub(crate) remote_state: Arc<Mutex<RemoteStateSnapshot>>,
+
     _span: Span,
 }
 
@@ -137,7 +139,6 @@ impl Instance {
             finished_rx: Mutex::new(finished_rx),
             sessions: HashMap::default(),
             views: Mutex::new(vec![]),
-            remote_state: Arc::default(),
 
             _span: span!(Level::TRACE, "Instance"),
         }
