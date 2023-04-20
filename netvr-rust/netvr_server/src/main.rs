@@ -35,11 +35,13 @@ async fn main() -> Result<()> {
 
     let server = Server::start().await;
     let connections = spawn(async move {
+        let mut id_generator: u32 = 0;
         loop {
             if let Some(connecting) = endpoint.accept().await {
                 let tx = tx.clone();
                 let server = server.clone();
-                spawn(accept_connection(connecting, server, tx));
+                id_generator += 1;
+                spawn(accept_connection(connecting, server, tx, id_generator));
             }
         }
     });

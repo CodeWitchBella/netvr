@@ -3,7 +3,7 @@ use std::{env, net::SocketAddr};
 use anyhow::{anyhow, Result};
 use futures_util::SinkExt;
 use netvr_data::{
-    net::LocalStateSnapshot,
+    net::{ClientId, LocalStateSnapshot},
     serde::{Deserialize, Serialize},
 };
 use tokio::sync::broadcast;
@@ -18,20 +18,20 @@ pub(crate) enum DashboardMessage {
     Binary(Vec<u8>),
     #[serde(rename_all = "camelCase")]
     ConnectionEstablished {
+        id: ClientId,
         addr: SocketAddr,
-        stable_id: usize,
     },
     #[serde(rename_all = "camelCase")]
     FullyConnected {
-        stable_id: usize,
+        id: ClientId,
     },
     #[serde(rename_all = "camelCase")]
     ConnectionClosed {
-        stable_id: usize,
+        id: ClientId,
     },
     #[serde(rename_all = "camelCase")]
     DatagramUp {
-        stable_id: usize,
+        id: ClientId,
         message: LocalStateSnapshot,
     },
 }

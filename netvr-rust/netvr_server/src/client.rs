@@ -1,12 +1,9 @@
-use std::sync::{
-    atomic::{AtomicUsize, Ordering},
-    Arc,
-};
+use std::sync::Arc;
 
 use anyhow::{Ok, Result};
 use netvr_data::{
     bincode,
-    net::{ConfigurationUp, LocalStateSnapshot},
+    net::{ClientId, ConfigurationUp, LocalStateSnapshot},
 };
 use quinn::Connection;
 use tokio::sync::broadcast;
@@ -15,7 +12,7 @@ use tokio_util::sync::CancellationToken;
 use crate::{dashboard::DashboardMessage, server::Server};
 
 struct InnerClient {
-    id: AtomicUsize,
+    id: ClientId,
     ws: broadcast::Sender<DashboardMessage>,
     token: CancellationToken,
     server: Server,
@@ -31,19 +28,16 @@ impl Client {
         ws: broadcast::Sender<DashboardMessage>,
         token: CancellationToken,
         server: Server,
+        id: ClientId,
     ) -> Self {
         Self {
             inner: Arc::new(InnerClient {
-                id: AtomicUsize::new(0),
+                id,
                 ws,
                 token,
                 server,
             }),
         }
-    }
-
-    pub(crate) fn set_id(&mut self, id: usize) {
-        self.inner.id.store(id, Ordering::Relaxed);
     }
 
     pub async fn handle_configuration_up(&self, message: ConfigurationUp) {
@@ -57,7 +51,7 @@ impl Client {
     ) -> Result<()> {
         println!("Received datagram {:?}", message);
         let _ = self.ws().send(DashboardMessage::DatagramUp {
-            stable_id: self.id(),
+            id: self.id(),
             message,
         });
         let snapshots = self.inner.server.read_latest_snapshots().await;
@@ -83,7 +77,7 @@ impl Client {
     }
 
     #[allow(dead_code)]
-    pub(crate) fn id(&self) -> usize {
-        self.inner.id.load(Ordering::Relaxed)
+    pub(crate) fn id(&self) -> ClientId {
+        self.inner.id
     }
 }

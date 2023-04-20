@@ -1,7 +1,7 @@
 use anyhow::Result;
 use netvr_data::{
     bincode,
-    net::{ConfigurationUp, Heartbeat, LocalStateSnapshot},
+    net::{ClientId, ConfigurationUp, Heartbeat, LocalStateSnapshot},
     RecvFrames, SendFrames,
 };
 use quinn::{Connecting, Connection};
@@ -14,11 +14,12 @@ pub(crate) async fn accept_connection(
     connecting: Connecting,
     server: Server,
     ws: broadcast::Sender<DashboardMessage>,
+    id: ClientId,
 ) {
     let token = CancellationToken::new();
 
     // Create client struct
-    let client = Client::new(ws.clone(), token.clone(), server.clone());
+    let client = Client::new(ws.clone(), token.clone(), server.clone(), id);
     server.add_client(client.clone()).await;
     match run_connection(connecting, client.clone(), ws, server.clone()).await {
         Ok(()) => {
@@ -29,25 +30,24 @@ pub(crate) async fn accept_connection(
         }
     }
     token.cancel();
-    server.remove_client(client.id()).await;
+    server.remove_client(id).await;
 }
 
 async fn run_connection(
     connecting: Connecting,
-    mut client: Client,
+    client: Client,
     ws: broadcast::Sender<DashboardMessage>,
     server: Server,
 ) -> Result<()> {
     // Accept connection and open channels
     let connection = connecting.await?;
-    client.set_id(connection.stable_id());
     let heartbeat_channel = SendFrames::open(&connection, b"heartbee").await?;
     let configuration_up_stream = RecvFrames::open(&connection, b"configur").await?;
 
     // Report to dashboard and console
     let _ = ws.send(DashboardMessage::ConnectionEstablished {
+        id: client.id(),
         addr: connection.remote_address(),
-        stable_id: connection.stable_id(),
     });
     println!("Connection established: {:?}", connection.remote_address());
 
@@ -71,9 +71,7 @@ async fn run_connection(
     // - rebroadcast configurations
     // - rebroadcast last datagrams
 
-    let _ = ws.send(DashboardMessage::FullyConnected {
-        stable_id: connection.stable_id(),
-    });
+    let _ = ws.send(DashboardMessage::FullyConnected { id: client.id() });
     println!("Fully connected: {:?}", connection.remote_address());
 
     // Wait for some task to finish
@@ -93,9 +91,7 @@ async fn run_connection(
     }
 
     // Report to dashboard and console
-    ws.send(DashboardMessage::ConnectionClosed {
-        stable_id: connection.stable_id(),
-    })?;
+    ws.send(DashboardMessage::ConnectionClosed { id: client.id() })?;
     println!("Connection closed: {:?}", connection.remote_address());
     Ok(())
 }

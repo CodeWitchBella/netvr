@@ -1,5 +1,5 @@
 use anyhow::{anyhow, Result};
-use netvr_data::{InstanceAndSession, Nothing};
+use netvr_data::{InstanceAndSession, Nothing, RemoteDevice};
 use tokio::select;
 use tracing::info;
 use xr_layer::{log::LogInfo, EventDataBuffer};
@@ -41,22 +41,19 @@ pub(crate) fn read_remote_devices(
         let state = session.remote_state.read().map_err(|err| {
             anyhow::anyhow!("Failed to acquire read lock for remote_state: {:?}", err)
         })?;
-        // TODO: use state instead of the following
-        // TODO: remove instance.views as it is not read anymore
-        let vec = instance
-            .views
-            .lock()
-            .map_err(|err| anyhow!("Failed to acquire view lock {:?}", err))?;
-        let mut i = 0;
-        for v in vec.iter() {
-            i += 1;
-            let device = netvr_data::RemoteDevice {
-                id: i.try_into().unwrap(),
-                pos: v.pose.position.into(),
-                rot: v.pose.orientation.into(),
-            };
-            devices.devices.push(device);
+        for client in state.clients.iter() {
+            let mut i = 0;
+            for device in client.1.views.iter() {
+                i += 1;
+                devices.devices.push(RemoteDevice {
+                    id: client.0 * 100 + i,
+                    pos: device.position.clone(),
+                    rot: device.orientation.clone(),
+                });
+            }
         }
+
+        // TODO: remove instance.views as it is not read anymore
         Ok(devices)
     })
 }

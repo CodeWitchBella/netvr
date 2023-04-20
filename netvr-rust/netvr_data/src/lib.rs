@@ -41,6 +41,8 @@ impl From<openxr_sys::Quaternionf> for Quaternion {
 
 #[derive(Serialize, Deserialize, Default)]
 pub struct RemoteDevice {
+    // TODO: consider changing to u64 to be able to comfortably fit client id +
+    // device id
     pub id: u32,
     pub pos: Vec3,
     pub rot: Quaternion,

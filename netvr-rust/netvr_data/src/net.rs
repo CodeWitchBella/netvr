@@ -40,12 +40,14 @@ pub struct LocalStateSnapshot {
     pub views: Vec<Pose>,
 }
 
+pub type ClientId = u32;
+
 #[derive(Serialize, Deserialize, Default, Clone, Debug)]
 pub struct RemoteStateSnapshot {
     /// Makes sure that we do not apply older snapshots, if they arrive out of
     /// order.
     pub order: usize,
-    pub clients: HashMap<usize, LocalStateSnapshot>,
+    pub clients: HashMap<ClientId, LocalStateSnapshot>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]

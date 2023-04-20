@@ -1,6 +1,6 @@
 use std::{collections::HashMap, sync::Arc};
 
-use netvr_data::net::{LocalStateSnapshot, RemoteStateSnapshot};
+use netvr_data::net::{ClientId, LocalStateSnapshot, RemoteStateSnapshot};
 use tokio::{
     spawn,
     sync::{Mutex, RwLock},
@@ -8,12 +8,12 @@ use tokio::{
 
 use crate::client::Client;
 
-pub(crate) type SnapshotChannel = tokio::sync::mpsc::Sender<(usize, LocalStateSnapshot)>;
+pub(crate) type SnapshotChannel = tokio::sync::mpsc::Sender<(ClientId, LocalStateSnapshot)>;
 type LatestSnaphots = Arc<RwLock<RemoteStateSnapshot>>;
 
 #[derive(Clone)]
 pub(crate) struct Server {
-    clients: Arc<Mutex<HashMap<usize, Client>>>,
+    clients: Arc<Mutex<HashMap<ClientId, Client>>>,
     latest_snapshots: LatestSnaphots,
     channel: SnapshotChannel,
 }
@@ -42,7 +42,7 @@ impl Server {
         snapshot_channel
     }
 
-    pub async fn apply_snapshot(&self, id: usize, snapshot: LocalStateSnapshot) {
+    pub async fn apply_snapshot(&self, id: ClientId, snapshot: LocalStateSnapshot) {
         if let Err(err) = self.channel.send((id, snapshot)).await {
             println!("Failed to send snapshot to be applied {:?}", err);
         }
@@ -53,7 +53,7 @@ impl Server {
         clients.insert(client.id(), client);
     }
 
-    pub async fn remove_client(&self, id: usize) {
+    pub async fn remove_client(&self, id: ClientId) {
         let mut clients = self.clients.lock().await;
         clients.remove(&id);
     }
