@@ -1,15 +1,21 @@
-use std::{collections::HashMap, ffi::CStr, os::raw::c_char, sync::RwLock};
+use std::{
+    collections::HashMap,
+    ffi::{CStr, CString},
+    os::raw::c_char,
+    sync::RwLock,
+};
 
+use anyhow::anyhow;
 use tracing::{field, info, trace_span};
 use xr_layer::{
     log::{LogError, LogInfo, LogTrace, LogWarn},
+    raw::{ConvertTimespecTimeKHR, Win32ConvertPerformanceCounterTimeKHR},
     safe_openxr::{self, InstanceExtensions},
-    sys, Entry, FnPtr, SizedArrayValueIterator, UnsafeFrom, XrDebug, XrStructChain,
+    sys, Entry, FnPtr, UnsafeFrom, XrDebug, XrStructChain,
 };
 
 use crate::{
-    implementation::post_poll_event,
-    instance::{Instance, Session, ViewData},
+    instance::{Action, ActionSet, Instance, Session, ViewData},
     xr_wrap::{xr_wrap, RecordDebug, ResultConvertible, Trace, XrWrapError},
 };
 
@@ -77,7 +83,7 @@ impl Layer {
             // Maybe TODO?:
             //.add_override(FnPtr::DestroySpace(destroy_space))
             //.add_override(FnPtr::DestroyAction(destroy_action))
-            //.add_override(FnPtr::DestroyActionSet(destroy_action_set))
+            .add_override(FnPtr::DestroyActionSet(destroy_action_set))
             //.add_override(FnPtr::EnumerateApiLayerProperties(enumerate_api_layer_properties))
             //.add_override(FnPtr::EnumerateInstanceExtensionProperties(enumerate_instance_extension_properties))
             //.add_override(FnPtr::LocateSpace(locate_space))
@@ -203,26 +209,66 @@ extern "system" fn get_instance_proc_addr(
 }
 
 extern "system" fn create_instance(
-    create_info: *const sys::InstanceCreateInfo,
+    create_info_ptr: *const sys::InstanceCreateInfo,
     instance_ptr: *mut sys::Instance,
 ) -> sys::Result {
     wrap_mut(|layer| {
         let _span = trace_span!("create_instance").entered();
         LogInfo::str("create_instance");
-        let result = unsafe { (layer.entry.fp().create_instance)(create_info, instance_ptr) };
+
+        let timespec = CString::new("XR_KHR_convert_timespec_time")?;
+        let mut has_timespec = false;
+        let perf_counter = CString::new("XR_KHR_win32_convert_performance_counter_time")?;
+        let mut has_perf_counter = false;
+
+        let mut extensions = vec![];
+        let mut create_info = unsafe { *create_info_ptr };
+        for i in 0..usize::try_from(create_info.enabled_extension_count)? {
+            let ptr = unsafe { *create_info.enabled_extension_names.add(i) };
+            let ext_name = unsafe { CStr::from_ptr(ptr) };
+            if ext_name.to_bytes() == timespec.as_bytes() {
+                has_timespec = true;
+            }
+            if ext_name.to_bytes() == perf_counter.as_bytes() {
+                has_perf_counter = true;
+            }
+            LogTrace::string(format!("create_instance: extension: {:?}", ext_name));
+            extensions.push(ptr);
+        }
+        let exts = layer.entry.enumerate_extensions()?;
+        if exts.khr_convert_timespec_time && !has_timespec {
+            extensions.push(timespec.as_ptr());
+            LogTrace::string(format!("added extension: {:?}", timespec));
+        }
+        if exts.khr_win32_convert_performance_counter_time && !has_perf_counter {
+            extensions.push(perf_counter.as_ptr());
+            LogTrace::string(format!("added extension: {:?}", perf_counter));
+        }
+        create_info.enabled_extension_names = extensions.as_ptr();
+        create_info.enabled_extension_count = extensions.len() as u32;
+
+        let result = unsafe { (layer.entry.fp().create_instance)(&create_info, instance_ptr) };
         if result == sys::Result::SUCCESS {
             let instance_handle = unsafe { *instance_ptr };
+            let exts = InstanceExtensions {
+                khr_convert_timespec_time: unsafe {
+                    ConvertTimespecTimeKHR::load(&layer.entry, instance_handle)
+                }
+                .ok(),
+                khr_win32_convert_performance_counter_time: unsafe {
+                    Win32ConvertPerformanceCounterTimeKHR::load(&layer.entry, instance_handle)
+                }
+                .ok(),
+                ..InstanceExtensions::default()
+            };
             let instance_result = unsafe {
-                safe_openxr::Instance::from_raw(
-                    layer.entry.clone(),
-                    instance_handle,
-                    InstanceExtensions::default(),
-                )
+                safe_openxr::Instance::from_raw(layer.entry.clone(), instance_handle, exts)
             };
             if let Ok(instance) = instance_result {
                 layer
                     .instances
                     .insert(instance_handle, Instance::new(instance));
+                LogTrace::str("Instance successfully created");
             } else {
                 LogWarn::str("Failed to acquire Instance");
             }
@@ -312,7 +358,7 @@ extern "system" fn poll_event(
     event_data: *mut sys::EventDataBuffer,
 ) -> sys::Result {
     wrap(|layer| {
-        let _span = trace_span!("poll_event").entered();
+        let span = trace_span!("poll_event", result = tracing::field::Empty).entered();
         let instance = read_instance(layer, instance_handle)?;
 
         let result = unsafe { (instance.fp().poll_event)(instance_handle, event_data) };
@@ -322,16 +368,8 @@ extern "system" fn poll_event(
                 "event",
                 unsafe { XrStructChain::from_ptr(event_data) }.as_debug(&instance.instance),
             );
-        } else if result == sys::Result::EVENT_UNAVAILABLE {
-            let option = post_poll_event(instance).map_err(|err| {
-                LogError::string(format!("post_poll_event failed with error {:?}", err));
-                sys::Result::EVENT_UNAVAILABLE
-            })?;
-            if let Some(data) = option {
-                unsafe { std::ptr::write(event_data, *data.as_raw()) };
-                return sys::Result::SUCCESS.into_result();
-            }
         }
+        span.record_debug("result", result);
         result.into_result()
     })
 }
@@ -349,11 +387,36 @@ extern "system" fn create_action_set(
             unsafe { (instance.fp().create_action_set)(instance_handle, info, action_set_ptr) };
         if result.into_result().is_ok() {
             let action_set = unsafe { *action_set_ptr };
+
+            // Insert object with related data
+            let mut map = instance.action_sets.write()?;
+            map.insert(action_set, ActionSet::new());
+
+            // Insert referencing object
             layer
                 .instance_refs
                 .action_sets
                 .insert(action_set, instance_handle);
         }
+        result.into_result()
+    })
+}
+
+extern "system" fn destroy_action_set(action_set: sys::ActionSet) -> sys::Result {
+    wrap_mut(|layer| {
+        let _span = trace_span!("create_action_set").entered();
+        let result = {
+            let instance =
+                subresource_read_instance_mut(layer, |l| &mut l.action_sets, action_set)?;
+
+            let result = unsafe { (instance.fp().destroy_action_set)(action_set) };
+
+            let mut map = instance.action_sets.write()?;
+            map.remove(&action_set);
+            result
+        };
+        layer.instance_refs.action_sets.remove(&action_set);
+
         result.into_result()
     })
 }
@@ -371,8 +434,17 @@ extern "system" fn create_action(
             unsafe { XrStructChain::from_ptr(info_in) }.as_debug(&instance.instance),
         );
 
-        let result = unsafe { (instance.fp().create_action)(action_set_handle, info_in, out) };
-        result.into_result()
+        let result =
+            unsafe { (instance.fp().create_action)(action_set_handle, info_in, out) }.into_result();
+        if result.is_ok() {
+            let action = unsafe { *out };
+
+            let mut map = instance.action_sets.write()?;
+            if let Some(set) = map.get_mut(&action_set_handle) {
+                set.actions.push(Action { handle: action });
+            }
+        }
+        result
     })
 }
 
@@ -457,9 +529,11 @@ extern "system" fn create_session(
             .0
             .into_any_graphics();
 
+            LogTrace::str("Creating session");
             instance
                 .sessions
                 .insert(session_handle, Session::new(session, &layer.trace)?);
+            LogTrace::str("Initialized session");
         }
         result.into_result()
     })
@@ -592,6 +666,10 @@ extern "system" fn get_action_state_boolean(
         let result = unsafe {
             (instance.fp().get_action_state_boolean)(session_handle, get_info_ptr, state)
         };
+        info!(
+            "{:?}",
+            unsafe { XrStructChain::from_ptr(state) }.as_debug(&instance.instance)
+        );
         result.into_result()
     })
 }
@@ -692,7 +770,7 @@ where
 {
     let r = LAYER
         .read()
-        .map_err(|err| anyhow::anyhow!("Failed to acquire read lock for layer: {:?}", err))?;
+        .map_err(|err| anyhow!("Failed to acquire read lock for layer: {:?}", err))?;
     let layer = (*r).as_ref().ok_or(sys::Result::ERROR_RUNTIME_FAILURE)?;
     let instance = read_instance(layer, handle)?;
     layer.trace.wrap(|| cb(instance))
@@ -762,10 +840,37 @@ simple_s!(get_action_state_float(
     get_info: *const sys::ActionStateGetInfo,
     state: *mut sys::ActionStateFloat,
 ));
-simple_s!(attach_session_action_sets(
+extern "system" fn attach_session_action_sets(
     session_handle: sys::Session,
     attach_info: *const sys::SessionActionSetsAttachInfo,
-));
+) -> sys::Result {
+    wrap(|layer| {
+        let _span = trace_span!("attach_session_action_sets").entered();
+        let instance = subresource_read_instance(layer, |l| &l.sessions, session_handle)?;
+        let result =
+            unsafe { (instance.fp().attach_session_action_sets)(session_handle, attach_info) }
+                .into_result();
+        if result.is_ok() {
+            let sets = instance.action_sets.read()?;
+            let mut session_sets = instance
+                .sessions
+                .get(&session_handle)
+                .ok_or(anyhow!("Missing session in instance"))?
+                .action_sets
+                .write()?;
+            let info = unsafe { XrStructChain::from_ptr(attach_info) }
+                .read_session_action_sets_attach_info()?;
+            for set_handle in info.action_sets() {
+                session_sets.push(
+                    sets.get(&set_handle)
+                        .ok_or(anyhow!("Missing set in instance"))?
+                        .clone(),
+                );
+            }
+        }
+        result
+    })
+}
 simple_i!(result_to_string(
     instance: sys::Instance,
     value: sys::Result,

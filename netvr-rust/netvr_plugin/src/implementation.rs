@@ -57,9 +57,3 @@ pub(crate) fn read_remote_devices(
         Ok(devices)
     })
 }
-
-pub(crate) fn post_poll_event(
-    _instance: &Instance,
-) -> Result<Option<EventDataBuffer>, XrWrapError> {
-    Ok(None)
-}

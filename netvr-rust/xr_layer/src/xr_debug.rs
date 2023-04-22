@@ -300,6 +300,20 @@ impl XrDebug for xr_struct::InteractionProfileState<'_> {
     }
 }
 
+impl XrDebug for xr_struct::ActionStateBoolean<'_> {
+    fn xr_fmt(&self, f: &mut fmt::Formatter, instance: &openxr::Instance) -> fmt::Result {
+        f.debug_struct("InteractionProfileState")
+            .field("current_state", &self.0.current_state)
+            .field("changed_since_last_sync", &self.0.changed_since_last_sync)
+            .field(
+                "last_change_time",
+                &self.0.last_change_time.as_debug(instance),
+            )
+            .field("is_active", &self.0.is_active)
+            .finish()
+    }
+}
+
 impl XrDebug for xr_struct::InteractionProfileSuggestedBinding<'_> {
     fn xr_fmt(&self, f: &mut fmt::Formatter, instance: &openxr::Instance) -> fmt::Result {
         f.debug_struct("InteractionProfileSuggestedBinding")

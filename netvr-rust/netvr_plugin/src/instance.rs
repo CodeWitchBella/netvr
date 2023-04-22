@@ -4,12 +4,13 @@ use std::{
     sync::{mpsc, Arc, Mutex, RwLock, RwLockReadGuard},
 };
 
+use anyhow::Result;
 use netvr_data::net::RemoteStateSnapshot;
 use tokio_util::sync::CancellationToken;
 use tracing::{span, Level, Span};
 use xr_layer::{log::LogTrace, safe_openxr, sys};
 
-use crate::xr_wrap::{Trace, XrWrapError};
+use crate::xr_wrap::Trace;
 
 /// This struct has 1-1 correspondence with each session the application creates
 /// It is used to hold the underlying session from runtime and extra data
@@ -17,11 +18,13 @@ use crate::xr_wrap::{Trace, XrWrapError};
 pub(crate) struct Session {
     pub(crate) session: safe_openxr::Session<safe_openxr::AnyGraphics>,
     pub(crate) view_configuration_type: safe_openxr::ViewConfigurationType,
-    pub(crate) space_stage: RwLock<Option<safe_openxr::Space>>,
+    pub(crate) space_stage: safe_openxr::Space,
+    pub(crate) space_view: safe_openxr::Space,
     pub(crate) time: sys::Time,
     /// This contains data that is received from the server and is made
     /// available to the application.
     pub(crate) remote_state: Arc<RwLock<RemoteStateSnapshot>>,
+    pub(crate) action_sets: Arc<RwLock<Vec<ActionSet>>>,
     _span: Span,
 }
 
@@ -30,49 +33,26 @@ impl Session {
     pub(crate) fn new(
         session: safe_openxr::Session<safe_openxr::AnyGraphics>,
         trace: &Trace,
-    ) -> Result<Self, XrWrapError> {
+    ) -> Result<Self> {
+        let stage = session.create_reference_space(
+            safe_openxr::ReferenceSpaceType::STAGE,
+            safe_openxr::Posef::IDENTITY,
+        )?;
+        let view = session.create_reference_space(
+            safe_openxr::ReferenceSpaceType::VIEW,
+            safe_openxr::Posef::IDENTITY,
+        )?;
         Ok(Self {
             session,
             // this will be set later
             view_configuration_type: sys::ViewConfigurationType::PRIMARY_MONO,
-            space_stage: RwLock::new(None),
+            space_stage: stage,
+            space_view: view,
             time: sys::Time::from_nanos(-1),
             remote_state: Arc::default(),
+            action_sets: Arc::default(),
             _span: trace.wrap(|| span!(Level::TRACE, "Instance")),
         })
-    }
-
-    /// Reads space_stage and if it is None, then it tries to initialize it.
-    pub(crate) fn read_space(
-        &self,
-    ) -> Result<RwLockReadGuard<Option<safe_openxr::Space>>, XrWrapError> {
-        {
-            let r = self
-                .space_stage
-                .read()
-                .map_err(|_| sys::Result::ERROR_RUNTIME_FAILURE)?;
-            if r.is_some() {
-                return Ok(r);
-            }
-        };
-
-        {
-            let mut w = self
-                .space_stage
-                .write()
-                .map_err(|_| sys::Result::ERROR_RUNTIME_FAILURE)?;
-            if w.is_none() {
-                w.replace(self.session.create_reference_space(
-                    safe_openxr::ReferenceSpaceType::STAGE,
-                    safe_openxr::Posef::IDENTITY,
-                )?);
-            };
-        }
-
-        Ok(self
-            .space_stage
-            .read()
-            .map_err(|_| sys::Result::ERROR_RUNTIME_FAILURE)?)
     }
 }
 
@@ -92,6 +72,21 @@ pub(crate) struct ViewData {
     pub fov: sys::Fovf,
 }
 
+#[derive(Debug, Clone)]
+pub(crate) struct Action {
+    pub(crate) handle: sys::Action,
+}
+
+#[derive(Debug, Clone)]
+pub(crate) struct ActionSet {
+    pub(crate) actions: Vec<Action>,
+}
+impl ActionSet {
+    pub(crate) fn new() -> Self {
+        Self { actions: vec![] }
+    }
+}
+
 /// This struct has 1-1 correspondence with each XrInstance the application
 /// creates It is used to hold the underlying instance from runtime and extra
 /// data required by the netvr layer.
@@ -102,6 +97,8 @@ pub(crate) struct Instance {
     pub(crate) finished_rx: Mutex<mpsc::Receiver<()>>,
     pub(crate) sessions: HashMap<sys::Session, Session>,
     pub(crate) views: Mutex<Vec<ViewData>>,
+
+    pub(crate) action_sets: RwLock<HashMap<sys::ActionSet, ActionSet>>,
 
     _span: Span,
 }
@@ -139,6 +136,7 @@ impl Instance {
             finished_rx: Mutex::new(finished_rx),
             sessions: HashMap::default(),
             views: Mutex::new(vec![]),
+            action_sets: RwLock::new(HashMap::new()),
 
             _span: span!(Level::TRACE, "Instance"),
         }

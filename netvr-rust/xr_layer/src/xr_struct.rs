@@ -168,6 +168,7 @@ implement_struct!(
     // I somehow missed this one in first version, which means that there likely
     // are more missing from the list.
     InteractionProfileState,
+    ActionStateBoolean,
 );
 
 impl XrStruct {
@@ -255,5 +256,11 @@ impl<'a> InteractionProfileSuggestedBinding<'a> {
         unsafe {
             SizedArrayValueIterator::new(self.0.count_suggested_bindings, self.0.suggested_bindings)
         }
+    }
+}
+
+impl<'a> SessionActionSetsAttachInfo<'a> {
+    pub fn action_sets(&self) -> SizedArrayValueIterator<openxr_sys::ActionSet> {
+        unsafe { SizedArrayValueIterator::new(self.0.count_action_sets, self.0.action_sets) }
     }
 }

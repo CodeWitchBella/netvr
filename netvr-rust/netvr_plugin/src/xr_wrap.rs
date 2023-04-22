@@ -81,6 +81,12 @@ impl From<anyhow::Error> for XrWrapError {
     }
 }
 
+impl From<std::ffi::NulError> for XrWrapError {
+    fn from(error: std::ffi::NulError) -> Self {
+        Self::Generic(error.into())
+    }
+}
+
 /// Makes sure that layer never crashes. Catches panics. Also allows for more
 /// ergonomic handle writing using ? operator.
 pub(crate) fn xr_wrap<O>(function: O) -> sys::Result

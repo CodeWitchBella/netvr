@@ -171,6 +171,7 @@ implement!(read_vulkan_swapchain_format_list_create_info_khr reads VulkanSwapcha
 // I somehow missed this one in first version, which means that there likely are
 // more missing from the list.
 implement!(read_interaction_profile_state reads InteractionProfileState);
+implement!(read_action_state_boolean reads ActionStateBoolean);
 
 impl XrDebug for XrStructChain {
     fn xr_fmt(&self, f: &mut std::fmt::Formatter, instance: &openxr::Instance) -> std::fmt::Result {

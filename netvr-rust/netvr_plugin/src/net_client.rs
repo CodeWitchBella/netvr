@@ -3,7 +3,10 @@ use netvr_data::{bincode, net::LocalStateSnapshot};
 use tokio::select;
 use xr_layer::{log::LogTrace, sys};
 
-use crate::{instance::Session, overrides::with_layer};
+use crate::{
+    instance::{Instance, Session},
+    overrides::with_layer,
+};
 
 /// Implements the netvr client state machine. Should be recalled if it exists
 /// to reconnect to the server.
@@ -89,6 +92,7 @@ fn collect_state(
 ) -> Result<Option<LocalStateSnapshot>> {
     with_layer(instance_handle, |instance| {
         Ok(collect_state_impl(
+            instance,
             instance
                 .sessions
                 .get(&session_handle)
@@ -99,27 +103,14 @@ fn collect_state(
 
 /// Collects the state of the local devices. None means that the state could not
 /// be collected.
-fn collect_state_impl(session: &Session) -> Option<LocalStateSnapshot> {
-    let r = session.read_space().ok()?;
-    let space = if let Some(val) = &*r {
-        val
-    } else {
-        return None;
-    };
-    let time = session.time;
-    if time.as_nanos() < 0 {
-        return None;
-    }
+fn collect_state_impl(instance: &Instance, session: &Session) -> Option<LocalStateSnapshot> {
+    let time = instance.instance.now().ok()?;
+    let location = session.space_view.locate(&session.space_stage, time).ok()?;
 
     // TODO: add controllers
 
-    let (_info, views) = session
-        .session
-        .locate_views(session.view_configuration_type, time, space)
-        .ok()?;
-
     Some(LocalStateSnapshot {
         controllers: vec![],
-        views: views.into_iter().map(|v| v.pose.into()).collect(),
+        views: vec![location.pose.into()],
     })
 }
