@@ -1,5 +1,6 @@
 use std::{collections::HashMap, sync::Arc};
 
+use anyhow::Result;
 use netvr_data::net::{ClientId, LocalStateSnapshot, RemoteStateSnapshot};
 use tokio::{
     spawn,
@@ -8,7 +9,14 @@ use tokio::{
 
 use crate::client::Client;
 
-pub(crate) type SnapshotChannel = tokio::sync::mpsc::Sender<(ClientId, LocalStateSnapshot)>;
+#[derive(Debug)]
+enum SnaphotChange {
+    AddClient(ClientId),
+    SetSnapshot(ClientId, LocalStateSnapshot),
+    RemoveClient(ClientId),
+}
+
+type SnapshotChannel = tokio::sync::mpsc::Sender<SnaphotChange>;
 type LatestSnaphots = Arc<RwLock<RemoteStateSnapshot>>;
 
 #[derive(Clone)]
@@ -30,31 +38,56 @@ impl Server {
     }
 
     async fn receive_snapshots(latest_snapshots: LatestSnaphots) -> SnapshotChannel {
-        let (snapshot_channel, mut receiver) = tokio::sync::mpsc::channel(100);
+        let (snapshot_channel, mut receiver) = tokio::sync::mpsc::channel::<SnaphotChange>(100);
         spawn(async move {
             loop {
-                let Some((id, snapshot)) = receiver.recv().await else { break };
+                let Some(change) = receiver.recv().await else { break };
                 let mut latest_snaphots = latest_snapshots.write().await;
-                latest_snaphots.order += 1;
-                latest_snaphots.clients.insert(id, snapshot);
+                match change {
+                    SnaphotChange::AddClient(id) => {
+                        latest_snaphots.order += 1;
+                        latest_snaphots.clients.insert(id, Default::default());
+                    }
+                    SnaphotChange::SetSnapshot(id, snapshot) => {
+                        if latest_snaphots.clients.contains_key(&id) {
+                            latest_snaphots.order += 1;
+                            latest_snaphots.clients.insert(id, snapshot);
+                        }
+                    }
+                    SnaphotChange::RemoveClient(id) => {
+                        latest_snaphots.order += 1;
+                        latest_snaphots.clients.remove(&id);
+                    }
+                }
             }
         });
         snapshot_channel
     }
 
     pub async fn apply_snapshot(&self, id: ClientId, snapshot: LocalStateSnapshot) {
-        if let Err(err) = self.channel.send((id, snapshot)).await {
+        if let Err(err) = self
+            .channel
+            .send(SnaphotChange::SetSnapshot(id, snapshot))
+            .await
+        {
             println!("Failed to send snapshot to be applied {:?}", err);
         }
     }
 
-    pub async fn add_client(&self, client: Client) {
+    pub async fn add_client(&self, client: Client) -> Result<()> {
         let mut clients = self.clients.lock().await;
+        self.channel
+            .send(SnaphotChange::AddClient(client.id()))
+            .await?;
         clients.insert(client.id(), client);
+        Ok(())
     }
 
     pub async fn remove_client(&self, id: ClientId) {
         let mut clients = self.clients.lock().await;
+        if let Err(err) = self.channel.send(SnaphotChange::RemoveClient(id)).await {
+            println!("Failed to remove client: {:?}", err);
+        }
         clients.remove(&id);
     }
 

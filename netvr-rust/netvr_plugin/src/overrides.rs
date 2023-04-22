@@ -4,7 +4,7 @@ use tracing::{field, info, trace_span};
 use xr_layer::{
     log::{LogError, LogInfo, LogTrace, LogWarn},
     safe_openxr::{self, InstanceExtensions},
-    sys, Entry, FnPtr, UnsafeFrom, XrDebug, XrStructChain,
+    sys, Entry, FnPtr, SizedArrayValueIterator, UnsafeFrom, XrDebug, XrStructChain,
 };
 
 use crate::{
@@ -561,6 +561,14 @@ extern "system" fn sync_actions(
             "info",
             unsafe { XrStructChain::from_ptr(sync_info) }.as_debug(&instance.instance),
         );
+
+        let info = unsafe { XrStructChain::from_ptr(sync_info) }.read_actions_sync_info();
+        if let Ok(info) = info {
+            for action in info.active_action_sets() {
+                // span.record_debug("action",
+                // action.as_debug(&instance.instance));
+            }
+        }
 
         let result = unsafe { (instance.fp().sync_actions)(session_handle, sync_info) };
         span.record_debug("result", result.into_result());

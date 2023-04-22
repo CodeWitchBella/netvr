@@ -87,14 +87,14 @@ fn collect_state(
     instance_handle: sys::Instance,
     session_handle: sys::Session,
 ) -> Result<Option<LocalStateSnapshot>> {
-    Ok(with_layer(instance_handle, |instance| {
+    with_layer(instance_handle, |instance| {
         Ok(collect_state_impl(
             instance
                 .sessions
                 .get(&session_handle)
                 .ok_or(anyhow!("Failed to get session data"))?,
         ))
-    })?)
+    })
 }
 
 /// Collects the state of the local devices. None means that the state could not
@@ -110,6 +110,8 @@ fn collect_state_impl(session: &Session) -> Option<LocalStateSnapshot> {
     if time.as_nanos() < 0 {
         return None;
     }
+
+    // TODO: add controllers
 
     let (_info, views) = session
         .session

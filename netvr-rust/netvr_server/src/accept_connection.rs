@@ -20,7 +20,6 @@ pub(crate) async fn accept_connection(
 
     // Create client struct
     let client = Client::new(ws.clone(), token.clone(), server.clone(), id);
-    server.add_client(client.clone()).await;
     match run_connection(connecting, client.clone(), ws, server.clone()).await {
         Ok(()) => {
             println!("Connection finished ok");
@@ -39,6 +38,8 @@ async fn run_connection(
     ws: broadcast::Sender<DashboardMessage>,
     server: Server,
 ) -> Result<()> {
+    server.add_client(client.clone()).await?;
+
     // Accept connection and open channels
     let connection = connecting.await?;
     let heartbeat_channel = SendFrames::open(&connection, b"heartbee").await?;
