@@ -117,7 +117,10 @@ pub(crate) async fn serve_dashboard(tx: broadcast::Sender<DashboardMessage>) {
             let rx = tx.subscribe();
             ws.on_upgrade(move |socket| dashboard_connected(socket, rx))
         });
-    let files = warp::filters::fs::dir(dashboard);
-    let routes = ws.or(files);
+    let files = warp::filters::fs::dir(dashboard.clone());
+    let mut index = dashboard.clone();
+    index.push("index.html");
+    let routes = ws.or(files).or(warp::fs::file(index));
     warp::serve(routes).run(([0, 0, 0, 0], 13161)).await;
+    println!("serving dashboard from {:?}", dashboard);
 }
