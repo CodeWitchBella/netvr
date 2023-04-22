@@ -153,6 +153,8 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: d36ad1f1e7826624ca5c868e56212bfe, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
+  DevicePrefab: {fileID: 2527833182869112472, guid: 0db630135afba974bb485feaea25f564,
+    type: 3}
 --- !u!4 &140298208
 Transform:
   m_ObjectHideFlags: 0

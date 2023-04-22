@@ -11,6 +11,7 @@ namespace Isbl.NetVR
     public class IsblRemoteDeviceManager : MonoBehaviour
     {
         readonly Dictionary<UInt32, IsblRemoteDevice> _devices = new();
+        public GameObject DevicePrefab;
 
         void Update()
         {
@@ -43,10 +44,7 @@ namespace Isbl.NetVR
                 IsblRemoteDevice device;
                 if (!_devices.TryGetValue(remoteDevice.id, out device))
                 {
-                    var obj = new GameObject($"Device {remoteDevice.id}");
-                    device = obj.AddComponent<IsblRemoteDevice>();
-                    device.transform.parent = transform;
-                    device.Id = remoteDevice.id;
+                    device = SpawnDevice(remoteDevice.id);
                     _devices.Add(remoteDevice.id, device);
                 }
                 device.transform.position = Convertor.Vector3(remoteDevice.pos);
@@ -54,6 +52,15 @@ namespace Isbl.NetVR
             }
             //foreach()
         }
-    }
 
+        IsblRemoteDevice SpawnDevice(UInt32 id)
+        {
+            var obj = DevicePrefab == null ? new GameObject($"Device {id}") : Instantiate(DevicePrefab);
+            var device = obj.GetComponent<IsblRemoteDevice>();
+            if (device == null) device = obj.AddComponent<IsblRemoteDevice>();
+            obj.transform.parent = transform;
+            device.Id = id;
+            return device;
+        }
+    }
 }
