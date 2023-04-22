@@ -780,7 +780,7 @@ extern "system" fn wait_frame(
         if result.is_ok() {
             let frame_state = unsafe { *frame_state_ptr };
             if let Some(session) = instance.sessions.get_mut(&session_handle) {
-                session.time = frame_state.predicted_display_time;
+                session.predicted_display_time = frame_state.predicted_display_time;
             }
         }
 

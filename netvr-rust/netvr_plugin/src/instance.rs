@@ -20,7 +20,7 @@ pub(crate) struct Session {
     pub(crate) view_configuration_type: safe_openxr::ViewConfigurationType,
     pub(crate) space_stage: safe_openxr::Space,
     pub(crate) space_view: safe_openxr::Space,
-    pub(crate) time: sys::Time,
+    pub(crate) predicted_display_time: sys::Time,
     pub(crate) active_interaction_profiles: Arc<RwLock<HashMap<sys::Path, sys::Path>>>,
 
     /// This contains data that is received from the server and is made
@@ -50,7 +50,7 @@ impl Session {
             view_configuration_type: sys::ViewConfigurationType::PRIMARY_MONO,
             space_stage: stage,
             space_view: view,
-            time: sys::Time::from_nanos(-1),
+            predicted_display_time: sys::Time::from_nanos(-1),
             active_interaction_profiles: Arc::default(),
             remote_state: Arc::default(),
             actions: Arc::default(),
@@ -64,7 +64,7 @@ impl Debug for Session {
         f.debug_struct("Session")
             .field("session", &self.session.as_raw())
             .field("view_configuration_type", &self.view_configuration_type)
-            .field("time", &self.time)
+            .field("time", &self.predicted_display_time)
             .finish_non_exhaustive()
     }
 }
