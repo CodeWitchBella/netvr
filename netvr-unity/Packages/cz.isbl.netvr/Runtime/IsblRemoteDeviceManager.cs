@@ -55,7 +55,8 @@ namespace Isbl.NetVR
 
         IsblRemoteDevice SpawnDevice(UInt32 id)
         {
-            var obj = DevicePrefab == null ? new GameObject($"Device {id}") : Instantiate(DevicePrefab);
+            var obj = DevicePrefab == null ? new GameObject() : Instantiate(DevicePrefab);
+            obj.name = $"Device {id}";
             var device = obj.GetComponent<IsblRemoteDevice>();
             if (device == null) device = obj.AddComponent<IsblRemoteDevice>();
             obj.transform.parent = transform;
