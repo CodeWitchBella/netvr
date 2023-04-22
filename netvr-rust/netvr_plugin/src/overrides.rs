@@ -1,3 +1,4 @@
+use core::slice;
 use std::{
     collections::HashMap,
     ffi::{CStr, CString},
@@ -15,7 +16,7 @@ use xr_layer::{
 };
 
 use crate::{
-    instance::{Action, ActionSet, Instance, Session, ViewData},
+    instance::{Action, ActionSet, Instance, Session},
     xr_wrap::{xr_wrap, RecordDebug, ResultConvertible, Trace, XrWrapError},
 };
 
@@ -362,15 +363,21 @@ extern "system" fn poll_event(
         let instance = read_instance(layer, instance_handle)?;
 
         let result = unsafe { (instance.fp().poll_event)(instance_handle, event_data) };
-        if result == sys::Result::SUCCESS {
-            let span = trace_span!("event", event = tracing::field::Empty).entered();
-            span.record_debug(
-                "event",
-                unsafe { XrStructChain::from_ptr(event_data) }.as_debug(&instance.instance),
-            );
-        }
         span.record_debug("result", result);
-        result.into_result()
+        result.into_result()?;
+        let result = result.into_result();
+        let span = trace_span!("event", event = tracing::field::Empty).entered();
+        span.record_debug(
+            "event",
+            unsafe { XrStructChain::from_ptr(event_data) }.as_debug(&instance.instance),
+        );
+
+        let Ok(buf) = unsafe { XrStructChain::from_ptr(event_data) }
+            .read_event_data_interaction_profile_changed() else { return result; };
+        let Some(session) = instance.sessions.get(&buf.session()) else { return result; };
+        session.active_interaction_profiles.write()?.clear();
+
+        result
     })
 }
 
@@ -390,7 +397,7 @@ extern "system" fn create_action_set(
 
             // Insert object with related data
             let mut map = instance.action_sets.write()?;
-            map.insert(action_set, ActionSet::new());
+            map.insert(action_set, ActionSet::default());
 
             // Insert referencing object
             layer
@@ -405,16 +412,11 @@ extern "system" fn create_action_set(
 extern "system" fn destroy_action_set(action_set: sys::ActionSet) -> sys::Result {
     wrap_mut(|layer| {
         let _span = trace_span!("create_action_set").entered();
-        let result = {
-            let instance =
-                subresource_read_instance_mut(layer, |l| &mut l.action_sets, action_set)?;
 
-            let result = unsafe { (instance.fp().destroy_action_set)(action_set) };
+        let instance = subresource_read_instance_mut(layer, |l| &mut l.action_sets, action_set)?;
+        instance.action_sets.write()?.remove(&action_set);
 
-            let mut map = instance.action_sets.write()?;
-            map.remove(&action_set);
-            result
-        };
+        let result = unsafe { (instance.fp().destroy_action_set)(action_set) };
         layer.instance_refs.action_sets.remove(&action_set);
 
         result.into_result()
@@ -434,15 +436,28 @@ extern "system" fn create_action(
             unsafe { XrStructChain::from_ptr(info_in) }.as_debug(&instance.instance),
         );
 
+        let info = unsafe { *info_in };
         let result =
             unsafe { (instance.fp().create_action)(action_set_handle, info_in, out) }.into_result();
         if result.is_ok() {
-            let action = unsafe { *out };
+            let handle = unsafe { *out };
 
             let mut map = instance.action_sets.write()?;
-            if let Some(set) = map.get_mut(&action_set_handle) {
-                set.actions.push(Action { handle: action });
-            }
+            let set = map
+                .get_mut(&action_set_handle)
+                .ok_or(sys::Result::ERROR_HANDLE_INVALID)?;
+            set.actions.push(Action {
+                handle,
+                name: unsafe {
+                    CStr::from_bytes_until_nul(slice::from_raw_parts(
+                        info.action_name.as_ptr() as *const u8,
+                        info.action_name.len(),
+                    ))
+                }?
+                .to_str()?
+                .to_string(),
+                path: HashMap::default(),
+            });
         }
         result
     })
@@ -495,7 +510,25 @@ extern "system" fn suggest_interaction_profile_bindings(
                 suggested_bindings,
             )
         };
-        result.into_result()
+        result.into_result()?;
+        let result = result.into_result();
+        let Ok(bindings) = unsafe { XrStructChain::from_ptr(suggested_bindings) }
+            .read_interaction_profile_suggested_binding() else {return result;};
+
+        let mut sets = instance.action_sets.write()?;
+        // This is inefficient, but it's only done in application startup.
+        for binding in bindings.suggested_bindings() {
+            for set in sets.values_mut() {
+                for action in &mut set.actions {
+                    if action.handle == binding.action {
+                        action
+                            .path
+                            .insert(bindings.interaction_profile(), binding.binding);
+                    }
+                }
+            }
+        }
+        result
     })
 }
 
@@ -636,16 +669,11 @@ extern "system" fn sync_actions(
             unsafe { XrStructChain::from_ptr(sync_info) }.as_debug(&instance.instance),
         );
 
-        let info = unsafe { XrStructChain::from_ptr(sync_info) }.read_actions_sync_info();
-        if let Ok(info) = info {
-            for action in info.active_action_sets() {
-                // span.record_debug("action",
-                // action.as_debug(&instance.instance));
-            }
-        }
-
         let result = unsafe { (instance.fp().sync_actions)(session_handle, sync_info) };
         span.record_debug("result", result.into_result());
+
+        // TODO: trigger upload to server
+
         result.into_result()
     })
 }
@@ -724,46 +752,6 @@ extern "system" fn apply_haptic_feedback(
     })
 }
 
-extern "system" fn locate_views(
-    session_handle: sys::Session,
-    view_locate_info: *const sys::ViewLocateInfo,
-    view_state: *mut sys::ViewState,
-    view_capacity_input: u32,
-    view_count_output: *mut u32,
-    view: *mut sys::View,
-) -> sys::Result {
-    wrap(|layer| {
-        let _span = trace_span!("locate_views").entered();
-        let instance = subresource_read_instance(layer, |l| &l.sessions, session_handle)?;
-
-        let result = unsafe {
-            (instance.fp().locate_views)(
-                session_handle,
-                view_locate_info,
-                view_state,
-                view_capacity_input,
-                view_count_output,
-                view,
-            )
-        }
-        .into_result();
-        if result.is_ok() {
-            let mut vec = instance.views.lock()?;
-            vec.clear();
-            let size: usize =
-                std::cmp::min(unsafe { *view_count_output }, view_capacity_input).try_into()?;
-            for i in 0..size {
-                let view = unsafe { *view.add(i) };
-                vec.push(ViewData {
-                    fov: view.fov,
-                    pose: view.pose,
-                });
-            }
-        }
-        result
-    })
-}
-
 pub(crate) fn with_layer<T, R>(handle: sys::Instance, cb: T) -> anyhow::Result<R>
 where
     T: FnOnce(&Instance) -> anyhow::Result<R>,
@@ -835,11 +823,21 @@ macro_rules! simple_i {
     };
 }
 
+simple_s!(locate_views(
+    session_handle: sys::Session,
+    view_locate_info: *const sys::ViewLocateInfo,
+    view_state: *mut sys::ViewState,
+    view_capacity_input: u32,
+    view_count_output: *mut u32,
+    view: *mut sys::View,
+));
+
 simple_s!(get_action_state_float(
     session_handle: sys::Session,
     get_info: *const sys::ActionStateGetInfo,
     state: *mut sys::ActionStateFloat,
 ));
+
 extern "system" fn attach_session_action_sets(
     session_handle: sys::Session,
     attach_info: *const sys::SessionActionSetsAttachInfo,
@@ -852,25 +850,25 @@ extern "system" fn attach_session_action_sets(
                 .into_result();
         if result.is_ok() {
             let sets = instance.action_sets.read()?;
-            let mut session_sets = instance
+            let mut session_actions = instance
                 .sessions
                 .get(&session_handle)
                 .ok_or(anyhow!("Missing session in instance"))?
-                .action_sets
+                .actions
                 .write()?;
             let info = unsafe { XrStructChain::from_ptr(attach_info) }
                 .read_session_action_sets_attach_info()?;
             for set_handle in info.action_sets() {
-                session_sets.push(
-                    sets.get(&set_handle)
-                        .ok_or(anyhow!("Missing set in instance"))?
-                        .clone(),
-                );
+                let Some(set) = sets.get(&set_handle) else { continue; };
+                for action in set.clone().actions {
+                    session_actions.push(action);
+                }
             }
         }
         result
     })
 }
+
 simple_i!(result_to_string(
     instance: sys::Instance,
     value: sys::Result,

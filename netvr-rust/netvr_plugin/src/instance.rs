@@ -1,14 +1,14 @@
 use std::{
     collections::HashMap,
     fmt::Debug,
-    sync::{mpsc, Arc, Mutex, RwLock, RwLockReadGuard},
+    sync::{mpsc, Arc, Mutex, RwLock},
 };
 
 use anyhow::Result;
 use netvr_data::net::RemoteStateSnapshot;
 use tokio_util::sync::CancellationToken;
 use tracing::{span, Level, Span};
-use xr_layer::{log::LogTrace, safe_openxr, sys};
+use xr_layer::{log::LogTrace, safe_openxr, sys, XrDebug};
 
 use crate::xr_wrap::Trace;
 
@@ -21,10 +21,12 @@ pub(crate) struct Session {
     pub(crate) space_stage: safe_openxr::Space,
     pub(crate) space_view: safe_openxr::Space,
     pub(crate) time: sys::Time,
+    pub(crate) active_interaction_profiles: Arc<RwLock<HashMap<sys::Path, sys::Path>>>,
+
     /// This contains data that is received from the server and is made
     /// available to the application.
     pub(crate) remote_state: Arc<RwLock<RemoteStateSnapshot>>,
-    pub(crate) action_sets: Arc<RwLock<Vec<ActionSet>>>,
+    pub(crate) actions: Arc<RwLock<Vec<Action>>>,
     _span: Span,
 }
 
@@ -49,8 +51,9 @@ impl Session {
             space_stage: stage,
             space_view: view,
             time: sys::Time::from_nanos(-1),
+            active_interaction_profiles: Arc::default(),
             remote_state: Arc::default(),
-            action_sets: Arc::default(),
+            actions: Arc::default(),
             _span: trace.wrap(|| span!(Level::TRACE, "Instance")),
         })
     }
@@ -66,25 +69,31 @@ impl Debug for Session {
     }
 }
 
-pub(crate) struct ViewData {
-    pub pose: sys::Posef,
-    #[allow(dead_code)]
-    pub fov: sys::Fovf,
-}
-
 #[derive(Debug, Clone)]
 pub(crate) struct Action {
     pub(crate) handle: sys::Action,
+    pub(crate) name: String,
+    // key is interaction profile, value is the binding
+    pub(crate) path: HashMap<sys::Path, sys::Path>,
 }
 
-#[derive(Debug, Clone)]
+impl XrDebug for Action {
+    fn xr_fmt(
+        &self,
+        f: &mut std::fmt::Formatter,
+        instance: &safe_openxr::Instance,
+    ) -> std::fmt::Result {
+        f.debug_struct("Action")
+            .field("handle", &self.handle)
+            .field("name", &self.name)
+            .field("path", &self.path.as_debug(instance))
+            .finish()
+    }
+}
+
+#[derive(Debug, Clone, Default)]
 pub(crate) struct ActionSet {
     pub(crate) actions: Vec<Action>,
-}
-impl ActionSet {
-    pub(crate) fn new() -> Self {
-        Self { actions: vec![] }
-    }
 }
 
 /// This struct has 1-1 correspondence with each XrInstance the application
@@ -96,7 +105,6 @@ pub(crate) struct Instance {
     pub(crate) token: CancellationToken,
     pub(crate) finished_rx: Mutex<mpsc::Receiver<()>>,
     pub(crate) sessions: HashMap<sys::Session, Session>,
-    pub(crate) views: Mutex<Vec<ViewData>>,
 
     pub(crate) action_sets: RwLock<HashMap<sys::ActionSet, ActionSet>>,
 
@@ -135,8 +143,7 @@ impl Instance {
             token,
             finished_rx: Mutex::new(finished_rx),
             sessions: HashMap::default(),
-            views: Mutex::new(vec![]),
-            action_sets: RwLock::new(HashMap::new()),
+            action_sets: RwLock::default(),
 
             _span: span!(Level::TRACE, "Instance"),
         }

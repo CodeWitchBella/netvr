@@ -59,6 +59,33 @@ where
     }
 }
 
+impl<K, V> XrDebug for std::collections::HashMap<K, V>
+where
+    K: XrDebug,
+    V: XrDebug,
+{
+    fn xr_fmt(&self, f: &mut fmt::Formatter, instance: &openxr::Instance) -> fmt::Result {
+        let mut deb = f.debug_map();
+        for (k, v) in self.iter() {
+            deb.entry(&k.as_debug(instance), &v.as_debug(instance));
+        }
+        deb.finish()
+    }
+}
+
+impl<V> XrDebug for Vec<V>
+where
+    V: XrDebug,
+{
+    fn xr_fmt(&self, f: &mut fmt::Formatter, instance: &openxr::Instance) -> fmt::Result {
+        let mut deb = f.debug_list();
+        for v in self.iter() {
+            deb.entry(&v.as_debug(instance));
+        }
+        deb.finish()
+    }
+}
+
 impl<T> XrDebug for Result<T, openxr_sys::Result>
 where
     T: XrDebug,
@@ -302,15 +329,7 @@ impl XrDebug for xr_struct::InteractionProfileState<'_> {
 
 impl XrDebug for xr_struct::ActionStateBoolean<'_> {
     fn xr_fmt(&self, f: &mut fmt::Formatter, instance: &openxr::Instance) -> fmt::Result {
-        f.debug_struct("InteractionProfileState")
-            .field("current_state", &self.0.current_state)
-            .field("changed_since_last_sync", &self.0.changed_since_last_sync)
-            .field(
-                "last_change_time",
-                &self.0.last_change_time.as_debug(instance),
-            )
-            .field("is_active", &self.0.is_active)
-            .finish()
+        self.0.xr_fmt(f, instance)
     }
 }
 
@@ -349,11 +368,12 @@ implement_as_action_state!(ActionStateVector2f);
 
 impl XrDebug for openxr_sys::ActionStatePose {
     fn xr_fmt(&self, f: &mut fmt::Formatter, _: &openxr::Instance) -> fmt::Result {
-        f.debug_struct(stringify!($id))
+        f.debug_struct("ActionStatePose")
             .field("changed_since_last_sync", &self.is_active)
             .field("is_active", &self.is_active)
             .finish()
-        // Pose does not have last_change_time nor current_state!?
+        // Pose does not have last_change_time nor current_state since it uses
+        // XrSpace instead
     }
 }
 

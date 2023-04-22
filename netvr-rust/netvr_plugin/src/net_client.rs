@@ -1,7 +1,7 @@
 use anyhow::{anyhow, Result};
 use netvr_data::{bincode, net::LocalStateSnapshot};
 use tokio::select;
-use xr_layer::{log::LogTrace, sys};
+use xr_layer::{log::LogTrace, sys, XrDebug};
 
 use crate::{
     instance::{Instance, Session},
@@ -108,6 +108,10 @@ fn collect_state_impl(instance: &Instance, session: &Session) -> Option<LocalSta
     let location = session.space_view.locate(&session.space_stage, time).ok()?;
 
     // TODO: add controllers
+    LogTrace::string(format!(
+        "session actions: {:?}",
+        session.actions.read().ok()?.as_debug(&instance.instance)
+    ));
 
     Some(LocalStateSnapshot {
         controllers: vec![],

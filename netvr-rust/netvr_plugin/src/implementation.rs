@@ -2,11 +2,9 @@ use anyhow::{anyhow, Result};
 use netvr_data::{InstanceAndSession, Nothing, RemoteDevice};
 use tokio::select;
 use tracing::info;
-use xr_layer::{log::LogInfo, EventDataBuffer};
+use xr_layer::log::LogInfo;
 
-use crate::{
-    instance::Instance, net_client::run_net_client, overrides::with_layer, xr_wrap::XrWrapError,
-};
+use crate::{net_client::run_net_client, overrides::with_layer};
 
 /// Starts the netvr client. Should be called after xrCreateInstance.
 pub(crate) fn start(input: InstanceAndSession) -> Result<Nothing> {

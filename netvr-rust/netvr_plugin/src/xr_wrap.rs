@@ -1,3 +1,4 @@
+use core::ffi::FromBytesUntilNulError;
 use std::{
     alloc::LayoutError,
     panic,
@@ -77,12 +78,24 @@ impl From<LayoutError> for XrWrapError {
 
 impl From<anyhow::Error> for XrWrapError {
     fn from(error: anyhow::Error) -> Self {
-        Self::Generic(error.into())
+        Self::Generic(error)
     }
 }
 
 impl From<std::ffi::NulError> for XrWrapError {
     fn from(error: std::ffi::NulError) -> Self {
+        Self::Generic(error.into())
+    }
+}
+
+impl From<std::str::Utf8Error> for XrWrapError {
+    fn from(error: std::str::Utf8Error) -> Self {
+        Self::Generic(error.into())
+    }
+}
+
+impl From<FromBytesUntilNulError> for XrWrapError {
+    fn from(error: FromBytesUntilNulError) -> Self {
         Self::Generic(error.into())
     }
 }
