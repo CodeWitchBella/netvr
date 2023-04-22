@@ -5,6 +5,8 @@ use std::{
     os::raw::c_char,
 };
 
+use thiserror::Error;
+
 use crate::{SizedArrayValueIterator, XrDebug};
 
 #[derive(Clone)]
@@ -179,9 +181,11 @@ impl XrStruct {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, Error)]
 pub enum StringParseError {
+    #[error("String is not null terminated")]
     NotNullTerminated,
+    #[error("String is not valid utf8")]
     Utf8Error(std::str::Utf8Error),
 }
 

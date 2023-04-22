@@ -100,6 +100,12 @@ impl From<FromBytesUntilNulError> for XrWrapError {
     }
 }
 
+impl From<xr_layer::StringParseError> for XrWrapError {
+    fn from(error: xr_layer::StringParseError) -> Self {
+        Self::Generic(error.into())
+    }
+}
+
 /// Makes sure that layer never crashes. Catches panics. Also allows for more
 /// ergonomic handle writing using ? operator.
 pub(crate) fn xr_wrap<O>(function: O) -> sys::Result

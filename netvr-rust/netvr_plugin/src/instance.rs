@@ -5,7 +5,8 @@ use std::{
 };
 
 use anyhow::Result;
-use netvr_data::net::RemoteStateSnapshot;
+use netvr_data::net::{self, LocalConfigurationSnapshot, RemoteStateSnapshot};
+use tokio::sync::watch;
 use tokio_util::sync::CancellationToken;
 use tracing::{span, Level, Span};
 use xr_layer::{log::LogTrace, safe_openxr, sys, XrDebug};
@@ -21,12 +22,15 @@ pub(crate) struct Session {
     pub(crate) space_stage: safe_openxr::Space,
     pub(crate) space_view: safe_openxr::Space,
     pub(crate) predicted_display_time: sys::Time,
+
+    /// Maps user paths (eg. /user/hand/left) to active interaction profile for
+    /// it (eg. /interaction_profiles/khr/simple_controller).
     pub(crate) active_interaction_profiles: Arc<RwLock<HashMap<sys::Path, sys::Path>>>,
+    pub(crate) local_configuration: watch::Sender<LocalConfigurationSnapshot>,
 
     /// This contains data that is received from the server and is made
     /// available to the application.
     pub(crate) remote_state: Arc<RwLock<RemoteStateSnapshot>>,
-    pub(crate) actions: Arc<RwLock<Vec<Action>>>,
     _span: Span,
 }
 
@@ -36,6 +40,7 @@ impl Session {
         session: safe_openxr::Session<safe_openxr::AnyGraphics>,
         trace: &Trace,
     ) -> Result<Self> {
+        // TODO: add server space
         let stage = session.create_reference_space(
             safe_openxr::ReferenceSpaceType::STAGE,
             safe_openxr::Posef::IDENTITY,
@@ -52,8 +57,9 @@ impl Session {
             space_view: view,
             predicted_display_time: sys::Time::from_nanos(-1),
             active_interaction_profiles: Arc::default(),
+            local_configuration: watch::channel(LocalConfigurationSnapshot::default()).0,
+
             remote_state: Arc::default(),
-            actions: Arc::default(),
             _span: trace.wrap(|| span!(Level::TRACE, "Instance")),
         })
     }
@@ -72,9 +78,11 @@ impl Debug for Session {
 #[derive(Debug, Clone)]
 pub(crate) struct Action {
     pub(crate) handle: sys::Action,
-    pub(crate) name: String,
     // key is interaction profile, value is the binding
     pub(crate) path: HashMap<sys::Path, sys::Path>,
+    pub(crate) typ: net::ActionType,
+    pub(crate) name: String,
+    pub(crate) localized_name: String,
 }
 
 impl XrDebug for Action {

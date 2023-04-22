@@ -1,5 +1,9 @@
 use anyhow::{anyhow, Result};
-use netvr_data::{bincode, net::LocalStateSnapshot};
+use netvr_data::{
+    bincode,
+    net::{ConfigurationUp, LocalStateSnapshot},
+    SendFrames,
+};
 use tokio::select;
 use xr_layer::{log::LogTrace, sys, XrDebug};
 
@@ -27,7 +31,9 @@ pub(crate) async fn run_net_client(
     // read data: lock, clone, unlock
 
     // TODO
-    let transmit = run_transmit_snapshots(
+    let transmit_conf =
+        run_transmit_configuration(connection.configuration_up, instance_handle, session_handle);
+    let transmit_snap = run_transmit_snapshots(
         connection.connection.clone(),
         instance_handle,
         session_handle,
@@ -38,8 +44,32 @@ pub(crate) async fn run_net_client(
         session_handle,
     );
     select! {
-        value = transmit => value,
+        value = transmit_conf => value,
+        value = transmit_snap => value,
         value = receive => value,
+    }
+}
+
+async fn run_transmit_configuration(
+    mut connection: SendFrames<ConfigurationUp>,
+    instance_handle: sys::Instance,
+    session_handle: sys::Session,
+) -> Result<()> {
+    let mut conf = with_layer(instance_handle, |instance| {
+        Ok(instance
+            .sessions
+            .get(&session_handle)
+            .ok_or(anyhow!("Missing session"))?
+            .local_configuration
+            .subscribe())
+    })?;
+    loop {
+        let value = conf.borrow().clone();
+
+        connection
+            .write(&ConfigurationUp::ConfigurationSnapshot(value))
+            .await?;
+        conf.changed().await?;
     }
 }
 
@@ -106,12 +136,6 @@ fn collect_state(
 fn collect_state_impl(instance: &Instance, session: &Session) -> Option<LocalStateSnapshot> {
     let time = instance.instance.now().ok()?;
     let location = session.space_view.locate(&session.space_stage, time).ok()?;
-
-    // TODO: add controllers
-    LogTrace::string(format!(
-        "session actions: {:?}",
-        session.actions.read().ok()?.as_debug(&instance.instance)
-    ));
 
     Some(LocalStateSnapshot {
         controllers: vec![],

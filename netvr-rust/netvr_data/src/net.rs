@@ -23,11 +23,6 @@ impl Default for DiscoveryResponse {
     }
 }
 
-#[derive(Serialize, Deserialize, Debug)]
-pub enum ConfigurationUp {
-    Hello,
-}
-
 #[derive(Serialize, Deserialize)]
 pub struct ConfigurationDown {
     header: [u8; 5],
@@ -38,6 +33,61 @@ pub struct ConfigurationDown {
 pub struct LocalStateSnapshot {
     pub controllers: Vec<Pose>,
     pub views: Vec<Pose>,
+}
+
+#[derive(Serialize, Deserialize, Default, Clone, Debug)]
+pub enum ActionType {
+    Boolean = 1,
+    Float = 2,
+    Vector2f = 3,
+    Pose = 4,
+    VibrationOutput = 100,
+    #[default]
+    Unknown,
+}
+
+impl From<openxr_sys::ActionType> for ActionType {
+    fn from(action_type: openxr_sys::ActionType) -> Self {
+        match action_type {
+            openxr_sys::ActionType::BOOLEAN_INPUT => ActionType::Pose,
+            openxr_sys::ActionType::FLOAT_INPUT => ActionType::Float,
+            openxr_sys::ActionType::VECTOR2F_INPUT => ActionType::Vector2f,
+            openxr_sys::ActionType::POSE_INPUT => ActionType::Pose,
+            openxr_sys::ActionType::VIBRATION_OUTPUT => ActionType::VibrationOutput,
+            _ => ActionType::Unknown,
+        }
+    }
+}
+
+#[derive(Serialize, Deserialize, Default, Clone, Debug)]
+pub struct Action {
+    #[serde(rename = "type")]
+    pub ty: ActionType,
+    pub name: String,
+    pub localized_name: String,
+    pub binding: String,
+}
+
+#[derive(Serialize, Deserialize, Default, Clone, Debug)]
+pub struct InteractionProfile {
+    pub path: String,
+    pub bindings: Vec<Action>,
+}
+
+#[derive(Serialize, Deserialize, Default, Clone, Debug)]
+pub struct LocalConfigurationSnapshot {
+    pub interaction_profiles: Vec<InteractionProfile>,
+}
+
+#[derive(Serialize, Deserialize, Default, Clone, Debug)]
+pub struct RemoteConfigurationSnapshot {
+    pub clients: HashMap<ClientId, LocalConfigurationSnapshot>,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub enum ConfigurationUp {
+    Hello,
+    ConfigurationSnapshot(LocalConfigurationSnapshot),
 }
 
 pub type ClientId = u32;

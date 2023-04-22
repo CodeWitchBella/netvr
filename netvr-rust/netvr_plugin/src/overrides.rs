@@ -1,4 +1,3 @@
-use core::slice;
 use std::{
     collections::HashMap,
     ffi::{CStr, CString},
@@ -7,6 +6,7 @@ use std::{
 };
 
 use anyhow::anyhow;
+use netvr_data::net::{self, LocalConfigurationSnapshot};
 use tracing::{field, info, trace_span};
 use xr_layer::{
     log::{LogError, LogInfo, LogTrace, LogWarn},
@@ -87,6 +87,8 @@ impl Layer {
             .add_override(FnPtr::DestroyActionSet(destroy_action_set))
             //.add_override(FnPtr::EnumerateApiLayerProperties(enumerate_api_layer_properties))
             //.add_override(FnPtr::EnumerateInstanceExtensionProperties(enumerate_instance_extension_properties))
+            // TODO: locate space can be used to transform from local space to server space,
+            // just replace the local space with the server space :mindblown:
             //.add_override(FnPtr::LocateSpace(locate_space))
             // Swapchain-related functions are of no interest to me
             //.add_override(FnPtr::AcquireSwapchainImage(acquire_swapchain_image))
@@ -436,7 +438,7 @@ extern "system" fn create_action(
             unsafe { XrStructChain::from_ptr(info_in) }.as_debug(&instance.instance),
         );
 
-        let info = unsafe { *info_in };
+        let info = unsafe { XrStructChain::from_ptr(info_in) }.read_action_create_info()?;
         let result =
             unsafe { (instance.fp().create_action)(action_set_handle, info_in, out) }.into_result();
         if result.is_ok() {
@@ -448,15 +450,11 @@ extern "system" fn create_action(
                 .ok_or(sys::Result::ERROR_HANDLE_INVALID)?;
             set.actions.push(Action {
                 handle,
-                name: unsafe {
-                    CStr::from_bytes_until_nul(slice::from_raw_parts(
-                        info.action_name.as_ptr() as *const u8,
-                        info.action_name.len(),
-                    ))
-                }?
-                .to_str()?
-                .to_string(),
+
                 path: HashMap::default(),
+                name: info.action_name()?.to_string(),
+                typ: info.action_type().into(),
+                localized_name: info.localized_action_name()?.to_string(),
             });
         }
         result
@@ -850,20 +848,46 @@ extern "system" fn attach_session_action_sets(
                 .into_result();
         if result.is_ok() {
             let sets = instance.action_sets.read()?;
-            let mut session_actions = instance
+            let session = instance
                 .sessions
                 .get(&session_handle)
-                .ok_or(anyhow!("Missing session in instance"))?
-                .actions
-                .write()?;
+                .ok_or(anyhow!("Missing session in instance"))?;
+
             let info = unsafe { XrStructChain::from_ptr(attach_info) }
                 .read_session_action_sets_attach_info()?;
+
+            let mut profile_map = HashMap::<sys::Path, net::InteractionProfile>::default();
             for set_handle in info.action_sets() {
                 let Some(set) = sets.get(&set_handle) else { continue; };
+
                 for action in set.clone().actions {
-                    session_actions.push(action);
+                    for (profile_path, binding_path) in action.path {
+                        let profile = profile_map.entry(profile_path).or_insert_with(|| {
+                            net::InteractionProfile {
+                                bindings: Vec::new(),
+                                path: instance
+                                    .instance
+                                    .path_to_string(profile_path)
+                                    // TODO: is this a problem?
+                                    .unwrap_or_else(|err| format!("error: {:?}", err)),
+                            }
+                        });
+                        profile.bindings.push(net::Action {
+                            ty: action.typ.clone(),
+                            name: action.name.clone(),
+                            localized_name: action.localized_name.clone(),
+                            binding: instance.instance.path_to_string(binding_path)?,
+                        });
+                    }
                 }
             }
+
+            let conf = LocalConfigurationSnapshot {
+                interaction_profiles: profile_map.values().cloned().collect(),
+            };
+            session.local_configuration.send_replace(conf);
+
+            // TODO: update configuration on server
         }
         result
     })

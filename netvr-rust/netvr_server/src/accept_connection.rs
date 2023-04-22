@@ -59,6 +59,7 @@ async fn run_connection(
     let task_conf = spawn(run_configuration_up(
         configuration_up_stream,
         client.clone(),
+        server.clone(),
     ));
 
     // Start receiving datagrams
@@ -116,7 +117,11 @@ async fn run_heartbeat(mut heartbeat: SendFrames<Heartbeat>, client: Client) {
     }
 }
 
-async fn run_configuration_up(mut configuration_up: RecvFrames<ConfigurationUp>, client: Client) {
+async fn run_configuration_up(
+    mut configuration_up: RecvFrames<ConfigurationUp>,
+    client: Client,
+    server: Server,
+) {
     loop {
         tokio::select! {
             _ = client.cancelled() => {
@@ -124,6 +129,9 @@ async fn run_configuration_up(mut configuration_up: RecvFrames<ConfigurationUp>,
             }
             message = configuration_up.read() => match message {
                 Ok(message) => {
+                    if let ConfigurationUp::ConfigurationSnapshot(snapshot) = &message {
+                        server.apply_configuration(client.id(), snapshot.clone()).await;
+                    }
                     client.handle_configuration_up(message).await;
                 }
                 Err(e) => {
