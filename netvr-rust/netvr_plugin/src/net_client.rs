@@ -5,7 +5,10 @@ use netvr_data::{
     SendFrames,
 };
 use tokio::select;
-use xr_layer::{log::LogTrace, sys, XrDebug};
+use xr_layer::{
+    log::LogTrace,
+    sys::{self, Posef},
+};
 
 use crate::{
     instance::{Instance, Session},

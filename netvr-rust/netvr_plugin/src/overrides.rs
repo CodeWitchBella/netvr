@@ -2,6 +2,7 @@ use std::{
     collections::HashMap,
     ffi::{CStr, CString},
     os::raw::c_char,
+    ptr,
     sync::RwLock,
 };
 
@@ -462,6 +463,7 @@ extern "system" fn create_action(
                 name: info.action_name()?.to_string(),
                 typ: info.action_type().into(),
                 localized_name: info.localized_action_name()?.to_string(),
+                subaction_paths: info.subaction_paths().collect(),
             });
         }
         result
@@ -854,6 +856,9 @@ extern "system" fn attach_session_action_sets(
             unsafe { (instance.fp().attach_session_action_sets)(session_handle, attach_info) }
                 .into_result();
         if result.is_ok() {
+            let left = instance.instance.string_to_path("/user/hand/left")?;
+            let right = instance.instance.string_to_path("/user/hand/right")?;
+
             let sets = instance.action_sets.read()?;
             let session = instance
                 .sessions
@@ -881,6 +886,25 @@ extern "system" fn attach_session_action_sets(
                                 path_handle: profile_path.into_raw(),
                             }
                         });
+
+                        let spaces = if let net::ActionType::Pose = action.typ {
+                            let mut map = HashMap::new();
+                            for subaction_path in action.subaction_paths.iter() {
+                                map.insert(
+                                    subaction_path.clone(),
+                                    util_create_action_space(
+                                        instance,
+                                        session_handle,
+                                        action.handle,
+                                        subaction_path,
+                                    )?,
+                                );
+                            }
+                            Some(map)
+                        } else {
+                            None
+                        };
+
                         profile.bindings.push(net::Action {
                             ty: action.typ.clone(),
                             name: action.name.clone(),
@@ -888,6 +912,7 @@ extern "system" fn attach_session_action_sets(
                             binding: instance.instance.path_to_string(binding_path)?,
                             extra: ActionExtra {
                                 action: action.handle,
+                                spaces,
                             },
                         });
                     }
@@ -906,6 +931,25 @@ extern "system" fn attach_session_action_sets(
         }
         result
     })
+}
+
+fn util_create_action_space(
+    instance: &Instance,
+    session_handle: sys::Session,
+    action: sys::Action,
+    subaction_path: &sys::Path,
+) -> Result<sys::Space, XrWrapError> {
+    let mut space = sys::Space::NULL;
+    let input = sys::ActionSpaceCreateInfo {
+        ty: sys::StructureType::ACTION_SPACE_CREATE_INFO,
+        next: ptr::null(),
+        action,
+        subaction_path: *subaction_path,
+        pose_in_action_space: sys::Posef::IDENTITY,
+    };
+    unsafe { (instance.instance.fp().create_action_space)(session_handle, &input, &mut space) }
+        .into_result()?;
+    Ok(space)
 }
 
 simple_i!(result_to_string(

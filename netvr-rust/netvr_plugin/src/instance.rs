@@ -5,21 +5,24 @@ use std::{
 };
 
 use anyhow::Result;
-use netvr_data::{
-    net::{self, ExtraMarker, LocalConfigurationSnapshot, RemoteStateSnapshot},
-    serde::{Deserialize, Serialize},
-};
+use netvr_data::net::{self, ExtraMarker, LocalConfigurationSnapshot, RemoteStateSnapshot};
 use tokio::sync::watch;
 use tokio_util::sync::CancellationToken;
 use tracing::{span, Level, Span};
-use xr_layer::{log::LogTrace, safe_openxr, sys, XrDebug};
+use xr_layer::{
+    log::LogTrace,
+    safe_openxr,
+    sys::{self},
+    XrDebug,
+};
 
 use crate::xr_wrap::Trace;
 
-#[derive(Debug, Default, Serialize, Deserialize, Clone)]
+#[derive(Clone)]
 pub(crate) struct ActionExtra {
-    #[serde(with = "netvr_data::handle_serializer::action")]
     pub(crate) action: sys::Action,
+    /// Maps subaction path to bound space.
+    pub(crate) spaces: Option<HashMap<sys::Path, sys::Space>>,
 }
 impl ExtraMarker for ActionExtra {}
 
@@ -67,7 +70,11 @@ impl Session {
             space_view: view,
             predicted_display_time: sys::Time::from_nanos(-1),
             active_interaction_profiles: Arc::default(),
-            local_configuration: watch::channel(LocalConfigurationSnapshot::default()).0,
+            local_configuration: watch::channel(LocalConfigurationSnapshot {
+                version: u32::default(),
+                interaction_profiles: Vec::default(),
+            })
+            .0,
 
             remote_state: Arc::default(),
             _span: trace.wrap(|| span!(Level::TRACE, "Instance")),
@@ -93,6 +100,7 @@ pub(crate) struct Action {
     pub(crate) typ: net::ActionType,
     pub(crate) name: String,
     pub(crate) localized_name: String,
+    pub(crate) subaction_paths: Vec<sys::Path>,
 }
 
 impl XrDebug for Action {
