@@ -1,7 +1,7 @@
 use anyhow::{anyhow, Result};
 use netvr_data::{
     bincode,
-    net::{ConfigurationUp, LocalStateSnapshot},
+    net::{ActionType, ConfigurationUp, LocalStateSnapshot},
     SendFrames,
 };
 use tokio::select;
@@ -67,7 +67,7 @@ async fn run_transmit_configuration(
         let value = conf.borrow().clone();
 
         connection
-            .write(&ConfigurationUp::ConfigurationSnapshot(value))
+            .write(&ConfigurationUp::ConfigurationSnapshot(value.into()))
             .await?;
         conf.changed().await?;
     }
@@ -136,9 +136,35 @@ fn collect_state(
 fn collect_state_impl(instance: &Instance, session: &Session) -> Option<LocalStateSnapshot> {
     let time = instance.instance.now().ok()?;
     let location = session.space_view.locate(&session.space_stage, time).ok()?;
+    let active_profiles = session.active_interaction_profiles.read().ok()?;
+    let conf = session.local_configuration.borrow();
+    // TODO: collect full state
+    let controllers = active_profiles
+        .iter()
+        .filter_map(|(user_path, profile)| {
+            let interaction_profile =
+                conf.interaction_profiles
+                    .iter()
+                    .find(|interaction_profile| {
+                        interaction_profile.path_handle == profile.into_raw()
+                    })?;
+            for binding in &interaction_profile.bindings {
+                if let ActionType::Pose = binding.ty {
+                    let pose = session
+                        .space_stage
+                        .locate(&session.space_stage, time)
+                        .ok()?
+                        .pose;
+                    return Some(pose.into());
+                }
+            }
+            None
+        })
+        .collect();
 
     Some(LocalStateSnapshot {
-        controllers: vec![],
+        controllers,
         views: vec![location.pose.into()],
+        required_configuration: conf.version,
     })
 }

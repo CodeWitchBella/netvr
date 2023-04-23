@@ -5,13 +5,23 @@ use std::{
 };
 
 use anyhow::Result;
-use netvr_data::net::{self, LocalConfigurationSnapshot, RemoteStateSnapshot};
+use netvr_data::{
+    net::{self, ExtraMarker, LocalConfigurationSnapshot, RemoteStateSnapshot},
+    serde::{Deserialize, Serialize},
+};
 use tokio::sync::watch;
 use tokio_util::sync::CancellationToken;
 use tracing::{span, Level, Span};
 use xr_layer::{log::LogTrace, safe_openxr, sys, XrDebug};
 
 use crate::xr_wrap::Trace;
+
+#[derive(Debug, Default, Serialize, Deserialize, Clone)]
+pub(crate) struct ActionExtra {
+    #[serde(with = "netvr_data::handle_serializer::action")]
+    pub(crate) action: sys::Action,
+}
+impl ExtraMarker for ActionExtra {}
 
 /// This struct has 1-1 correspondence with each session the application creates
 /// It is used to hold the underlying session from runtime and extra data
@@ -26,7 +36,7 @@ pub(crate) struct Session {
     /// Maps user paths (eg. /user/hand/left) to active interaction profile for
     /// it (eg. /interaction_profiles/khr/simple_controller).
     pub(crate) active_interaction_profiles: Arc<RwLock<HashMap<sys::Path, sys::Path>>>,
-    pub(crate) local_configuration: watch::Sender<LocalConfigurationSnapshot>,
+    pub(crate) local_configuration: watch::Sender<LocalConfigurationSnapshot<ActionExtra>>,
 
     /// This contains data that is received from the server and is made
     /// available to the application.

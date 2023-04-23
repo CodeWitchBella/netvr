@@ -16,7 +16,7 @@ use xr_layer::{
 };
 
 use crate::{
-    instance::{Action, ActionSet, Instance, Session},
+    instance::{Action, ActionExtra, ActionSet, Instance, Session},
     xr_wrap::{xr_wrap, RecordDebug, ResultConvertible, Trace, XrWrapError},
 };
 
@@ -377,8 +377,15 @@ extern "system" fn poll_event(
         let Ok(buf) = unsafe { XrStructChain::from_ptr(event_data) }
             .read_event_data_interaction_profile_changed() else { return result; };
         let Some(session) = instance.sessions.get(&buf.session()) else { return result; };
-        session.active_interaction_profiles.write()?.clear();
-
+        let Ok(mut profiles) = session.active_interaction_profiles.write() else {return result;};
+        // TODO: remove ? and instead just log and return result
+        // TODO: stop hardcoding just left/right
+        let left = instance.instance.string_to_path("/user/hand/left")?;
+        let right = instance.instance.string_to_path("/user/hand/right")?;
+        profiles.clear();
+        profiles.insert(left, session.session.current_interaction_profile(left)?);
+        profiles.insert(right, session.session.current_interaction_profile(right)?);
+        LogTrace::str("Successfully updated active_interaction_profiles");
         result
     })
 }
@@ -856,7 +863,8 @@ extern "system" fn attach_session_action_sets(
             let info = unsafe { XrStructChain::from_ptr(attach_info) }
                 .read_session_action_sets_attach_info()?;
 
-            let mut profile_map = HashMap::<sys::Path, net::InteractionProfile>::default();
+            let mut profile_map =
+                HashMap::<sys::Path, net::InteractionProfile<ActionExtra>>::default();
             for set_handle in info.action_sets() {
                 let Some(set) = sets.get(&set_handle) else { continue; };
 
@@ -870,6 +878,7 @@ extern "system" fn attach_session_action_sets(
                                     .path_to_string(profile_path)
                                     // TODO: is this a problem?
                                     .unwrap_or_else(|err| format!("error: {:?}", err)),
+                                path_handle: profile_path.into_raw(),
                             }
                         });
                         profile.bindings.push(net::Action {
@@ -877,12 +886,18 @@ extern "system" fn attach_session_action_sets(
                             name: action.name.clone(),
                             localized_name: action.localized_name.clone(),
                             binding: instance.instance.path_to_string(binding_path)?,
+                            extra: ActionExtra {
+                                action: action.handle,
+                            },
                         });
                     }
                 }
             }
 
             let conf = LocalConfigurationSnapshot {
+                // TODO: this is not atomic and might be wrong.
+                // It's okay in Unity's case because event system has a dedicated thread there.
+                version: session.local_configuration.borrow().version + 1,
                 interaction_profiles: profile_map.values().cloned().collect(),
             };
             session.local_configuration.send_replace(conf);

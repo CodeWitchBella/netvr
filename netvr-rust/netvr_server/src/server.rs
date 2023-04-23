@@ -16,7 +16,7 @@ use crate::client::Client;
 enum ServerChange {
     AddClient(ClientId),
     SetSnapshot(ClientId, LocalStateSnapshot),
-    SetConfiguration(ClientId, LocalConfigurationSnapshot),
+    SetConfiguration(ClientId, LocalConfigurationSnapshot<()>),
     RemoveClient(ClientId),
 }
 
@@ -110,7 +110,7 @@ impl Server {
         clients.remove(&id);
     }
 
-    pub async fn apply_configuration(&self, id: ClientId, config: LocalConfigurationSnapshot) {
+    pub async fn apply_configuration(&self, id: ClientId, config: LocalConfigurationSnapshot<()>) {
         if let Err(err) = self
             .channel
             .send(ServerChange::SetConfiguration(id, config))

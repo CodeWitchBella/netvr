@@ -1,5 +1,5 @@
 mod framing;
-mod handle_serializer;
+pub mod handle_serializer;
 
 use serde::{Deserialize, Serialize};
 

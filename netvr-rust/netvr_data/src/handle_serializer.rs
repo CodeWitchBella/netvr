@@ -2,7 +2,7 @@
 
 macro_rules! handle {
     ($mod:ident, $id:ident) => {
-        pub(crate) mod $mod {
+        pub mod $mod {
             use serde::{self, Deserialize, Deserializer, Serializer};
 
             pub fn serialize<S>(val: &openxr_sys::$id, serializer: S) -> Result<S::Ok, S::Error>

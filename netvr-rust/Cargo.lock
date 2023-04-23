@@ -665,6 +665,7 @@ dependencies = [
  "netvr_client",
  "netvr_data",
  "quinn",
+ "serde",
  "serde-reflection",
  "thiserror",
  "tokio",

@@ -21,3 +21,4 @@ tokio-util = { version = "0.7.7" }
 anyhow = "1.0.70"
 thiserror = "1.0.40"
 quinn = "0.9.3"
+serde = "1.0.159"
