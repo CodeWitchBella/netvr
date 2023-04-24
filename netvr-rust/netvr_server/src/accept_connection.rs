@@ -1,7 +1,7 @@
 use anyhow::Result;
 use netvr_data::{
     bincode,
-    net::{ClientId, ConfigurationUp, Heartbeat, LocalStateSnapshot},
+    net::{ClientId, ConfigurationDown, ConfigurationUp, Heartbeat, LocalStateSnapshot},
     RecvFrames, SendFrames,
 };
 use quinn::{Connecting, Connection};
@@ -44,6 +44,7 @@ async fn run_connection(
     let connection = connecting.await?;
     let heartbeat_channel = SendFrames::open(&connection, b"heartbee").await?;
     let configuration_up_stream = RecvFrames::open(&connection, b"configur").await?;
+    let configuration_down_stream = SendFrames::open(&connection, b"confetti").await?;
 
     // Report to dashboard and console
     let _ = ws.send(DashboardMessage::ConnectionEstablished {
@@ -56,10 +57,14 @@ async fn run_connection(
     let task_heartbeat = run_heartbeat(heartbeat_channel);
 
     // Start receiving configuration messages
-    let task_conf = run_configuration_up(configuration_up_stream, client.clone(), server.clone());
+    let task_conf_up =
+        run_configuration_up(configuration_up_stream, client.clone(), server.clone());
 
     // Start receiving datagrams
     let task_datagram = run_datagram_up(connection.clone(), client.clone(), server.clone());
+
+    // Start sending configurations
+    let task_conf_down = run_configuration_down(configuration_down_stream, server.clone());
 
     // TODO:
     // - rebroadcast configurations
@@ -76,7 +81,7 @@ async fn run_connection(
         _ = connection.closed() => {
             println!("Closed");
         },
-        _ = task_conf => {
+        _ = task_conf_up => {
             println!("Configuration closed");
         },
         _ = task_datagram => {
@@ -84,6 +89,9 @@ async fn run_connection(
         },
         _ = task_heartbeat => {
             println!("Heartbeat ended");
+        },
+        res = task_conf_down => {
+            println!("Configuration down ended: {:?}", res);
         },
     }
 
@@ -158,5 +166,19 @@ async fn run_datagram_up(connection: Connection, client: Client, server: Server)
                 }
             },
         }
+    }
+}
+
+async fn run_configuration_down(
+    mut connection: SendFrames<ConfigurationDown>,
+    server: Server,
+) -> Result<()> {
+    let mut conf = server.latest_configuration().await;
+    loop {
+        let val = conf.borrow().to_owned();
+        println!("Sending configuration: {:?}", val);
+        connection.write(&ConfigurationDown { snap: val }).await?;
+
+        conf.changed().await?;
     }
 }

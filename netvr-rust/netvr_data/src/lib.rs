@@ -1,6 +1,9 @@
 mod framing;
 pub mod handle_serializer;
 
+use std::collections::HashMap;
+
+use net::{ClientId, LocalConfigurationSnapshot, LocalStateSnapshot, RemoteConfigurationSnapshot};
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Default, Clone, Debug)]
@@ -82,6 +85,17 @@ pub struct InstanceAndSession {
     pub session: openxr_sys::Session,
 }
 
+#[derive(Default, Serialize, Deserialize)]
+pub struct RemoteClientSnapshot {
+    pub configuration: RemoteConfigurationSnapshot,
+    pub state: LocalStateSnapshot,
+}
+
+#[derive(Default, Serialize, Deserialize)]
+pub struct RemoteSnapshot {
+    pub clients: HashMap<ClientId, RemoteClientSnapshot>,
+}
+
 #[derive(Serialize, Deserialize, Default)]
 pub struct Nothing(u8);
 
@@ -95,6 +109,7 @@ pub struct CodegenRoot(
     pub JustInstance,
     pub Nothing,
     pub InstanceAndSession,
+    pub RemoteSnapshot,
 );
 
 pub mod net;

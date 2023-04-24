@@ -23,10 +23,9 @@ impl Default for DiscoveryResponse {
     }
 }
 
-#[derive(Serialize, Deserialize)]
+#[derive(Serialize, Deserialize, Default, Clone, Debug)]
 pub struct ConfigurationDown {
-    header: [u8; 5],
-    pub port: u16,
+    pub snap: RemoteConfigurationSnapshotSet,
 }
 
 #[derive(Serialize, Deserialize, Default, Clone, Debug)]
@@ -60,8 +59,6 @@ impl From<openxr_sys::ActionType> for ActionType {
     }
 }
 
-pub trait ExtraMarker {}
-
 #[derive(Serialize, Deserialize, Default, Clone, Debug)]
 pub struct Action<ActionExtra> {
     #[serde(rename = "type")]
@@ -72,14 +69,22 @@ pub struct Action<ActionExtra> {
     pub extra: ActionExtra,
 }
 
-impl<T: ExtraMarker> From<Action<T>> for Action<()> {
+#[derive(Serialize, Deserialize, Default, Clone, Debug)]
+pub struct RemoteAction {
+    #[serde(rename = "type")]
+    pub ty: ActionType,
+    pub name: String,
+    pub localized_name: String,
+    pub binding: String,
+}
+
+impl<T> From<Action<T>> for RemoteAction {
     fn from(action: Action<T>) -> Self {
         Self {
             ty: action.ty,
             name: action.name,
             localized_name: action.localized_name,
             binding: action.binding,
-            extra: (),
         }
     }
 }
@@ -91,8 +96,15 @@ pub struct InteractionProfile<ActionExtra> {
     #[serde(skip)]
     pub path_handle: u64,
 }
+#[derive(Serialize, Deserialize, Default, Clone, Debug)]
+pub struct RemoteInteractionProfile {
+    pub path: String,
+    pub bindings: Vec<RemoteAction>,
+    #[serde(skip)]
+    pub path_handle: u64,
+}
 
-impl<T: ExtraMarker> From<InteractionProfile<T>> for InteractionProfile<()> {
+impl<T> From<InteractionProfile<T>> for RemoteInteractionProfile {
     fn from(profile: InteractionProfile<T>) -> Self {
         Self {
             path: profile.path,
@@ -108,7 +120,13 @@ pub struct LocalConfigurationSnapshot<ActionExtra> {
     pub interaction_profiles: Vec<InteractionProfile<ActionExtra>>,
 }
 
-impl<T: ExtraMarker> From<LocalConfigurationSnapshot<T>> for LocalConfigurationSnapshot<()> {
+#[derive(Serialize, Deserialize, Default, Clone, Debug)]
+pub struct RemoteConfigurationSnapshot {
+    pub version: u32,
+    pub interaction_profiles: Vec<RemoteInteractionProfile>,
+}
+
+impl<T> From<LocalConfigurationSnapshot<T>> for RemoteConfigurationSnapshot {
     fn from(snapshot: LocalConfigurationSnapshot<T>) -> Self {
         Self {
             version: snapshot.version,
@@ -122,20 +140,20 @@ impl<T: ExtraMarker> From<LocalConfigurationSnapshot<T>> for LocalConfigurationS
 }
 
 #[derive(Serialize, Deserialize, Default, Clone, Debug)]
-pub struct RemoteConfigurationSnapshot {
-    pub clients: HashMap<ClientId, LocalConfigurationSnapshot<()>>,
+pub struct RemoteConfigurationSnapshotSet {
+    pub clients: HashMap<ClientId, RemoteConfigurationSnapshot>,
 }
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum ConfigurationUp {
     Hello,
-    ConfigurationSnapshot(LocalConfigurationSnapshot<()>),
+    ConfigurationSnapshot(RemoteConfigurationSnapshot),
 }
 
 pub type ClientId = u32;
 
 #[derive(Serialize, Deserialize, Default, Clone, Debug)]
-pub struct RemoteStateSnapshot {
+pub struct RemoteStateSnapshotSet {
     /// Makes sure that we do not apply older snapshots, if they arrive out of
     /// order.
     pub order: usize,

@@ -9,7 +9,7 @@ use std::{
 use error::Error;
 use netvr_data::{
     bincode,
-    net::{self, ConfigurationUp, Heartbeat},
+    net::{self, ConfigurationDown, ConfigurationUp, Heartbeat},
     RecvFrames, SendFrames,
 };
 use quinn::{Connection, Endpoint};
@@ -22,6 +22,7 @@ pub struct NetVRConnection {
     pub connection: Connection,
     pub heartbeat: RecvFrames<Heartbeat>,
     pub configuration_up: SendFrames<ConfigurationUp>,
+    pub configuration_down: RecvFrames<ConfigurationDown>,
 }
 
 /// Performs server discovery and returns a socket bound to correct address and
@@ -71,7 +72,9 @@ async fn setup_connection(
     let heartbeat = RecvFrames::open(&connection, b"heartbee").await?;
     log("Heartbeat channel opened.".to_string());
     let configuration_up = SendFrames::open(&connection, b"configur").await?;
-    log("Configuration channel opened.".to_string());
+    log("Configuration up channel opened.".to_string());
+    let configuration_down = RecvFrames::open(&connection, b"confetti").await?;
+    log("Configuration down channel opened.".to_string());
 
     log("Channels opened.".to_string());
 
@@ -80,5 +83,6 @@ async fn setup_connection(
         connection,
         heartbeat,
         configuration_up,
+        configuration_down,
     })
 }

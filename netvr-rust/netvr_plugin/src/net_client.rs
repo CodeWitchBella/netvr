@@ -1,6 +1,7 @@
 use std::ptr;
 
 use anyhow::{anyhow, Result};
+use netvr_client::NetVRConnection;
 use netvr_data::{
     bincode,
     net::{ActionType, ConfigurationUp, LocalStateSnapshot},
@@ -50,10 +51,16 @@ pub(crate) async fn run_net_client(
         instance_handle,
         session_handle,
     );
+    let recv_conf = run_receive_configuration(
+        connection.configuration_down,
+        instance_handle,
+        session_handle,
+    );
     select! {
         value = transmit_conf => value,
         value = transmit_snap => value,
         value = receive => value,
+        value = recv_conf => value,
     }
 }
 
@@ -87,7 +94,7 @@ async fn run_receive_snapshots(
 ) -> Result<()> {
     loop {
         let datagram = connection.read_datagram().await?;
-        let value: netvr_data::net::RemoteStateSnapshot = bincode::deserialize(&datagram)?;
+        let value: netvr_data::net::RemoteStateSnapshotSet = bincode::deserialize(&datagram)?;
 
         with_layer(instance_handle, |instance| {
             let session = instance
@@ -98,8 +105,39 @@ async fn run_receive_snapshots(
                 anyhow::anyhow!("Failed to acquire write lock on remote_state: {:?}", err)
             })?;
             if value.order > remote_state.order {
-                *remote_state = value;
+                remote_state.clone_from(&value);
             }
+            session.update_merged()?;
+
+            Ok(())
+        })?;
+    }
+}
+
+async fn run_receive_configuration(
+    mut connection: netvr_data::RecvFrames<netvr_data::net::ConfigurationDown>,
+    instance_handle: sys::Instance,
+    session_handle: sys::Session,
+) -> Result<()> {
+    LogTrace::str("Waiting for configuration...");
+    loop {
+        let conf = connection.read().await?;
+
+        LogTrace::string(format!("Received configuration: {:?}", conf));
+
+        with_layer(instance_handle, |instance| {
+            let session = instance
+                .sessions
+                .get(&session_handle)
+                .ok_or(anyhow!("Failed to read session from instance"))?;
+            {
+                let mut remote_configuration =
+                    session.remote_configuration.write().map_err(|err| {
+                        anyhow::anyhow!("Failed to acquire write lock on remote_state: {:?}", err)
+                    })?;
+                remote_configuration.clone_from(&conf.snap);
+            }
+            session.update_merged()?;
 
             Ok(())
         })?;

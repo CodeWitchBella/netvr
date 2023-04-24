@@ -1,13 +1,16 @@
-use std::{collections::HashMap, sync::Arc};
+use std::{
+    collections::{hash_map::Entry::Occupied, HashMap},
+    sync::Arc,
+};
 
 use anyhow::Result;
 use netvr_data::net::{
-    ClientId, LocalConfigurationSnapshot, LocalStateSnapshot, RemoteConfigurationSnapshot,
-    RemoteStateSnapshot,
+    ClientId, LocalStateSnapshot, RemoteConfigurationSnapshot, RemoteConfigurationSnapshotSet,
+    RemoteStateSnapshotSet,
 };
 use tokio::{
     spawn,
-    sync::{Mutex, RwLock},
+    sync::{watch, Mutex, RwLock},
 };
 
 use crate::client::Client;
@@ -16,13 +19,13 @@ use crate::client::Client;
 enum ServerChange {
     AddClient(ClientId),
     SetSnapshot(ClientId, LocalStateSnapshot),
-    SetConfiguration(ClientId, LocalConfigurationSnapshot<()>),
+    SetConfiguration(ClientId, RemoteConfigurationSnapshot),
     RemoveClient(ClientId),
 }
 
 type ServerChannel = tokio::sync::mpsc::Sender<ServerChange>;
-type LatestSnaphots = Arc<RwLock<RemoteStateSnapshot>>;
-type LatestConfigurations = Arc<RwLock<RemoteConfigurationSnapshot>>;
+type LatestSnaphots = Arc<RwLock<RemoteStateSnapshotSet>>;
+type LatestConfigurations = Arc<RwLock<watch::Sender<RemoteConfigurationSnapshotSet>>>;
 
 #[derive(Clone)]
 pub(crate) struct Server {
@@ -35,7 +38,8 @@ pub(crate) struct Server {
 impl Server {
     pub async fn start() -> Self {
         let latest_snapshots: LatestSnaphots = Arc::default();
-        let latest_configurations: LatestConfigurations = Arc::default();
+        let latest_configurations: LatestConfigurations =
+            Arc::new(RwLock::new(watch::channel(Default::default()).0));
         let channel = Self::receive(latest_snapshots.clone(), latest_configurations.clone()).await;
         Self {
             clients: Arc::default(),
@@ -56,8 +60,12 @@ impl Server {
                 match change {
                     ServerChange::AddClient(id) => {
                         let mut latest_snaphots = latest_snapshots.write().await;
+                        let latest_configurations = latest_configurations.write().await;
                         latest_snaphots.order += 1;
                         latest_snaphots.clients.insert(id, Default::default());
+                        latest_configurations.send_modify(|confs| {
+                            confs.clients.insert(id, Default::default());
+                        });
                     }
                     ServerChange::SetSnapshot(id, snapshot) => {
                         let mut latest_snaphots = latest_snapshots.write().await;
@@ -67,20 +75,34 @@ impl Server {
                         }
                     }
                     ServerChange::SetConfiguration(id, config) => {
-                        let mut latest_configurations = latest_configurations.write().await;
-                        latest_configurations.clients.insert(id, config);
+                        let latest_configurations = latest_configurations.write().await;
+                        latest_configurations.send_if_modified(|confs| {
+                            if let Occupied(mut e) = confs.clients.entry(id) {
+                                e.insert(config);
+                                true
+                            } else {
+                                println!("Configuration ignored {:?}", config);
+                                false
+                            }
+                        });
                     }
                     ServerChange::RemoveClient(id) => {
                         let mut latest_snaphots = latest_snapshots.write().await;
-                        let mut latest_configurations = latest_configurations.write().await;
+                        let latest_configurations = latest_configurations.write().await;
                         latest_snaphots.order += 1;
                         latest_snaphots.clients.remove(&id);
-                        latest_configurations.clients.remove(&id);
+                        latest_configurations.send_modify(|confs| {
+                            confs.clients.remove(&id);
+                        });
                     }
                 }
             }
         });
         snapshot_channel
+    }
+
+    pub async fn latest_configuration(&self) -> watch::Receiver<RemoteConfigurationSnapshotSet> {
+        self.latest_configurations.read().await.subscribe()
     }
 
     pub async fn apply_snapshot(&self, id: ClientId, snapshot: LocalStateSnapshot) {
@@ -110,7 +132,7 @@ impl Server {
         clients.remove(&id);
     }
 
-    pub async fn apply_configuration(&self, id: ClientId, config: LocalConfigurationSnapshot<()>) {
+    pub async fn apply_configuration(&self, id: ClientId, config: RemoteConfigurationSnapshot) {
         if let Err(err) = self
             .channel
             .send(ServerChange::SetConfiguration(id, config))
@@ -120,7 +142,7 @@ impl Server {
         }
     }
 
-    pub async fn read_latest_snapshots(&self) -> RemoteStateSnapshot {
+    pub async fn read_latest_snapshots(&self) -> RemoteStateSnapshotSet {
         self.latest_snapshots.read().await.clone()
     }
 }

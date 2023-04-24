@@ -49,7 +49,7 @@ impl Client {
         message: LocalStateSnapshot,
         connection: &Connection,
     ) -> Result<()> {
-        println!("Received datagram {:?}", message);
+        // println!("Received datagram {:?}", message);
         let _ = self.ws().send(DashboardMessage::DatagramUp {
             id: self.id(),
             message,

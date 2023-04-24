@@ -4,8 +4,14 @@ use std::{
     sync::{mpsc, Arc, Mutex, RwLock},
 };
 
-use anyhow::Result;
-use netvr_data::net::{self, ExtraMarker, LocalConfigurationSnapshot, RemoteStateSnapshot};
+use anyhow::{anyhow, Result};
+use netvr_data::{
+    net::{
+        self, LocalConfigurationSnapshot, RemoteConfigurationSnapshot,
+        RemoteConfigurationSnapshotSet, RemoteStateSnapshotSet,
+    },
+    RemoteSnapshot,
+};
 use tokio::sync::watch;
 use tokio_util::sync::CancellationToken;
 use tracing::{span, Level, Span};
@@ -24,7 +30,6 @@ pub(crate) struct ActionExtra {
     /// Maps subaction path to bound space.
     pub(crate) spaces: Option<HashMap<sys::Path, sys::Space>>,
 }
-impl ExtraMarker for ActionExtra {}
 
 /// This struct has 1-1 correspondence with each session the application creates
 /// It is used to hold the underlying session from runtime and extra data
@@ -43,7 +48,10 @@ pub(crate) struct Session {
 
     /// This contains data that is received from the server and is made
     /// available to the application.
-    pub(crate) remote_state: Arc<RwLock<RemoteStateSnapshot>>,
+    pub(crate) remote_state: Arc<RwLock<RemoteStateSnapshotSet>>,
+    pub(crate) remote_configuration: Arc<RwLock<RemoteConfigurationSnapshotSet>>,
+
+    pub(crate) remote_merged: Arc<RwLock<RemoteSnapshot>>,
     _span: Span,
 }
 
@@ -77,8 +85,66 @@ impl Session {
             .0,
 
             remote_state: Arc::default(),
+            remote_configuration: Arc::default(),
+            remote_merged: Arc::default(),
             _span: trace.wrap(|| span!(Level::TRACE, "Instance")),
         })
+    }
+
+    pub(crate) fn update_merged(&self) -> Result<()> {
+        let state = self
+            .remote_state
+            .read()
+            .map_err(|err| anyhow!("{:?}", err))?;
+        let config = self
+            .remote_configuration
+            .read()
+            .map_err(|err| anyhow!("{:?}", err))?;
+        let mut merged = self
+            .remote_merged
+            .write()
+            .map_err(|err| anyhow!("{:?}", err))?;
+
+        merged
+            .clients
+            .retain(|client_id, client| config.clients.contains_key(client_id));
+
+        for (client_id, client_config) in &config.clients {
+            let Some(state) = state.clients.get(client_id) else { continue; };
+            if client_config.version == state.required_configuration {
+                merged.clients.insert(
+                    *client_id,
+                    netvr_data::RemoteClientSnapshot {
+                        configuration: client_config.clone(),
+                        state: state.clone(),
+                    },
+                );
+            }
+        }
+
+        for (client_id, client) in &mut merged.clients {
+            let old_config = client.configuration.clone();
+            let old_state = client.state.clone();
+
+            let new_config = config.clients[client_id].clone();
+            let new_state = state.clients[client_id].clone();
+
+            if old_config.version == new_config.version {
+                if new_state.required_configuration == old_config.version {
+                    client.state = new_state;
+                }
+            } else if new_config.version > old_config.version {
+                if new_state.required_configuration == new_config.version {
+                    client.configuration = new_config;
+                    client.state = new_state;
+                } else if old_state.required_configuration == new_config.version {
+                    client.configuration = new_config;
+                } else if new_state.required_configuration == old_config.version {
+                    client.state = new_state;
+                }
+            }
+        }
+        Ok(())
     }
 }
 
