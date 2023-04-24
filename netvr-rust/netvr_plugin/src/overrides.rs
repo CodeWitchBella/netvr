@@ -7,7 +7,7 @@ use std::{
 };
 
 use anyhow::anyhow;
-use netvr_data::net::{self, LocalConfigurationSnapshot};
+use netvr_data::net;
 use tracing::{field, info, trace_span};
 use xr_layer::{
     log::{LogError, LogInfo, LogTrace, LogWarn},
@@ -17,7 +17,8 @@ use xr_layer::{
 };
 
 use crate::{
-    instance::{Action, ActionExtra, ActionSet, Instance, Session},
+    instance::{Action, ActionSet, Instance, Session},
+    local_configuration::{self, ActionExtra, InteractionProfile, LocalConfigurationSnapshot},
     xr_wrap::{xr_wrap, RecordDebug, ResultConvertible, Trace, XrWrapError},
 };
 
@@ -870,15 +871,14 @@ extern "system" fn attach_session_action_sets(
             let info = unsafe { XrStructChain::from_ptr(attach_info) }
                 .read_session_action_sets_attach_info()?;
 
-            let mut profile_map =
-                HashMap::<sys::Path, net::InteractionProfile<ActionExtra>>::default();
+            let mut profile_map = HashMap::<sys::Path, InteractionProfile>::default();
             for set_handle in info.action_sets() {
                 let Some(set) = sets.get(&set_handle) else { continue; };
 
                 for action in set.clone().actions {
                     for (profile_path, binding_path) in action.path {
                         let profile = profile_map.entry(profile_path).or_insert_with(|| {
-                            net::InteractionProfile {
+                            InteractionProfile {
                                 bindings: Vec::new(),
                                 path: instance
                                     .instance
@@ -907,7 +907,7 @@ extern "system" fn attach_session_action_sets(
                             None
                         };
 
-                        profile.bindings.push(net::Action {
+                        profile.bindings.push(local_configuration::Action {
                             ty: action.typ.clone(),
                             name: action.name.clone(),
                             localized_name: action.localized_name.clone(),

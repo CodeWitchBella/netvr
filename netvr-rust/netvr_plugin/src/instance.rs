@@ -6,10 +6,7 @@ use std::{
 
 use anyhow::{anyhow, Result};
 use netvr_data::{
-    net::{
-        self, LocalConfigurationSnapshot, RemoteConfigurationSnapshot,
-        RemoteConfigurationSnapshotSet, RemoteStateSnapshotSet,
-    },
+    net::{self, RemoteConfigurationSnapshotSet, RemoteStateSnapshotSet},
     RemoteSnapshot,
 };
 use tokio::sync::watch;
@@ -22,14 +19,7 @@ use xr_layer::{
     XrDebug,
 };
 
-use crate::xr_wrap::Trace;
-
-#[derive(Clone)]
-pub(crate) struct ActionExtra {
-    pub(crate) action: sys::Action,
-    /// Maps subaction path to bound space.
-    pub(crate) spaces: Option<HashMap<sys::Path, sys::Space>>,
-}
+use crate::{local_configuration::LocalConfigurationSnapshot, xr_wrap::Trace};
 
 /// This struct has 1-1 correspondence with each session the application creates
 /// It is used to hold the underlying session from runtime and extra data
@@ -44,7 +34,7 @@ pub(crate) struct Session {
     /// Maps user paths (eg. /user/hand/left) to active interaction profile for
     /// it (eg. /interaction_profiles/khr/simple_controller).
     pub(crate) active_interaction_profiles: Arc<RwLock<HashMap<sys::Path, sys::Path>>>,
-    pub(crate) local_configuration: watch::Sender<LocalConfigurationSnapshot<ActionExtra>>,
+    pub(crate) local_configuration: watch::Sender<LocalConfigurationSnapshot>,
 
     /// This contains data that is received from the server and is made
     /// available to the application.

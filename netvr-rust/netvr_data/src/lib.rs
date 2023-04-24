@@ -3,7 +3,7 @@ pub mod handle_serializer;
 
 use std::collections::HashMap;
 
-use net::{ClientId, LocalConfigurationSnapshot, LocalStateSnapshot, RemoteConfigurationSnapshot};
+use net::{ClientId, LocalStateSnapshot, RemoteConfigurationSnapshot};
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Default, Clone, Debug)]

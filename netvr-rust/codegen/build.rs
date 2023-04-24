@@ -18,6 +18,9 @@ fn main() -> Result<(), Box<dyn std::error::Error>> {
     tracer
         .trace_simple_type::<netvr_data::CodegenRoot>()
         .unwrap();
+    tracer
+        .trace_simple_type::<netvr_data::net::ActionType>()
+        .unwrap();
     let registry = tracer.registry().unwrap();
 
     // Create C# class

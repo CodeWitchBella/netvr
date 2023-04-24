@@ -60,16 +60,6 @@ impl From<openxr_sys::ActionType> for ActionType {
 }
 
 #[derive(Serialize, Deserialize, Default, Clone, Debug)]
-pub struct Action<ActionExtra> {
-    #[serde(rename = "type")]
-    pub ty: ActionType,
-    pub name: String,
-    pub localized_name: String,
-    pub binding: String,
-    pub extra: ActionExtra,
-}
-
-#[derive(Serialize, Deserialize, Default, Clone, Debug)]
 pub struct RemoteAction {
     #[serde(rename = "type")]
     pub ty: ActionType,
@@ -78,24 +68,6 @@ pub struct RemoteAction {
     pub binding: String,
 }
 
-impl<T> From<Action<T>> for RemoteAction {
-    fn from(action: Action<T>) -> Self {
-        Self {
-            ty: action.ty,
-            name: action.name,
-            localized_name: action.localized_name,
-            binding: action.binding,
-        }
-    }
-}
-
-#[derive(Serialize, Deserialize, Default, Clone, Debug)]
-pub struct InteractionProfile<ActionExtra> {
-    pub path: String,
-    pub bindings: Vec<Action<ActionExtra>>,
-    #[serde(skip)]
-    pub path_handle: u64,
-}
 #[derive(Serialize, Deserialize, Default, Clone, Debug)]
 pub struct RemoteInteractionProfile {
     pub path: String,
@@ -104,39 +76,10 @@ pub struct RemoteInteractionProfile {
     pub path_handle: u64,
 }
 
-impl<T> From<InteractionProfile<T>> for RemoteInteractionProfile {
-    fn from(profile: InteractionProfile<T>) -> Self {
-        Self {
-            path: profile.path,
-            bindings: profile.bindings.into_iter().map(|b| b.into()).collect(),
-            path_handle: profile.path_handle,
-        }
-    }
-}
-
-#[derive(Serialize, Deserialize, Default, Clone, Debug)]
-pub struct LocalConfigurationSnapshot<ActionExtra> {
-    pub version: u32,
-    pub interaction_profiles: Vec<InteractionProfile<ActionExtra>>,
-}
-
 #[derive(Serialize, Deserialize, Default, Clone, Debug)]
 pub struct RemoteConfigurationSnapshot {
     pub version: u32,
     pub interaction_profiles: Vec<RemoteInteractionProfile>,
-}
-
-impl<T> From<LocalConfigurationSnapshot<T>> for RemoteConfigurationSnapshot {
-    fn from(snapshot: LocalConfigurationSnapshot<T>) -> Self {
-        Self {
-            version: snapshot.version,
-            interaction_profiles: snapshot
-                .interaction_profiles
-                .into_iter()
-                .map(|p| p.into())
-                .collect(),
-        }
-    }
 }
 
 #[derive(Serialize, Deserialize, Default, Clone, Debug)]
