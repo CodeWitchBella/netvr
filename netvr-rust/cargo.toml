@@ -2,6 +2,7 @@
 
 members = [
     "codegen",
+    "netvr_calibrate",
     "netvr_client",
     "netvr_data",
     "netvr_plugin",
