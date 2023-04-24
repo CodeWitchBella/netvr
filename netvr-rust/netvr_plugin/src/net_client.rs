@@ -7,7 +7,7 @@ use netvr_data::{
 use tokio::select;
 use xr_layer::{
     log::LogTrace,
-    sys::{self, Posef},
+    sys::{self},
 };
 
 use crate::{
@@ -144,7 +144,7 @@ fn collect_state_impl(instance: &Instance, session: &Session) -> Option<LocalSta
     // TODO: collect full state
     let controllers = active_profiles
         .iter()
-        .filter_map(|(user_path, profile)| {
+        .filter_map(|(_user_path, profile)| {
             let interaction_profile =
                 conf.interaction_profiles
                     .iter()
