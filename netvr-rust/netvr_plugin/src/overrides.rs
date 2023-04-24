@@ -222,7 +222,9 @@ extern "system" fn create_instance(
 
         let timespec = CString::new("XR_KHR_convert_timespec_time")?;
         let mut has_timespec = false;
+        #[cfg(windows)]
         let perf_counter = CString::new("XR_KHR_win32_convert_performance_counter_time")?;
+        #[cfg(windows)]
         let mut has_perf_counter = false;
 
         let mut extensions = vec![];
@@ -233,6 +235,7 @@ extern "system" fn create_instance(
             if ext_name.to_bytes() == timespec.as_bytes() {
                 has_timespec = true;
             }
+            #[cfg(windows)]
             if ext_name.to_bytes() == perf_counter.as_bytes() {
                 has_perf_counter = true;
             }
