@@ -11,7 +11,7 @@ use netvr_data::net::{self, LocalConfigurationSnapshot};
 use tracing::{field, info, trace_span};
 use xr_layer::{
     log::{LogError, LogInfo, LogTrace, LogWarn},
-    raw::{ConvertTimespecTimeKHR, Win32ConvertPerformanceCounterTimeKHR},
+    raw,
     safe_openxr::{self, InstanceExtensions},
     sys, Entry, FnPtr, UnsafeFrom, XrDebug, XrStructChain,
 };
@@ -244,6 +244,7 @@ extern "system" fn create_instance(
             extensions.push(timespec.as_ptr());
             LogTrace::string(format!("added extension: {:?}", timespec));
         }
+        #[cfg(windows)]
         if exts.khr_win32_convert_performance_counter_time && !has_perf_counter {
             extensions.push(perf_counter.as_ptr());
             LogTrace::string(format!("added extension: {:?}", perf_counter));
@@ -256,11 +257,12 @@ extern "system" fn create_instance(
             let instance_handle = unsafe { *instance_ptr };
             let exts = InstanceExtensions {
                 khr_convert_timespec_time: unsafe {
-                    ConvertTimespecTimeKHR::load(&layer.entry, instance_handle)
+                    raw::ConvertTimespecTimeKHR::load(&layer.entry, instance_handle)
                 }
                 .ok(),
+                #[cfg(windows)]
                 khr_win32_convert_performance_counter_time: unsafe {
-                    Win32ConvertPerformanceCounterTimeKHR::load(&layer.entry, instance_handle)
+                    raw::Win32ConvertPerformanceCounterTimeKHR::load(&layer.entry, instance_handle)
                 }
                 .ok(),
                 ..InstanceExtensions::default()
