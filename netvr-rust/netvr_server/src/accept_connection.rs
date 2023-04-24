@@ -53,21 +53,13 @@ async fn run_connection(
     println!("Connection established: {:?}", connection.remote_address());
 
     // Start sending heartbeat
-    let task_heartbeat = spawn(run_heartbeat(heartbeat_channel, client.clone()));
+    let task_heartbeat = run_heartbeat(heartbeat_channel);
 
     // Start receiving configuration messages
-    let task_conf = spawn(run_configuration_up(
-        configuration_up_stream,
-        client.clone(),
-        server.clone(),
-    ));
+    let task_conf = run_configuration_up(configuration_up_stream, client.clone(), server.clone());
 
     // Start receiving datagrams
-    let task_datagram = spawn(run_datagram_up(
-        connection.clone(),
-        client.clone(),
-        server.clone(),
-    ));
+    let task_datagram = run_datagram_up(connection.clone(), client.clone(), server.clone());
 
     // TODO:
     // - rebroadcast configurations
@@ -78,6 +70,9 @@ async fn run_connection(
 
     // Wait for some task to finish
     tokio::select! {
+        _ = client.cancelled() => {
+            println!("Cancelled");
+        },
         _ = connection.closed() => {
             println!("Closed");
         },
@@ -98,7 +93,7 @@ async fn run_connection(
     Ok(())
 }
 
-async fn run_heartbeat(mut heartbeat: SendFrames<Heartbeat>, client: Client) {
+async fn run_heartbeat(mut heartbeat: SendFrames<Heartbeat>) {
     loop {
         match heartbeat.write(&Heartbeat::default()).await {
             Ok(v) => {
@@ -108,12 +103,7 @@ async fn run_heartbeat(mut heartbeat: SendFrames<Heartbeat>, client: Client) {
                 println!("Error sending heartbeat: {:?}", e);
             }
         };
-        tokio::select! {
-            _ = client.cancelled() => {
-                break;
-            }
-            _ = tokio::time::sleep(tokio::time::Duration::from_secs(1)) => {}
-        };
+        tokio::time::sleep(tokio::time::Duration::from_secs(1)).await
     }
 }
 
@@ -123,21 +113,20 @@ async fn run_configuration_up(
     server: Server,
 ) {
     loop {
-        tokio::select! {
-            _ = client.cancelled() => {
-                break;
+        match configuration_up.read().await {
+            Ok(message) => {
+                if let ConfigurationUp::ConfigurationSnapshot(snapshot) = &message {
+                    server
+                        .apply_configuration(client.id(), snapshot.clone())
+                        .await;
+                }
+                client.handle_configuration_up(message).await;
             }
-            message = configuration_up.read() => match message {
-                Ok(message) => {
-                    if let ConfigurationUp::ConfigurationSnapshot(snapshot) = &message {
-                        server.apply_configuration(client.id(), snapshot.clone()).await;
-                    }
-                    client.handle_configuration_up(message).await;
+            Err(e) => {
+                if client.is_cancelled() {
+                    break;
                 }
-                Err(e) => {
-                    if client.is_cancelled() { break; }
-                    println!("Error reading configuration: {:?}", e);
-                }
+                println!("Error reading configuration: {:?}", e);
             }
         }
     }
@@ -145,32 +134,29 @@ async fn run_configuration_up(
 
 async fn run_datagram_up(connection: Connection, client: Client, server: Server) {
     loop {
-        tokio::select! {
-            _ = client.cancelled() => {
-                break;
-            }
-            datagram = connection.read_datagram() => match datagram {
-                Ok(bytes) => match bincode::deserialize::<LocalStateSnapshot>(&bytes) {
-                    Ok(message) => {
-                        if let Err(err) = client.handle_recv_snapshot(message.clone(), &connection).await {
-                            println!("Failed to handle snapshot: {:?}", err);
-                            return;
-                        }
-                        server.apply_snapshot(client.id(), message).await;
+        match connection.read_datagram().await {
+            Ok(bytes) => match bincode::deserialize::<LocalStateSnapshot>(&bytes) {
+                Ok(message) => {
+                    if let Err(err) = client
+                        .handle_recv_snapshot(message.clone(), &connection)
+                        .await
+                    {
+                        println!("Failed to handle snapshot: {:?}", err);
+                        return;
                     }
-                    Err(e) => {
-                        println!("Failed to decode snapshot: {:?}", e);
-                    }
-                },
-                Err(e) => match e {
-                    quinn::ConnectionError::ConnectionClosed(_)
-                    | quinn::ConnectionError::ApplicationClosed(_)
-                      => { break }
-                    _ =>{
-                        println!("Error reading datagram: {:?}", e);
-                    }
+                    server.apply_snapshot(client.id(), message).await;
                 }
-            }
+                Err(e) => {
+                    println!("Failed to decode snapshot: {:?}", e);
+                }
+            },
+            Err(e) => match e {
+                quinn::ConnectionError::ConnectionClosed(_)
+                | quinn::ConnectionError::ApplicationClosed(_) => break,
+                _ => {
+                    println!("Error reading datagram: {:?}", e);
+                }
+            },
         }
     }
 }
