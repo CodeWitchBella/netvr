@@ -1,3 +1,5 @@
+use std::ptr;
+
 use anyhow::{anyhow, Result};
 use netvr_data::{
     bincode,
@@ -7,12 +9,14 @@ use netvr_data::{
 use tokio::select;
 use xr_layer::{
     log::LogTrace,
+    safe_openxr::{self},
     sys::{self},
 };
 
 use crate::{
     instance::{Instance, Session},
     overrides::with_layer,
+    xr_wrap::ResultConvertible,
 };
 
 /// Implements the netvr client state machine. Should be recalled if it exists
@@ -144,7 +148,7 @@ fn collect_state_impl(instance: &Instance, session: &Session) -> Option<LocalSta
     // TODO: collect full state
     let controllers = active_profiles
         .iter()
-        .filter_map(|(_user_path, profile)| {
+        .filter_map(|(user_path, profile)| {
             let interaction_profile =
                 conf.interaction_profiles
                     .iter()
@@ -153,12 +157,10 @@ fn collect_state_impl(instance: &Instance, session: &Session) -> Option<LocalSta
                     })?;
             for binding in &interaction_profile.bindings {
                 if let ActionType::Pose = binding.ty {
-                    let pose = session
-                        .space_stage
-                        .locate(&session.space_stage, time)
-                        .ok()?
-                        .pose;
-                    return Some(pose.into());
+                    let Some(spaces) = &binding.extra.spaces else {continue;};
+                    let Some(space) = spaces.get(user_path) else {continue;};
+                    let Ok(location) = locate_space(&instance.instance, space, &session.space_stage.as_raw(), time) else {continue;};
+                    return Some(location.pose.into());
                 }
             }
             None
@@ -170,4 +172,31 @@ fn collect_state_impl(instance: &Instance, session: &Session) -> Option<LocalSta
         views: vec![location.pose.into()],
         required_configuration: conf.version,
     })
+}
+
+fn locate_space(
+    instance: &safe_openxr::Instance,
+    space: &sys::Space,
+    base: &sys::Space,
+    time: sys::Time,
+) -> Result<safe_openxr::SpaceLocation> {
+    unsafe {
+        let mut x = sys::SpaceLocation::out(ptr::null_mut());
+        (instance.fp().locate_space)(*space, *base, time, x.as_mut_ptr()).into_result()?;
+        let ptr = x.as_ptr();
+        let flags = *ptr::addr_of!((*ptr).location_flags);
+        Ok(safe_openxr::SpaceLocation {
+            location_flags: flags,
+            pose: sys::Posef {
+                orientation: flags
+                    .contains(sys::SpaceLocationFlags::ORIENTATION_VALID)
+                    .then(|| *ptr::addr_of!((*ptr).pose.orientation))
+                    .unwrap_or_default(),
+                position: flags
+                    .contains(sys::SpaceLocationFlags::POSITION_VALID)
+                    .then(|| *ptr::addr_of!((*ptr).pose.position))
+                    .unwrap_or_default(),
+            },
+        })
+    }
 }

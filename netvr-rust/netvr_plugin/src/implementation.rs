@@ -39,19 +39,25 @@ pub(crate) fn read_remote_devices(
         let state = session.remote_state.read().map_err(|err| {
             anyhow::anyhow!("Failed to acquire read lock for remote_state: {:?}", err)
         })?;
-        for client in state.clients.iter() {
+        for (client_id, client) in state.clients.iter() {
             let mut i = 0;
-            for device in client.1.views.iter() {
+            for device in client.views.iter() {
                 i += 1;
                 devices.devices.push(RemoteDevice {
-                    id: client.0 * 100 + i,
+                    id: client_id * 100 + i,
+                    pos: device.position.clone(),
+                    rot: device.orientation.clone(),
+                });
+            }
+            for device in client.controllers.iter() {
+                i += 1;
+                devices.devices.push(RemoteDevice {
+                    id: client_id * 100 + i,
                     pos: device.position.clone(),
                     rot: device.orientation.clone(),
                 });
             }
         }
-
-        // TODO: remove instance.views as it is not read anymore
         Ok(devices)
     })
 }
