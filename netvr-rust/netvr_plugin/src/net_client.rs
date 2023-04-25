@@ -193,7 +193,7 @@ fn collect_state_impl(instance: &Instance, session: &Session) -> Option<StateSna
                     })?;
             for binding in &interaction_profile.bindings {
                 if let ActionType::Pose = binding.ty {
-                    let Some(spaces) = &binding.extra.spaces else {continue;};
+                    let Some(spaces) = &binding.spaces else {continue;};
                     let Some(space) = spaces.get(user_path) else {continue;};
                     let Ok(location) = locate_space(&instance.instance, space, &session.space_stage.as_raw(), time) else {continue;};
                     let Ok(interaction_profile_index) = u8::try_from(interaction_profile_index+1) else {continue;};

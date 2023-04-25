@@ -98,7 +98,7 @@ impl Session {
 
         merged
             .clients
-            .retain(|client_id, client| config.clients.contains_key(client_id));
+            .retain(|client_id, _client| config.clients.contains_key(client_id));
 
         for (client_id, client_config) in &config.clients {
             let Some(state) = state.clients.get(client_id) else { continue; };
@@ -120,6 +120,7 @@ impl Session {
             let new_config = config.clients[client_id].clone();
             let new_state = state.clients[client_id].clone();
 
+            #[allow(clippy::comparison_chain)]
             if old_config.version == new_config.version {
                 if new_state.required_configuration == old_config.version {
                     client.state = new_state;

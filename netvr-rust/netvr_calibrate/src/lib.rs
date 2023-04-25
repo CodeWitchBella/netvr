@@ -1,8 +1,6 @@
 #![allow(non_snake_case)]
 
-use std::ops::AddAssign;
-
-use nalgebra::{vector, Const, Dyn, Matrix3, OMatrix, Rotation, Rotation3, RowVector3, Vector3};
+use nalgebra::{Const, Dyn, Matrix3, OMatrix, Rotation3, RowVector3};
 
 #[derive(Default, Clone, Debug, Copy)]
 pub struct Pose<T: num::Float + std::clone::Clone + std::cmp::PartialEq + std::fmt::Debug + 'static>
@@ -58,7 +56,7 @@ fn AxisFromRotationMatrix3(rot: Matrix3<f64>) -> RowVector3<f64> {
 }
 
 fn AngleFromRotationMatrix3(rot: Matrix3<f64>) -> f64 {
-    return f64::acos((rot.diagonal().sum() - 1.0) / 2.0);
+    f64::acos((rot.diagonal().sum() - 1.0) / 2.0)
     // return acos((rot(0, 0) + rot(1, 1) + rot(2, 2) - 1.0) / 2.0);
 }
 
@@ -188,7 +186,7 @@ pub fn calibrate(matches: &[Sample<f32>]) -> CalibrationResult {
     // - it waits at least 50ms (0.05s) between samples
 
     let rot_samples = matches.len() / 2;
-    let pos_samples = matches.len() - rot_samples;
+    let _pos_samples = matches.len() - rot_samples;
     let eigen_samples = matches
         .iter()
         .take(rot_samples)

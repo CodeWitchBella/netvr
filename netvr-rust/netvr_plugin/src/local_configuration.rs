@@ -11,7 +11,8 @@ pub(crate) struct Action {
     pub name: String,
     pub localized_name: String,
     pub binding: String,
-    pub extra: ActionExtra,
+    /// Maps subaction path to bound space. None for non-pose actions.
+    pub(crate) spaces: Option<HashMap<sys::Path, sys::Space>>,
 }
 
 impl From<Action> for RemoteAction {
@@ -60,11 +61,4 @@ impl From<LocalConfigurationSnapshot> for RemoteConfigurationSnapshot {
             user_paths: val.user_paths.iter().map(|(_, p)| p.clone()).collect(),
         }
     }
-}
-
-#[derive(Default, Clone, Debug)]
-pub(crate) struct ActionExtra {
-    pub(crate) action: sys::Action,
-    /// Maps subaction path to bound space.
-    pub(crate) spaces: Option<HashMap<sys::Path, sys::Space>>,
 }

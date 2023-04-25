@@ -18,7 +18,7 @@ use xr_layer::{
 
 use crate::{
     instance::{Action, ActionSet, Instance, Session},
-    local_configuration::{self, ActionExtra, InteractionProfile, LocalConfigurationSnapshot},
+    local_configuration::{self, InteractionProfile, LocalConfigurationSnapshot},
     xr_wrap::{xr_wrap, RecordDebug, ResultConvertible, Trace, XrWrapError},
 };
 
@@ -919,10 +919,7 @@ extern "system" fn attach_session_action_sets(
                             name: action.name.clone(),
                             localized_name: action.localized_name.clone(),
                             binding: instance.instance.path_to_string(binding_path)?,
-                            extra: ActionExtra {
-                                action: action.handle,
-                                spaces,
-                            },
+                            spaces,
                         });
                     }
                 }
