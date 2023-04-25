@@ -124,6 +124,10 @@ impl Server {
         Ok(())
     }
 
+    pub async fn get_client(&self, id: ClientId) -> Option<Client> {
+        self.clients.lock().await.get(&id).cloned()
+    }
+
     pub async fn remove_client(&self, id: ClientId) {
         let mut clients = self.clients.lock().await;
         if let Err(err) = self.channel.send(ServerChange::RemoveClient(id)).await {

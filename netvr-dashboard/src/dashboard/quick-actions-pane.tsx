@@ -29,6 +29,16 @@ export function QuickActionsPane(props: {
         </Button>
         {syncDevicesByHeadset.message}
       </div>
+      <div>
+        <Button
+          type="button"
+          onClick={() => {
+            sendMessage(JSON.stringify({ type: 'MoveSomeClients' }))
+          }}
+        >
+          Move some clients
+        </Button>
+      </div>
       <form
         css={{ display: 'flex', gap: 4 }}
         onSubmit={(evt) => {

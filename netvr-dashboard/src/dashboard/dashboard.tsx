@@ -20,13 +20,11 @@ import { ThemeSelector } from '../components/theme'
 import { JSONPane } from '../components/json-view'
 import { Button, Pane } from '../components/design'
 import { useLocalStorage } from '../utils'
-import * as sentMessages from '../protocol/sent-messages'
 import {
   MessageTransmitLogs,
   RecievedMessage,
 } from '../protocol/recieved-messages'
 import { LogsModalDialog } from './logs-modal-dialog'
-import { FullscreenButton } from './fullscreen-button'
 import { QuickActionsPane } from './quick-actions-pane'
 import { ClientPane } from './client-pane'
 
@@ -36,7 +34,7 @@ enablePatches()
 function useSendKeepAlive(socket: WebSocket) {
   useEffect(() => {
     const interval = setInterval(() => {
-      socket.send(JSON.stringify({ action: 'keep alive' }))
+      socket.send(JSON.stringify({ type: 'KeepAlive' }))
     }, 1000)
     return () => {
       clearInterval(interval)
@@ -94,37 +92,21 @@ export function Dashboard({ socketUrl }: { socketUrl: string }) {
 
 function DashboardInner() {
   const socket = useSocket()
-  const [selfId, setSelfId] = useState(-1)
   useEffect(() => {
-    let sent = false
-    const deviceName = localStorage.getItem('deviceName')
-    try {
-      const reconnection = localStorage.getItem('reconnection')
-      const data = JSON.parse(reconnection || 'invalid')
-      socket.send(sentMessages.restoreConnectionFromBrowser(deviceName, data))
-      console.log(data)
-      setSelfId(data.id)
-      sent = true
-    } catch (e) {
-      console.log(e)
-    }
-
-    if (!sent) {
-      socket.send(sentMessages.establishNewConnectionFromBrowser(deviceName))
-    }
+    socket.send(JSON.stringify({ type: 'Init' }))
   }, [socket])
 
   const [stopped, setStopped] = useState(false)
-  const [showBinaryRaw, setShowBinary] = useLocalStorage(
+  const [showBinaryRaw, setShowDatagrams] = useLocalStorage(
     'show-binary',
     'true',
     (v): v is 'true' | 'false' => v === 'true' || v === 'false',
   )
-  const showBinary = showBinaryRaw === 'true'
+  const showDatagrams = showBinaryRaw === 'true'
   const [clients, dispatchDevices] = useReducer(deviceReducer, [])
   const [serverState, setServerState] = useImmer<ServerState>({ clients: {} })
 
-  const [log, dispatchLog] = useLog({ showBinary })
+  const [log, dispatchLog] = useLog({ showDatagrams: showDatagrams })
   useSendKeepAlive(socket)
 
   function sendMessage(data: any) {
@@ -194,16 +176,7 @@ function DashboardInner() {
               parsed: msg,
             })
             dispatchDevices({ type: 'text', message: msg })
-            if (msg.action === "id's here") {
-              localStorage.setItem(
-                'reconnection',
-                JSON.stringify({
-                  id: msg.intValue,
-                  token: msg.stringValue,
-                }),
-              )
-              setSelfId(msg.intValue)
-            } else if (msg.action === 'full state reset') {
+            if (msg.action === 'full state reset') {
               setServerState(msg.state)
             } else if (msg.action === 'patch') {
               setServerState((draft) => {
@@ -255,7 +228,6 @@ function DashboardInner() {
                   client={clientConfiguration}
                   binaryClient={binaryClient ?? { clientId }}
                   sendMessage={sendMessage}
-                  selfId={selfId}
                 />
               )
             },
@@ -266,9 +238,11 @@ function DashboardInner() {
             <div css={{ flexDirection: 'row', gap: 8, display: 'flex' }}>
               <Button
                 type="button"
-                onClick={() => setShowBinary(showBinary ? 'false' : 'true')}
+                onClick={() =>
+                  setShowDatagrams(showDatagrams ? 'false' : 'true')
+                }
               >
-                {showBinary ? 'Hide binary' : 'Show binary'}
+                {showDatagrams ? 'Hide datagrams' : 'Show datagrams'}
               </Button>
               <Button type="button" onClick={() => setStopped((v) => !v)}>
                 {stopped ? 'Resume' : 'Pause'}

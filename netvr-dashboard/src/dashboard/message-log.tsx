@@ -3,17 +3,16 @@ import { memo, useMemo, useReducer } from 'react'
 import { Pane } from '../components/design'
 import { JSONView } from '../components/json-view'
 
-type MessageData<T extends 'binary' | 'json'> = {
-  type: T
+type MessageData = {
   key: number
-  message: T extends 'binary' ? { raw: ArrayBuffer; parsed: any } : any
+  message: any
   timestamp: string
   direction: 'down' | 'up'
 }
 
 type State = {
-  events: MessageData<'json'>[]
-  binaryEvents: MessageData<'binary'>[]
+  events: MessageData[]
+  datagramEvents: MessageData[]
   keyGen: number
 }
 
@@ -25,11 +24,13 @@ function logReducer(
   ),
 ) {
   const timestamp = new Date().toISOString()
-  if (action.type === 'text') {
+  if (action.type !== 'text') {
+    return state
+  }
+  if (action.parsed.type !== 'DatagramUp') {
     return {
       ...state,
       events: state.events.concat({
-        type: 'json',
         message: action.parsed,
         key: state.keyGen,
         timestamp,
@@ -41,13 +42,9 @@ function logReducer(
   return {
     ...state,
     keyGen: state.keyGen + 1,
-    binaryEvents: state.binaryEvents
+    datagramEvents: state.datagramEvents
       .concat({
-        type: 'binary',
-        message: {
-          raw: action.message,
-          parsed: action.parsed,
-        },
+        message: action.parsed,
         key: state.keyGen,
         timestamp,
         direction: action.direction,
@@ -57,16 +54,16 @@ function logReducer(
 }
 const defaultState: State = {
   events: [],
-  binaryEvents: [],
+  datagramEvents: [],
   keyGen: 1,
 }
 
-export function useLog({ showBinary }: { showBinary: boolean }) {
+export function useLog({ showDatagrams }: { showDatagrams: boolean }) {
   const [log, dispatch] = useReducer(logReducer, defaultState)
   return [
-    ([] as readonly (MessageData<'binary'> | MessageData<'json'>)[])
+    ([] as readonly MessageData[])
       .concat(log.events)
-      .concat(showBinary ? log.binaryEvents : [])
+      .concat(showDatagrams ? log.datagramEvents : [])
       .sort((a, b) => -a.timestamp.localeCompare(b.timestamp)),
     dispatch,
   ] as const

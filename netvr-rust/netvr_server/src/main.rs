@@ -31,9 +31,9 @@ async fn main() -> Result<()> {
 
     let discovery_server = init_discovery_server().await?;
     let discovery = spawn(run_discovery_server(server_udp.clone(), discovery_server));
-    let dashboard = spawn(serve_dashboard(tx.clone()));
-
     let server = Server::start().await;
+    let dashboard = spawn(serve_dashboard(tx.clone(), server.clone()));
+
     let connections = spawn(async move {
         let mut id_generator: u32 = 0;
         loop {

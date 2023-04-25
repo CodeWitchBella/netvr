@@ -15,12 +15,10 @@ export function ClientPane({
   binaryClient,
   client,
   sendMessage,
-  selfId,
 }: {
   binaryClient: ClientBinaryData | { clientId: number; devices?: undefined }
   client: ClientConfiguration
   sendMessage: sentMessages.SendMessage
-  selfId: number
 }) {
   function resetCalibration() {
     sendMessage(
@@ -40,9 +38,7 @@ export function ClientPane({
   return (
     <Pane
       id={'client-' + binaryClient.clientId}
-      title={`Client ${getName(binaryClient, client.connectionInfo)}${
-        selfId === binaryClient.clientId ? ' (this browser)' : ''
-      }`}
+      title={`Client ${getName(binaryClient, client.connectionInfo)}`}
     >
       <div
         css={{
@@ -53,8 +49,7 @@ export function ClientPane({
         }}
       >
         <div>
-          {selfId === binaryClient.clientId ||
-          client.connectionInfo.isBrowser ? null : (
+          {client.connectionInfo.isBrowser ? null : (
             <div css={{ display: 'flex', gap: 6 }}>
               <Button
                 type="button"
