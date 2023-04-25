@@ -200,7 +200,8 @@ fn collect_state(
 /// be collected.
 fn collect_state_impl(instance: &Instance, session: &Session) -> Option<StateSnapshot> {
     let time = instance.instance.now().ok()?;
-    let location = session.space_view.locate(&session.space_stage, time).ok()?;
+    let space_server = session.space_server.read().ok()?;
+    let location = session.space_view.locate(&space_server, time).ok()?;
     let active_profiles = session.active_interaction_profiles.read().ok()?;
     let conf = session.local_configuration.borrow();
     // TODO: collect full state
@@ -216,8 +217,8 @@ fn collect_state_impl(instance: &Instance, session: &Session) -> Option<StateSna
             for binding in &interaction_profile.bindings {
                 if let ActionType::Pose = binding.ty {
                     let Some(spaces) = &binding.spaces else {continue;};
-                    let Some(space) = spaces.get(user_path) else {continue;};
-                    let Ok(location) = locate_space(&instance.instance, space, &session.space_stage.as_raw(), time) else {continue;};
+                    let Some(space_action) = spaces.get(user_path) else {continue;};
+                    let Ok(location) = locate_space(&instance.instance, space_action.to_owned(), space_server.as_raw(), time) else {continue;};
                     let Ok(interaction_profile_index) = u8::try_from(interaction_profile_index+1) else {continue;};
                     let Some(user_path_index) = conf.user_paths.iter().position(|p| p.0 == *user_path) else {continue;};
                     let Ok(user_path_index) = u8::try_from(user_path_index+1) else {continue;};
@@ -241,13 +242,13 @@ fn collect_state_impl(instance: &Instance, session: &Session) -> Option<StateSna
 
 fn locate_space(
     instance: &safe_openxr::Instance,
-    space: &sys::Space,
-    base: &sys::Space,
+    space: sys::Space,
+    base: sys::Space,
     time: sys::Time,
 ) -> Result<safe_openxr::SpaceLocation> {
     unsafe {
         let mut x = sys::SpaceLocation::out(ptr::null_mut());
-        (instance.fp().locate_space)(*space, *base, time, x.as_mut_ptr()).into_result()?;
+        (instance.fp().locate_space)(space, base, time, x.as_mut_ptr()).into_result()?;
         let ptr = x.as_ptr();
         let flags = *ptr::addr_of!((*ptr).location_flags);
         Ok(safe_openxr::SpaceLocation {
