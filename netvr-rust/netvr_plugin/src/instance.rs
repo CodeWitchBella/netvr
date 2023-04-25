@@ -6,7 +6,7 @@ use std::{
 
 use anyhow::{anyhow, Result};
 use netvr_data::{
-    net::{self, RemoteConfigurationSnapshotSet, RemoteStateSnapshotSet},
+    net::{self, ConfigurationSnapshotSet, RemoteStateSnapshotSet},
     RemoteSnapshot,
 };
 use tokio::sync::watch;
@@ -39,7 +39,7 @@ pub(crate) struct Session {
     /// This contains data that is received from the server and is made
     /// available to the application.
     pub(crate) remote_state: Arc<RwLock<RemoteStateSnapshotSet>>,
-    pub(crate) remote_configuration: Arc<RwLock<RemoteConfigurationSnapshotSet>>,
+    pub(crate) remote_configuration: Arc<RwLock<ConfigurationSnapshotSet>>,
 
     pub(crate) remote_merged: Arc<RwLock<RemoteSnapshot>>,
     _span: Span,
@@ -71,6 +71,7 @@ impl Session {
             local_configuration: watch::channel(LocalConfigurationSnapshot {
                 version: u32::default(),
                 interaction_profiles: Vec::default(),
+                user_paths: Vec::default(),
             })
             .0,
 

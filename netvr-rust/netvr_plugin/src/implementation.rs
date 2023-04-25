@@ -1,5 +1,5 @@
 use anyhow::{anyhow, Result};
-use netvr_data::{InstanceAndSession, Nothing, RemoteDevice};
+use netvr_data::{InstanceAndSession, Nothing, ReadRemoteDevicesOutput, RemoteDevice};
 use tokio::select;
 use tracing::info;
 use xr_layer::log::LogInfo;
@@ -20,6 +20,7 @@ pub(crate) fn start(input: InstanceAndSession) -> Result<Nothing> {
                         LogInfo::string(format!("net_client finished {:?}", res));
                     }
                 }
+                tokio::time::sleep(tokio::time::Duration::from_millis(100)).await;
             }
         });
 
@@ -35,26 +36,42 @@ pub(crate) fn read_remote_devices(
             .sessions
             .get(&input.session)
             .ok_or(anyhow!("Session not found"))?;
-        let mut devices = netvr_data::ReadRemoteDevicesOutput::default();
-        let state = session.remote_state.read().map_err(|err| {
-            anyhow::anyhow!("Failed to acquire read lock for remote_state: {:?}", err)
-        })?;
-        for (client_id, client) in state.clients.iter() {
+        let mut devices = ReadRemoteDevicesOutput::default();
+
+        let remote_merged = session
+            .remote_merged
+            .read()
+            .map_err(|err| anyhow!("{:?}", err))?;
+
+        for (client_id, client) in remote_merged.clients.iter() {
             let mut i = 0;
-            for device in client.views.iter() {
+            for device in client.state.views.iter() {
                 i += 1;
                 devices.devices.push(RemoteDevice {
                     id: client_id * 100 + i,
                     pos: device.position.clone(),
                     rot: device.orientation.clone(),
+                    user_path: "/user/head".to_owned(),
+                    interaction_profile: "generic_hmd".to_owned(),
                 });
             }
-            for device in client.controllers.iter() {
+            for device in client.state.controllers.iter() {
+                let Some(interaction_profile) = client
+                    .configuration
+                    .interaction_profiles
+                    .get(usize::from(device.interaction_profile) - 1) else { continue; };
+                let Some(user_path) = client
+                    .configuration
+                    .user_paths
+                    .get(usize::from(device.user_path) - 1)
+                     else { continue; };
                 i += 1;
                 devices.devices.push(RemoteDevice {
                     id: client_id * 100 + i,
-                    pos: device.position.clone(),
-                    rot: device.orientation.clone(),
+                    pos: device.pose.position.clone(),
+                    rot: device.pose.orientation.clone(),
+                    user_path: user_path.clone(),
+                    interaction_profile: interaction_profile.path.clone(),
                 });
             }
         }

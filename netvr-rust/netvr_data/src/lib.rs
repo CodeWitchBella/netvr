@@ -3,7 +3,7 @@ pub mod handle_serializer;
 
 use std::collections::HashMap;
 
-use net::{ClientId, LocalStateSnapshot, RemoteConfigurationSnapshot};
+use net::{ClientId, RemoteConfigurationSnapshot, StateSnapshot};
 use serde::{Deserialize, Serialize};
 
 #[derive(Serialize, Deserialize, Default, Clone, Debug)]
@@ -49,6 +49,8 @@ pub struct RemoteDevice {
     pub id: u32,
     pub pos: Vec3,
     pub rot: Quaternion,
+    pub user_path: String,
+    pub interaction_profile: String,
 }
 
 #[derive(Serialize, Deserialize, Default, Clone, Debug)]
@@ -85,13 +87,13 @@ pub struct InstanceAndSession {
     pub session: openxr_sys::Session,
 }
 
-#[derive(Default, Serialize, Deserialize)]
+#[derive(Default, Serialize, Deserialize, Debug, Clone)]
 pub struct RemoteClientSnapshot {
     pub configuration: RemoteConfigurationSnapshot,
-    pub state: LocalStateSnapshot,
+    pub state: StateSnapshot,
 }
 
-#[derive(Default, Serialize, Deserialize)]
+#[derive(Default, Serialize, Deserialize, Debug, Clone)]
 pub struct RemoteSnapshot {
     pub clients: HashMap<ClientId, RemoteClientSnapshot>,
 }

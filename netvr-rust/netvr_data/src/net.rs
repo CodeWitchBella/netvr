@@ -25,12 +25,19 @@ impl Default for DiscoveryResponse {
 
 #[derive(Serialize, Deserialize, Default, Clone, Debug)]
 pub struct ConfigurationDown {
-    pub snap: RemoteConfigurationSnapshotSet,
+    pub snap: ConfigurationSnapshotSet,
 }
 
 #[derive(Serialize, Deserialize, Default, Clone, Debug)]
-pub struct LocalStateSnapshot {
-    pub controllers: Vec<Pose>,
+pub struct Controller {
+    pub interaction_profile: u8,
+    pub user_path: u8,
+    pub pose: Pose,
+}
+
+#[derive(Serialize, Deserialize, Default, Clone, Debug)]
+pub struct StateSnapshot {
+    pub controllers: Vec<Controller>,
     pub views: Vec<Pose>,
     pub required_configuration: u32,
 }
@@ -72,18 +79,17 @@ pub struct RemoteAction {
 pub struct RemoteInteractionProfile {
     pub path: String,
     pub bindings: Vec<RemoteAction>,
-    #[serde(skip)]
-    pub path_handle: u64,
 }
 
 #[derive(Serialize, Deserialize, Default, Clone, Debug)]
 pub struct RemoteConfigurationSnapshot {
     pub version: u32,
     pub interaction_profiles: Vec<RemoteInteractionProfile>,
+    pub user_paths: Vec<String>,
 }
 
 #[derive(Serialize, Deserialize, Default, Clone, Debug)]
-pub struct RemoteConfigurationSnapshotSet {
+pub struct ConfigurationSnapshotSet {
     pub clients: HashMap<ClientId, RemoteConfigurationSnapshot>,
 }
 
@@ -100,7 +106,7 @@ pub struct RemoteStateSnapshotSet {
     /// Makes sure that we do not apply older snapshots, if they arrive out of
     /// order.
     pub order: usize,
-    pub clients: HashMap<ClientId, LocalStateSnapshot>,
+    pub clients: HashMap<ClientId, StateSnapshot>,
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]

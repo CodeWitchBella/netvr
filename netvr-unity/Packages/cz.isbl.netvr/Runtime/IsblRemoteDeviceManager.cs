@@ -45,6 +45,8 @@ namespace Isbl.NetVR
                 if (!_devices.TryGetValue(remoteDevice.id, out device))
                 {
                     device = SpawnDevice(remoteDevice.id);
+                    device.SubactionPath = remoteDevice.user_path;
+                    device.InteractionProfile = remoteDevice.interaction_profile;
                     _devices.Add(remoteDevice.id, device);
                 }
                 device.transform.position = Convertor.Vector3(remoteDevice.pos);

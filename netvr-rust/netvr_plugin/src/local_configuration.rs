@@ -15,12 +15,12 @@ pub(crate) struct Action {
 }
 
 impl From<Action> for RemoteAction {
-    fn from(action: Action) -> Self {
-        Self {
-            ty: action.ty,
-            name: action.name,
-            localized_name: action.localized_name,
-            binding: action.binding,
+    fn from(val: Action) -> Self {
+        RemoteAction {
+            ty: val.ty,
+            name: val.name,
+            localized_name: val.localized_name,
+            binding: val.binding,
         }
     }
 }
@@ -29,16 +29,14 @@ impl From<Action> for RemoteAction {
 pub(crate) struct InteractionProfile {
     pub path: String,
     pub bindings: Vec<Action>,
-
-    pub path_handle: u64,
+    pub path_handle: sys::Path,
 }
 
 impl From<InteractionProfile> for RemoteInteractionProfile {
-    fn from(profile: InteractionProfile) -> Self {
-        Self {
-            path: profile.path,
-            bindings: profile.bindings.into_iter().map(|b| b.into()).collect(),
-            path_handle: profile.path_handle,
+    fn from(val: InteractionProfile) -> Self {
+        RemoteInteractionProfile {
+            path: val.path,
+            bindings: val.bindings.into_iter().map(|b| b.into()).collect(),
         }
     }
 }
@@ -47,17 +45,19 @@ impl From<InteractionProfile> for RemoteInteractionProfile {
 pub(crate) struct LocalConfigurationSnapshot {
     pub version: u32,
     pub interaction_profiles: Vec<InteractionProfile>,
+    pub user_paths: Vec<(sys::Path, String)>,
 }
 
 impl From<LocalConfigurationSnapshot> for RemoteConfigurationSnapshot {
-    fn from(snapshot: LocalConfigurationSnapshot) -> Self {
-        Self {
-            version: snapshot.version,
-            interaction_profiles: snapshot
+    fn from(val: LocalConfigurationSnapshot) -> Self {
+        RemoteConfigurationSnapshot {
+            version: val.version,
+            interaction_profiles: val
                 .interaction_profiles
                 .into_iter()
                 .map(|p| p.into())
                 .collect(),
+            user_paths: val.user_paths.iter().map(|(_, p)| p.clone()).collect(),
         }
     }
 }

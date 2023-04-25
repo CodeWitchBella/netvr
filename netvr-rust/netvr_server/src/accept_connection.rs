@@ -1,11 +1,11 @@
 use anyhow::Result;
 use netvr_data::{
     bincode,
-    net::{ClientId, ConfigurationDown, ConfigurationUp, Heartbeat, LocalStateSnapshot},
-    RecvFrames, SendFrames,
+    net::{ClientId, ConfigurationDown, ConfigurationUp, Heartbeat, StateSnapshot},
+    FramingError, RecvFrames, SendFrames,
 };
 use quinn::{Connecting, Connection};
-use tokio::{spawn, sync::broadcast};
+use tokio::sync::broadcast;
 use tokio_util::sync::CancellationToken;
 
 use crate::{client::Client, dashboard::DashboardMessage, server::Server};
@@ -130,12 +130,15 @@ async fn run_configuration_up(
                 }
                 client.handle_configuration_up(message).await;
             }
-            Err(e) => {
-                if client.is_cancelled() {
-                    break;
+            Err(e) => match e {
+                FramingError::ReadExactError(_)
+                | FramingError::ConnectionError(quinn::ConnectionError::ConnectionClosed(_))
+                | FramingError::ConnectionError(quinn::ConnectionError::ApplicationClosed(_))
+                | FramingError::ConnectionError(quinn::ConnectionError::TimedOut) => break,
+                _ => {
+                    println!("Error reading configuration: {:?}", e);
                 }
-                println!("Error reading configuration: {:?}", e);
-            }
+            },
         }
     }
 }
@@ -143,7 +146,7 @@ async fn run_configuration_up(
 async fn run_datagram_up(connection: Connection, client: Client, server: Server) {
     loop {
         match connection.read_datagram().await {
-            Ok(bytes) => match bincode::deserialize::<LocalStateSnapshot>(&bytes) {
+            Ok(bytes) => match bincode::deserialize::<StateSnapshot>(&bytes) {
                 Ok(message) => {
                     if let Err(err) = client
                         .handle_recv_snapshot(message.clone(), &connection)
@@ -160,7 +163,8 @@ async fn run_datagram_up(connection: Connection, client: Client, server: Server)
             },
             Err(e) => match e {
                 quinn::ConnectionError::ConnectionClosed(_)
-                | quinn::ConnectionError::ApplicationClosed(_) => break,
+                | quinn::ConnectionError::ApplicationClosed(_)
+                | quinn::ConnectionError::TimedOut => break,
                 _ => {
                     println!("Error reading datagram: {:?}", e);
                 }

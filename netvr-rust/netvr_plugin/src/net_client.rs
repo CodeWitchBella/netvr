@@ -1,10 +1,9 @@
 use std::ptr;
 
 use anyhow::{anyhow, Result};
-use netvr_client::NetVRConnection;
 use netvr_data::{
     bincode,
-    net::{ActionType, ConfigurationUp, LocalStateSnapshot},
+    net::{self, ActionType, ConfigurationUp, StateSnapshot},
     SendFrames,
 };
 use tokio::select;
@@ -36,9 +35,6 @@ pub(crate) async fn run_net_client(
 
     // alright, so we are connected let's send info about local devices...
 
-    // read data: lock, clone, unlock
-
-    // TODO
     let transmit_conf =
         run_transmit_configuration(connection.configuration_up, instance_handle, session_handle);
     let transmit_snap = run_transmit_snapshots(
@@ -101,11 +97,13 @@ async fn run_receive_snapshots(
                 .sessions
                 .get(&session_handle)
                 .ok_or(anyhow!("Failed to read session from instance"))?;
-            let mut remote_state = session.remote_state.write().map_err(|err| {
-                anyhow::anyhow!("Failed to acquire write lock on remote_state: {:?}", err)
-            })?;
-            if value.order > remote_state.order {
-                remote_state.clone_from(&value);
+            {
+                let mut remote_state = session.remote_state.write().map_err(|err| {
+                    anyhow::anyhow!("Failed to acquire write lock on remote_state: {:?}", err)
+                })?;
+                if value.order > remote_state.order {
+                    remote_state.clone_from(&value);
+                }
             }
             session.update_merged()?;
 
@@ -164,7 +162,7 @@ async fn run_transmit_snapshots(
 fn collect_state(
     instance_handle: sys::Instance,
     session_handle: sys::Session,
-) -> Result<Option<LocalStateSnapshot>> {
+) -> Result<Option<StateSnapshot>> {
     with_layer(instance_handle, |instance| {
         Ok(collect_state_impl(
             instance,
@@ -178,7 +176,7 @@ fn collect_state(
 
 /// Collects the state of the local devices. None means that the state could not
 /// be collected.
-fn collect_state_impl(instance: &Instance, session: &Session) -> Option<LocalStateSnapshot> {
+fn collect_state_impl(instance: &Instance, session: &Session) -> Option<StateSnapshot> {
     let time = instance.instance.now().ok()?;
     let location = session.space_view.locate(&session.space_stage, time).ok()?;
     let active_profiles = session.active_interaction_profiles.read().ok()?;
@@ -187,25 +185,32 @@ fn collect_state_impl(instance: &Instance, session: &Session) -> Option<LocalSta
     let controllers = active_profiles
         .iter()
         .filter_map(|(user_path, profile)| {
-            let interaction_profile =
+            let (interaction_profile_index, interaction_profile) =
                 conf.interaction_profiles
-                    .iter()
-                    .find(|interaction_profile| {
-                        interaction_profile.path_handle == profile.into_raw()
+                    .iter().enumerate()
+                    .find(|(_, interaction_profile)| {
+                        interaction_profile.path_handle == *profile
                     })?;
             for binding in &interaction_profile.bindings {
                 if let ActionType::Pose = binding.ty {
                     let Some(spaces) = &binding.extra.spaces else {continue;};
                     let Some(space) = spaces.get(user_path) else {continue;};
                     let Ok(location) = locate_space(&instance.instance, space, &session.space_stage.as_raw(), time) else {continue;};
-                    return Some(location.pose.into());
+                    let Ok(interaction_profile_index) = u8::try_from(interaction_profile_index+1) else {continue;};
+                    let Some(user_path_index) = conf.user_paths.iter().position(|p| p.0 == *user_path) else {continue;};
+                    let Ok(user_path_index) = u8::try_from(user_path_index+1) else {continue;};
+                    return Some(net::Controller {
+                        pose: location.pose.into(),
+                         interaction_profile: interaction_profile_index,
+                        user_path: user_path_index
+                    });
                 }
             }
             None
         })
         .collect();
 
-    Some(LocalStateSnapshot {
+    Some(StateSnapshot {
         controllers,
         views: vec![location.pose.into()],
         required_configuration: conf.version,

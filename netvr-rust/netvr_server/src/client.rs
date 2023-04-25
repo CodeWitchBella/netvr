@@ -3,7 +3,7 @@ use std::sync::Arc;
 use anyhow::{Ok, Result};
 use netvr_data::{
     bincode,
-    net::{ClientId, ConfigurationUp, LocalStateSnapshot},
+    net::{ClientId, ConfigurationUp, StateSnapshot},
 };
 use quinn::Connection;
 use tokio::sync::broadcast;
@@ -46,7 +46,7 @@ impl Client {
 
     pub async fn handle_recv_snapshot(
         &self,
-        message: LocalStateSnapshot,
+        message: StateSnapshot,
         connection: &Connection,
     ) -> Result<()> {
         // println!("Received datagram {:?}", message);

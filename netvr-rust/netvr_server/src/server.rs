@@ -5,8 +5,8 @@ use std::{
 
 use anyhow::Result;
 use netvr_data::net::{
-    ClientId, LocalStateSnapshot, RemoteConfigurationSnapshot, RemoteConfigurationSnapshotSet,
-    RemoteStateSnapshotSet,
+    ClientId, ConfigurationSnapshotSet, RemoteConfigurationSnapshot, RemoteStateSnapshotSet,
+    StateSnapshot,
 };
 use tokio::{
     spawn,
@@ -18,14 +18,14 @@ use crate::client::Client;
 #[derive(Debug)]
 enum ServerChange {
     AddClient(ClientId),
-    SetSnapshot(ClientId, LocalStateSnapshot),
+    SetSnapshot(ClientId, StateSnapshot),
     SetConfiguration(ClientId, RemoteConfigurationSnapshot),
     RemoveClient(ClientId),
 }
 
 type ServerChannel = tokio::sync::mpsc::Sender<ServerChange>;
 type LatestSnaphots = Arc<RwLock<RemoteStateSnapshotSet>>;
-type LatestConfigurations = Arc<RwLock<watch::Sender<RemoteConfigurationSnapshotSet>>>;
+type LatestConfigurations = Arc<RwLock<watch::Sender<ConfigurationSnapshotSet>>>;
 
 #[derive(Clone)]
 pub(crate) struct Server {
@@ -101,11 +101,11 @@ impl Server {
         snapshot_channel
     }
 
-    pub async fn latest_configuration(&self) -> watch::Receiver<RemoteConfigurationSnapshotSet> {
+    pub async fn latest_configuration(&self) -> watch::Receiver<ConfigurationSnapshotSet> {
         self.latest_configurations.read().await.subscribe()
     }
 
-    pub async fn apply_snapshot(&self, id: ClientId, snapshot: LocalStateSnapshot) {
+    pub async fn apply_snapshot(&self, id: ClientId, snapshot: StateSnapshot) {
         if let Err(err) = self
             .channel
             .send(ServerChange::SetSnapshot(id, snapshot))

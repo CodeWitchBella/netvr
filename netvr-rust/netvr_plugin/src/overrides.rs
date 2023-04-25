@@ -871,6 +871,7 @@ extern "system" fn attach_session_action_sets(
             let info = unsafe { XrStructChain::from_ptr(attach_info) }
                 .read_session_action_sets_attach_info()?;
 
+            let mut user_paths = HashMap::new();
             let mut profile_map = HashMap::<sys::Path, InteractionProfile>::default();
             for set_handle in info.action_sets() {
                 let Some(set) = sets.get(&set_handle) else { continue; };
@@ -885,13 +886,19 @@ extern "system" fn attach_session_action_sets(
                                     .path_to_string(profile_path)
                                     // TODO: is this a problem?
                                     .unwrap_or_else(|err| format!("error: {:?}", err)),
-                                path_handle: profile_path.into_raw(),
+                                path_handle: profile_path,
                             }
                         });
 
                         let spaces = if let net::ActionType::Pose = action.typ {
                             let mut map = HashMap::new();
                             for subaction_path in action.subaction_paths.iter() {
+                                if !user_paths.contains_key(subaction_path) {
+                                    user_paths.insert(
+                                        *subaction_path,
+                                        instance.instance.path_to_string(*subaction_path)?,
+                                    );
+                                }
                                 map.insert(
                                     *subaction_path,
                                     util_create_action_space(
@@ -926,6 +933,7 @@ extern "system" fn attach_session_action_sets(
                 // It's okay in Unity's case because event system has a dedicated thread there.
                 version: session.local_configuration.borrow().version + 1,
                 interaction_profiles: profile_map.values().cloned().collect(),
+                user_paths: user_paths.into_iter().collect(),
             };
             session.local_configuration.send_replace(conf);
 
