@@ -13,7 +13,8 @@ use xr_layer::{
     log::{LogError, LogInfo, LogTrace, LogWarn},
     raw,
     safe_openxr::{self, InstanceExtensions},
-    sys, Entry, FnPtr, UnsafeFrom, XrDebug, XrStructChain,
+    sys::{self, ReferenceSpaceType},
+    Entry, FnPtr, UnsafeFrom, XrDebug, XrStructChain,
 };
 
 use crate::{
@@ -22,9 +23,12 @@ use crate::{
     xr_wrap::{xr_wrap, RecordDebug, ResultConvertible, Trace, XrWrapError},
 };
 
+#[derive(Default)]
 struct InstanceRefs {
     pub(crate) sessions: HashMap<sys::Session, sys::Instance>,
     pub(crate) action_sets: HashMap<sys::ActionSet, sys::Instance>,
+    pub(crate) spaces: HashMap<sys::Space, sys::Instance>,
+    pub(crate) space_sessions: HashMap<sys::Space, sys::Session>,
 }
 
 struct Layer {
@@ -89,9 +93,7 @@ impl Layer {
             .add_override(FnPtr::DestroyActionSet(destroy_action_set))
             //.add_override(FnPtr::EnumerateApiLayerProperties(enumerate_api_layer_properties))
             //.add_override(FnPtr::EnumerateInstanceExtensionProperties(enumerate_instance_extension_properties))
-            // TODO: locate space can be used to transform from local space to server space,
-            // just replace the local space with the server space :mindblown:
-            //.add_override(FnPtr::LocateSpace(locate_space))
+            .add_override(FnPtr::LocateSpace(locate_space))
             // Swapchain-related functions are of no interest to me
             //.add_override(FnPtr::AcquireSwapchainImage(acquire_swapchain_image))
             //.add_override(FnPtr::CreateSwapchain(create_swapchain))
@@ -109,10 +111,7 @@ impl Layer {
             layer,
             entry,
             instances: HashMap::default(),
-            instance_refs: InstanceRefs {
-                sessions: HashMap::default(),
-                action_sets: HashMap::default(),
-            },
+            instance_refs: Default::default(),
             trace: Trace::new(),
         }
     }
@@ -836,14 +835,53 @@ macro_rules! simple_i {
     };
 }
 
-simple_s!(locate_views(
+extern "system" fn locate_views(
     session_handle: sys::Session,
     view_locate_info: *const sys::ViewLocateInfo,
     view_state: *mut sys::ViewState,
     view_capacity_input: u32,
     view_count_output: *mut u32,
     view: *mut sys::View,
-));
+) -> sys::Result {
+    wrap(|layer| {
+        let _span = trace_span!("locate_views").entered();
+        let instance = subresource_read_instance(layer, |l| &l.sessions, session_handle)?;
+        let session = instance
+            .sessions
+            .get(&session_handle)
+            .ok_or(sys::Result::ERROR_HANDLE_INVALID)?;
+        let mut info = unsafe { *view_locate_info };
+        rewrite_space(session, &mut info.space);
+        let result = unsafe {
+            (instance.fp().locate_views)(
+                session_handle,
+                &info,
+                view_state,
+                view_capacity_input,
+                view_count_output,
+                view,
+            )
+        }
+        .into_result();
+        result
+    })
+}
+
+fn rewrite_space(session: &Session, space: &mut sys::Space) {
+    if let Ok(spaces) = session.application_stage_spaces.read() {
+        if spaces.contains(space) {
+            match session.space_server.read() {
+                Ok(space_server) => {
+                    LogTrace::string(format!("Rewriting space: {:?}", space));
+                    *space = space_server.as_raw();
+                }
+                Err(err) => {
+                    LogError::string(format!("Couldn't rewrite space: {:?}", err));
+                }
+            }
+        }
+    }
+}
 
 simple_s!(get_action_state_float(
     session_handle: sys::Session,
@@ -991,16 +1029,79 @@ simple_s!(enumerate_reference_spaces(
     space_count_output: *mut u32,
     spaces: *mut sys::ReferenceSpaceType,
 ));
-simple_s!(create_reference_space(
+extern "system" fn create_reference_space(
     session: sys::Session,
     create_info: *const sys::ReferenceSpaceCreateInfo,
     space: *mut sys::Space,
-));
-simple_s!(create_action_space(
+) -> sys::Result {
+    wrap_mut(|layer| {
+        let _span = trace_span!("create_reference_space").entered();
+        let instance_handle = layer
+            .instance_refs
+            .sessions
+            .get(&session)
+            .ok_or(sys::Result::ERROR_HANDLE_INVALID)?
+            .to_owned();
+        let instance = read_instance(layer, instance_handle)?;
+        let result = unsafe { (instance.fp().create_reference_space)(session, create_info, space) }
+            .into_result();
+        if result.is_ok() {
+            let out_space = unsafe { *space };
+            if unsafe { *create_info }.reference_space_type == ReferenceSpaceType::STAGE {
+                let session = instance
+                    .sessions
+                    .get(&session)
+                    .ok_or(anyhow!("Missing session in instance"))?;
+                // TODO: honor create_info.pose_in_reference_space
+                if let Ok(mut spaces) = session.application_stage_spaces.write() {
+                    spaces.insert(out_space);
+                }
+            }
+            // Insert referencing object
+            layer
+                .instance_refs
+                .spaces
+                .insert(out_space, instance_handle);
+            layer
+                .instance_refs
+                .space_sessions
+                .insert(out_space, session);
+        }
+        result
+    })
+}
+extern "system" fn create_action_space(
     session: sys::Session,
     create_info: *const sys::ActionSpaceCreateInfo,
     space: *mut sys::Space,
-));
+) -> sys::Result {
+    wrap_mut(|layer| {
+        let _span = trace_span!(stringify!(create_action_space)).entered();
+        let instance_handle = layer
+            .instance_refs
+            .sessions
+            .get(&session)
+            .ok_or(sys::Result::ERROR_HANDLE_INVALID)?
+            .to_owned();
+        let instance = read_instance(layer, instance_handle)?;
+        let result = unsafe { (instance.fp().create_action_space)(session, create_info, space) }
+            .into_result();
+        if result.is_ok() {
+            let out_space = unsafe { *space };
+
+            // Insert referencing object
+            layer
+                .instance_refs
+                .spaces
+                .insert(out_space, instance_handle);
+            layer
+                .instance_refs
+                .space_sessions
+                .insert(out_space, session);
+        }
+        result
+    })
+}
 simple_i!(enumerate_view_configurations(
     instance: sys::Instance,
     system_id: sys::SystemId,
@@ -1068,3 +1169,30 @@ simple_s!(enumerate_bound_sources_for_action(
     source_count_output: *mut u32,
     sources: *mut sys::Path,
 ));
+
+extern "system" fn locate_space(
+    space: sys::Space,
+    base_space: sys::Space,
+    time: sys::Time,
+    location: *mut sys::SpaceLocation,
+) -> sys::Result {
+    wrap(|layer| {
+        let mut space = space;
+        let _span = trace_span!(stringify!(locate_space)).entered();
+        let instance_handle = layer
+            .instance_refs
+            .spaces
+            .get(&space)
+            .ok_or(sys::Result::ERROR_HANDLE_INVALID)?;
+        let instance = read_instance(layer, *instance_handle)?;
+
+        if let Some(session_handle) = layer.instance_refs.space_sessions.get(&space) {
+            if let Some(session) = instance.sessions.get(session_handle) {
+                rewrite_space(session, &mut space);
+            }
+        }
+        let result = unsafe { (instance.fp().locate_space)(space, base_space, time, location) }
+            .into_result();
+        result
+    })
+}

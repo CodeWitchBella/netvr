@@ -23,9 +23,10 @@ impl Default for DiscoveryResponse {
     }
 }
 
-#[derive(Serialize, Deserialize, Default, Clone, Debug)]
-pub struct ConfigurationDown {
-    pub snap: ConfigurationSnapshotSet,
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub enum ConfigurationDown {
+    Snapshot(ConfigurationSnapshotSet),
+    StagePose(Pose),
 }
 
 #[derive(Serialize, Deserialize, Default, Clone, Debug)]

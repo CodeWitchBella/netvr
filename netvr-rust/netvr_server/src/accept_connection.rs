@@ -181,7 +181,7 @@ async fn run_configuration_down(
     loop {
         let val = conf.borrow().to_owned();
         println!("Sending configuration: {:?}", val);
-        connection.write(&ConfigurationDown { snap: val }).await?;
+        connection.write(&ConfigurationDown::Snapshot(val)).await?;
 
         conf.changed().await?;
     }

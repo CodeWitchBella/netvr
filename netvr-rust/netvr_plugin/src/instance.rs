@@ -1,5 +1,5 @@
 use std::{
-    collections::HashMap,
+    collections::{HashMap, HashSet},
     fmt::Debug,
     sync::{mpsc, Arc, Mutex, RwLock},
 };
@@ -28,7 +28,9 @@ pub(crate) struct Session {
     pub(crate) session: safe_openxr::Session<safe_openxr::AnyGraphics>,
     pub(crate) view_configuration_type: safe_openxr::ViewConfigurationType,
     pub(crate) space_stage: safe_openxr::Space,
+    pub(crate) application_stage_spaces: Arc<RwLock<HashSet<sys::Space>>>,
     pub(crate) space_view: safe_openxr::Space,
+    pub(crate) space_server: Arc<RwLock<safe_openxr::Space>>,
     pub(crate) predicted_display_time: sys::Time,
 
     /// Maps user paths (eg. /user/hand/left) to active interaction profile for
@@ -60,12 +62,18 @@ impl Session {
             safe_openxr::ReferenceSpaceType::VIEW,
             safe_openxr::Posef::IDENTITY,
         )?;
+        let server = session.create_reference_space(
+            safe_openxr::ReferenceSpaceType::STAGE,
+            safe_openxr::Posef::IDENTITY,
+        )?;
         Ok(Self {
             session,
             // this will be set later
             view_configuration_type: sys::ViewConfigurationType::PRIMARY_MONO,
             space_stage: stage,
+            application_stage_spaces: Default::default(),
             space_view: view,
+            space_server: Arc::new(RwLock::new(server)),
             predicted_display_time: sys::Time::from_nanos(-1),
             active_interaction_profiles: Arc::default(),
             local_configuration: watch::channel(LocalConfigurationSnapshot {

@@ -23,6 +23,16 @@ impl From<openxr_sys::Vector3f> for Vec3 {
     }
 }
 
+impl From<Vec3> for openxr_sys::Vector3f {
+    fn from(v: Vec3) -> Self {
+        Self {
+            x: v.x,
+            y: v.y,
+            z: v.z,
+        }
+    }
+}
+
 #[derive(Serialize, Deserialize, Default, Clone, Debug)]
 pub struct Quaternion {
     pub x: f32,
@@ -33,6 +43,17 @@ pub struct Quaternion {
 
 impl From<openxr_sys::Quaternionf> for Quaternion {
     fn from(v: openxr_sys::Quaternionf) -> Self {
+        Self {
+            x: v.x,
+            y: v.y,
+            z: v.z,
+            w: v.w,
+        }
+    }
+}
+
+impl From<Quaternion> for openxr_sys::Quaternionf {
+    fn from(v: Quaternion) -> Self {
         Self {
             x: v.x,
             y: v.y,
@@ -61,6 +82,15 @@ pub struct Pose {
 
 impl From<openxr_sys::Posef> for Pose {
     fn from(v: openxr_sys::Posef) -> Self {
+        Self {
+            position: v.position.into(),
+            orientation: v.orientation.into(),
+        }
+    }
+}
+
+impl From<Pose> for openxr_sys::Posef {
+    fn from(v: Pose) -> Self {
         Self {
             position: v.position.into(),
             orientation: v.orientation.into(),

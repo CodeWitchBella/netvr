@@ -129,11 +129,31 @@ async fn run_receive_configuration(
                 .get(&session_handle)
                 .ok_or(anyhow!("Failed to read session from instance"))?;
             {
-                let mut remote_configuration =
-                    session.remote_configuration.write().map_err(|err| {
-                        anyhow::anyhow!("Failed to acquire write lock on remote_state: {:?}", err)
-                    })?;
-                remote_configuration.clone_from(&conf.snap);
+                match conf {
+                    net::ConfigurationDown::Snapshot(snap) => {
+                        let mut remote_configuration =
+                            session.remote_configuration.write().map_err(|err| {
+                                anyhow::anyhow!(
+                                    "Failed to acquire write lock on remote_state: {:?}",
+                                    err
+                                )
+                            })?;
+                        remote_configuration.clone_from(&snap);
+                    }
+                    net::ConfigurationDown::StagePose(pose) => {
+                        let space_server = session.session.create_reference_space(
+                            safe_openxr::ReferenceSpaceType::STAGE,
+                            pose.into(),
+                        )?;
+                        let mut lock = session.space_server.write().map_err(|err| {
+                            anyhow::anyhow!(
+                                "Failed to acquire write lock on space_server: {:?}",
+                                err
+                            )
+                        })?;
+                        *lock = space_server;
+                    }
+                }
             }
             session.update_merged()?;
 

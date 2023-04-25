@@ -708,6 +708,7 @@ name = "netvr_data"
 version = "0.1.0"
 dependencies = [
  "bincode",
+ "nalgebra",
  "openxr-sys",
  "quinn",
  "serde",
@@ -742,6 +743,7 @@ version = "0.1.0"
 dependencies = [
  "anyhow",
  "futures-util",
+ "nalgebra",
  "netvr_data",
  "quinn",
  "quinn-proto",
