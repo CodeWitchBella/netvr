@@ -3,10 +3,10 @@ use std::sync::Arc;
 use anyhow::{Ok, Result};
 use netvr_data::{
     bincode,
-    net::{ClientId, ConfigurationUp, StateSnapshot},
+    net::{ClientId, ConfigurationDown, ConfigurationUp, StateSnapshot},
 };
 use quinn::Connection;
-use tokio::sync::broadcast;
+use tokio::sync::{broadcast, mpsc};
 use tokio_util::sync::CancellationToken;
 
 use crate::{dashboard::DashboardMessage, server::Server};
@@ -16,6 +16,7 @@ struct InnerClient {
     ws: broadcast::Sender<DashboardMessage>,
     token: CancellationToken,
     server: Server,
+    com: mpsc::UnboundedSender<ConfigurationDown>,
 }
 
 #[derive(Clone)]
@@ -29,6 +30,7 @@ impl Client {
         token: CancellationToken,
         server: Server,
         id: ClientId,
+        com: mpsc::UnboundedSender<ConfigurationDown>,
     ) -> Self {
         Self {
             inner: Arc::new(InnerClient {
@@ -36,6 +38,7 @@ impl Client {
                 ws,
                 token,
                 server,
+                com,
             }),
         }
     }
@@ -64,6 +67,11 @@ impl Client {
     #[allow(dead_code)]
     pub(crate) fn ws(&self) -> &broadcast::Sender<DashboardMessage> {
         &self.inner.ws
+    }
+
+    pub(crate) fn send_configuration_down(&self, message: ConfigurationDown) -> Result<()> {
+        self.inner.com.send(message)?;
+        Ok(())
     }
 
     #[allow(dead_code)]

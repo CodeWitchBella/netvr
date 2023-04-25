@@ -141,9 +141,10 @@ async fn run_receive_configuration(
                         remote_configuration.clone_from(&snap);
                     }
                     net::ConfigurationDown::StagePose(pose) => {
+                        let posef: sys::Posef = pose.into();
                         let space_server = session.session.create_reference_space(
                             safe_openxr::ReferenceSpaceType::STAGE,
-                            pose.into(),
+                            posef,
                         )?;
                         let mut lock = session.space_server.write().map_err(|err| {
                             anyhow::anyhow!(
@@ -152,6 +153,7 @@ async fn run_receive_configuration(
                             )
                         })?;
                         *lock = space_server;
+                        LogTrace::string(format!("Updated space_server: {:?}", posef));
                     }
                 }
             }

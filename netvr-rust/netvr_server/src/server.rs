@@ -124,6 +124,18 @@ impl Server {
         Ok(())
     }
 
+    pub async fn get_first_client(&self) -> Option<Client> {
+        self.clients
+            .lock()
+            .await
+            .iter()
+            .take(1)
+            .collect::<Vec<_>>()
+            .get(0)
+            .map(|v| v.1)
+            .cloned()
+    }
+
     pub async fn get_client(&self, id: ClientId) -> Option<Client> {
         self.clients.lock().await.get(&id).cloned()
     }

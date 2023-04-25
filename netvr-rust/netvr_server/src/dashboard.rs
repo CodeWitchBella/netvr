@@ -6,7 +6,7 @@ use futures_util::{
     SinkExt, StreamExt,
 };
 use netvr_data::{
-    net::{ClientId, ConfigurationSnapshotSet, StateSnapshot},
+    net::{ClientId, ConfigurationDown, ConfigurationSnapshotSet, StateSnapshot},
     serde::{Deserialize, Serialize},
 };
 use tokio::sync::{broadcast, mpsc};
@@ -127,7 +127,27 @@ async fn dashboard_receive(
         };
         match val {
             DashboardMessageRecv::MoveSomeClients => {
-                println!("TODO: move some clients");
+                if let Some(client) = server.get_first_client().await {
+                    if let Err(err) = client.send_configuration_down(ConfigurationDown::StagePose(
+                        netvr_data::Pose {
+                            position: netvr_data::Vec3 {
+                                x: 0.,
+                                y: 0.,
+                                z: 1.,
+                            },
+                            orientation: netvr_data::Quaternion {
+                                x: 0.,
+                                y: 0.,
+                                z: 0.,
+                                w: 1.,
+                            },
+                        },
+                    )) {
+                        println!("Failed to send configuration down: {}", err);
+                    }
+                } else {
+                    println!("... no clients");
+                }
             }
             DashboardMessageRecv::KeepAlive => {}
             DashboardMessageRecv::Init => {

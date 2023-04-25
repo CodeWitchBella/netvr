@@ -5,7 +5,7 @@ use netvr_data::{
     FramingError, RecvFrames, SendFrames,
 };
 use quinn::{Connecting, Connection};
-use tokio::sync::broadcast;
+use tokio::sync::{broadcast, mpsc};
 use tokio_util::sync::CancellationToken;
 
 use crate::{client::Client, dashboard::DashboardMessage, server::Server};
@@ -17,10 +17,26 @@ pub(crate) async fn accept_connection(
     id: ClientId,
 ) {
     let token = CancellationToken::new();
+    let mpsc = mpsc::unbounded_channel();
 
     // Create client struct
-    let client = Client::new(ws.clone(), token.clone(), server.clone(), id);
-    match run_connection(connecting, client.clone(), ws, server.clone()).await {
+    let client = Client::new(
+        ws.clone(),
+        token.clone(),
+        server.clone(),
+        id,
+        mpsc.0.clone(),
+    );
+    match run_connection(
+        connecting,
+        client.clone(),
+        ws,
+        server.clone(),
+        mpsc.0,
+        mpsc.1,
+    )
+    .await
+    {
         Ok(()) => {
             println!("Connection finished ok");
         }
@@ -37,6 +53,8 @@ async fn run_connection(
     client: Client,
     ws: broadcast::Sender<DashboardMessage>,
     server: Server,
+    configuration_channel_sender: mpsc::UnboundedSender<ConfigurationDown>,
+    configuration_channel: mpsc::UnboundedReceiver<ConfigurationDown>,
 ) -> Result<()> {
     server.add_client(client.clone()).await?;
 
@@ -64,7 +82,9 @@ async fn run_connection(
     let task_datagram = run_datagram_up(connection.clone(), client.clone(), server.clone());
 
     // Start sending configurations
-    let task_conf_down = run_configuration_down(configuration_down_stream, server.clone());
+    let task_conf_listen_change =
+        run_configuration_listen_change(configuration_channel_sender, server.clone());
+    let task_conf_down = run_configuration_down(configuration_down_stream, configuration_channel);
 
     // TODO:
     // - rebroadcast configurations
@@ -89,6 +109,9 @@ async fn run_connection(
         },
         _ = task_heartbeat => {
             println!("Heartbeat ended");
+        },
+        res = task_conf_listen_change => {
+            println!("Configuration listen change ended: {:?}", res);
         },
         res = task_conf_down => {
             println!("Configuration down ended: {:?}", res);
@@ -173,16 +196,28 @@ async fn run_datagram_up(connection: Connection, client: Client, server: Server)
     }
 }
 
-async fn run_configuration_down(
-    mut connection: SendFrames<ConfigurationDown>,
+async fn run_configuration_listen_change(
+    channel: mpsc::UnboundedSender<ConfigurationDown>,
     server: Server,
 ) -> Result<()> {
     let mut conf = server.latest_configuration().await;
     loop {
         let val = conf.borrow().to_owned();
         println!("Sending configuration: {:?}", val);
-        connection.write(&ConfigurationDown::Snapshot(val)).await?;
+        channel.send(ConfigurationDown::Snapshot(val))?;
 
         conf.changed().await?;
     }
+}
+
+async fn run_configuration_down(
+    mut connection: SendFrames<ConfigurationDown>,
+    mut channel: mpsc::UnboundedReceiver<ConfigurationDown>,
+) -> Result<()> {
+    loop {
+        let Some(val) = channel.recv().await else { break; };
+        println!("Sending configuration: {:?}", val);
+        connection.write(&val).await?;
+    }
+    Ok(())
 }

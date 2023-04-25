@@ -840,8 +840,8 @@ extern "system" fn locate_views(
     view_locate_info: *const sys::ViewLocateInfo,
     view_state: *mut sys::ViewState,
     view_capacity_input: u32,
-    view_count_output: *mut u32,
-    view: *mut sys::View,
+    view_output_count: *mut u32,
+    view_output: *mut sys::View,
 ) -> sys::Result {
     wrap(|layer| {
         let _span = trace_span!("locate_views").entered();
@@ -858,8 +858,8 @@ extern "system" fn locate_views(
                 &info,
                 view_state,
                 view_capacity_input,
-                view_count_output,
-                view,
+                view_output_count,
+                view_output,
             )
         }
         .into_result();
@@ -872,7 +872,6 @@ fn rewrite_space(session: &Session, space: &mut sys::Space) {
         if spaces.contains(space) {
             match session.space_server.read() {
                 Ok(space_server) => {
-                    LogTrace::string(format!("Rewriting space: {:?}", space));
                     *space = space_server.as_raw();
                 }
                 Err(err) => {
@@ -1178,6 +1177,7 @@ extern "system" fn locate_space(
 ) -> sys::Result {
     wrap(|layer| {
         let mut space = space;
+        let mut base_space = base_space;
         let _span = trace_span!(stringify!(locate_space)).entered();
         let instance_handle = layer
             .instance_refs
@@ -1189,6 +1189,7 @@ extern "system" fn locate_space(
         if let Some(session_handle) = layer.instance_refs.space_sessions.get(&space) {
             if let Some(session) = instance.sessions.get(session_handle) {
                 rewrite_space(session, &mut space);
+                rewrite_space(session, &mut base_space);
             }
         }
         let result = unsafe { (instance.fp().locate_space)(space, base_space, time, location) }
