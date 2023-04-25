@@ -16,7 +16,7 @@ struct InnerClient {
     ws: broadcast::Sender<DashboardMessage>,
     token: CancellationToken,
     server: Server,
-    com: mpsc::UnboundedSender<ConfigurationDown>,
+    configuration_down_queue: mpsc::UnboundedSender<ConfigurationDown>,
 }
 
 #[derive(Clone)]
@@ -30,7 +30,7 @@ impl Client {
         token: CancellationToken,
         server: Server,
         id: ClientId,
-        com: mpsc::UnboundedSender<ConfigurationDown>,
+        configuration_down_queue: mpsc::UnboundedSender<ConfigurationDown>,
     ) -> Self {
         Self {
             inner: Arc::new(InnerClient {
@@ -38,7 +38,7 @@ impl Client {
                 ws,
                 token,
                 server,
-                com,
+                configuration_down_queue,
             }),
         }
     }
@@ -70,7 +70,7 @@ impl Client {
     }
 
     pub(crate) fn send_configuration_down(&self, message: ConfigurationDown) -> Result<()> {
-        self.inner.com.send(message)?;
+        self.inner.configuration_down_queue.send(message)?;
         Ok(())
     }
 

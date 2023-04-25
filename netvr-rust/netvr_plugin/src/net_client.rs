@@ -3,10 +3,10 @@ use std::ptr;
 use anyhow::{anyhow, Result};
 use netvr_data::{
     bincode,
-    net::{self, ActionType, ConfigurationUp, StateSnapshot},
+    net::{self, ActionType, CalibrationSample, ConfigurationUp, StateSnapshot},
     SendFrames,
 };
-use tokio::select;
+use tokio::{select, spawn, sync::mpsc};
 use xr_layer::{
     log::LogTrace,
     safe_openxr::{self},
@@ -18,6 +18,18 @@ use crate::{
     overrides::with_layer,
     xr_wrap::ResultConvertible,
 };
+
+macro_rules! map_err {
+    ($text:expr) => {
+        |err| anyhow::anyhow!(concat!($text, ": {:?}"), err)
+    };
+}
+
+#[derive(Debug)]
+enum CalibrationTrigger {
+    Start(String),
+    Stop,
+}
 
 /// Implements the netvr client state machine. Should be recalled if it exists
 /// to reconnect to the server.
@@ -32,6 +44,7 @@ pub(crate) async fn run_net_client(
         "Connected to netvr server: {:?}",
         connection.connection.remote_address()
     ));
+    let calibration_trigger = tokio::sync::mpsc::channel(1);
 
     // alright, so we are connected let's send info about local devices...
 
@@ -51,12 +64,20 @@ pub(crate) async fn run_net_client(
         connection.configuration_down,
         instance_handle,
         session_handle,
+        calibration_trigger.0,
     );
+    let calibration_sender = spawn(run_calibration_sender(
+        instance_handle,
+        session_handle,
+        connection.calibration_up,
+        calibration_trigger.1,
+    ));
     select! {
         value = transmit_conf => value,
         value = transmit_snap => value,
         value = receive => value,
         value = recv_conf => value,
+        value = calibration_sender => value?,
     }
 }
 
@@ -98,9 +119,10 @@ async fn run_receive_snapshots(
                 .get(&session_handle)
                 .ok_or(anyhow!("Failed to read session from instance"))?;
             {
-                let mut remote_state = session.remote_state.write().map_err(|err| {
-                    anyhow::anyhow!("Failed to acquire write lock on remote_state: {:?}", err)
-                })?;
+                let mut remote_state = session
+                    .remote_state
+                    .write()
+                    .map_err(map_err!("Failed to acquire write lock on remote_state"))?;
                 if value.order > remote_state.order {
                     remote_state.clone_from(&value);
                 }
@@ -112,10 +134,93 @@ async fn run_receive_snapshots(
     }
 }
 
+async fn run_calibration_sender(
+    instance_handle: sys::Instance,
+    session_handle: sys::Session,
+    mut connection: netvr_data::SendFrames<netvr_data::net::CalibrationSample>,
+    mut calibration_trigger: mpsc::Receiver<CalibrationTrigger>,
+) -> Result<()> {
+    loop {
+        let Some(trigger) = calibration_trigger.recv().await else { break; };
+
+        let CalibrationTrigger::Start(mut subaction_path) = trigger else { continue; };
+        loop {
+            connection
+                .write(&collect_calibration_sample(
+                    instance_handle,
+                    session_handle,
+                    subaction_path.as_str(),
+                )?)
+                .await?;
+
+            select! {
+                trigger = calibration_trigger.recv() => match trigger {
+                    Some(trigger) => match trigger {
+                        CalibrationTrigger::Stop => break,
+                        CalibrationTrigger::Start(new_subaction_path) => {
+                            subaction_path = new_subaction_path;
+                        },
+                    },
+                    None => break,
+                },
+                _ = tokio::time::sleep(std::time::Duration::from_millis(20)) => {},
+            }
+        }
+    }
+    Ok(())
+}
+
+fn collect_calibration_sample(
+    instance_handle: sys::Instance,
+    session_handle: sys::Session,
+    subaction_path: &str,
+) -> Result<CalibrationSample> {
+    with_layer(instance_handle, |instance| {
+        let session = instance
+            .sessions
+            .get(&session_handle)
+            .ok_or(anyhow!("Failed to read session from instance"))?;
+        let time = instance.instance.now()?;
+
+        let active_profiles = session
+            .active_interaction_profiles
+            .read()
+            .map_err(map_err!(
+                "Failed to acquire read lock on active_interaction_profiles"
+            ))?;
+        let subaction_path = instance.instance.string_to_path(subaction_path)?;
+        let conf = session.local_configuration.borrow();
+        let (_, profile) = active_profiles
+            .iter()
+            .find(|(user_path, _)| **user_path == subaction_path)
+            .ok_or(anyhow!("Couldn't get active_profile with specified id"))?;
+        let interaction_profile = conf
+            .interaction_profiles
+            .iter()
+            .find(|interaction_profile| interaction_profile.path_handle == *profile)
+            .ok_or(anyhow!("Failed to get interaction_profile"))?;
+
+        for binding in &interaction_profile.bindings {
+            if let ActionType::Pose = binding.ty {
+                let Some(spaces) = &binding.spaces else {continue;};
+                let Some(space_action) = spaces.get(&subaction_path) else {continue;};
+                let Ok(location) = locate_space(&instance.instance, space_action.to_owned(), session.space_stage.as_raw(), time) else {continue;};
+
+                return Ok(CalibrationSample {
+                    pose: location.pose.into(),
+                });
+            }
+        }
+
+        Err(anyhow!("Failed to find pose binding"))
+    })
+}
+
 async fn run_receive_configuration(
     mut connection: netvr_data::RecvFrames<netvr_data::net::ConfigurationDown>,
     instance_handle: sys::Instance,
     session_handle: sys::Session,
+    calibration_trigger: mpsc::Sender<CalibrationTrigger>,
 ) -> Result<()> {
     LogTrace::str("Waiting for configuration...");
     loop {
@@ -123,44 +228,53 @@ async fn run_receive_configuration(
 
         LogTrace::string(format!("Received configuration: {:?}", conf));
 
-        with_layer(instance_handle, |instance| {
-            let session = instance
-                .sessions
-                .get(&session_handle)
-                .ok_or(anyhow!("Failed to read session from instance"))?;
-            {
-                match conf {
-                    net::ConfigurationDown::Snapshot(snap) => {
-                        let mut remote_configuration =
-                            session.remote_configuration.write().map_err(|err| {
-                                anyhow::anyhow!(
-                                    "Failed to acquire write lock on remote_state: {:?}",
-                                    err
-                                )
-                            })?;
-                        remote_configuration.clone_from(&snap);
-                    }
-                    net::ConfigurationDown::StagePose(pose) => {
-                        let posef: sys::Posef = pose.into();
-                        let space_server = session.session.create_reference_space(
-                            safe_openxr::ReferenceSpaceType::STAGE,
-                            posef,
-                        )?;
-                        let mut lock = session.space_server.write().map_err(|err| {
-                            anyhow::anyhow!(
-                                "Failed to acquire write lock on space_server: {:?}",
-                                err
-                            )
-                        })?;
-                        *lock = space_server;
-                        LogTrace::string(format!("Updated space_server: {:?}", posef));
-                    }
+        match conf {
+            net::ConfigurationDown::Snapshot(snap) => with_layer(instance_handle, |instance| {
+                let session = instance
+                    .sessions
+                    .get(&session_handle)
+                    .ok_or(anyhow!("Failed to read session from instance"))?;
+                {
+                    let mut remote_configuration = session
+                        .remote_configuration
+                        .write()
+                        .map_err(map_err!("Failed to acquire write lock on remote_state"))?;
+                    remote_configuration.clone_from(&snap);
                 }
-            }
-            session.update_merged()?;
+                session.update_merged()?;
 
-            Ok(())
-        })?;
+                Ok(())
+            })?,
+            net::ConfigurationDown::StagePose(pose) => with_layer(instance_handle, |instance| {
+                let session = instance
+                    .sessions
+                    .get(&session_handle)
+                    .ok_or(anyhow!("Failed to read session from instance"))?;
+                {
+                    let posef: sys::Posef = pose.into();
+                    let space_server = session
+                        .session
+                        .create_reference_space(safe_openxr::ReferenceSpaceType::STAGE, posef)?;
+                    let mut lock = session
+                        .space_server
+                        .write()
+                        .map_err(map_err!("Failed to acquire write lock on space_server"))?;
+                    *lock = space_server;
+                    LogTrace::string(format!("Updated space_server: {:?}", posef));
+                }
+                session.update_merged()?;
+
+                Ok(())
+            })?,
+            net::ConfigurationDown::TriggerCalibration(value) => {
+                calibration_trigger
+                    .send(CalibrationTrigger::Start(value))
+                    .await?;
+            }
+            net::ConfigurationDown::StopCalibration => {
+                calibration_trigger.send(CalibrationTrigger::Stop).await?;
+            }
+        };
     }
 }
 

@@ -15,7 +15,10 @@ use warp::{
     Filter,
 };
 
-use crate::server::Server;
+use crate::{
+    calibration_protocol::{CalibrationProtocolMessage::Begin, CalibrationSender},
+    server::Server,
+};
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(tag = "type")]
@@ -51,6 +54,14 @@ pub(crate) enum DashboardMessageRecv {
     MoveSomeClients,
     KeepAlive,
     Init,
+    #[serde(rename_all = "camelCase")]
+    StartCalibration {
+        a_id: ClientId,
+        a_path: String,
+        b_id: ClientId,
+        b_path: String,
+        sample_count: usize,
+    },
 }
 
 async fn dashboard_send(
@@ -102,6 +113,7 @@ async fn dashboard_receive(
     mut ws: SplitStream<WebSocket>,
     server: Server,
     reply: mpsc::UnboundedSender<DashboardMessage>,
+    calibration_sender: CalibrationSender,
 ) {
     loop {
         let Some(val) = ws.next().await else { break; };
@@ -159,6 +171,20 @@ async fn dashboard_receive(
                     },
                 }) else { return; };
             }
+            DashboardMessageRecv::StartCalibration {
+                a_id,
+                a_path,
+                b_id,
+                b_path,
+                sample_count,
+            } => {
+                if let Err(err) = calibration_sender.send(Begin {
+                    clients: ((a_id, a_path), (b_id, b_path)),
+                    sample_count,
+                }) {
+                    println!("Failed to send calibration request: {}", err);
+                }
+            }
         }
     }
 }
@@ -187,17 +213,22 @@ async fn dashboard_connected(
     ws: WebSocket,
     broadcast_receiver: broadcast::Receiver<DashboardMessage>,
     server: Server,
+    calibration_sender: CalibrationSender,
 ) {
     let (sender, receiver) = mpsc::unbounded_channel();
     let split = ws.split();
     tokio::select! {
         _ = dashboard_send(split.0, broadcast_receiver, receiver) => {},
         _ = dashboard_send_configuration(server.clone(), sender.clone()) => {},
-        _ = dashboard_receive(split.1, server, sender) => {},
+        _ = dashboard_receive(split.1, server, sender, calibration_sender) => {},
     }
 }
 
-pub(crate) async fn serve_dashboard(tx: broadcast::Sender<DashboardMessage>, server: Server) {
+pub(crate) async fn serve_dashboard(
+    tx: broadcast::Sender<DashboardMessage>,
+    server: Server,
+    calibration_sender: CalibrationSender,
+) {
     let exe_parent: Result<_> = match std::env::current_exe() {
         Ok(p) => match p.parent() {
             Some(p) => anyhow::Result::Ok(p.to_owned()),
@@ -235,7 +266,8 @@ pub(crate) async fn serve_dashboard(tx: broadcast::Sender<DashboardMessage>, ser
         .map(move |ws: warp::ws::Ws| {
             let rx = tx.subscribe();
             let server = server.clone();
-            ws.on_upgrade(move |socket| dashboard_connected(socket, rx, server))
+            let calibration_sender = calibration_sender.clone();
+            ws.on_upgrade(move |socket| dashboard_connected(socket, rx, server, calibration_sender))
         });
     let files = warp::filters::fs::dir(dashboard.clone());
     let mut index = dashboard.clone();

@@ -1,23 +1,31 @@
-use anyhow::Result;
+use anyhow::{anyhow, Result};
 use netvr_data::{
     bincode,
-    net::{ClientId, ConfigurationDown, ConfigurationUp, Heartbeat, StateSnapshot},
+    net::{
+        CalibrationSample, ClientId, ConfigurationDown, ConfigurationUp, Heartbeat, StateSnapshot,
+    },
     FramingError, RecvFrames, SendFrames,
 };
 use quinn::{Connecting, Connection};
 use tokio::sync::{broadcast, mpsc};
 use tokio_util::sync::CancellationToken;
 
-use crate::{client::Client, dashboard::DashboardMessage, server::Server};
+use crate::{
+    calibration_protocol::{CalibrationProtocolMessage, CalibrationSender},
+    client::Client,
+    dashboard::DashboardMessage,
+    server::Server,
+};
 
 pub(crate) async fn accept_connection(
     connecting: Connecting,
     server: Server,
     ws: broadcast::Sender<DashboardMessage>,
     id: ClientId,
+    calibration_sender: CalibrationSender,
 ) {
     let token = CancellationToken::new();
-    let mpsc = mpsc::unbounded_channel();
+    let configuration_down_queue = mpsc::unbounded_channel();
 
     // Create client struct
     let client = Client::new(
@@ -25,15 +33,16 @@ pub(crate) async fn accept_connection(
         token.clone(),
         server.clone(),
         id,
-        mpsc.0.clone(),
+        configuration_down_queue.0.clone(),
     );
     match run_connection(
         connecting,
         client.clone(),
         ws,
         server.clone(),
-        mpsc.0,
-        mpsc.1,
+        configuration_down_queue.0,
+        configuration_down_queue.1,
+        calibration_sender,
     )
     .await
     {
@@ -53,8 +62,9 @@ async fn run_connection(
     client: Client,
     ws: broadcast::Sender<DashboardMessage>,
     server: Server,
-    configuration_channel_sender: mpsc::UnboundedSender<ConfigurationDown>,
-    configuration_channel: mpsc::UnboundedReceiver<ConfigurationDown>,
+    configuration_down_queue_sender: mpsc::UnboundedSender<ConfigurationDown>,
+    configuration_down_queue: mpsc::UnboundedReceiver<ConfigurationDown>,
+    calibration_sender: CalibrationSender,
 ) -> Result<()> {
     server.add_client(client.clone()).await?;
 
@@ -63,6 +73,8 @@ async fn run_connection(
     let heartbeat_channel = SendFrames::open(&connection, b"heartbee").await?;
     let configuration_up_stream = RecvFrames::open(&connection, b"configur").await?;
     let configuration_down_stream = SendFrames::open(&connection, b"confetti").await?;
+    let calibration_up_stream: RecvFrames<CalibrationSample> =
+        RecvFrames::open(&connection, b"calibrat").await?; // <- TODO: use this
 
     // Report to dashboard and console
     let _ = ws.send(DashboardMessage::ConnectionEstablished {
@@ -83,8 +95,11 @@ async fn run_connection(
 
     // Start sending configurations
     let task_conf_listen_change =
-        run_configuration_listen_change(configuration_channel_sender, server.clone());
-    let task_conf_down = run_configuration_down(configuration_down_stream, configuration_channel);
+        run_configuration_listen_change(configuration_down_queue_sender, server.clone());
+    let task_conf_down =
+        run_configuration_down(configuration_down_stream, configuration_down_queue);
+    let task_calibration_up =
+        run_calibration_up(client.id(), calibration_up_stream, calibration_sender);
 
     // TODO:
     // - rebroadcast configurations
@@ -116,6 +131,9 @@ async fn run_connection(
         res = task_conf_down => {
             println!("Configuration down ended: {:?}", res);
         },
+        res = task_calibration_up => {
+            println!("Calibration up ended: {:?}", res);
+        }
     }
 
     // Report to dashboard and console
@@ -220,4 +238,21 @@ async fn run_configuration_down(
         connection.write(&val).await?;
     }
     Ok(())
+}
+
+async fn run_calibration_up(
+    client_id: ClientId,
+    mut connection: RecvFrames<CalibrationSample>,
+    channel: CalibrationSender,
+) -> Result<()> {
+    loop {
+        let val = connection.read().await?;
+        println!("Forwarding calibration: {:?}", val);
+        channel
+            .send(CalibrationProtocolMessage::Sample {
+                client: client_id,
+                sample: val,
+            })
+            .map_err(|err| anyhow!("Failed to forward calibration message: {:?}", err))?;
+    }
 }

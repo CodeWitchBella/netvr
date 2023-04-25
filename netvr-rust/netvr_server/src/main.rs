@@ -1,6 +1,7 @@
 use std::sync::Arc;
 
 use anyhow::Result;
+use calibration_protocol::CalibrationProtocol;
 use tokio::{net::UdpSocket, spawn, sync::broadcast};
 
 use crate::{
@@ -13,6 +14,7 @@ use crate::{
 };
 
 mod accept_connection;
+mod calibration_protocol;
 mod client;
 mod dashboard;
 mod discovery_server;
@@ -29,10 +31,16 @@ async fn main() -> Result<()> {
 
     println!("Server port: {:?}", server_port);
 
+    let (calibration, calibration_sender) = CalibrationProtocol::new();
     let discovery_server = init_discovery_server().await?;
     let discovery = spawn(run_discovery_server(server_udp.clone(), discovery_server));
     let server = Server::start().await;
-    let dashboard = spawn(serve_dashboard(tx.clone(), server.clone()));
+    let dashboard = spawn(serve_dashboard(
+        tx.clone(),
+        server.clone(),
+        calibration_sender.clone(),
+    ));
+    let calibration = calibration.run(server.clone());
 
     let connections = spawn(async move {
         let mut id_generator: u32 = 0;
@@ -41,7 +49,13 @@ async fn main() -> Result<()> {
                 let tx = tx.clone();
                 let server = server.clone();
                 id_generator += 1;
-                spawn(accept_connection(connecting, server, tx, id_generator));
+                spawn(accept_connection(
+                    connecting,
+                    server,
+                    tx,
+                    id_generator,
+                    calibration_sender.clone(),
+                ));
             }
         }
     });
@@ -53,6 +67,7 @@ async fn main() -> Result<()> {
         }
     });
 
+    calibration.await?;
     dashboard.await?;
     discovery.await?;
     connections.await?;

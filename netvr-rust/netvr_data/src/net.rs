@@ -27,6 +27,8 @@ impl Default for DiscoveryResponse {
 pub enum ConfigurationDown {
     Snapshot(ConfigurationSnapshotSet),
     StagePose(Pose),
+    TriggerCalibration(String),
+    StopCalibration,
 }
 
 #[derive(Serialize, Deserialize, Default, Clone, Debug)]
@@ -98,6 +100,11 @@ pub struct ConfigurationSnapshotSet {
 pub enum ConfigurationUp {
     Hello,
     ConfigurationSnapshot(RemoteConfigurationSnapshot),
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone)]
+pub struct CalibrationSample {
+    pub pose: Pose,
 }
 
 pub type ClientId = u32;

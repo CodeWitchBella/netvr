@@ -136,6 +136,7 @@ impl Server {
             .cloned()
     }
 
+    #[allow(dead_code)]
     pub async fn get_client(&self, id: ClientId) -> Option<Client> {
         self.clients.lock().await.get(&id).cloned()
     }
