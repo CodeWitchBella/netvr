@@ -1,11 +1,11 @@
 #![allow(non_snake_case)]
 
-use nalgebra::{Const, Dyn, Matrix3, OMatrix, Rotation3, RowVector3};
+use nalgebra::{Const, Dyn, Matrix3, OMatrix, Rotation3, RowVector3, Vector3};
 
 #[derive(Default, Clone, Debug, Copy)]
 pub struct Pose<T: num::Float + std::clone::Clone + std::cmp::PartialEq + std::fmt::Debug + 'static>
 {
-    pub position: RowVector3<T>,
+    pub position: Vector3<T>,
     pub rotation: Matrix3<T>,
 }
 
@@ -112,11 +112,13 @@ fn CalibrateRotation(samples: &[Sample<f64>]) -> Rotation3<f64> {
     }
 
     // Kabsch algorithm
-    // Eigen::MatrixXd refPoints(deltas.size(), 3), targetPoints(deltas.size(), 3);
-    // Eigen::Vector3d refCentroid(0, 0, 0), targetCentroid(0, 0, 0);
+    // Eigen::Vector3d refCentroid(0, 0, 0);
     let mut refCentroid = RowVector3::zeros();
+    // Eigen::Vector3d targetCentroid(0, 0, 0);
     let mut targetCentroid = RowVector3::zeros();
+    // Eigen::MatrixXd refPoints(deltas.size(), 3);
     let mut refPoints = OMatrix::<f64, Dyn, Const<3>>::zeros(deltas.len());
+    // Eigen::MatrixXd targetPoints(deltas.size(), 3);
     let mut targetPoints = OMatrix::<f64, Dyn, Const<3>>::zeros(deltas.len());
 
     // for (size_t i = 0; i < deltas.size(); i++)
@@ -179,6 +181,66 @@ fn CalibrateRotation(samples: &[Sample<f64>]) -> Rotation3<f64> {
     Rotation3::from_matrix(&rot)
 }
 
+fn CalibrateTranslation(samples: &[Sample<f64>]) -> RowVector3<f64> {
+    let mut deltas: Vec<(Vector3<f64>, Matrix3<f64>)> = vec![];
+    for i in 0..samples.len() {
+        for j in 0..i {
+            // auto QAi = samples[i].ref.rot.transpose();
+            let QAi = samples[i].reference.rotation.transpose();
+            // auto QAj = samples[j].ref.rot.transpose();
+            let QAj = samples[j].reference.rotation.transpose();
+            // auto dQA = QAj - QAi;
+            let dQA = QAj - QAi;
+            // auto CA = QAj * (samples[j].ref.trans - samples[j].target.trans)
+            // - QAi * (samples[i].ref.trans - samples[i].target.trans);
+            let CA = QAj * (samples[j].reference.position - samples[j].target.position)
+                - QAi * (samples[i].reference.position - samples[i].target.position);
+            // deltas.push_back(std::make_pair(CA, dQA));
+            deltas.push((CA, dQA));
+            // auto QBi = samples[i].target.rot.transpose();
+            let QBi = samples[i].target.rotation.transpose();
+            // auto QBj = samples[j].target.rot.transpose();
+            let QBj = samples[j].target.rotation.transpose();
+            // auto dQB = QBj - QBi;
+            let dQB = QBj - QBi;
+            // auto CB = QBj * (samples[j].ref.trans - samples[j].target.trans)
+            // - QBi * (samples[i].ref.trans - samples[i].target.trans);
+            let CB = QBj * (samples[j].reference.position - samples[j].target.position)
+                - QBi * (samples[i].reference.position - samples[i].target.position);
+            // deltas.push_back(std::make_pair(CB, dQB));
+            deltas.push((CB, dQB));
+        }
+    }
+
+    // Eigen::VectorXd constants(deltas.size() * 3);
+    let mut constants = OMatrix::<f64, Dyn, Const<3>>::zeros(deltas.len() * 3);
+    // Eigen::MatrixXd coefficients(deltas.size() * 3, 3);
+    let mut coefficients = OMatrix::<f64, Dyn, Const<3>>::zeros(deltas.len() * 3);
+
+    // for (size_t i = 0; i < deltas.size(); i++)
+    // {
+    //     for (int axis = 0; axis < 3; axis++)
+    //     {
+    //         constants(i * 3 + axis) = deltas[i].first(axis);
+    //         coefficients.row(i * 3 + axis) = deltas[i].second.row(axis);
+    //     }
+    // }
+    for i in 0..deltas.len() {
+        for axis in 0..3 {
+            constants[i * 3 + axis] = deltas[i].0[axis];
+            coefficients.set_row(i * 3 + axis, &deltas[i].1.row(axis));
+        }
+    }
+
+    // Eigen::Vector3d trans = coefficients.bdcSvd(Eigen::ComputeThinU |
+    // Eigen::ComputeThinV).solve(constants);
+    // auto transcm = trans * 100.0;
+    let trans = constants.svd(true, true);
+    let trans = trans.singular_values;
+
+    RowVector3::new(trans[0], trans[1], trans[2])
+}
+
 pub fn calibrate(matches: &[Sample<f32>]) -> CalibrationResult {
     // Notes from original code:
     // - it applies rotation right when it determines it
@@ -194,8 +256,19 @@ pub fn calibrate(matches: &[Sample<f32>]) -> CalibrationResult {
         .collect::<Vec<Sample<f64>>>();
 
     let rotation = CalibrateRotation(&eigen_samples);
+    println!("Solved rotation: {:?}", rotation);
+
+    let eigen_samples = matches
+        .iter()
+        .skip(rot_samples)
+        .map(|s| (*s).into())
+        .collect::<Vec<Sample<f64>>>();
+
+    let translation = CalibrateTranslation(&eigen_samples);
+    println!("Solved position: {:?}", translation);
+
     CalibrationResult {
         rotation: rotation.cast::<f32>(),
-        ..Default::default()
+        translation: translation.cast::<f32>(),
     }
 }
