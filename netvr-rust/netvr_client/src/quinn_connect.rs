@@ -1,4 +1,7 @@
-use std::{net::SocketAddr, sync::Arc};
+use std::{
+    net::{Ipv4Addr, SocketAddr},
+    sync::Arc,
+};
 
 use quinn::{ClientConfig, Connection, Endpoint};
 
@@ -8,7 +11,7 @@ pub(crate) async fn quinn_connect(
     server_addr: SocketAddr,
 ) -> Result<(Endpoint, Connection), Error> {
     let client_cfg = configure_client();
-    let mut endpoint = Endpoint::client(SocketAddr::new(server_addr.ip(), 0))?;
+    let mut endpoint = Endpoint::client(SocketAddr::new(Ipv4Addr::new(0, 0, 0, 0).into(), 0))?;
     endpoint.set_default_client_config(client_cfg);
 
     // connect to server

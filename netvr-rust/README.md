@@ -100,8 +100,8 @@ And only after doing so installing rust using rustup. Alternatively you can use 
 rustup target add aarch64-linux-android
 # Install cargo-ndk
 cargo install cargo-ndk
-# Compile
-cargo ndk -t arm64-v8a -p 26 b --package netvr_plugin --release --target aarch64-linux-android
+# Compile (platform 32 = android 12, which new quest 2 software uses)
+cargo ndk -t arm64-v8a -p 32 b --package netvr_plugin --release --target aarch64-linux-android
 # Copy to unity project (cargo-post does not work with cargo-ndk)
 cp target/aarch64-linux-android/release/libnetvr_plugin.so ../netvr-unity/Packages/cz.isbl.netvr/Runtime/Plugins/Android/arm64-v8a/libnetvr_plugin.so
 ```
