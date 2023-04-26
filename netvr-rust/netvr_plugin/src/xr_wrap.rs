@@ -1,15 +1,16 @@
 use core::ffi::FromBytesUntilNulError;
-use std::{
-    alloc::LayoutError,
-    panic,
-    sync::{Arc, Mutex, PoisonError},
-};
+#[cfg(not(target_os = "android"))]
+use std::sync::{Arc, Mutex};
+use std::{alloc::LayoutError, panic, sync::PoisonError};
 
 use netvr_data::bincode;
 use thiserror::Error;
 use tracing::{dispatcher, span::EnteredSpan, Dispatch, Level, Span};
+#[cfg(not(target_os = "android"))]
 use tracing_chrome::{ChromeLayerBuilder, FlushGuard};
-use tracing_subscriber::{prelude::*, FmtSubscriber};
+#[cfg(not(target_os = "android"))]
+use tracing_subscriber::prelude::*;
+use tracing_subscriber::FmtSubscriber;
 use xr_layer::{
     log::{LogError, LogPanic},
     sys,
@@ -135,36 +136,43 @@ where
 #[derive(Clone)]
 pub(crate) struct Trace {
     pub(self) dispatch: tracing::Dispatch,
+    #[cfg(not(target_os = "android"))]
     pub(self) _flush_guard: Arc<Mutex<FlushGuard>>,
 }
 
 impl Trace {
     pub(crate) fn new() -> Self {
-        let (chrome_layer, trace_flush_guard) = ChromeLayerBuilder::new()
-            .include_args(true)
-            //.trace_style(tracing_chrome::TraceStyle::Async)
-            .include_locations(true)
-            // .name_fn(Box::new(|event_or_span| match event_or_span {
-            //     EventOrSpan::Event(ev) => ev
-            //         .metadata()
-            //         .fields()
-            //         .field("message")
-            //         .map_or_else(|| ev.metadata().name().into(), |val| val.to_string()),
-            //     EventOrSpan::Span(s) => s.metadata().name().into(),
-            // }))
-            .build();
+        let subscriber = FmtSubscriber::builder()
+            // all spans/events with a level higher than TRACE (e.g, debug, info, warn,
+            // etc.) will be written to stdout.
+            .with_max_level(Level::TRACE)
+            // completes the builder.
+            .finish();
+        #[cfg(not(target_os = "android"))]
+        {
+            let (chrome_layer, trace_flush_guard) = ChromeLayerBuilder::new()
+                .include_args(true)
+                //.trace_style(tracing_chrome::TraceStyle::Async)
+                .include_locations(true)
+                // .name_fn(Box::new(|event_or_span| match event_or_span {
+                //     EventOrSpan::Event(ev) => ev
+                //         .metadata()
+                //         .fields()
+                //         .field("message")
+                //         .map_or_else(|| ev.metadata().name().into(), |val| val.to_string()),
+                //     EventOrSpan::Span(s) => s.metadata().name().into(),
+                // }))
+                .build();
+            let dispatch = Dispatch::new(subscriber.with(chrome_layer));
+            Self {
+                dispatch,
+                _flush_guard: Arc::new(Mutex::new(trace_flush_guard)),
+            }
+        }
 
+        #[cfg(target_os = "android")]
         Self {
-            dispatch: Dispatch::new(
-                FmtSubscriber::builder()
-                    // all spans/events with a level higher than TRACE (e.g, debug, info, warn,
-                    // etc.) will be written to stdout.
-                    .with_max_level(Level::TRACE)
-                    // completes the builder.
-                    .finish()
-                    .with(chrome_layer),
-            ),
-            _flush_guard: Arc::new(Mutex::new(trace_flush_guard)),
+            dispatch: Dispatch::new(subscriber),
         }
     }
 
