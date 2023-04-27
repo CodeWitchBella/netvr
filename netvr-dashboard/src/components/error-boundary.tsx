@@ -25,7 +25,7 @@ const showErrorOverlay = (err: Error) => {
 
 type State = { hasError: boolean; key: number }
 export class ErrorBoundary extends Component<
-  { children: React.ReactNode },
+  { children: React.ReactNode; fallback?: React.ReactNode },
   State
 > {
   state: State = { hasError: false, key: 0 }
@@ -43,6 +43,7 @@ export class ErrorBoundary extends Component<
 
   render() {
     if (this.state.hasError) {
+      if (this.props.fallback !== undefined) return this.props.fallback
       // You can render any custom fallback UI
       return (
         <>

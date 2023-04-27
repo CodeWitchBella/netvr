@@ -12,6 +12,7 @@ serde = "1.0.159"
 thiserror = "1.0.40"
 tokio = { version = "1.27.0", features = ["net", "time", "macros"] }
 nalgebra = { version = "0.32.2", features = ["serde"] }
+chrono = {version = "0.4.24", default-features = false, features = ["serde"]}
 
 [build-dependencies]
 serde = "1.0.159"

@@ -12,6 +12,7 @@ import {
   useTheme,
 } from '../components/theme'
 import { useWasmSuspending, type WrappedWasm } from '../wasm/wasm-wrapper'
+import { ErrorBoundary } from '../components/error-boundary'
 
 type SavedCalibration = {
   fileName: string
@@ -36,6 +37,7 @@ type NewSample = {
     position: { x: number; y: number; z: number }
     orientation: { x: number; y: number; z: number; w: number }
   }
+  nanos: number
 }
 
 function convert(
@@ -57,7 +59,7 @@ function convert(
   }
 }
 
-function convertSample(v: NewSample) {
+function convertSample(v: NewSample, _: number, arr: NewSample[]) {
   const rotation = new THREE.Euler()
     .setFromQuaternion(
       new THREE.Quaternion().set(
@@ -75,7 +77,7 @@ function convertSample(v: NewSample) {
       y: rotation[1],
       z: rotation[2],
     },
-    timestamp: 0,
+    timestamp: (v.nanos - arr[0].nanos) / 1000 / 1000,
   }
 }
 
@@ -336,7 +338,19 @@ function Segment({
   return <PolyLine points={[from, to]} color={color} thickness={thickness} />
 }
 
-function PolyLine({
+function PolyLine(props: {
+  points: readonly (readonly [number, number, number])[]
+  color: any
+  thickness?: number
+}) {
+  return (
+    <ErrorBoundary fallback={null}>
+      <PolyLineInner {...props} />
+    </ErrorBoundary>
+  )
+}
+
+function PolyLineInner({
   points,
   color,
   thickness = 0.001,

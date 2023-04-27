@@ -822,6 +822,7 @@ name = "netvr_data"
 version = "0.1.0"
 dependencies = [
  "bincode",
+ "chrono",
  "nalgebra",
  "openxr-sys",
  "quinn",
@@ -836,6 +837,7 @@ name = "netvr_plugin"
 version = "0.1.0"
 dependencies = [
  "anyhow",
+ "chrono",
  "lazy_static",
  "netvr_client",
  "netvr_data",

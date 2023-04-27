@@ -107,6 +107,7 @@ pub enum ConfigurationUp {
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct CalibrationSample {
     pub pose: Pose,
+    pub nanos: i64,
 }
 
 pub type ClientId = u32;

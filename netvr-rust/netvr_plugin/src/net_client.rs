@@ -232,6 +232,7 @@ fn collect_calibration_sample(
 
                 return Ok(CalibrationSample {
                     pose: location.pose.into(),
+                    nanos: time.as_nanos(),
                 });
             }
         }
