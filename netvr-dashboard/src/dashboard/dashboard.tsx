@@ -20,6 +20,7 @@ import { QuickActionsPane } from './quick-actions-pane'
 import { ClientPane } from './client-pane'
 import { SendMessage } from '../protocol/sent-messages'
 import { DashboardMessageDown, DatagramUp } from '../protocol/recieved-messages'
+import { DatagramState, mergeData } from './merge-data'
 
 enableMapSet()
 enablePatches()
@@ -59,13 +60,6 @@ export function Dashboard({ socketUrl }: { socketUrl: string }) {
   )
 }
 
-type DatagramState = {
-  [key: number]: {
-    id: number
-    time: number
-    snapshot: StateSnapshot
-  }
-}
 function datagramReducer(
   state: DatagramState,
   action: { now: number; datagram: DatagramUp },
@@ -121,30 +115,7 @@ function DashboardInner() {
     useState<ConfigurationSnapshotSet | null>(null)
   const [datagramData, dispatchDatagram] = useReducer(datagramReducer, {})
   const mergedData = useMemo(
-    () =>
-      Object.entries(datagramData).map(([k, v]) => {
-        const configuration = configurationSnapshot?.clients[k as any]
-        const snapshot = v.snapshot
-        if (configuration?.version !== snapshot.required_configuration) {
-          return {
-            time: new Date(v.time).toISOString().slice(11),
-            configuration,
-            ...snapshot,
-          }
-        }
-        return {
-          time: new Date(v.time).toISOString().slice(11),
-          configuration,
-          view: snapshot.view,
-          controllers: snapshot.controllers.map((c) => ({
-            ...c,
-            interaction_profile:
-              configuration.interaction_profiles[c.interaction_profile - 1]
-                ?.path,
-            user_path: configuration.user_paths[c.user_path - 1],
-          })),
-        }
-      }),
+    () => mergeData(datagramData, configurationSnapshot),
     [datagramData, configurationSnapshot],
   )
 
@@ -189,6 +160,7 @@ function DashboardInner() {
               <CalibrationPane
                 sendMessage={sendMessage}
                 serverState={configurationSnapshot}
+                mergedData={mergedData}
               />
             </ErrorBoundary>
             <StatePane data={mergedData} />

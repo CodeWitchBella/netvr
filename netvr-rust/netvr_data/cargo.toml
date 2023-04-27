@@ -10,7 +10,7 @@ openxr-sys = "0.9.3"
 quinn = "0.9.3"
 serde = "1.0.159"
 thiserror = "1.0.40"
-tokio = { version = "1.27.0", features = ["net", "time"] }
+tokio = { version = "1.27.0", features = ["net", "time", "macros"] }
 nalgebra = { version = "0.32.2", features = ["serde"] }
 
 [build-dependencies]

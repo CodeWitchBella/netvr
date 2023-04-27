@@ -136,7 +136,9 @@ function useSocketState(url: string, onDisconnected: () => void) {
         setError(new Error((event as any).message))
       } else {
         console.error(event)
-        setError(new Error('Error in websocket'))
+        const err = new Error('Error in websocket')
+        ;(err as any).recoverable = true
+        setError(err)
       }
     }
   }, [url])

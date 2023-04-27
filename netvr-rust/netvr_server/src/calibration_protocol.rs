@@ -1,6 +1,8 @@
-use std::vec;
+use std::{fs::File, io::Write, time::SystemTime, vec};
 
 use anyhow::{anyhow, Result};
+use chrono::{DateTime, Utc};
+use netvr_calibrate::CalibrationInput;
 use netvr_data::net::{
     CalibrationSample, ClientId,
     ConfigurationDown::{StopCalibration, TriggerCalibration},
@@ -87,8 +89,29 @@ async fn run(
         };
 
         // Samples collected. Calibrate and apply
-        println!("Samples 1: {:?}", samples1);
-        println!("Samples 2: {:?}", samples2);
+        println!("Samples 1: {:?}", samples1.len());
+        println!("Samples 2: {:?}", samples2.len());
+        let calibration = CalibrationInput {
+            reference: samples1,
+            target: samples2,
+        };
+        match serde_json::to_string(&calibration) {
+            Ok(data) => {
+                let dt: DateTime<Utc> = SystemTime::now().into();
+                let fname = format!("calibration-data-{}.json", dt.format("%Y-%m-%dT%H-%M-%S"));
+                match File::create(fname.clone()) {
+                    Ok(mut f) => match f.write_all(data.as_bytes()) {
+                        Ok(()) => println!("Calibration data written to file: {}", fname),
+                        Err(err) => println!("Failed to write calibration data to file: {:?}", err),
+                    },
+                    Err(err) => println!("Failed to create calibration file: {:?}", err),
+                }
+            }
+            Err(err) => println!("Failed to serialize calibration data: {:?}", err),
+        };
+
+        let result = netvr_calibrate::calibrate(&calibration);
+        println!("Calibration result: {:?}", result);
     }
     Ok(())
 }

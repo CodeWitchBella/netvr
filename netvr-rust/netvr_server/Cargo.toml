@@ -9,6 +9,7 @@ edition = "2021"
 tokio = { version = "1.27.0", features = ["full"] }
 tokio-util = { version = "0.7.7" }
 netvr_data = { path = "../netvr_data" }
+netvr_calibrate = { path = "../netvr_calibrate" }
 serde = "1.0.159" # This should be the same version as used by netvr_data
 serde_json = "1.0.96"
 rcgen = "0.10.0"
@@ -21,3 +22,4 @@ rustls = { version = "0.20.8", features = ["quic"] }
 anyhow = "1.0.70"
 warp = "0.3.4"
 futures-util = "0.3.28"
+chrono = {version = "0.4.24", default-features = false, features = ["serde", "clock"]}

@@ -1,44 +1,54 @@
 #![allow(non_snake_case)]
 
-use nalgebra::{Const, Dyn, Matrix3, OMatrix, Rotation3, RowVector3, Vector3};
+mod input;
+use std::cmp::min;
 
-#[derive(Default, Clone, Debug, Copy)]
-pub struct Pose<T: num::Float + std::clone::Clone + std::cmp::PartialEq + std::fmt::Debug + 'static>
-{
-    pub position: Vector3<T>,
-    pub rotation: Matrix3<T>,
+pub use input::*;
+use nalgebra::{
+    Const, Dyn, Matrix3, OMatrix, Quaternion, Rotation3, RowVector3, UnitQuaternion, Vector3,
+};
+use netvr_data::{net::CalibrationSample, Vec3};
+
+#[derive(Debug, Default, Clone, Copy)]
+struct PoseF64 {
+    pub position: Vector3<f64>,
+    pub rotation: Matrix3<f64>,
 }
 
-impl From<Pose<f32>> for Pose<f64> {
-    fn from(val: Pose<f32>) -> Self {
-        Pose {
-            position: val.position.cast::<f64>(),
-            rotation: val.rotation.cast::<f64>(),
+impl From<netvr_data::Pose> for PoseF64 {
+    fn from(val: netvr_data::Pose) -> Self {
+        Self {
+            position: Vector3::new(val.position.x, val.position.y, val.position.z).cast::<f64>(),
+            rotation: UnitQuaternion::new_normalize(Quaternion::new(
+                val.orientation.w,
+                val.orientation.x,
+                val.orientation.y,
+                val.orientation.z,
+            ))
+            .cast::<f64>()
+            .to_rotation_matrix()
+            .into(),
+        }
+    }
+}
+
+#[derive(Debug, Default, Clone, Copy)]
+struct SampleF64 {
+    pose: PoseF64,
+}
+
+impl From<CalibrationSample> for SampleF64 {
+    fn from(val: CalibrationSample) -> Self {
+        Self {
+            pose: val.pose.into(),
         }
     }
 }
 
 #[derive(Default, Clone, Debug, Copy)]
-pub struct Sample<
-    T: num::Float + std::clone::Clone + std::cmp::PartialEq + std::fmt::Debug + 'static,
-> {
-    reference: Pose<T>,
-    target: Pose<T>,
-}
-
-impl From<Sample<f32>> for Sample<f64> {
-    fn from(val: Sample<f32>) -> Self {
-        Sample {
-            reference: val.reference.into(),
-            target: val.target.into(),
-        }
-    }
-}
-
-#[derive(Default, Clone, Debug)]
-pub struct CalibrationResult {
-    pub translation: RowVector3<f32>,
-    pub rotation: Rotation3<f32>,
+struct SamplePairF64 {
+    reference: SampleF64,
+    target: SampleF64,
 }
 
 #[derive(Default, Clone, Debug, Copy)]
@@ -60,10 +70,10 @@ fn AngleFromRotationMatrix3(rot: Matrix3<f64>) -> f64 {
     // return acos((rot(0, 0) + rot(1, 1) + rot(2, 2) - 1.0) / 2.0);
 }
 
-fn DeltaRotationSamples(s1: Sample<f64>, s2: Sample<f64>) -> Option<DSample> {
+fn DeltaRotationSamples(s1: SamplePairF64, s2: SamplePairF64) -> Option<DSample> {
     // Difference in rotation between samples.
-    let dref = s1.reference.rotation * s2.reference.rotation.transpose();
-    let dtarget = s1.target.rotation * s2.target.rotation.transpose();
+    let dref = s1.reference.pose.rotation * s2.reference.pose.rotation.transpose();
+    let dtarget = s1.target.pose.rotation * s2.target.pose.rotation.transpose();
 
     // When stuck together, the two tracked objects rotate as a pair,
     // therefore their axes of rotation must be equal between any given pair of
@@ -89,7 +99,7 @@ fn DeltaRotationSamples(s1: Sample<f64>, s2: Sample<f64>) -> Option<DSample> {
     }
 }
 
-fn CalibrateRotation(samples: &[Sample<f64>]) -> Rotation3<f64> {
+fn CalibrateRotation(samples: &[SamplePairF64]) -> Rotation3<f64> {
     // std::vector<DSample> deltas;
     // for (size_t i = 0; i < samples.size(); i++)
     // {
@@ -181,32 +191,32 @@ fn CalibrateRotation(samples: &[Sample<f64>]) -> Rotation3<f64> {
     Rotation3::from_matrix(&rot)
 }
 
-fn CalibrateTranslation(samples: &[Sample<f64>]) -> RowVector3<f64> {
+fn CalibrateTranslation(samples: &[SamplePairF64]) -> RowVector3<f64> {
     let mut deltas: Vec<(Vector3<f64>, Matrix3<f64>)> = vec![];
     for i in 0..samples.len() {
         for j in 0..i {
             // auto QAi = samples[i].ref.rot.transpose();
-            let QAi = samples[i].reference.rotation.transpose();
+            let QAi = samples[i].reference.pose.rotation.transpose();
             // auto QAj = samples[j].ref.rot.transpose();
-            let QAj = samples[j].reference.rotation.transpose();
+            let QAj = samples[j].reference.pose.rotation.transpose();
             // auto dQA = QAj - QAi;
             let dQA = QAj - QAi;
             // auto CA = QAj * (samples[j].ref.trans - samples[j].target.trans)
             // - QAi * (samples[i].ref.trans - samples[i].target.trans);
-            let CA = QAj * (samples[j].reference.position - samples[j].target.position)
-                - QAi * (samples[i].reference.position - samples[i].target.position);
+            let CA = QAj * (samples[j].reference.pose.position - samples[j].target.pose.position)
+                - QAi * (samples[i].reference.pose.position - samples[i].target.pose.position);
             // deltas.push_back(std::make_pair(CA, dQA));
             deltas.push((CA, dQA));
             // auto QBi = samples[i].target.rot.transpose();
-            let QBi = samples[i].target.rotation.transpose();
+            let QBi = samples[i].target.pose.rotation.transpose();
             // auto QBj = samples[j].target.rot.transpose();
-            let QBj = samples[j].target.rotation.transpose();
+            let QBj = samples[j].target.pose.rotation.transpose();
             // auto dQB = QBj - QBi;
             let dQB = QBj - QBi;
             // auto CB = QBj * (samples[j].ref.trans - samples[j].target.trans)
             // - QBi * (samples[i].ref.trans - samples[i].target.trans);
-            let CB = QBj * (samples[j].reference.position - samples[j].target.position)
-                - QBi * (samples[i].reference.position - samples[i].target.position);
+            let CB = QBj * (samples[j].reference.pose.position - samples[j].target.pose.position)
+                - QBi * (samples[i].reference.pose.position - samples[i].target.pose.position);
             // deltas.push_back(std::make_pair(CB, dQB));
             deltas.push((CB, dQB));
         }
@@ -241,19 +251,32 @@ fn CalibrateTranslation(samples: &[Sample<f64>]) -> RowVector3<f64> {
     RowVector3::new(trans[0], trans[1], trans[2])
 }
 
-pub fn calibrate(matches: &[Sample<f32>]) -> CalibrationResult {
+fn match_samples(input: &CalibrationInput) -> Vec<SamplePairF64> {
+    let mut matches = vec![];
+    for i in 0..min(input.reference.len(), input.target.len()) {
+        matches.push(SamplePairF64 {
+            reference: input.reference[i].clone().into(),
+            target: input.target[i].clone().into(),
+        });
+    }
+    matches
+}
+
+pub fn calibrate(samples: &CalibrationInput) -> CalibrationResult {
     // Notes from original code:
     // - it applies rotation right when it determines it
     // - it collects SampleCount for each phase
     // - it waits at least 50ms (0.05s) between samples
+
+    let matches = match_samples(samples);
 
     let rot_samples = matches.len() / 2;
     let _pos_samples = matches.len() - rot_samples;
     let eigen_samples = matches
         .iter()
         .take(rot_samples)
-        .map(|s| (*s).into())
-        .collect::<Vec<Sample<f64>>>();
+        .copied()
+        .collect::<Vec<SamplePairF64>>();
 
     let rotation = CalibrateRotation(&eigen_samples);
     println!("Solved rotation: {:?}", rotation);
@@ -261,14 +284,24 @@ pub fn calibrate(matches: &[Sample<f32>]) -> CalibrationResult {
     let eigen_samples = matches
         .iter()
         .skip(rot_samples)
-        .map(|s| (*s).into())
-        .collect::<Vec<Sample<f64>>>();
+        .copied()
+        .collect::<Vec<SamplePairF64>>();
 
     let translation = CalibrateTranslation(&eigen_samples);
     println!("Solved position: {:?}", translation);
+    let rotation = UnitQuaternion::from_matrix(&rotation.into()).cast::<f32>();
 
     CalibrationResult {
-        rotation: rotation.cast::<f32>(),
-        translation: translation.cast::<f32>(),
+        rotation: netvr_data::Quaternion {
+            x: rotation.i,
+            y: rotation.j,
+            z: rotation.k,
+            w: rotation.w,
+        },
+        translation: Vec3 {
+            x: translation[0] as f32,
+            y: translation[1] as f32,
+            z: translation[2] as f32,
+        },
     }
 }

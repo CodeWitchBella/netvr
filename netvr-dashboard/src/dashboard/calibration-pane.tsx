@@ -5,19 +5,18 @@ import type {
   ConfigurationSnapshotSet,
 } from '../protocol/data'
 import { Button, Pane, Select } from '../components/design'
-import { useLocalStorage } from '../utils'
 import * as sentMessages from '../protocol/sent-messages'
-
-function isTrueOrFalseString(v: string): v is 'true' | 'false' {
-  return v === 'true' || v === 'false'
-}
+import { MergedData } from './merge-data'
+import { JSONView } from '../components/json-view'
 
 export function CalibrationPane({
   sendMessage,
   serverState,
+  mergedData,
 }: {
   sendMessage: sentMessages.SendMessage
   serverState: ConfigurationSnapshotSet
+  mergedData: MergedData
 }) {
   const client1 = useDeviceSelect({ serverState })
   const client2 = useDeviceSelect({
@@ -74,14 +73,31 @@ export function CalibrationPane({
           type="leader"
           sendMessage={sendMessage}
         />
-        {true ? (
-          <DeviceSelect
-            serverState={serverState}
-            data={client2}
-            type="follower"
-            sendMessage={sendMessage}
+        <div css={{ marginTop: -16 }}>
+          <JSONView
+            name="data"
+            shouldExpandNode={() => true}
+            data={mergedData[client1.clientId]?.controllers?.find(
+              (c) => c.user_path === client1.subactionPath,
+            )}
           />
-        ) : null}
+        </div>
+
+        <DeviceSelect
+          serverState={serverState}
+          data={client2}
+          type="follower"
+          sendMessage={sendMessage}
+        />
+        <div css={{ marginTop: -16 }}>
+          <JSONView
+            name="data"
+            shouldExpandNode={() => true}
+            data={mergedData[client2.clientId]?.controllers?.find(
+              (c) => c.user_path === client2.subactionPath,
+            )}
+          />
+        </div>
         <Button type="submit">Trigger Calibration</Button>
         {message}
       </form>

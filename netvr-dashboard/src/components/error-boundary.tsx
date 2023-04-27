@@ -1,4 +1,4 @@
-import React, { Component } from 'react'
+import React, { Component, Fragment } from 'react'
 import { Button } from './design'
 
 const showErrorOverlay = (err: Error) => {
@@ -23,15 +23,17 @@ const showErrorOverlay = (err: Error) => {
   document.body.appendChild(overlay)
 }
 
-type State = { hasError: boolean }
+type State = { hasError: boolean; key: number }
 export class ErrorBoundary extends Component<
   { children: React.ReactNode },
   State
 > {
-  state: State = { hasError: false }
+  state: State = { hasError: false, key: 0 }
 
   static getDerivedStateFromError(error: any): State {
-    return { hasError: true }
+    if (typeof error === 'object' && error?.recoverable)
+      return { hasError: false, key: Math.random() }
+    return { hasError: true, key: 0 }
   }
   componentDidCatch(error: any, errorInfo: any) {
     showErrorOverlay(error)
@@ -51,6 +53,6 @@ export class ErrorBoundary extends Component<
         </>
       )
     }
-    return this.props.children
+    return <Fragment key={this.state.key}>{this.props.children}</Fragment>
   }
 }
