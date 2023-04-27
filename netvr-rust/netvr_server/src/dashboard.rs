@@ -54,12 +54,22 @@ pub(crate) enum DashboardMessageRecv {
     MoveSomeClients,
     KeepAlive,
     Init,
+    CalibrateByHeadsetPosition,
+    #[serde(rename_all = "camelCase")]
+    TriggerHapticImpulse {
+        client_id: ClientId,
+        subaction_path: String,
+    },
+    #[serde(rename_all = "camelCase")]
+    ResetCalibration {
+        client_id: ClientId,
+    },
     #[serde(rename_all = "camelCase")]
     StartCalibration {
-        a_id: ClientId,
-        a_path: String,
-        b_id: ClientId,
-        b_path: String,
+        leader_id: ClientId,
+        leader_subaction_path: String,
+        follower_id: ClientId,
+        follower_subaction_path: String,
         sample_count: usize,
     },
 }
@@ -172,10 +182,10 @@ async fn dashboard_receive(
                 }) else { return; };
             }
             DashboardMessageRecv::StartCalibration {
-                a_id,
-                a_path,
-                b_id,
-                b_path,
+                leader_id: a_id,
+                leader_subaction_path: a_path,
+                follower_id: b_id,
+                follower_subaction_path: b_path,
                 sample_count,
             } => {
                 if let Err(err) = calibration_sender.send(Begin {
@@ -184,6 +194,21 @@ async fn dashboard_receive(
                 }) {
                     println!("Failed to send calibration request: {}", err);
                 }
+            }
+            DashboardMessageRecv::CalibrateByHeadsetPosition => {
+                println!("TODO: sync by head position")
+            }
+            DashboardMessageRecv::ResetCalibration { client_id } => {
+                println!("TODO: reset calibration for {}", client_id)
+            }
+            DashboardMessageRecv::TriggerHapticImpulse {
+                client_id,
+                subaction_path,
+            } => {
+                println!(
+                    "TODO: trigger haptic impulse for {} {}",
+                    client_id, subaction_path
+                )
             }
         }
     }

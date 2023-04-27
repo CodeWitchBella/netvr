@@ -1,5 +1,4 @@
 import { useCallback, useEffect, useState } from 'react'
-import { ClientConfiguration } from './protocol/data'
 
 export function useLocalStorage<Value extends string = string>(
   key: string,
@@ -45,13 +44,4 @@ export function useLocalStorage<Value extends string = string>(
       [key, validate],
     ),
   ] as const
-}
-
-export function getName(
-  binaryClient: { clientId: number | string },
-  connectionInfo: ClientConfiguration['connectionInfo'],
-) {
-  return `#${binaryClient.clientId} ${
-    connectionInfo.deviceName ?? connectionInfo.ip ?? ''
-  }`
 }

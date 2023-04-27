@@ -1,8 +1,11 @@
 /** @jsxImportSource @emotion/react */
 import { useState } from 'react'
-import type { ClientConfiguration, ServerState } from '../protocol/data'
+import type {
+  RemoteConfigurationSnapshot,
+  ConfigurationSnapshotSet,
+} from '../protocol/data'
 import { Button, Pane, Select } from '../components/design'
-import { getName, useLocalStorage } from '../utils'
+import { useLocalStorage } from '../utils'
 import * as sentMessages from '../protocol/sent-messages'
 
 function isTrueOrFalseString(v: string): v is 'true' | 'false' {
@@ -13,19 +16,13 @@ export function CalibrationPane({
   sendMessage,
   serverState,
 }: {
-  sendMessage: (message: any) => void
-  serverState: ServerState
+  sendMessage: sentMessages.SendMessage
+  serverState: ConfigurationSnapshotSet
 }) {
-  const [selfCalRaw, setSelfCal] = useLocalStorage(
-    'self-calibration',
-    'false',
-    isTrueOrFalseString,
-  )
-  const selfCal = selfCalRaw === 'true'
   const client1 = useDeviceSelect({ serverState })
   const client2 = useDeviceSelect({
     serverState,
-    exceptClient: selfCal ? undefined : client1.clientId,
+    exceptClient: client1.clientId,
   })
 
   const [message, setMessage] = useState('')
@@ -39,12 +36,24 @@ export function CalibrationPane({
           const data: {
             leader: number
             follower: number
-            leaderDevice: number
-            followerDevice: number
+            leaderDevice: string
+            followerDevice: string
           } = Object.fromEntries(
             Array.from(formData.entries(), ([k, v]) => [k, +v]),
           ) as any
-          sendMessage(sentMessages.beginCalibration(data))
+          const str = (v: unknown) => {
+            if (typeof v !== 'string') throw new Error('Missing value')
+            return v
+          }
+          const num = (v: unknown) => +str(v)
+          sendMessage({
+            type: 'StartCalibration',
+            leaderId: num(formData.get('leaderId')),
+            leaderSubactionPath: str(formData.get('leaderSubactionPath')),
+            followerId: num(formData.get('followerId')),
+            followerSubactionPath: str(formData.get('followerSubactionPath')),
+            sampleCount: 500,
+          })
 
           const msg = 'Calibration triggered ' + JSON.stringify(data)
           setMessage(msg)
@@ -59,17 +68,6 @@ export function CalibrationPane({
           gap: 8,
         }}
       >
-        <label title="Only useful for debugging. Allows selecting same client twice.">
-          <input
-            type="checkbox"
-            name="self-calibration"
-            checked={selfCal}
-            onChange={(evt) =>
-              void setSelfCal(evt.currentTarget.checked ? 'true' : 'false')
-            }
-          />{' '}
-          Allow self-calibration
-        </label>
         <DeviceSelect
           serverState={serverState}
           data={client1}
@@ -93,16 +91,14 @@ export function CalibrationPane({
 
 function isSelectableClient(
   clientId: number | string,
-  client: ClientConfiguration | null,
+  client: RemoteConfigurationSnapshot | null,
   exceptClient: number = 0,
 ) {
   return !!(
     client &&
     +clientId !== exceptClient &&
-    client.connected &&
-    !client.connectionInfo.isBrowser &&
-    client.devices &&
-    client.devices.length > 0
+    client.user_paths &&
+    client.user_paths.length > 0
   )
 }
 
@@ -111,27 +107,25 @@ function useDeviceSelect({
   serverState,
 }: {
   exceptClient?: number
-  serverState: ServerState
+  serverState: ConfigurationSnapshotSet
 }) {
   const [clientIdState, setClientId] = useState(0)
-  const [deviceIdState, setDeviceId] = useState(0)
+  const [subactionPathState, setSubactionPath] = useState('')
 
   const [clientId, client] = getClient()
-  const devices = client?.devices?.filter((v) =>
-    v.characteristics.includes('TrackedDevice'),
-  )
+  const subactionPaths = client?.user_paths
 
   return {
     clientId,
     client,
     setClientId,
-    deviceId: getDeviceId(),
-    setDeviceId,
+    subactionPath: getSubactionPath(),
+    setSubactionPath,
     exceptClient,
-    devices,
+    subactionPaths,
   }
 
-  function getClient(): readonly [number, ClientConfiguration | null] {
+  function getClient(): readonly [number, RemoteConfigurationSnapshot | null] {
     if (
       isSelectableClient(
         clientIdState,
@@ -149,13 +143,13 @@ function useDeviceSelect({
     return [+found[0], found[1]]
   }
 
-  function getDeviceId() {
-    if (!devices) return deviceIdState
-    let device = devices.find((d) => d.localId === deviceIdState)
-    if (device) return device.localId
-    device = devices.find((d) => d.characteristics.includes('HeldInHand'))
-    if (device) return device.localId
-    return deviceIdState
+  function getSubactionPath() {
+    if (!subactionPaths) return subactionPathState
+    let subactionPath = subactionPaths.find((d) => d === subactionPathState)
+    if (subactionPath) return subactionPath
+    subactionPath = subactionPaths[0]
+    if (subactionPath) return subactionPath
+    return subactionPathState
   }
 }
 
@@ -165,17 +159,16 @@ function DeviceSelect({
   sendMessage,
   data,
 }: {
-  serverState: ServerState
+  serverState: ConfigurationSnapshotSet
   type: 'leader' | 'follower'
-  sendMessage: (data: ArrayBuffer) => void
+  sendMessage: sentMessages.SendMessage
   data: ReturnType<typeof useDeviceSelect>
 }) {
   const clients = Object.entries(serverState.clients).filter(
-    ([id, client]) =>
-      client.connected && client.devices && +id !== data.exceptClient,
+    ([id]) => +id !== data.exceptClient,
   )
   const deviceSelectorDisabled =
-    !data.client || !data.devices || data.devices.length < 1
+    !data.client || !data.subactionPaths || data.subactionPaths.length < 1
   return (
     <div
       css={{
@@ -191,7 +184,7 @@ function DeviceSelect({
         <Select
           css={{ marginInlineStart: 4 }}
           required
-          name={type}
+          name={type + 'Id'}
           autoComplete="off"
           disabled={clients.length < 1}
           value={data.clientId}
@@ -205,7 +198,7 @@ function DeviceSelect({
           ) : null}
           {clients.map(([id, client]) => (
             <option key={id} value={id}>
-              {getName({ clientId: id }, client.connectionInfo)}
+              {id}
             </option>
           ))}
         </Select>
@@ -216,22 +209,20 @@ function DeviceSelect({
           <Select
             css={{ marginInline: 4 }}
             required
-            name={type + 'Device'}
+            name={type + 'SubactionPath'}
             autoComplete="off"
-            value={data.deviceId}
+            value={data.subactionPath}
             disabled={deviceSelectorDisabled}
             onChange={(evt) => {
-              data.setDeviceId(+evt.currentTarget.value ?? 0)
+              data.setSubactionPath(evt.currentTarget.value)
             }}
           >
             {deviceSelectorDisabled ? (
               <option value="">Select client first</option>
             ) : null}
-            {data.devices?.map((device) => (
-              <option key={device.localId} value={device.localId}>
-                #{device.localId}: {device.name.replace(' OpenXR', '')}
-                {'\n'}
-                {device.characteristics.join(',')}
+            {data.subactionPaths?.map((device) => (
+              <option key={device} value={device}>
+                {device}
               </option>
             ))}
           </Select>
@@ -239,17 +230,12 @@ function DeviceSelect({
         <Button
           type="button"
           onClick={() => {
-            sendMessage(
-              sentMessages.hapticImpulse({
-                clientId: data.clientId,
-                deviceId: data.deviceId,
-              }),
-            )
+            sendMessage({
+              type: 'TriggerHapticImpulse',
+              clientId: data.clientId,
+              subactionPath: data.subactionPath,
+            })
           }}
-          disabled={
-            !data.client?.devices?.find((d) => d.localId === data.deviceId)
-              ?.haptics?.supportsImpulse
-          }
         >
           Identify
         </Button>

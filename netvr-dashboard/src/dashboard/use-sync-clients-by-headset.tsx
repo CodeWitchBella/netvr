@@ -1,11 +1,16 @@
+// @ts-nocheck
 import { notNull } from '@isbl/ts-utils'
 import { useState } from 'react'
-import { ClientBinaryData, mapData, ServerState } from '../protocol/data'
+import {
+  ClientBinaryData,
+  mapData,
+  ConfigurationSnapshotSet,
+} from '../protocol/data'
 import * as sentMessages from '../protocol/sent-messages'
 
 type Props = {
   clients: readonly ClientBinaryData[]
-  serverState: ServerState
+  serverState: ConfigurationSnapshotSet
   sendMessage: (message: any) => void
 }
 

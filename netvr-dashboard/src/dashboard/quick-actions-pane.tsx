@@ -1,17 +1,12 @@
 /** @jsxImportSource @emotion/react */
 import { Pane, Button, Input } from '../components/design'
-import { ClientBinaryData, ServerState } from '../protocol/data'
 import * as sentMessages from '../protocol/sent-messages'
-import { useSyncClientsByHeadset } from './use-sync-clients-by-headset'
 
 export function QuickActionsPane(props: {
   sendMessage: sentMessages.SendMessage
-  clients: readonly ClientBinaryData[]
-  serverState: ServerState
   closeSocket: () => void
 }) {
   const { sendMessage, closeSocket } = props
-  const syncDevicesByHeadset = useSyncClientsByHeadset(props)
 
   return (
     <Pane title="Quick actions" id="quick-actions">
@@ -19,22 +14,16 @@ export function QuickActionsPane(props: {
         <Button
           type="button"
           onClick={() => {
-            sendMessage(sentMessages.resetRoom())
+            sendMessage({ type: 'CalibrateByHeadsetPosition' })
           }}
         >
-          Reset room
-        </Button>
-        <Button type="button" onClick={syncDevicesByHeadset.onClick}>
           Sync Devices by headset position
         </Button>
-        {syncDevicesByHeadset.message}
       </div>
       <div>
         <Button
           type="button"
-          onClick={() => {
-            sendMessage(JSON.stringify({ type: 'MoveSomeClients' }))
-          }}
+          onClick={() => void sendMessage({ type: 'MoveSomeClients' })}
         >
           Move some clients
         </Button>

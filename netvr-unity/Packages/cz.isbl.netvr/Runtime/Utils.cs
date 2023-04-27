@@ -9,6 +9,17 @@ namespace Isbl.NetVR
     static class Utils
     {
 
+        private static string Truncate(string text)
+        {
+            if (text.Length < 16000)
+            {
+                return text;
+            }
+            text = text.Substring(0, 16000);
+            var index = text.LastIndexOf('\n');
+            if (index < 0) return text;
+            return text.Substring(0, index);
+        }
 
         /**
          * Like Debug.Log but only appends stacktrace if in editor so that plaintext
@@ -18,11 +29,16 @@ namespace Isbl.NetVR
         {
             text = text.Replace("\n", "\n    ");
 
+            while (text.Length > 0)
+            {
+                var to_print = Truncate(text);
+                text = text.Substring(to_print.Length);
 #if UNITY_EDITOR
-            Debug.LogFormat(LogType.Log, LogOption.None, null, "{0}", text);
+                Debug.LogFormat(LogType.Log, LogOption.None, null, "{0}", to_print);
 #else
-            Debug.LogFormat(LogType.Log, LogOption.NoStacktrace, null, "{0}", text);
+                Debug.LogFormat(LogType.Log, LogOption.NoStacktrace, null, "{0}", to_print);
 #endif
+            }
         }
 
         /**

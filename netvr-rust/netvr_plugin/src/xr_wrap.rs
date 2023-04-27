@@ -55,7 +55,7 @@ impl From<sys::Result> for XrWrapError {
 
 impl<T> From<PoisonError<T>> for XrWrapError {
     fn from(error: PoisonError<T>) -> Self {
-        Self::Generic(anyhow::Error::msg(error.to_string()))
+        Self::Generic(anyhow::Error::msg(format!("{:?}", error)))
     }
 }
 

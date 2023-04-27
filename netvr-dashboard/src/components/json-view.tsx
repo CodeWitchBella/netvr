@@ -1,6 +1,7 @@
 /** @jsxImportSource @emotion/react */
 import { JSONTree } from 'react-json-tree'
 import { Pane } from './design'
+import { Fragment } from 'react'
 
 type Props = {
   data: any
@@ -36,7 +37,8 @@ export function JSONView({ data, shouldExpandNode, name }: Props) {
           (typeof value === 'object' &&
             value &&
             Array.isArray(value) &&
-            value.every((v) => typeof v === 'string')) ||
+            value.every((v) => typeof v === 'string' && v.startsWith('/'))) ||
+          (typeof value === 'string' && value.startsWith('/')) ||
           (typeof value === 'object' &&
             value &&
             Object.keys(value).length === 4 &&
@@ -47,14 +49,31 @@ export function JSONView({ data, shouldExpandNode, name }: Props) {
         )
       }}
       valueRenderer={(valueAsString, value, key) => {
+        if (typeof value === 'string' && value.startsWith('/')) {
+          return (
+            <span
+              css={{ color: 'var(--base-9)' }}
+              title={JSON.stringify(value)}
+            >
+              {value}
+            </span>
+          )
+        }
         if (typeof value === 'object' && value) {
           if (Array.isArray(value))
             return (
               <span
-                css={{ color: 'var(--base-9)' }}
                 title={JSON.stringify(value)}
+                css={{ color: 'var(--base-3)' }}
               >
-                {value.join(', ')}
+                [
+                {value.map((v, i) => (
+                  <Fragment key={i}>
+                    {i > 0 ? ', ' : ''}
+                    <span css={{ color: 'var(--base-9)' }}>{v}</span>
+                  </Fragment>
+                ))}
+                ]
               </span>
             )
           if (typeof value.w === 'number')

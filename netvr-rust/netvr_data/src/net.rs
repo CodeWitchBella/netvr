@@ -87,8 +87,8 @@ pub struct RemoteInteractionProfile {
 #[derive(Serialize, Deserialize, Default, Clone, Debug)]
 pub struct RemoteConfigurationSnapshot {
     pub version: u32,
-    pub interaction_profiles: Vec<RemoteInteractionProfile>,
     pub user_paths: Vec<String>,
+    pub interaction_profiles: Vec<RemoteInteractionProfile>,
 }
 
 #[derive(Serialize, Deserialize, Default, Clone, Debug)]
