@@ -31,6 +31,54 @@ type Sample = {
   timestamp: number
 }
 
+type NewSample = {
+  pose: {
+    position: { x: number; y: number; z: number }
+    orientation: { x: number; y: number; z: number; w: number }
+  }
+}
+
+function convert(
+  data:
+    | SavedCalibration
+    | { fileName: string; target: NewSample[]; reference: NewSample[] },
+): SavedCalibration {
+  if (!('reference' in data)) return data
+  return {
+    fileName: data.fileName,
+    follower: 0,
+    followerDevice: 0,
+    followerSamples: data.target.map(convertSample),
+    leader: 0,
+    leaderDevice: 0,
+    leaderSamples: data.reference.map(convertSample),
+    resultRotate: { x: 0, y: 0, z: 0 },
+    resultTranslate: { x: 0, y: 0, z: 0 },
+  }
+}
+
+function convertSample(v: NewSample) {
+  const rotation = new THREE.Euler()
+    .setFromQuaternion(
+      new THREE.Quaternion().set(
+        v.pose.orientation.x,
+        v.pose.orientation.y,
+        v.pose.orientation.z,
+        v.pose.orientation.w,
+      ),
+    )
+    .toArray()
+  return {
+    position: v.pose.position,
+    rotation: {
+      x: rotation[0],
+      y: rotation[1],
+      z: rotation[2],
+    },
+    timestamp: 0,
+  }
+}
+
 export default function SampleVizRoute() {
   const [savedCalibration, setSavedCalibration] =
     useState<SavedCalibration | null>(null)
@@ -39,7 +87,7 @@ export default function SampleVizRoute() {
     multiple: false,
     onDrop: ([file]) => {
       file.text().then((v) => {
-        setSavedCalibration({ fileName: file.name, ...JSON.parse(v) })
+        setSavedCalibration(convert({ fileName: file.name, ...JSON.parse(v) }))
       })
     },
   })
