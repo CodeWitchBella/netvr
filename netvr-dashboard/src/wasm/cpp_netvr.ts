@@ -21,7 +21,7 @@ export default function WasmModule(): Promise<{
   addFunction: (fn: Function, type: string) => number
   UTF8ToString: (ptr: number) => string
 }> {
-  return Promise.reject()
+  return Promise.reject(new Error('Fallback was used'))
 }
 
 export type Module = Awaited<ReturnType<typeof WasmModule>>

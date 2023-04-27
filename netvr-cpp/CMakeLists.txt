@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.17 FATAL_ERROR)
-project(isbl_netvr LANGUAGES CXX)
+project(cpp_netvr LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 
@@ -31,6 +31,7 @@ if (EMSCRIPTEN)
     target_link_options(${PROJECT_NAME} PRIVATE "SHELL:-s EXPORTED_RUNTIME_METHODS=cwrap,addFunction,UTF8ToString,getValue")
     #target_link_options(${PROJECT_NAME} PRIVATE "SHELL:-s SAFE_HEAP=1")
     target_link_options(${PROJECT_NAME} PRIVATE "SHELL:--closure 1")
+    target_link_options(${PROJECT_NAME} PRIVATE "SHELL:-s EXPORTED_FUNCTIONS=\"['_malloc','_free']\"")
     #target_compile_options(${PROJECT_NAME} PRIVATE "-g")
     #target_link_options(${PROJECT_NAME} PRIVATE "-gseparate-dwarf=${PROJECT_NAME}.debug.wasm")
     add_custom_command(TARGET ${PROJECT_NAME} POST_BUILD

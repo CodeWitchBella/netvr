@@ -1,4 +1,4 @@
-import WasmModule, { Module } from './isbl_netvr'
+import WasmModule, { Module } from './cpp_netvr'
 type Value = Awaited<ReturnType<typeof createModule>>
 
 let cachePromise: Promise<Value | null> | null = null
