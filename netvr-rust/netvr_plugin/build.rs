@@ -31,7 +31,7 @@ fn main() {
         let _ = fs::create_dir(build_path.join("pdb"));
         let pdb = build_path
             .join("pdb")
-            .join(format!("isbl_netvr_rust-{time}.pdb"));
+            .join(format!("netvr_plugin-{time}.pdb"));
         print!("cargo:rustc-link-arg=/pdb:");
         println!("{}", pdb.display());
     }

@@ -34,17 +34,16 @@ namespace Isbl.NetVR
 
         internal ulong XrInstance { get; private set; }
         internal ulong XrSession { get; private set; }
-        internal IsblRustLibrary RustLib { get; private set; }
+        internal NetVRPluginLibrary Lib { get; private set; }
         internal Binary.RPC RPC { get; private set; }
 
 
-        static System.Timers.Timer _timer;
         const bool InstantLog = false;
 
-        static string _logRust = "";
-        static System.Timers.Timer _timerRust;
-        [AOT.MonoPInvokeCallback(typeof(IsblRustLibrary.Logger_Delegate))]
-        static void LoggerRust(Int32 level, string value, string stack)
+        static string _log = "";
+        static System.Timers.Timer _pluginTimer;
+        [AOT.MonoPInvokeCallback(typeof(NetVRPluginLibrary.Logger_Delegate))]
+        static void PluginLogger(Int32 level, string value, string stack)
         {
 #if UNITY_EDITOR
         if (stack != "")
@@ -52,12 +51,12 @@ namespace Isbl.NetVR
 #endif
             if (level <= 2 /* Info or Trace */)
             {
-                _logRust += "\n" + (level == 1 ? "[trace] " : "[info] ") + value.Replace("\n", "\n  ");
-                if (_timerRust == null)
+                _log += "\n" + (level == 1 ? "[trace] " : "[info] ") + value.Replace("\n", "\n  ");
+                if (_pluginTimer == null)
                 {
-                    _timerRust = new(1000);
-                    _timerRust.Elapsed += (source, evt) => InfoLogProcess();
-                    _timerRust.Enabled = true;
+                    _pluginTimer = new(1000);
+                    _pluginTimer.Elapsed += (source, evt) => InfoLogProcess();
+                    _pluginTimer.Enabled = true;
                 }
 #pragma warning disable 0162
                 if (InstantLog) InfoLogProcess();
@@ -70,23 +69,23 @@ namespace Isbl.NetVR
 
                 if (level == 3 /* Warn */)
                 {
-                    Utils.LogWarning($"[rust][warn] {value}");
+                    Utils.LogWarning($"[netvr][warn] {value}");
                 }
                 else /* Error */
                 {
                     var levelText = level == 4 ? "error" : level == 5 ? "panic" : "unknown";
-                    Utils.LogError($"[rust][{levelText}] {value}");
+                    Utils.LogError($"[netvr][{levelText}] {value}");
                 }
             }
         }
 
         static void InfoLogProcess()
         {
-            if (_timerRust == null) return;
-            Utils.Log($"[rust] {_logRust}");
-            _logRust = "";
-            _timerRust.Dispose();
-            _timerRust = null;
+            if (_pluginTimer == null) return;
+            Utils.Log($"[netvr] {_log}");
+            _log = "";
+            _pluginTimer.Dispose();
+            _pluginTimer = null;
         }
 
         protected override bool OnInstanceCreate(ulong xrInstance)
@@ -94,10 +93,10 @@ namespace Isbl.NetVR
             Utils.Log("OnInstanceCreate");
             XrInstance = xrInstance;
 
-            if (RustLib == null)
+            if (Lib == null)
             {
-                RustLib = new(LoggerRust);
-                if (RustLib.GetFn != null) RPC = new(RustLib.GetFn, RustLib.Cleanup);
+                Lib = new(PluginLogger);
+                if (Lib.GetFn != null) RPC = new(Lib.GetFn, Lib.Cleanup);
             }
 
             return true;
@@ -120,21 +119,21 @@ namespace Isbl.NetVR
             Utils.Log("OnInstanceDestroy");
 
 
-            if (IsblRustLibrary.DoesUnload) RustLib.Unhook();
-            RustLib?.Dispose();
-            RustLib = null;
+            if (NetVRPluginLibrary.DoesUnload) Lib.Unhook();
+            Lib?.Dispose();
+            Lib = null;
             RPC = null;
             XrInstance = 0;
         }
 
         protected override IntPtr HookGetInstanceProcAddr(IntPtr func)
         {
-            if (RustLib == null)
+            if (Lib == null)
             {
-                RustLib = new(LoggerRust);
-                if (RustLib.GetFn != null) RPC = new(RustLib.GetFn, RustLib.Cleanup);
+                Lib = new(PluginLogger);
+                if (Lib.GetFn != null) RPC = new(Lib.GetFn, Lib.Cleanup);
             }
-            return RustLib.HookGetInstanceProcAddr(func, manualUnhook: IsblRustLibrary.DoesUnload);
+            return Lib.HookGetInstanceProcAddr(func, manualUnhook: NetVRPluginLibrary.DoesUnload);
         }
 
         protected override void OnSessionCreate(ulong xrSession)

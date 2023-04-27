@@ -7,7 +7,7 @@ namespace Isbl.NetVR
 {
 
 
-    class IsblRustLibrary : IDisposable
+    class NetVRPluginLibrary : IDisposable
     {
         const string LibraryName = "netvr_plugin";
 
@@ -49,7 +49,7 @@ namespace Isbl.NetVR
         // ADD_FUNC: add static extern above this line
 #endif // !UNITY_EDITOR_WIN
 
-        public IsblRustLibrary(Logger_Delegate logger)
+        public NetVRPluginLibrary(Logger_Delegate logger)
         {
             this._l = new IsblDynamicLibrary(LibraryName, "../netvr-rust/target/debug/");
 #if UNITY_EDITOR_WIN

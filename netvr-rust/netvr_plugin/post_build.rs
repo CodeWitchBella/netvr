@@ -16,7 +16,7 @@ fn main() {
                     let path_buf = v.path();
                     let path = path_buf.as_path();
                     if let Some(Some(filename)) = path.file_name().map(|p| p.to_str()) {
-                        if filename.starts_with("isbl_netvr_rust") {
+                        if filename.starts_with("netvr_plugin") {
                             Some(path_buf)
                         } else {
                             None
