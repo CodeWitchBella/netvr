@@ -337,6 +337,7 @@ MonoBehaviour:
   m_Name: IsblOldNetXRFeature Standalone
   m_EditorClassIdentifier: 
   m_enabled: 0
+  <failedInitialization>k__BackingField: 0
   nameUi: Isbl Old NetVR XR Feature
   version: 0.0.1
   featureIdInternal: cz.isbl.old-netvr
@@ -344,6 +345,7 @@ MonoBehaviour:
   company: Isbl
   priority: 0
   required: 0
+  _xrInstance: 0
 --- !u!114 &-4670723027192146633
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1099,7 +1101,6 @@ MonoBehaviour:
   features:
   - {fileID: 7720092602780165281}
   - {fileID: -3913617698517783533}
-  - {fileID: 7706274102080453326}
   - {fileID: -2339375261965693577}
   - {fileID: -6948651536590334617}
   - {fileID: 7460526345044051366}
@@ -1401,6 +1402,7 @@ MonoBehaviour:
   m_Name: IsblOldNetXRFeature Android
   m_EditorClassIdentifier: 
   m_enabled: 0
+  <failedInitialization>k__BackingField: 0
   nameUi: Isbl Old NetVR XR Feature
   version: 0.0.1
   featureIdInternal: cz.isbl.old-netvr
@@ -1408,6 +1410,7 @@ MonoBehaviour:
   company: Isbl
   priority: 0
   required: 0
+  _xrInstance: 0
 --- !u!114 &7720092602780165281
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1545,7 +1548,6 @@ MonoBehaviour:
   - {fileID: -1920399770845522042}
   - {fileID: -8090210824752771119}
   - {fileID: -2645778269032969327}
-  - {fileID: -4799569417950236948}
   - {fileID: -4295933516180172870}
   - {fileID: 8659670685832646134}
   - {fileID: -3018365188757195433}

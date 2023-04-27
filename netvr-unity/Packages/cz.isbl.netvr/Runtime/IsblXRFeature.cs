@@ -2,6 +2,7 @@ using System;
 using System.Collections.Generic;
 using System.Timers;
 using System.Threading;
+using System.IO;
 #if UNITY_EDITOR
 using UnityEditor;
 #endif
@@ -39,6 +40,12 @@ namespace Isbl.NetVR
 
 
         const bool InstantLog = false;
+
+        static string PluginDirectory()
+        {
+            if (Application.platform == RuntimePlatform.Android) return Path.Combine(Application.persistentDataPath, "netvr");
+            return Path.Combine(System.IO.Directory.GetCurrentDirectory(), "netvr");
+        }
 
         static string _log = "";
         static System.Timers.Timer _pluginTimer;

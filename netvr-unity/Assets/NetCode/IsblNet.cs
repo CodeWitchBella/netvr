@@ -75,8 +75,9 @@ public sealed class IsblNet : IDisposable
         SocketUrl = data.SocketUrl;
     }
 
-    readonly Dictionary<string, IIsblNetFeature> _features = new() {
-        { CalibrationFeature.FeatureId, new CalibrationFeature() }
+    readonly Dictionary<string, IIsblNetFeature> _features = new()
+    {
+
     };
 
     /**
