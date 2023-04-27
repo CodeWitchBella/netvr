@@ -95,13 +95,10 @@ namespace Isbl.NetVR
             _pluginTimer = null;
         }
 
-        private static string DataDirectory
+        private static string GetDataDirectory()
         {
-            get
-            {
-                if (Application.platform == RuntimePlatform.Android) return Path.Combine(Application.persistentDataPath, "netvr");
-                return Path.Combine(System.IO.Directory.GetCurrentDirectory(), "netvr");
-            }
+            if (Application.platform == RuntimePlatform.Android) return Path.Combine(Application.persistentDataPath, "netvr");
+            return Path.Combine(System.IO.Directory.GetCurrentDirectory(), "netvr");
         }
 
         protected override bool OnInstanceCreate(ulong xrInstance)
@@ -121,7 +118,9 @@ namespace Isbl.NetVR
         protected override void OnSessionBegin(ulong xrSession)
         {
             XrSession = xrSession;
-            RPC?.Start(new(XrInstance, XrSession, DataDirectory));
+            var dir = GetDataDirectory();
+            try { if (!Directory.Exists(dir)) Directory.CreateDirectory(dir); } catch (Exception e) { Utils.LogError($"Failed to create data directory: {e}"); }
+            RPC?.Start(new(XrInstance, XrSession, dir));
         }
 
         protected override void OnSessionEnd(ulong xrSession)

@@ -1,5 +1,5 @@
 /** @jsxImportSource @emotion/react */
-import type { ReactNode } from 'react'
+import { ReactNode, useState } from 'react'
 import { Pane, Button, Input } from '../components/design'
 import { RemoteConfigurationSnapshot, StateSnapshot } from '../protocol/data'
 import * as sentMessages from '../protocol/sent-messages'
@@ -22,46 +22,70 @@ export function ClientPane({
 
   return (
     <Pane id={'client-' + clientId} title={`Client ${clientId}`}>
-      <div
-        css={{
-          display: 'flex',
-          flexDirection: 'row',
-          flexWrap: 'wrap',
-          justifyContent: 'space-between',
-        }}
-      >
-        <form
-          onSubmit={(evt) => {
-            evt.preventDefault()
-            const data = new FormData(evt.currentTarget)
-            sendMessage({
-              type: 'SetName',
-              name: data.get('name') as any,
-              clientId,
-            })
+      <div css={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <div
+          css={{
+            padding: 8,
+            display: 'flex',
+            flexDirection: 'row',
+            flexWrap: 'wrap',
+            justifyContent: 'space-between',
           }}
         >
-          <label css={{ display: 'flex', gap: 4, alignItems: 'center' }}>
-            Name:
-            <Input name="name" />
-            <Button>Set</Button>
-          </label>
-        </form>
-        <Button type="button" onClick={resetCalibration}>
-          Reset
-        </Button>
-      </div>
-      {client.user_paths?.map((userPath) => {
-        return (
-          <Device
-            userPath={userPath}
-            key={userPath}
-            clientId={clientId}
-            sendMessage={sendMessage}
+          <NameInput
+            remoteValue={client.name}
+            submit={(name) => {
+              sendMessage({ type: 'SetName', name, clientId })
+            }}
           />
-        )
-      }) ?? null}
+          <Button type="button" onClick={resetCalibration}>
+            Reset
+          </Button>
+        </div>
+        {client.user_paths?.map((userPath) => {
+          return (
+            <Device
+              userPath={userPath}
+              key={userPath}
+              clientId={clientId}
+              sendMessage={sendMessage}
+            />
+          )
+        }) ?? null}
+      </div>
     </Pane>
+  )
+}
+
+function NameInput({
+  remoteValue,
+  submit,
+}: {
+  remoteValue: string
+  submit: (value: string) => void
+}) {
+  const [value, setValue] = useState<null | string>(null)
+  return (
+    <form
+      onSubmit={(evt) => {
+        evt.preventDefault()
+        const data = new FormData(evt.currentTarget)
+        submit(data.get('name') as any)
+        setTimeout(() => {
+          setValue(null)
+        }, 250)
+      }}
+    >
+      <label css={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+        Name:
+        <Input
+          name="name"
+          value={value ?? remoteValue}
+          onChange={(evt) => void setValue(evt.currentTarget.value)}
+        />
+        <Button>Set</Button>
+      </label>
+    </form>
   )
 }
 
