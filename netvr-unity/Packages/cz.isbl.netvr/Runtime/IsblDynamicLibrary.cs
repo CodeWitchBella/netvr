@@ -10,8 +10,7 @@ namespace Isbl.NetVR
     /// Wrapper around my native dynamic library managing its loading and unloading
     /// (when supported)
     /// </summary>
-    //[Deprecated("This will be internal in the future")]
-    public class IsblDynamicLibrary : IDisposable
+    internal class IsblDynamicLibrary : IDisposable
     {
 #if UNITY_EDITOR_WIN
     /// <summary>

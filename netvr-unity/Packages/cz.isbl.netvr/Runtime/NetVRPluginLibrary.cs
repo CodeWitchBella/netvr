@@ -7,7 +7,7 @@ namespace Isbl.NetVR
 {
 
 
-    class NetVRPluginLibrary : IDisposable
+    internal class NetVRPluginLibrary : IDisposable
     {
         const string LibraryName = "netvr_plugin";
 

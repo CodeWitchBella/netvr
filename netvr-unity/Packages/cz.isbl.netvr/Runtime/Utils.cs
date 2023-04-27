@@ -6,7 +6,7 @@ using UnityEngine;
 namespace Isbl.NetVR
 {
 
-    static class Utils
+    internal static class Utils
     {
 
         private static string Truncate(string text)
@@ -39,28 +39,6 @@ namespace Isbl.NetVR
                 Debug.LogFormat(LogType.Log, LogOption.NoStacktrace, null, "{0}", to_print);
 #endif
             }
-        }
-
-        /**
-         * Logs json in such a way that it could be syntax haighlighted in the GUI
-         */
-        public static void LogJson(string label, string json)
-        {
-
-#if UNITY_EDITOR
-            Debug.LogFormat(LogType.Log, LogOption.None, null, "{0} {1}", label, json);
-#else
-            Debug.LogFormat(LogType.Log, LogOption.NoStacktrace, null, "{0} {1}", label, json);
-#endif
-        }
-
-        /**
-        * Logs json in such a way that it could be syntax haighlighted in the GUI
-        */
-        public static void LogJson(string label, object obj)
-        {
-            string json = System.Text.Json.JsonSerializer.Serialize(obj);
-            LogJson(label, json);
         }
 
         /**
