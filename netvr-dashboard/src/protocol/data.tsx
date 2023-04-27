@@ -24,8 +24,18 @@ export type ConfigurationSnapshotSet = {
   clients: { [key: number]: RemoteConfigurationSnapshot }
 }
 
+export type Vec3 = { x: number; y: number; z: number }
+export type Pose = {
+  position: Vec3
+  orientation: { x: number; y: number; z: number; w: number }
+}
+
 export type StateSnapshot = {
-  controllers: readonly {}[]
-  views: readonly {}[]
+  controllers: readonly {
+    interaction_profile: number
+    user_path: number
+    pose: Pose
+  }[]
+  view: Pose
   required_configuration: number
 }

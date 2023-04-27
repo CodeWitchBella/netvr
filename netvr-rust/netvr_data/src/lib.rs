@@ -33,12 +33,23 @@ impl From<Vec3> for openxr_sys::Vector3f {
     }
 }
 
-#[derive(Serialize, Deserialize, Default, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Quaternion {
     pub x: f32,
     pub y: f32,
     pub z: f32,
     pub w: f32,
+}
+
+impl Default for Quaternion {
+    fn default() -> Self {
+        Self {
+            x: Default::default(),
+            y: Default::default(),
+            z: Default::default(),
+            w: 1.,
+        }
+    }
 }
 
 impl From<openxr_sys::Quaternionf> for Quaternion {

@@ -41,7 +41,7 @@ pub struct Controller {
 #[derive(Serialize, Deserialize, Default, Clone, Debug)]
 pub struct StateSnapshot {
     pub controllers: Vec<Controller>,
-    pub views: Vec<Pose>,
+    pub view: Pose,
     pub required_configuration: u32,
 }
 

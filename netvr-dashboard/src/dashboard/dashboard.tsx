@@ -1,5 +1,5 @@
 /** @jsxImportSource @emotion/react */
-import { memo, useEffect, useState } from 'react'
+import { memo, useEffect, useMemo, useReducer, useState } from 'react'
 import { Message, useLog } from './message-log'
 import {
   ListenToSocket,
@@ -7,7 +7,7 @@ import {
   useSocket,
 } from '../components/listen-to-socket'
 import { ErrorBoundary } from '../components/error-boundary'
-import { ConfigurationSnapshotSet } from '../protocol/data'
+import { ConfigurationSnapshotSet, StateSnapshot } from '../protocol/data'
 import { CalibrationPane } from './calibration-pane'
 import { enableMapSet, enablePatches } from 'immer'
 
@@ -19,7 +19,7 @@ import { useLocalStorage } from '../utils'
 import { QuickActionsPane } from './quick-actions-pane'
 import { ClientPane } from './client-pane'
 import { SendMessage } from '../protocol/sent-messages'
-import { DashboardMessageDown } from '../protocol/recieved-messages'
+import { DashboardMessageDown, DatagramUp } from '../protocol/recieved-messages'
 
 enableMapSet()
 enablePatches()
@@ -59,6 +59,37 @@ export function Dashboard({ socketUrl }: { socketUrl: string }) {
   )
 }
 
+type DatagramState = {
+  [key: number]: {
+    id: number
+    time: number
+    snapshot: StateSnapshot
+  }
+}
+function datagramReducer(
+  state: DatagramState,
+  action: { now: number; datagram: DatagramUp },
+): DatagramState {
+  const {
+    now,
+    datagram: { id, message },
+  } = action
+  const res: DatagramState = {
+    ...state,
+    [id]: {
+      id,
+      time: now,
+      snapshot: message,
+    },
+  }
+  for (const [key, value] of Object.entries(res)) {
+    if (value.time < now - 1000) {
+      delete res[key as any]
+    }
+  }
+  return res
+}
+
 function DashboardInner() {
   const socket = useSocket()
   useEffect(() => {
@@ -88,6 +119,34 @@ function DashboardInner() {
 
   const [configurationSnapshot, setConfigurationSnapshot] =
     useState<ConfigurationSnapshotSet | null>(null)
+  const [datagramData, dispatchDatagram] = useReducer(datagramReducer, {})
+  const mergedData = useMemo(
+    () =>
+      Object.entries(datagramData).map(([k, v]) => {
+        const configuration = configurationSnapshot?.clients[k as any]
+        const snapshot = v.snapshot
+        if (configuration?.version !== snapshot.required_configuration) {
+          return {
+            time: new Date(v.time).toISOString().slice(11),
+            configuration,
+            ...snapshot,
+          }
+        }
+        return {
+          time: new Date(v.time).toISOString().slice(11),
+          configuration,
+          view: snapshot.view,
+          controllers: snapshot.controllers.map((c) => ({
+            ...c,
+            interaction_profile:
+              configuration.interaction_profiles[c.interaction_profile - 1]
+                ?.path,
+            user_path: configuration.user_paths[c.user_path - 1],
+          })),
+        }
+      }),
+    [datagramData, configurationSnapshot],
+  )
 
   return (
     <ErrorBoundary>
@@ -104,7 +163,9 @@ function DashboardInner() {
             message,
             parsed: msg,
           })
-          if (msg.type === 'ConfigurationSnapshotChanged') {
+          if (msg.type === 'DatagramUp') {
+            dispatchDatagram({ now: Date.now(), datagram: msg })
+          } else if (msg.type === 'ConfigurationSnapshotChanged') {
             setConfigurationSnapshot(msg.value)
           }
         }}
@@ -130,7 +191,7 @@ function DashboardInner() {
                 serverState={configurationSnapshot}
               />
             </ErrorBoundary>
-            <StatePane data={configurationSnapshot} />
+            <StatePane data={mergedData} />
 
             {Object.entries(configurationSnapshot.clients).map(
               ([key, clientConfiguration]) => {
@@ -142,6 +203,7 @@ function DashboardInner() {
                     client={clientConfiguration}
                     clientId={clientId}
                     sendMessage={sendMessage}
+                    stateSnapshot={datagramData[clientId]?.snapshot ?? null}
                   />
                 )
               },
@@ -178,18 +240,22 @@ function DashboardInner() {
   )
 }
 
-const StatePane = memo<{ data: ConfigurationSnapshotSet }>(function StatePane({
-  data,
-}) {
+const StatePane = memo<{ data: any }>(function StatePane({ data }) {
   return (
     <JSONPane
       title="State"
       id="state"
       name="state"
       data={data}
-      shouldExpandNode={(keyPath, data, level) =>
-        data.connected || level <= 1 || keyPath[0] === 'connectionInfo'
-      }
+      shouldExpandNode={(keyPath, data, level) => {
+        if (keyPath[0] === 'pose')
+          return (
+            data.position.x !== 0 &&
+            data.position.y !== 0 &&
+            data.position.z !== 0
+          )
+        return level <= 5 && keyPath[0] !== 'configuration'
+      }}
     />
   )
 })

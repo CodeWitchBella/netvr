@@ -45,12 +45,13 @@ pub(crate) fn read_remote_devices(
 
         for (client_id, client) in remote_merged.clients.iter() {
             let mut i = 0;
-            for device in client.state.views.iter() {
+            {
+                let device = client.state.view.clone();
                 i += 1;
                 devices.devices.push(RemoteDevice {
                     id: client_id * 100 + i,
-                    pos: device.position.clone(),
-                    rot: device.orientation.clone(),
+                    pos: device.position,
+                    rot: device.orientation,
                     user_path: "/user/head".to_owned(),
                     interaction_profile: "generic_hmd".to_owned(),
                 });

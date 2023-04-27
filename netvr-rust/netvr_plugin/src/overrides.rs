@@ -970,8 +970,6 @@ extern "system" fn attach_session_action_sets(
                 user_paths: user_paths.into_iter().collect(),
             };
             session.local_configuration.send_replace(conf);
-
-            // TODO: update configuration on server
         }
         result
     })

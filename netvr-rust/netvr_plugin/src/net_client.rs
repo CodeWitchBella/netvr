@@ -349,7 +349,7 @@ fn collect_state_impl(instance: &Instance, session: &Session) -> Option<StateSna
 
     Some(StateSnapshot {
         controllers,
-        views: vec![location.pose.into()],
+        view: location.pose.into(),
         required_configuration: conf.version,
     })
 }

@@ -1,7 +1,7 @@
 /** @jsxImportSource @emotion/react */
-import React, { useReducer } from 'react'
+import type { ReactNode } from 'react'
 import { Pane, Button } from '../components/design'
-import { RemoteConfigurationSnapshot } from '../protocol/data'
+import { RemoteConfigurationSnapshot, StateSnapshot } from '../protocol/data'
 import * as sentMessages from '../protocol/sent-messages'
 import { ClientId } from '../protocol/recieved-messages'
 
@@ -9,10 +9,12 @@ export function ClientPane({
   client,
   clientId,
   sendMessage,
+  stateSnapshot,
 }: {
   client: RemoteConfigurationSnapshot
   clientId: ClientId
   sendMessage: sentMessages.SendMessage
+  stateSnapshot: StateSnapshot | null
 }) {
   function resetCalibration() {
     sendMessage({ type: 'ResetCalibration', clientId })
@@ -50,7 +52,7 @@ function ClientContent({
   children,
   className,
 }: {
-  children: React.ReactNode
+  children: ReactNode
   className?: string
 }) {
   return (

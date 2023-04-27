@@ -46,6 +46,9 @@ pub(crate) enum DashboardMessage {
     ConfigurationSnapshotChanged {
         value: ConfigurationSnapshotSet,
     },
+    Info {
+        message: String,
+    },
 }
 
 #[derive(Debug, Serialize, Deserialize, Clone)]
@@ -157,12 +160,7 @@ async fn dashboard_receive(
                                 y: 0.,
                                 z: 1.,
                             },
-                            orientation: netvr_data::Quaternion {
-                                x: 0.,
-                                y: 0.,
-                                z: 0.,
-                                w: 1.,
-                            },
+                            orientation: netvr_data::Quaternion::default(),
                         },
                     )) {
                         println!("Failed to send configuration down: {}", err);
@@ -199,7 +197,20 @@ async fn dashboard_receive(
                 println!("TODO: sync by head position")
             }
             DashboardMessageRecv::ResetCalibration { client_id } => {
-                println!("TODO: reset calibration for {}", client_id)
+                if let Some(client) = server.get_client(client_id).await {
+                    if let Err(err) = client.send_configuration_down(ConfigurationDown::StagePose(
+                        netvr_data::Pose {
+                            position: netvr_data::Vec3::default(),
+                            orientation: netvr_data::Quaternion::default(),
+                        },
+                    )) {
+                        println!("Failed to send configuration down: {}", err);
+                    }
+                } else {
+                    let Ok(_) = reply.send(DashboardMessage::Info {
+                        message: "Reset calibration: Client not found".to_owned(),
+                    }) else { return; };
+                }
             }
             DashboardMessageRecv::TriggerHapticImpulse {
                 client_id,
