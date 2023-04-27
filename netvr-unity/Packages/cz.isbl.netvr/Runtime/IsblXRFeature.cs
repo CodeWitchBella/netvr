@@ -95,6 +95,15 @@ namespace Isbl.NetVR
             _pluginTimer = null;
         }
 
+        private static string DataDirectory
+        {
+            get
+            {
+                if (Application.platform == RuntimePlatform.Android) return Path.Combine(Application.persistentDataPath, "netvr");
+                return Path.Combine(System.IO.Directory.GetCurrentDirectory(), "netvr");
+            }
+        }
+
         protected override bool OnInstanceCreate(ulong xrInstance)
         {
             Utils.Log("OnInstanceCreate");
@@ -112,7 +121,7 @@ namespace Isbl.NetVR
         protected override void OnSessionBegin(ulong xrSession)
         {
             XrSession = xrSession;
-            RPC?.Start(new(XrInstance, XrSession));
+            RPC?.Start(new(XrInstance, XrSession, DataDirectory));
         }
 
         protected override void OnSessionEnd(ulong xrSession)

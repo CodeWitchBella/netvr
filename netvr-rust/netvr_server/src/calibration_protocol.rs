@@ -21,7 +21,8 @@ pub(crate) type CalibrationSender = mpsc::UnboundedSender<CalibrationProtocolMes
 #[derive(Debug, Clone)]
 pub(crate) enum CalibrationProtocolMessage {
     Begin {
-        clients: ((ClientId, String), (ClientId, String)),
+        client_target: (ClientId, String),
+        client_reference: (ClientId, String),
         sample_count: usize,
     },
     Sample {
@@ -47,30 +48,43 @@ async fn run(
 ) -> Result<()> {
     loop {
         let Some(instruction) = recv.recv().await else { break; };
-        let Begin { clients, sample_count } = instruction else { continue; };
+        let Begin { client_target, client_reference, sample_count } = instruction else { continue; };
+        let client_target_id = client_target.0;
+        let client_reference_id = client_reference.0;
+        let client_target_path = client_target.1;
+        let client_reference_path = client_reference.1;
 
-        let Some(client1) = server.get_client(clients.0.0).await else { continue; };
-        let Some(client2) = server.get_client(clients.1.0).await else { continue; };
-        if let Err(err) = client1.send_configuration_down(TriggerCalibration(clients.0 .1)) {
+        let Some(client_target) = server.get_client(client_target.0).await else { continue; };
+        let Some(client_reference) = server.get_client(client_reference.0).await else { continue; };
+        if let Err(err) =
+            client_target.send_configuration_down(TriggerCalibration(client_target_path))
+        {
             println!(
                 "Failed to send trigger calibration to client {:?}: {:?}",
-                clients.0 .0, err
+                client_target_id, err
             );
             continue;
         }
-        if let Err(err) = client2.send_configuration_down(TriggerCalibration(clients.1 .1)) {
+        if let Err(err) =
+            client_reference.send_configuration_down(TriggerCalibration(client_reference_path))
+        {
             println!(
                 "Failed to send trigger calibration to client {:?}: {:?}",
-                clients.1 .0, err
+                client_reference_id, err
             );
-            let _ = client1.send_configuration_down(StopCalibration);
+            let _ = client_target.send_configuration_down(StopCalibration);
             continue;
         }
 
-        let clients = (clients.0 .0, clients.1 .0);
-        let samples_result = collect_samples(sample_count, clients, &mut recv).await;
+        let samples_result = collect_samples(
+            sample_count,
+            client_target_id,
+            client_reference_id,
+            &mut recv,
+        )
+        .await;
         // Send end to clients
-        for id in [clients.0, clients.1] {
+        for id in [client_target_id, client_reference_id] {
             if let Some(client) = server.get_client(id).await {
                 if let Err(err) = client.send_configuration_down(StopCalibration) {
                     println!(
@@ -80,7 +94,7 @@ async fn run(
                 }
             }
         }
-        let (samples1, samples2) = match samples_result {
+        let (samples_target, samples_reference) = match samples_result {
             Ok(v) => v,
             Err(err) => {
                 println!("Calibration failed: {:?}", err);
@@ -89,11 +103,11 @@ async fn run(
         };
 
         // Samples collected. Calibrate and apply
-        println!("Samples 1: {:?}", samples1.len());
-        println!("Samples 2: {:?}", samples2.len());
+        println!("samples_target: {:?}", samples_target.len());
+        println!("samples_reference: {:?}", samples_target.len());
         let calibration = CalibrationInput {
-            reference: samples1,
-            target: samples2,
+            target: samples_target,
+            reference: samples_reference,
         };
         match serde_json::to_string(&calibration) {
             Ok(data) => {
@@ -118,26 +132,27 @@ async fn run(
 
 async fn collect_samples(
     sample_count: usize,
-    clients: (ClientId, ClientId),
+    client_target: ClientId,
+    client_reference: ClientId,
     recv: &mut mpsc::UnboundedReceiver<CalibrationProtocolMessage>,
 ) -> Result<(Vec<CalibrationSample>, Vec<CalibrationSample>)> {
-    let mut samples1 = vec![];
-    let mut samples2 = vec![];
+    let mut samples_target = vec![];
+    let mut samples_reference = vec![];
     let time_start = std::time::Instant::now();
     loop {
         let Some(sample) = recv.recv().await else { break; };
         let Sample { client, sample } = sample else { continue; };
-        if client == clients.0 {
-            samples1.push(sample);
-        } else if client == clients.1 {
-            samples2.push(sample);
+        if client == client_target {
+            samples_target.push(sample);
+        } else if client == client_reference {
+            samples_reference.push(sample);
         }
-        if samples1.len() >= sample_count && samples2.len() >= sample_count {
+        if samples_target.len() >= sample_count && samples_reference.len() >= sample_count {
             break;
         }
         if time_start.elapsed().as_secs() > 60 {
             Err(anyhow!("Timed out waiting for samples"))?
         }
     }
-    Ok((samples1, samples2))
+    Ok((samples_target, samples_reference))
 }

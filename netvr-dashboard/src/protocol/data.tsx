@@ -18,6 +18,7 @@ export type RemoteConfigurationSnapshot = {
     path: string
     bindings: readonly RemoteAction[]
   }[]
+  name: string
 }
 
 export type ConfigurationSnapshotSet = {

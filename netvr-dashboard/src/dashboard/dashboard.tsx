@@ -7,7 +7,7 @@ import {
   useSocket,
 } from '../components/listen-to-socket'
 import { ErrorBoundary } from '../components/error-boundary'
-import { ConfigurationSnapshotSet, StateSnapshot } from '../protocol/data'
+import { ConfigurationSnapshotSet } from '../protocol/data'
 import { CalibrationPane } from './calibration-pane'
 import { enableMapSet, enablePatches } from 'immer'
 

@@ -76,12 +76,7 @@ impl Session {
             space_server: Arc::new(RwLock::new(server)),
             predicted_display_time: sys::Time::from_nanos(-1),
             active_interaction_profiles: Arc::default(),
-            local_configuration: watch::channel(LocalConfigurationSnapshot {
-                version: u32::default(),
-                interaction_profiles: Vec::default(),
-                user_paths: Vec::default(),
-            })
-            .0,
+            local_configuration: watch::channel(Default::default()).0,
 
             remote_state: Arc::default(),
             remote_configuration: Arc::default(),

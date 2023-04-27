@@ -19,7 +19,7 @@ use xr_layer::{
 
 use crate::{
     instance::{Action, ActionSet, Instance, Session},
-    local_configuration::{self, InteractionProfile, LocalConfigurationSnapshot},
+    local_configuration::{self, InteractionProfile},
     xr_wrap::{xr_wrap, RecordDebug, ResultConvertible, Trace, XrWrapError},
 };
 
@@ -961,15 +961,14 @@ extern "system" fn attach_session_action_sets(
                     }
                 }
             }
+            let interaction_profiles = profile_map.values().cloned().collect();
+            let user_paths = user_paths.into_iter().collect();
 
-            let conf = LocalConfigurationSnapshot {
-                // TODO: this is not atomic and might be wrong.
-                // It's okay in Unity's case because event system has a dedicated thread there.
-                version: session.local_configuration.borrow().version + 1,
-                interaction_profiles: profile_map.values().cloned().collect(),
-                user_paths: user_paths.into_iter().collect(),
-            };
-            session.local_configuration.send_replace(conf);
+            session.local_configuration.send_modify(|conf| {
+                conf.version = conf.version + 1;
+                conf.interaction_profiles = interaction_profiles;
+                conf.user_paths = user_paths;
+            });
         }
         result
     })

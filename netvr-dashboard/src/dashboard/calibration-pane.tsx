@@ -33,10 +33,10 @@ export function CalibrationPane({
 
           const formData = new FormData(evt.currentTarget)
           const data: {
-            leader: number
-            follower: number
-            leaderDevice: string
-            followerDevice: string
+            target: number
+            targetDevice: string
+            reference: number
+            referenceDevice: string
           } = Object.fromEntries(
             Array.from(formData.entries(), ([k, v]) => [k, +v]),
           ) as any
@@ -47,10 +47,10 @@ export function CalibrationPane({
           const num = (v: unknown) => +str(v)
           sendMessage({
             type: 'StartCalibration',
-            leaderId: num(formData.get('leaderId')),
-            leaderSubactionPath: str(formData.get('leaderSubactionPath')),
-            followerId: num(formData.get('followerId')),
-            followerSubactionPath: str(formData.get('followerSubactionPath')),
+            targetId: num(formData.get('targetId')),
+            targetSubactionPath: str(formData.get('targetSubactionPath')),
+            referenceId: num(formData.get('referenceId')),
+            referenceSubactionPath: str(formData.get('referenceSubactionPath')),
             sampleCount: 500,
           })
 
@@ -70,7 +70,7 @@ export function CalibrationPane({
         <DeviceSelect
           serverState={serverState}
           data={client1}
-          type="leader"
+          type="target"
           sendMessage={sendMessage}
         />
         <div css={{ marginTop: -16 }}>
@@ -86,7 +86,7 @@ export function CalibrationPane({
         <DeviceSelect
           serverState={serverState}
           data={client2}
-          type="follower"
+          type="reference"
           sendMessage={sendMessage}
         />
         <div css={{ marginTop: -16 }}>
@@ -176,7 +176,7 @@ function DeviceSelect({
   data,
 }: {
   serverState: ConfigurationSnapshotSet
-  type: 'leader' | 'follower'
+  type: 'target' | 'reference'
   sendMessage: sentMessages.SendMessage
   data: ReturnType<typeof useDeviceSelect>
 }) {
@@ -214,7 +214,7 @@ function DeviceSelect({
           ) : null}
           {clients.map(([id, client]) => (
             <option key={id} value={id}>
-              {id}
+              {client.name} #{id}
             </option>
           ))}
         </Select>

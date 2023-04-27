@@ -14,6 +14,7 @@ use xr_layer::{
 };
 
 use crate::{
+    config::Config,
     instance::{Instance, Session},
     overrides::with_layer,
     xr_wrap::ResultConvertible,
@@ -36,8 +37,12 @@ enum CalibrationTrigger {
 pub(crate) async fn run_net_client(
     instance_handle: sys::Instance,
     session_handle: sys::Session,
+    data_directory: String,
 ) -> Result<()> {
     LogTrace::str("connecting to netvr server...");
+    let config = Config::load(data_directory).await;
+    set_local_configuration_name(instance_handle, session_handle, config.name.clone())?;
+
     let connection =
         netvr_client::connect(|text| LogTrace::string(format!("[conn] {}", text))).await?;
     LogTrace::string(format!(
@@ -65,6 +70,7 @@ pub(crate) async fn run_net_client(
         instance_handle,
         session_handle,
         calibration_trigger.0,
+        config,
     );
     let calibration_sender = spawn(run_calibration_sender(
         instance_handle,
@@ -79,6 +85,24 @@ pub(crate) async fn run_net_client(
         value = recv_conf => value,
         value = calibration_sender => value?,
     }
+}
+
+fn set_local_configuration_name(
+    instance_handle: sys::Instance,
+    session_handle: sys::Session,
+    name: String,
+) -> Result<()> {
+    with_layer(instance_handle, |instance| {
+        instance
+            .sessions
+            .get(&session_handle)
+            .ok_or(anyhow!("Missing session"))?
+            .local_configuration
+            .send_modify(|conf| {
+                conf.name = name;
+            });
+        Ok(())
+    })
 }
 
 async fn run_transmit_configuration(
@@ -221,6 +245,7 @@ async fn run_receive_configuration(
     instance_handle: sys::Instance,
     session_handle: sys::Session,
     calibration_trigger: mpsc::Sender<CalibrationTrigger>,
+    mut config: Config,
 ) -> Result<()> {
     LogTrace::str("Waiting for configuration...");
     loop {
@@ -273,6 +298,11 @@ async fn run_receive_configuration(
             }
             net::ConfigurationDown::StopCalibration => {
                 calibration_trigger.send(CalibrationTrigger::Stop).await?;
+            }
+            net::ConfigurationDown::ChangeName(value) => {
+                config.name = value;
+                set_local_configuration_name(instance_handle, session_handle, config.name.clone())?;
+                config.write().await;
             }
         };
     }

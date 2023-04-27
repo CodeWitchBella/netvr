@@ -842,6 +842,7 @@ dependencies = [
  "quinn",
  "serde",
  "serde-reflection",
+ "serde_json",
  "thiserror",
  "tokio",
  "tokio-util",

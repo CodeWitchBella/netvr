@@ -1,6 +1,6 @@
 /** @jsxImportSource @emotion/react */
 import type { ReactNode } from 'react'
-import { Pane, Button } from '../components/design'
+import { Pane, Button, Input } from '../components/design'
 import { RemoteConfigurationSnapshot, StateSnapshot } from '../protocol/data'
 import * as sentMessages from '../protocol/sent-messages'
 import { ClientId } from '../protocol/recieved-messages'
@@ -25,11 +25,28 @@ export function ClientPane({
       <div
         css={{
           display: 'flex',
-          flexDirection: 'row-reverse',
+          flexDirection: 'row',
           flexWrap: 'wrap',
-          gap: 8,
+          justifyContent: 'space-between',
         }}
       >
+        <form
+          onSubmit={(evt) => {
+            evt.preventDefault()
+            const data = new FormData(evt.currentTarget)
+            sendMessage({
+              type: 'SetName',
+              name: data.get('name') as any,
+              clientId,
+            })
+          }}
+        >
+          <label css={{ display: 'flex', gap: 4, alignItems: 'center' }}>
+            Name:
+            <Input name="name" />
+            <Button>Set</Button>
+          </label>
+        </form>
         <Button type="button" onClick={resetCalibration}>
           Reset
         </Button>

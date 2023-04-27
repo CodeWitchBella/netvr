@@ -29,6 +29,7 @@ pub enum ConfigurationDown {
     StagePose(Pose),
     TriggerCalibration(String),
     StopCalibration,
+    ChangeName(String),
 }
 
 #[derive(Serialize, Deserialize, Default, Clone, Debug)]
@@ -89,6 +90,7 @@ pub struct RemoteConfigurationSnapshot {
     pub version: u32,
     pub user_paths: Vec<String>,
     pub interaction_profiles: Vec<RemoteInteractionProfile>,
+    pub name: String,
 }
 
 #[derive(Serialize, Deserialize, Default, Clone, Debug)]

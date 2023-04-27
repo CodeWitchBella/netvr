@@ -47,6 +47,7 @@ pub(crate) struct LocalConfigurationSnapshot {
     pub version: u32,
     pub interaction_profiles: Vec<InteractionProfile>,
     pub user_paths: Vec<(sys::Path, String)>,
+    pub name: String,
 }
 
 impl From<LocalConfigurationSnapshot> for RemoteConfigurationSnapshot {
@@ -59,6 +60,7 @@ impl From<LocalConfigurationSnapshot> for RemoteConfigurationSnapshot {
                 .map(|p| p.into())
                 .collect(),
             user_paths: val.user_paths.iter().map(|(_, p)| p.clone()).collect(),
+            name: val.name,
         }
     }
 }

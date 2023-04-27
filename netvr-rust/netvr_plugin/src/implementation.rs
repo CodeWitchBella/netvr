@@ -1,5 +1,5 @@
 use anyhow::{anyhow, Result};
-use netvr_data::{InstanceAndSession, Nothing, ReadRemoteDevicesOutput, RemoteDevice};
+use netvr_data::{InstanceAndSession, Nothing, ReadRemoteDevicesOutput, RemoteDevice, StartInput};
 use tokio::select;
 use tracing::info;
 use xr_layer::log::LogInfo;
@@ -7,7 +7,7 @@ use xr_layer::log::LogInfo;
 use crate::{net_client::run_net_client, overrides::with_layer};
 
 /// Starts the netvr client. Should be called after xrCreateInstance.
-pub(crate) fn start(input: InstanceAndSession) -> Result<Nothing> {
+pub(crate) fn start(input: StartInput) -> Result<Nothing> {
     with_layer(input.instance, |instance| {
         info!("start {:?}", instance.instance.as_raw());
 
@@ -16,7 +16,7 @@ pub(crate) fn start(input: InstanceAndSession) -> Result<Nothing> {
             loop {
                 select! {
                     _ = token.cancelled() => { break; }
-                    res = run_net_client(input.instance, input.session) => {
+                    res = run_net_client(input.instance, input.session, input.data_directory.clone()) => {
                         LogInfo::string(format!("net_client finished {:?}", res));
                     }
                 }

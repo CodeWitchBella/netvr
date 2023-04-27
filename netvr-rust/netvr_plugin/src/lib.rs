@@ -13,6 +13,7 @@ use xr_layer::{
 
 #[macro_use]
 mod bincode_abi;
+mod config;
 mod implementation;
 mod instance;
 mod local_configuration;
@@ -68,5 +69,5 @@ pub use bincode_abi::netvr_cleanup;
 
 bincode_expose!(
     expose read_remote_devices as ReadRemoteDevices taking InstanceAndSession and outputting ReadRemoteDevicesOutput,
-    expose start as Start taking InstanceAndSession and outputting Nothing,
+    expose start as Start taking StartInput and outputting Nothing,
 );

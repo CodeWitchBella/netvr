@@ -69,11 +69,16 @@ pub(crate) enum DashboardMessageRecv {
     },
     #[serde(rename_all = "camelCase")]
     StartCalibration {
-        leader_id: ClientId,
-        leader_subaction_path: String,
-        follower_id: ClientId,
-        follower_subaction_path: String,
+        target_id: ClientId,
+        target_subaction_path: String,
+        reference_id: ClientId,
+        reference_subaction_path: String,
         sample_count: usize,
+    },
+    #[serde(rename_all = "camelCase")]
+    SetName {
+        name: String,
+        client_id: ClientId,
     },
 }
 
@@ -180,14 +185,15 @@ async fn dashboard_receive(
                 }) else { return; };
             }
             DashboardMessageRecv::StartCalibration {
-                leader_id: a_id,
-                leader_subaction_path: a_path,
-                follower_id: b_id,
-                follower_subaction_path: b_path,
+                target_id,
+                target_subaction_path,
+                reference_id,
+                reference_subaction_path,
                 sample_count,
             } => {
                 if let Err(err) = calibration_sender.send(Begin {
-                    clients: ((a_id, a_path), (b_id, b_path)),
+                    client_target: (target_id, target_subaction_path),
+                    client_reference: (reference_id, reference_subaction_path),
                     sample_count,
                 }) {
                     println!("Failed to send calibration request: {}", err);
@@ -220,6 +226,19 @@ async fn dashboard_receive(
                     "TODO: trigger haptic impulse for {} {}",
                     client_id, subaction_path
                 )
+            }
+            DashboardMessageRecv::SetName { name, client_id } => {
+                if let Some(client) = server.get_client(client_id).await {
+                    if let Err(err) =
+                        client.send_configuration_down(ConfigurationDown::ChangeName(name.clone()))
+                    {
+                        println!("Failed to send configuration down: {}", err);
+                    }
+                } else {
+                    let Ok(_) = reply.send(DashboardMessage::Info {
+                        message: "Set name: Client not found".to_owned(),
+                    }) else { return; };
+                }
             }
         }
     }

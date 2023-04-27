@@ -128,6 +128,15 @@ pub struct InstanceAndSession {
     pub session: openxr_sys::Session,
 }
 
+#[derive(Serialize, Deserialize)]
+pub struct StartInput {
+    #[serde(with = "handle_serializer::instance")]
+    pub instance: openxr_sys::Instance,
+    #[serde(with = "handle_serializer::session")]
+    pub session: openxr_sys::Session,
+    pub data_directory: String,
+}
+
 #[derive(Default, Serialize, Deserialize, Debug, Clone)]
 pub struct RemoteClientSnapshot {
     pub configuration: RemoteConfigurationSnapshot,
@@ -153,6 +162,7 @@ pub struct CodegenRoot(
     pub Nothing,
     pub InstanceAndSession,
     pub RemoteSnapshot,
+    pub StartInput,
 );
 
 pub mod net;

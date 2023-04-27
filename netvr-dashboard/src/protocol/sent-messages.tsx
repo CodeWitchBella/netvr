@@ -13,10 +13,10 @@ export type DashboardMessageUp =
   | { type: 'ResetCalibration'; clientId: ClientId }
   | {
       type: 'StartCalibration'
-      leaderId: ClientId
-      leaderSubactionPath: string
-      followerId: ClientId
-      followerSubactionPath: string
+      targetId: ClientId
+      targetSubactionPath: string
+      referenceId: ClientId
+      referenceSubactionPath: string
       sampleCount: number
     }
   | {
@@ -24,3 +24,4 @@ export type DashboardMessageUp =
       clientId: ClientId
       subactionPath: string
     }
+  | { type: 'SetName'; name: string; clientId: number }
