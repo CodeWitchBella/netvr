@@ -3,6 +3,7 @@
 mod input;
 use std::cmp::min;
 
+use anyhow::{anyhow, Result};
 pub use input::*;
 use nalgebra::{
     Const, Dyn, Matrix3, OMatrix, Quaternion, Rotation3, RowVector3, UnitQuaternion, Vector3,
@@ -18,18 +19,19 @@ struct PoseF64 {
 impl From<netvr_data::Pose> for PoseF64 {
     fn from(val: netvr_data::Pose) -> Self {
         Self {
-            position: Vector3::new(val.position.x, val.position.y, val.position.z).cast::<f64>(),
-            rotation: UnitQuaternion::new_normalize(Quaternion::new(
-                val.orientation.w,
-                val.orientation.x,
-                val.orientation.y,
-                val.orientation.z,
-            ))
-            .cast::<f64>()
-            .to_rotation_matrix()
-            .into(),
+            position: Vector3::new(val.position.x, val.position.y, -val.position.z).cast::<f64>(),
+            rotation: convert_quaternion(val.orientation)
+                .to_rotation_matrix()
+                .into(),
         }
     }
+}
+
+fn convert_quaternion(q: netvr_data::Quaternion) -> UnitQuaternion<f64> {
+    let q = UnitQuaternion::new_unchecked(Quaternion::new(q.w, -q.x, -q.y, -q.z)).cast::<f64>();
+    let euler = q.euler_angles();
+    let q = UnitQuaternion::from_euler_angles(euler.1, euler.0, -euler.2);
+    UnitQuaternion::new_unchecked(Quaternion::new(q.w, q.j, q.i, q.k))
 }
 
 #[derive(Debug, Default, Clone, Copy)]
@@ -191,7 +193,7 @@ fn CalibrateRotation(samples: &[SamplePairF64]) -> Rotation3<f64> {
     Rotation3::from_matrix(&rot)
 }
 
-fn CalibrateTranslation(samples: &[SamplePairF64]) -> RowVector3<f64> {
+fn CalibrateTranslation(samples: &[SamplePairF64]) -> Result<RowVector3<f64>> {
     let mut deltas: Vec<(Vector3<f64>, Matrix3<f64>)> = vec![];
     for i in 0..samples.len() {
         for j in 0..i {
@@ -223,7 +225,7 @@ fn CalibrateTranslation(samples: &[SamplePairF64]) -> RowVector3<f64> {
     }
 
     // Eigen::VectorXd constants(deltas.size() * 3);
-    let mut constants = OMatrix::<f64, Dyn, Const<3>>::zeros(deltas.len() * 3);
+    let mut constants = OMatrix::<f64, Dyn, Const<1>>::zeros(deltas.len() * 3);
     // Eigen::MatrixXd coefficients(deltas.size() * 3, 3);
     let mut coefficients = OMatrix::<f64, Dyn, Const<3>>::zeros(deltas.len() * 3);
 
@@ -242,13 +244,21 @@ fn CalibrateTranslation(samples: &[SamplePairF64]) -> RowVector3<f64> {
         }
     }
 
+    println!("samples len: {}", samples.len());
+    println!("delta len: {}", deltas.len());
+    println!("constants len: {}", constants.len());
+    println!("coefficients len: {}", coefficients.len());
+    // println!("coefficients: {:#?}", coefficients);
+    // println!("{:#?}", constants);
     // Eigen::Vector3d trans = coefficients.bdcSvd(Eigen::ComputeThinU |
     // Eigen::ComputeThinV).solve(constants);
     // auto transcm = trans * 100.0;
-    let trans = constants.svd(true, true);
-    let trans = trans.singular_values;
+    let trans = coefficients
+        .svd(true, true)
+        .solve(&constants, f64::EPSILON)
+        .map_err(|err| anyhow!("{:?}", err))?;
 
-    RowVector3::new(trans[0], trans[1], trans[2])
+    Ok(RowVector3::new(trans[0], trans[1], trans[2]))
 }
 
 fn match_samples(input: &CalibrationInput) -> Vec<SamplePairF64> {
@@ -262,7 +272,7 @@ fn match_samples(input: &CalibrationInput) -> Vec<SamplePairF64> {
     matches
 }
 
-pub fn calibrate(samples: &CalibrationInput) -> CalibrationResult {
+pub fn calibrate(samples: &CalibrationInput) -> Result<CalibrationResult> {
     // Notes from original code:
     // - it applies rotation right when it determines it
     // - it collects SampleCount for each phase
@@ -271,7 +281,6 @@ pub fn calibrate(samples: &CalibrationInput) -> CalibrationResult {
     let matches = match_samples(samples);
 
     let rot_samples = matches.len() / 2;
-    let _pos_samples = matches.len() - rot_samples;
     let eigen_samples = matches
         .iter()
         .take(rot_samples)
@@ -279,19 +288,26 @@ pub fn calibrate(samples: &CalibrationInput) -> CalibrationResult {
         .collect::<Vec<SamplePairF64>>();
 
     let rotation = CalibrateRotation(&eigen_samples);
-    println!("Solved rotation: {:?}", rotation);
 
     let eigen_samples = matches
         .iter()
         .skip(rot_samples)
-        .copied()
+        .map(|s| SamplePairF64 {
+            reference: s.reference,
+            target: SampleF64 {
+                pose: PoseF64 {
+                    position: rotation * s.target.pose.position,
+                    rotation: rotation * s.target.pose.rotation,
+                },
+            },
+        })
         .collect::<Vec<SamplePairF64>>();
 
-    let translation = CalibrateTranslation(&eigen_samples);
+    let translation = CalibrateTranslation(&eigen_samples)?;
     println!("Solved position: {:?}", translation);
     let rotation = UnitQuaternion::from_matrix(&rotation.into()).cast::<f32>();
 
-    CalibrationResult {
+    Ok(CalibrationResult {
         rotation: netvr_data::Quaternion {
             x: rotation.i,
             y: rotation.j,
@@ -303,5 +319,5 @@ pub fn calibrate(samples: &CalibrationInput) -> CalibrationResult {
             y: translation[1] as f32,
             z: translation[2] as f32,
         },
-    }
+    })
 }

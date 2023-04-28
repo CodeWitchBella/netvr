@@ -3,12 +3,9 @@ use std::{fs::File, io::Write, time::SystemTime, vec};
 use anyhow::{anyhow, Result};
 use chrono::{DateTime, Utc};
 use netvr_calibrate::CalibrationInput;
-use netvr_data::{
-    bincode::config,
-    net::{
-        CalibrationConfiguration, CalibrationSample, ClientId,
-        ConfigurationDown::{StopCalibration, TriggerCalibration},
-    },
+use netvr_data::net::{
+    CalibrationConfiguration, CalibrationSample, ClientId,
+    ConfigurationDown::{StopCalibration, TriggerCalibration},
 };
 use tokio::sync::{broadcast, mpsc};
 
