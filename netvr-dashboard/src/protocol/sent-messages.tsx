@@ -17,7 +17,11 @@ export type DashboardMessageUp =
       targetSubactionPath: string
       referenceId: ClientId
       referenceSubactionPath: string
-      sampleCount: number
+
+      conf: {
+        sample_count: number
+        sample_interval_nanos: number
+      }
     }
   | {
       type: 'TriggerHapticImpulse'

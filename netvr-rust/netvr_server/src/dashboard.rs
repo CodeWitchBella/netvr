@@ -6,7 +6,10 @@ use futures_util::{
     SinkExt, StreamExt,
 };
 use netvr_data::{
-    net::{ClientId, ConfigurationDown, ConfigurationSnapshotSet, StateSnapshot},
+    net::{
+        CalibrationConfiguration, ClientId, ConfigurationDown, ConfigurationSnapshotSet,
+        StateSnapshot,
+    },
     serde::{Deserialize, Serialize},
 };
 use tokio::sync::{broadcast, mpsc};
@@ -73,7 +76,8 @@ pub(crate) enum DashboardMessageRecv {
         target_subaction_path: String,
         reference_id: ClientId,
         reference_subaction_path: String,
-        sample_count: usize,
+
+        conf: CalibrationConfiguration,
     },
     #[serde(rename_all = "camelCase")]
     SetName {
@@ -189,12 +193,12 @@ async fn dashboard_receive(
                 target_subaction_path,
                 reference_id,
                 reference_subaction_path,
-                sample_count,
+                conf,
             } => {
                 if let Err(err) = calibration_sender.send(Begin {
                     client_target: (target_id, target_subaction_path),
                     client_reference: (reference_id, reference_subaction_path),
-                    sample_count,
+                    conf,
                 }) {
                     println!("Failed to send calibration request: {}", err);
                 }

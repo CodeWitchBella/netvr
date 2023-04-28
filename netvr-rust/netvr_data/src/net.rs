@@ -27,7 +27,7 @@ impl Default for DiscoveryResponse {
 pub enum ConfigurationDown {
     Snapshot(ConfigurationSnapshotSet),
     StagePose(Pose),
-    TriggerCalibration(String),
+    TriggerCalibration(String, CalibrationConfiguration),
     StopCalibration,
     ChangeName(String),
 }
@@ -106,8 +106,20 @@ pub enum ConfigurationUp {
 
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct CalibrationSample {
+    pub flags: u64,
     pub pose: Pose,
+    pub prev_flags: u64,
+    pub prev_pose: Pose,
+    /// This is the time that we used when requesting the sample.
     pub nanos: i64,
+    /// This is when the sample was requested.
+    pub now_nanos: i64,
+}
+
+#[derive(Serialize, Deserialize, Debug, Clone, Copy)]
+pub struct CalibrationConfiguration {
+    pub sample_count: usize,
+    pub sample_interval_nanos: i64,
 }
 
 pub type ClientId = u32;

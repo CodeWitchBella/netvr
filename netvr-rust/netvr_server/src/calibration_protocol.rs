@@ -3,14 +3,17 @@ use std::{fs::File, io::Write, time::SystemTime, vec};
 use anyhow::{anyhow, Result};
 use chrono::{DateTime, Utc};
 use netvr_calibrate::CalibrationInput;
-use netvr_data::net::{
-    CalibrationSample, ClientId,
-    ConfigurationDown::{StopCalibration, TriggerCalibration},
+use netvr_data::{
+    bincode::config,
+    net::{
+        CalibrationConfiguration, CalibrationSample, ClientId,
+        ConfigurationDown::{StopCalibration, TriggerCalibration},
+    },
 };
-use tokio::sync::mpsc;
+use tokio::sync::{broadcast, mpsc};
 
 use self::CalibrationProtocolMessage::*;
-use crate::server::Server;
+use crate::{dashboard::DashboardMessage, server::Server};
 
 pub(crate) struct CalibrationProtocol {
     recv: mpsc::UnboundedReceiver<CalibrationProtocolMessage>,
@@ -23,7 +26,7 @@ pub(crate) enum CalibrationProtocolMessage {
     Begin {
         client_target: (ClientId, String),
         client_reference: (ClientId, String),
-        sample_count: usize,
+        conf: CalibrationConfiguration,
     },
     Sample {
         client: ClientId,
@@ -37,18 +40,23 @@ impl CalibrationProtocol {
         (Self { recv }, sender)
     }
 
-    pub(crate) async fn run(self, server: Server) -> Result<()> {
-        run(self.recv, server).await
+    pub(crate) async fn run(
+        self,
+        server: Server,
+        tx: broadcast::Sender<DashboardMessage>,
+    ) -> Result<()> {
+        run(self.recv, server, tx).await
     }
 }
 
 async fn run(
     mut recv: mpsc::UnboundedReceiver<CalibrationProtocolMessage>,
     server: Server,
+    tx: broadcast::Sender<DashboardMessage>,
 ) -> Result<()> {
     loop {
         let Some(instruction) = recv.recv().await else { break; };
-        let Begin { client_target, client_reference, sample_count } = instruction else { continue; };
+        let Begin { client_target, client_reference, conf } = instruction else { continue; };
         let client_target_id = client_target.0;
         let client_reference_id = client_reference.0;
         let client_target_path = client_target.1;
@@ -57,7 +65,7 @@ async fn run(
         let Some(client_target) = server.get_client(client_target.0).await else { continue; };
         let Some(client_reference) = server.get_client(client_reference.0).await else { continue; };
         if let Err(err) =
-            client_target.send_configuration_down(TriggerCalibration(client_target_path))
+            client_target.send_configuration_down(TriggerCalibration(client_target_path, conf))
         {
             println!(
                 "Failed to send trigger calibration to client {:?}: {:?}",
@@ -65,8 +73,8 @@ async fn run(
             );
             continue;
         }
-        if let Err(err) =
-            client_reference.send_configuration_down(TriggerCalibration(client_reference_path))
+        if let Err(err) = client_reference
+            .send_configuration_down(TriggerCalibration(client_reference_path, conf))
         {
             println!(
                 "Failed to send trigger calibration to client {:?}: {:?}",
@@ -77,7 +85,7 @@ async fn run(
         }
 
         let samples_result = collect_samples(
-            sample_count,
+            conf.sample_count,
             client_target_id,
             client_reference_id,
             &mut recv,
@@ -105,9 +113,21 @@ async fn run(
         // Samples collected. Calibrate and apply
         println!("samples_target: {:?}", samples_target.len());
         println!("samples_reference: {:?}", samples_target.len());
+        let configuration = server.latest_configuration().await;
+        let configuration = configuration.borrow();
         let calibration = CalibrationInput {
             target: samples_target,
+            target_name: configuration
+                .clients
+                .get(&client_target_id)
+                .map(|v| v.name.clone())
+                .unwrap_or_default(),
             reference: samples_reference,
+            reference_name: configuration
+                .clients
+                .get(&client_reference_id)
+                .map(|v| v.name.clone())
+                .unwrap_or_default(),
         };
         match serde_json::to_string(&calibration) {
             Ok(data) => {
@@ -126,6 +146,9 @@ async fn run(
 
         let result = netvr_calibrate::calibrate(&calibration);
         println!("Calibration result: {:?}", result);
+        let _ = tx.send(DashboardMessage::Info {
+            message: format!("Calibration finished: {:?}", result),
+        });
     }
     Ok(())
 }

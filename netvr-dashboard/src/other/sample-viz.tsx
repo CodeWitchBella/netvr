@@ -18,8 +18,8 @@ type SavedCalibration = {
   fileName: string
   followerDevice: number
   leaderDevice: number
-  follower: number
-  leader: number
+  follower: number | string
+  leader: number | string
   resultRotate: { x: number; y: number; z: number }
   resultTranslate: { x: number; y: number; z: number }
   leaderSamples: readonly Sample[]
@@ -32,26 +32,37 @@ type Sample = {
   timestamp: number
 }
 
+type NewPose = {
+  position: { x: number; y: number; z: number }
+  orientation: { x: number; y: number; z: number; w: number }
+}
 type NewSample = {
-  pose: {
-    position: { x: number; y: number; z: number }
-    orientation: { x: number; y: number; z: number; w: number }
-  }
+  pose: NewPose
+  prev_pose: NewPose
+  flags: number
+  prev_flags: number
   nanos: number
+  now_nanos: number
 }
 
-function convert(
-  data:
-    | SavedCalibration
-    | { fileName: string; target: NewSample[]; reference: NewSample[] },
-): SavedCalibration {
+type File =
+  | SavedCalibration
+  | {
+      fileName: string
+      target: NewSample[]
+      reference: NewSample[]
+      target_name?: string
+      reference_name?: string
+    }
+
+function convert(data: File): SavedCalibration {
   if (!('reference' in data)) return data
   return {
-    fileName: data.fileName,
-    follower: 0,
+    fileName: data.fileName.replace(/\.json$/, ''),
+    follower: data.target_name ?? 0,
     followerDevice: 0,
     followerSamples: data.target.map(convertSample),
-    leader: 0,
+    leader: data.reference_name ?? 0,
     leaderDevice: 0,
     leaderSamples: data.reference.map(convertSample),
     resultRotate: { x: 0, y: 0, z: 0 },
@@ -59,14 +70,16 @@ function convert(
   }
 }
 
+let getNanos = (v: NewSample) => v.now_nanos
 function convertSample(v: NewSample, _: number, arr: NewSample[]) {
+  let pose = v.pose
   const rotation = new THREE.Euler()
     .setFromQuaternion(
       new THREE.Quaternion().set(
-        v.pose.orientation.x,
-        v.pose.orientation.y,
-        v.pose.orientation.z,
-        v.pose.orientation.w,
+        pose.orientation.x,
+        pose.orientation.y,
+        pose.orientation.z,
+        pose.orientation.w,
       ),
     )
     .toArray()
@@ -77,22 +90,27 @@ function convertSample(v: NewSample, _: number, arr: NewSample[]) {
       y: rotation[1],
       z: rotation[2],
     },
-    timestamp: (v.nanos - arr[0].nanos) / 1000 / 1000,
+    timestamp: (getNanos(v) - getNanos(arr[0])) / 1000 / 1000 / 1000,
   }
 }
 
 export default function SampleVizRoute() {
-  const [savedCalibration, setSavedCalibration] =
-    useState<SavedCalibration | null>(null)
+  const [savedCalibrationFile, setSavedCalibration] = useState<File | null>(
+    null,
+  )
   const dropzone = useDropzone({
     noClick: true,
     multiple: false,
     onDrop: ([file]) => {
       file.text().then((v) => {
-        setSavedCalibration(convert({ fileName: file.name, ...JSON.parse(v) }))
+        setSavedCalibration({ fileName: file.name, ...JSON.parse(v) })
       })
     },
   })
+  const savedCalibration = useMemo(
+    () => (savedCalibrationFile ? convert(savedCalibrationFile) : null),
+    [savedCalibrationFile],
+  )
   return (
     <div
       css={{
@@ -162,11 +180,21 @@ function Scene({ data: dataIn }: { data: SavedCalibration | null }) {
       value: 'none',
       options: Object.keys(preprocessors),
     },
-    leader: { editable: false, value: theme.base08 },
-    follower: { editable: false, value: theme.base0B },
     meanDistance: { editable: false, value: '' },
     stdDev: { editable: false, value: '' },
   }))
+  const leader = useControls('Leader', () => ({
+    name: { editable: false, value: dataIn?.leader + '' },
+    color: { editable: false, value: theme.base08 },
+  }))
+  const follower = useControls('Follower', () => ({
+    name: { editable: false, value: dataIn?.follower + '' },
+    color: { editable: false, value: theme.base0B },
+  }))
+  useEffect(() => {
+    leader[1]({ name: dataIn?.leader + '', color: theme.base08 })
+    follower[1]({ name: dataIn?.follower + '', color: theme.base0B })
+  }, [dataIn, follower, leader, theme.base08, theme.base0B])
 
   const data = useMemo(
     () => (!dataIn ? null : (preprocessors[preprocess] ?? ((v) => v))(dataIn)),
@@ -187,10 +215,6 @@ function Scene({ data: dataIn }: { data: SavedCalibration | null }) {
     if (recomputed) set(recomputed)
   }, [recomputed, set])
 
-  useEffect(() => {
-    set({ follower: theme.base0B, leader: theme.base08 })
-  }, [set, theme])
-
   const transformedSamples = useMemo(() => {
     if (!data) return null
     const rotateThree = new THREE.Quaternion()
@@ -198,10 +222,10 @@ function Scene({ data: dataIn }: { data: SavedCalibration | null }) {
 
     return {
       leader: data.leaderSamples
-        .slice(0, data.followerSamples.length)
+        //.slice(0, data.followerSamples.length)
         .map((v) => objectToArray(v.position)),
       follower: data.followerSamples
-        .slice(0, data.leaderSamples.length)
+        //.slice(0, data.leaderSamples.length)
         .map((v) => {
           let position = objectToArray(v.position)
           // apply offset+angle
@@ -222,9 +246,9 @@ function Scene({ data: dataIn }: { data: SavedCalibration | null }) {
   useEffect(() => {
     if (!transformedSamples) return
     //const timeout = setTimeout(() => {
-    const dists = transformedSamples.leader.map((leader, i) =>
-      dist(leader, transformedSamples.follower[i]),
-    )
+    const dists = transformedSamples.leader
+      .slice(0, transformedSamples.follower.length)
+      .map((leader, i) => dist(leader, transformedSamples.follower[i]))
     const mean = dists.reduce((a, b) => a + b, 0) / dists.length
     const variance =
       dists.reduce((acc, dist) => acc + (mean - dist) * (mean - dist), 0) /
@@ -263,6 +287,16 @@ function Scene({ data: dataIn }: { data: SavedCalibration | null }) {
     }),
     [data],
   )
+  useEffect(() => {
+    if (!timePointsFollower || !timePointsLeader) return
+    const averageFollower =
+      timePointsFollower?.map((v) => v[1]).reduce((a, b) => a + b, 0) /
+      timePointsFollower?.length
+    const averageLeader =
+      timePointsLeader?.map((v) => v[1]).reduce((a, b) => a + b, 0) /
+      timePointsLeader?.length
+    console.log({ averageFollower, averageLeader })
+  }, [timePointsFollower, timePointsLeader])
 
   const mov = transformedSamples?.leader[0]
   return (

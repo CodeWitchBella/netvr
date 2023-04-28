@@ -91,6 +91,7 @@ export function ThemeRoot({ children }: PropsWithChildren<{}>) {
                     : [],
                 ),
               ),
+              accentColor: data.resolved.base0D,
               background: data.resolved.base01,
               color: data.resolved.base07,
             },

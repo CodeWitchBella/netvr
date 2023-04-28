@@ -3,14 +3,17 @@ use std::ptr;
 use anyhow::{anyhow, Result};
 use netvr_data::{
     bincode,
-    net::{self, ActionType, CalibrationSample, ConfigurationUp, StateSnapshot},
+    net::{
+        self, ActionType, CalibrationConfiguration, CalibrationSample, ConfigurationUp,
+        StateSnapshot,
+    },
     SendFrames,
 };
-use tokio::{select, spawn, sync::mpsc};
+use tokio::{select, spawn, sync::mpsc, time};
 use xr_layer::{
-    log::LogTrace,
+    log::{LogError, LogTrace},
     safe_openxr::{self},
-    sys::{self},
+    sys::{self, Time},
 };
 
 use crate::{
@@ -28,7 +31,7 @@ macro_rules! map_err {
 
 #[derive(Debug)]
 enum CalibrationTrigger {
-    Start(String),
+    Start(String, CalibrationConfiguration),
     Stop,
 }
 
@@ -167,44 +170,59 @@ async fn run_calibration_sender(
     loop {
         let Some(trigger) = calibration_trigger.recv().await else { break; };
 
-        let CalibrationTrigger::Start(mut subaction_path) = trigger else { continue; };
+        let CalibrationTrigger::Start(subaction_path, conf) = trigger else { continue; };
+        let duration = std::time::Duration::from_nanos(u64::try_from(conf.sample_interval_nanos)?);
+        let duration_nanos = i64::try_from(duration.as_nanos())?;
+        let mut interval = time::interval(duration);
+        let mut sample_time = now(instance_handle)?;
+        let mut prev_time = sample_time;
+
         loop {
             connection
                 .write(&collect_calibration_sample(
                     instance_handle,
                     session_handle,
                     subaction_path.as_str(),
+                    sample_time,
+                    prev_time,
                 )?)
                 .await?;
+            prev_time = sample_time;
+            sample_time = Time::from_nanos(sample_time.as_nanos() + duration_nanos);
 
             select! {
                 trigger = calibration_trigger.recv() => match trigger {
                     Some(trigger) => match trigger {
                         CalibrationTrigger::Stop => break,
-                        CalibrationTrigger::Start(new_subaction_path) => {
-                            subaction_path = new_subaction_path;
+                        CalibrationTrigger::Start(..) => {
+                            LogError::str("Calibration trigger received while already calibrating");
                         },
                     },
                     None => break,
                 },
-                _ = tokio::time::sleep(std::time::Duration::from_millis(20)) => {},
+                _ = interval.tick() => {},
             }
         }
     }
     Ok(())
 }
 
+fn now(instance_handle: sys::Instance) -> Result<Time> {
+    with_layer(instance_handle, |instance| Ok(instance.instance.now()?))
+}
+
 fn collect_calibration_sample(
     instance_handle: sys::Instance,
     session_handle: sys::Session,
     subaction_path: &str,
+    time: Time,
+    prev_time: Time,
 ) -> Result<CalibrationSample> {
     with_layer(instance_handle, |instance| {
         let session = instance
             .sessions
             .get(&session_handle)
             .ok_or(anyhow!("Failed to read session from instance"))?;
-        let time = instance.instance.now()?;
 
         let active_profiles = session
             .active_interaction_profiles
@@ -228,11 +246,17 @@ fn collect_calibration_sample(
             if let ActionType::Pose = binding.ty {
                 let Some(spaces) = &binding.spaces else {continue;};
                 let Some(space_action) = spaces.get(&subaction_path) else {continue;};
+                let now = instance.instance.now()?;
                 let Ok(location) = locate_space(&instance.instance, space_action.to_owned(), session.space_stage.as_raw(), time) else {continue;};
+                let Ok(prev_location) = locate_space(&instance.instance, space_action.to_owned(), session.space_stage.as_raw(), prev_time) else {continue;};
 
                 return Ok(CalibrationSample {
+                    flags: location.location_flags.into_raw(),
                     pose: location.pose.into(),
+                    prev_flags: prev_location.location_flags.into_raw(),
+                    prev_pose: prev_location.pose.into(),
                     nanos: time.as_nanos(),
+                    now_nanos: now.as_nanos(),
                 });
             }
         }
@@ -292,9 +316,9 @@ async fn run_receive_configuration(
 
                 Ok(())
             })?,
-            net::ConfigurationDown::TriggerCalibration(value) => {
+            net::ConfigurationDown::TriggerCalibration(value, conf) => {
                 calibration_trigger
-                    .send(CalibrationTrigger::Start(value))
+                    .send(CalibrationTrigger::Start(value, conf))
                     .await?;
             }
             net::ConfigurationDown::StopCalibration => {
@@ -319,7 +343,7 @@ async fn run_transmit_snapshots(
             connection.send_datagram(bincode::serialize(&value)?.into())?;
         }
 
-        tokio::time::sleep(std::time::Duration::from_millis(20)).await;
+        time::sleep(std::time::Duration::from_millis(20)).await;
     }
 }
 

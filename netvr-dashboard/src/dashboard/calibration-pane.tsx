@@ -1,13 +1,14 @@
 /** @jsxImportSource @emotion/react */
-import { useState } from 'react'
+import { useEffect, useRef, useState } from 'react'
 import type {
   RemoteConfigurationSnapshot,
   ConfigurationSnapshotSet,
 } from '../protocol/data'
-import { Button, Pane, Select } from '../components/design'
+import { Button, Input, Pane, Select } from '../components/design'
 import * as sentMessages from '../protocol/sent-messages'
 import { MergedData } from './merge-data'
 import { JSONView } from '../components/json-view'
+import { useLocalStorage } from '../utils'
 
 export function CalibrationPane({
   sendMessage,
@@ -23,11 +24,53 @@ export function CalibrationPane({
     serverState,
     exceptClient: client1.clientId,
   })
+  const [shortcutsIn, setShortcuts] = useLocalStorage(
+    'enable-keyboard-shortcuts',
+    'true' as 'true' | 'false',
+    isBooleanString,
+  )
+  const shortcuts = shortcutsIn === 'true'
+  const form = useRef<HTMLFormElement>(null)
+
+  useEffect(() => {
+    document.addEventListener('keydown', listener)
+    return () => document.removeEventListener('keydown', listener)
+    function listener(evt: KeyboardEvent) {
+      if (!shortcuts) return
+      if (evt.key === 't') {
+        console.log('Triggering')
+        form.current?.dispatchEvent(
+          new Event('submit', { cancelable: true, bubbles: true }),
+        )
+      }
+      if (evt.key === 'a' && client1.subactionPaths?.length) {
+        client1.setSubactionPath(client1.subactionPaths[0])
+      }
+      if (
+        evt.key === 's' &&
+        client1.subactionPaths &&
+        client1.subactionPaths.length > 1
+      ) {
+        client1.setSubactionPath(client1.subactionPaths[1])
+      }
+      if (evt.key === 'k' && client2.subactionPaths?.length) {
+        client2.setSubactionPath(client2.subactionPaths[0])
+      }
+      if (
+        evt.key === 'l' &&
+        client2.subactionPaths &&
+        client2.subactionPaths.length > 1
+      ) {
+        client2.setSubactionPath(client2.subactionPaths[1])
+      }
+    }
+  })
 
   const [message, setMessage] = useState('')
   return (
     <Pane title="Calibration" id="calibration">
       <form
+        ref={form}
         onSubmit={(evt) => {
           evt.preventDefault()
 
@@ -51,7 +94,10 @@ export function CalibrationPane({
             targetSubactionPath: str(formData.get('targetSubactionPath')),
             referenceId: num(formData.get('referenceId')),
             referenceSubactionPath: str(formData.get('referenceSubactionPath')),
-            sampleCount: 500,
+            conf: {
+              sample_count: 500,
+              sample_interval_nanos: 1000 * 1000 * 20,
+            },
           })
 
           const msg = 'Calibration triggered ' + JSON.stringify(data)
@@ -65,13 +111,25 @@ export function CalibrationPane({
           flexDirection: 'column',
           alignItems: 'flex-start',
           gap: 8,
+          '.highlight': {
+            display: shortcuts ? 'inline' : 'none',
+          },
         }}
       >
+        <label css={{ userSelect: 'none' }}>
+          <Input
+            type="checkbox"
+            checked={shortcuts}
+            onChange={(evt) => setShortcuts(evt.currentTarget.checked + '')}
+          />{' '}
+          Enable keyboard shortcuts
+        </label>
         <DeviceSelect
           serverState={serverState}
           data={client1}
           type="target"
           sendMessage={sendMessage}
+          shortcut="[AS]"
         />
         <div css={{ marginTop: -16 }}>
           <JSONView
@@ -88,6 +146,7 @@ export function CalibrationPane({
           data={client2}
           type="reference"
           sendMessage={sendMessage}
+          shortcut="[KL]"
         />
         <div css={{ marginTop: -16 }}>
           <JSONView
@@ -98,7 +157,10 @@ export function CalibrationPane({
             )}
           />
         </div>
-        <Button type="submit">Trigger Calibration</Button>
+        <Button type="submit">
+          <span className="highlight">[</span>T
+          <span className="highlight">]</span>rigger Calibration
+        </Button>
         {message}
       </form>
     </Pane>
@@ -174,11 +236,13 @@ function DeviceSelect({
   type,
   sendMessage,
   data,
+  shortcut,
 }: {
   serverState: ConfigurationSnapshotSet
   type: 'target' | 'reference'
   sendMessage: sentMessages.SendMessage
   data: ReturnType<typeof useDeviceSelect>
+  shortcut: string
 }) {
   const clients = Object.entries(serverState.clients).filter(
     ([id]) => +id !== data.exceptClient,
@@ -219,7 +283,7 @@ function DeviceSelect({
           ))}
         </Select>
       </label>
-      <div>
+      <div css={{ display: 'flex', alignItems: 'center' }}>
         <label>
           Device
           <Select
@@ -255,7 +319,11 @@ function DeviceSelect({
         >
           Identify
         </Button>
+        <div className="highlight">{shortcut}</div>
       </div>
     </div>
   )
+}
+function isBooleanString(v: unknown): v is 'true' | 'false' {
+  return v === 'true' || v === 'false'
 }

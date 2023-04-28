@@ -10,5 +10,7 @@ pub struct CalibrationResult {
 #[derive(Serialize, Deserialize, Debug)]
 pub struct CalibrationInput {
     pub target: Vec<CalibrationSample>,
+    pub target_name: String,
     pub reference: Vec<CalibrationSample>,
+    pub reference_name: String,
 }
