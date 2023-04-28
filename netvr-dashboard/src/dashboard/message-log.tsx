@@ -93,7 +93,16 @@ export const Message = memo(function Message({
         <JSONView
           name="message"
           data={message}
-          shouldExpandNode={(path) => path[0] !== 'bindings'}
+          shouldExpandNode={(path, data) => {
+            if (path[0] === 'bindings') return false
+            if (
+              (path[0] === 'target' || path[0] === 'reference') &&
+              Array.isArray(data) &&
+              data.length > 10
+            )
+              return false
+            return true
+          }}
         />
       )}
     </Pane>

@@ -5,6 +5,7 @@ use futures_util::{
     stream::{SplitSink, SplitStream},
     SinkExt, StreamExt,
 };
+use netvr_calibrate::CalibrationInput;
 use netvr_data::{
     net::{
         CalibrationConfiguration, ClientId, ConfigurationDown, ConfigurationSnapshotSet,
@@ -19,7 +20,10 @@ use warp::{
 };
 
 use crate::{
-    calibration_protocol::{CalibrationProtocolMessage::Begin, CalibrationSender},
+    calibration_protocol::{
+        CalibrationProtocolMessage::{Begin, Reapply},
+        CalibrationSender,
+    },
     server::Server,
 };
 
@@ -78,6 +82,14 @@ pub(crate) enum DashboardMessageRecv {
         reference_subaction_path: String,
 
         conf: CalibrationConfiguration,
+    },
+    #[serde(rename_all = "camelCase")]
+    ReapplyCalibration {
+        target_id: ClientId,
+        target_subaction_path: String,
+        reference_id: ClientId,
+        reference_subaction_path: String,
+        data: CalibrationInput,
     },
     #[serde(rename_all = "camelCase")]
     SetName {
@@ -187,6 +199,21 @@ async fn dashboard_receive(
                         value
                     },
                 }) else { return; };
+            }
+            DashboardMessageRecv::ReapplyCalibration {
+                target_id,
+                target_subaction_path,
+                reference_id,
+                reference_subaction_path,
+                data,
+            } => {
+                if let Err(err) = calibration_sender.send(Reapply {
+                    client_target: (target_id, target_subaction_path),
+                    client_reference: (reference_id, reference_subaction_path),
+                    data,
+                }) {
+                    println!("Failed to send reapply calibration request: {}", err);
+                }
             }
             DashboardMessageRecv::StartCalibration {
                 target_id,

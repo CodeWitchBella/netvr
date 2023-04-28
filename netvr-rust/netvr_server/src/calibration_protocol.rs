@@ -32,6 +32,11 @@ pub(crate) enum CalibrationProtocolMessage {
         client: ClientId,
         sample: CalibrationSample,
     },
+    Reapply {
+        client_target: (ClientId, String),
+        client_reference: (ClientId, String),
+        data: CalibrationInput,
+    },
 }
 
 impl CalibrationProtocol {
@@ -56,7 +61,22 @@ async fn run(
 ) -> Result<()> {
     loop {
         let Some(instruction) = recv.recv().await else { break; };
-        let Begin { client_target, client_reference, conf } = instruction else { continue; };
+        let (client_target, client_reference, conf) = match instruction {
+            Begin {
+                client_target,
+                client_reference,
+                conf,
+            } => (client_target, client_reference, conf),
+            Sample { .. } => continue,
+            Reapply {
+                client_target,
+                client_reference,
+                data,
+            } => {
+                finish(tx.clone(), data).await;
+                continue;
+            }
+        };
         let client_target_id = client_target.0;
         let client_reference_id = client_reference.0;
         let client_target_path = client_target.1;
@@ -143,14 +163,17 @@ async fn run(
             }
             Err(err) => println!("Failed to serialize calibration data: {:?}", err),
         };
-
-        let result = netvr_calibrate::calibrate(&calibration);
-        println!("Calibration result: {:?}", result);
-        let _ = tx.send(DashboardMessage::Info {
-            message: format!("Calibration finished: {:?}", result),
-        });
+        finish(tx.clone(), calibration).await;
     }
     Ok(())
+}
+
+async fn finish(tx: broadcast::Sender<DashboardMessage>, input: CalibrationInput) {
+    let result = netvr_calibrate::calibrate(&input);
+    println!("Calibration result: {:?}", result);
+    let _ = tx.send(DashboardMessage::Info {
+        message: format!("Calibration finished: {:?}", result),
+    });
 }
 
 async fn collect_samples(

@@ -24,6 +24,14 @@ export type DashboardMessageUp =
       }
     }
   | {
+      type: 'ReapplyCalibration'
+      targetId: ClientId
+      targetSubactionPath: string
+      referenceId: ClientId
+      referenceSubactionPath: string
+      data: any
+    }
+  | {
       type: 'TriggerHapticImpulse'
       clientId: ClientId
       subactionPath: string

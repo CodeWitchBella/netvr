@@ -9,6 +9,7 @@ import * as sentMessages from '../protocol/sent-messages'
 import { MergedData } from './merge-data'
 import { JSONView } from '../components/json-view'
 import { useLocalStorage } from '../utils'
+import { useDropzone } from 'react-dropzone'
 
 export function CalibrationPane({
   sendMessage,
@@ -19,10 +20,10 @@ export function CalibrationPane({
   serverState: ConfigurationSnapshotSet
   mergedData: MergedData
 }) {
-  const client1 = useDeviceSelect({ serverState })
-  const client2 = useDeviceSelect({
+  const target = useDeviceSelect({ serverState })
+  const reference = useDeviceSelect({
     serverState,
-    exceptClient: client1.clientId,
+    exceptClient: target.clientId,
   })
   const [shortcutsIn, setShortcuts] = useLocalStorage(
     'enable-keyboard-shortcuts',
@@ -43,127 +44,150 @@ export function CalibrationPane({
           new Event('submit', { cancelable: true, bubbles: true }),
         )
       }
-      if (evt.key === 'a' && client1.subactionPaths?.length) {
-        client1.setSubactionPath(client1.subactionPaths[0])
+      if (evt.key === 'a' && target.subactionPaths?.length) {
+        target.setSubactionPath(target.subactionPaths[0])
       }
       if (
         evt.key === 's' &&
-        client1.subactionPaths &&
-        client1.subactionPaths.length > 1
+        target.subactionPaths &&
+        target.subactionPaths.length > 1
       ) {
-        client1.setSubactionPath(client1.subactionPaths[1])
+        target.setSubactionPath(target.subactionPaths[1])
       }
-      if (evt.key === 'k' && client2.subactionPaths?.length) {
-        client2.setSubactionPath(client2.subactionPaths[0])
+      if (evt.key === 'k' && reference.subactionPaths?.length) {
+        reference.setSubactionPath(reference.subactionPaths[0])
       }
       if (
         evt.key === 'l' &&
-        client2.subactionPaths &&
-        client2.subactionPaths.length > 1
+        reference.subactionPaths &&
+        reference.subactionPaths.length > 1
       ) {
-        client2.setSubactionPath(client2.subactionPaths[1])
+        reference.setSubactionPath(reference.subactionPaths[1])
       }
     }
   })
 
   const [message, setMessage] = useState('')
+  const dropzone = useDropzone({
+    noClick: true,
+    multiple: false,
+    onDrop: ([file]) => {
+      file.text().then((v) => {
+        console.log(v)
+        sendMessage({
+          type: 'ReapplyCalibration',
+          targetId: target.clientId,
+          targetSubactionPath: target.subactionPath,
+          referenceId: reference.clientId,
+          referenceSubactionPath: reference.subactionPath,
+          data: JSON.parse(v),
+        })
+        //setSavedCalibration({ fileName: file.name, ...JSON.parse(v) })
+      })
+    },
+  })
   return (
-    <Pane title="Calibration" id="calibration">
-      <form
-        ref={form}
-        onSubmit={(evt) => {
-          evt.preventDefault()
+    <div {...dropzone.getRootProps()}>
+      <Pane title="Calibration" id="calibration">
+        <input {...dropzone.getInputProps()} css={{ display: 'none' }} />
+        <form
+          ref={form}
+          onSubmit={(evt) => {
+            evt.preventDefault()
 
-          const formData = new FormData(evt.currentTarget)
-          const data: {
-            target: number
-            targetDevice: string
-            reference: number
-            referenceDevice: string
-          } = Object.fromEntries(
-            Array.from(formData.entries(), ([k, v]) => [k, +v]),
-          ) as any
-          const str = (v: unknown) => {
-            if (typeof v !== 'string') throw new Error('Missing value')
-            return v
-          }
-          const num = (v: unknown) => +str(v)
-          sendMessage({
-            type: 'StartCalibration',
-            targetId: num(formData.get('targetId')),
-            targetSubactionPath: str(formData.get('targetSubactionPath')),
-            referenceId: num(formData.get('referenceId')),
-            referenceSubactionPath: str(formData.get('referenceSubactionPath')),
-            conf: {
-              sample_count: 500,
-              sample_interval_nanos: 1000 * 1000 * 20,
+            const formData = new FormData(evt.currentTarget)
+            const data: {
+              target: number
+              targetDevice: string
+              reference: number
+              referenceDevice: string
+            } = Object.fromEntries(
+              Array.from(formData.entries(), ([k, v]) => [k, +v]),
+            ) as any
+            const str = (v: unknown) => {
+              if (typeof v !== 'string') throw new Error('Missing value')
+              return v
+            }
+            const num = (v: unknown) => +str(v)
+            sendMessage({
+              type: 'StartCalibration',
+              targetId: num(formData.get('targetId')),
+              targetSubactionPath: str(formData.get('targetSubactionPath')),
+              referenceId: num(formData.get('referenceId')),
+              referenceSubactionPath: str(
+                formData.get('referenceSubactionPath'),
+              ),
+              conf: {
+                sample_count: 500,
+                sample_interval_nanos: 1000 * 1000 * 20,
+              },
+            })
+
+            const msg = 'Calibration triggered ' + JSON.stringify(data)
+            setMessage(msg)
+            setTimeout(() => {
+              setMessage((prev) => (prev === msg ? '' : prev))
+            }, 750)
+          }}
+          css={{
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'flex-start',
+            gap: 8,
+            '.highlight': {
+              display: shortcuts ? 'inline' : 'none',
             },
-          })
-
-          const msg = 'Calibration triggered ' + JSON.stringify(data)
-          setMessage(msg)
-          setTimeout(() => {
-            setMessage((prev) => (prev === msg ? '' : prev))
-          }, 750)
-        }}
-        css={{
-          display: 'flex',
-          flexDirection: 'column',
-          alignItems: 'flex-start',
-          gap: 8,
-          '.highlight': {
-            display: shortcuts ? 'inline' : 'none',
-          },
-        }}
-      >
-        <label css={{ userSelect: 'none' }}>
-          <Input
-            type="checkbox"
-            checked={shortcuts}
-            onChange={(evt) => setShortcuts(evt.currentTarget.checked + '')}
-          />{' '}
-          Enable keyboard shortcuts
-        </label>
-        <DeviceSelect
-          serverState={serverState}
-          data={client1}
-          type="target"
-          sendMessage={sendMessage}
-          shortcut="[AS]"
-        />
-        <div css={{ marginTop: -16 }}>
-          <JSONView
-            name="data"
-            shouldExpandNode={() => true}
-            data={mergedData[client1.clientId]?.controllers?.find(
-              (c) => c.user_path === client1.subactionPath,
-            )}
+          }}
+        >
+          <label css={{ userSelect: 'none' }}>
+            <Input
+              type="checkbox"
+              checked={shortcuts}
+              onChange={(evt) => setShortcuts(evt.currentTarget.checked + '')}
+            />{' '}
+            Enable keyboard shortcuts
+          </label>
+          <DeviceSelect
+            serverState={serverState}
+            data={target}
+            type="target"
+            sendMessage={sendMessage}
+            shortcut="[AS]"
           />
-        </div>
+          <div css={{ marginTop: -16 }}>
+            <JSONView
+              name="data"
+              shouldExpandNode={() => true}
+              data={mergedData[target.clientId]?.controllers?.find(
+                (c) => c.user_path === target.subactionPath,
+              )}
+            />
+          </div>
 
-        <DeviceSelect
-          serverState={serverState}
-          data={client2}
-          type="reference"
-          sendMessage={sendMessage}
-          shortcut="[KL]"
-        />
-        <div css={{ marginTop: -16 }}>
-          <JSONView
-            name="data"
-            shouldExpandNode={() => true}
-            data={mergedData[client2.clientId]?.controllers?.find(
-              (c) => c.user_path === client2.subactionPath,
-            )}
+          <DeviceSelect
+            serverState={serverState}
+            data={reference}
+            type="reference"
+            sendMessage={sendMessage}
+            shortcut="[KL]"
           />
-        </div>
-        <Button type="submit">
-          <span className="highlight">[</span>T
-          <span className="highlight">]</span>rigger Calibration
-        </Button>
-        {message}
-      </form>
-    </Pane>
+          <div css={{ marginTop: -16 }}>
+            <JSONView
+              name="data"
+              shouldExpandNode={() => true}
+              data={mergedData[reference.clientId]?.controllers?.find(
+                (c) => c.user_path === reference.subactionPath,
+              )}
+            />
+          </div>
+          <Button type="submit">
+            <span className="highlight">[</span>T
+            <span className="highlight">]</span>rigger Calibration
+          </Button>
+          {message}
+        </form>
+      </Pane>
+    </div>
   )
 }
 

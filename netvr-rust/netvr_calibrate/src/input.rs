@@ -7,7 +7,7 @@ pub struct CalibrationResult {
     pub rotation: Quaternion,
 }
 
-#[derive(Serialize, Deserialize, Debug)]
+#[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct CalibrationInput {
     pub target: Vec<CalibrationSample>,
     pub target_name: String,
