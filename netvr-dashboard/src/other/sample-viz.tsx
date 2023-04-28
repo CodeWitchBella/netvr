@@ -140,7 +140,10 @@ function Scene({ data: dataIn }: { data: SavedCalibration | null }) {
   const wasm = useWasmSuspending()
   const recomputed = useMemo(() => {
     if (!wasm || !data) return
-    return computeCalibration(wasm, data)
+    console.time('computeCalibration')
+    const res = computeCalibration(wasm, data)
+    console.timeEnd('computeCalibration')
+    return res
   }, [data, wasm])
 
   useEffect(() => {

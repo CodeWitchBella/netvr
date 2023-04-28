@@ -19,7 +19,7 @@ struct PoseF64 {
 impl From<netvr_data::Pose> for PoseF64 {
     fn from(val: netvr_data::Pose) -> Self {
         Self {
-            position: Vector3::new(val.position.x, val.position.y, -val.position.z).cast::<f64>(),
+            position: convert_vector(val.position),
             rotation: convert_quaternion(val.orientation)
                 .to_rotation_matrix()
                 .into(),
@@ -27,7 +27,15 @@ impl From<netvr_data::Pose> for PoseF64 {
     }
 }
 
+fn convert_vector(p: netvr_data::Vec3) -> Vector3<f64> {
+    return Vector3::new(p.x, p.y, p.z).cast::<f64>();
+
+    Vector3::new(p.x, p.y, -p.z).cast::<f64>()
+}
+
 fn convert_quaternion(q: netvr_data::Quaternion) -> UnitQuaternion<f64> {
+    return UnitQuaternion::new_unchecked(Quaternion::new(q.w, q.x, q.y, q.z)).cast::<f64>();
+
     let q = UnitQuaternion::new_unchecked(Quaternion::new(q.w, -q.x, -q.y, -q.z)).cast::<f64>();
     let euler = q.euler_angles();
     let q = UnitQuaternion::from_euler_angles(euler.1, euler.0, -euler.2);
@@ -306,6 +314,7 @@ pub fn calibrate(samples: &CalibrationInput) -> Result<CalibrationResult> {
     let translation = CalibrateTranslation(&eigen_samples)?;
     println!("Solved position: {:?}", translation);
     let rotation = UnitQuaternion::from_matrix(&rotation.into()).cast::<f32>();
+    println!("Solved rotation: {:?}", rotation.euler_angles());
 
     Ok(CalibrationResult {
         rotation: netvr_data::Quaternion {

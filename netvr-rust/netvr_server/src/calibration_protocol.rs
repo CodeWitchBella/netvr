@@ -3,14 +3,17 @@ use std::{fs::File, io::Write, time::SystemTime, vec};
 use anyhow::{anyhow, Result};
 use chrono::{DateTime, Utc};
 use netvr_calibrate::CalibrationInput;
-use netvr_data::net::{
-    CalibrationConfiguration, CalibrationSample, ClientId,
-    ConfigurationDown::{StopCalibration, TriggerCalibration},
+use netvr_data::{
+    net::{
+        CalibrationConfiguration, CalibrationSample, ClientId,
+        ConfigurationDown::{StagePose, StopCalibration, TriggerCalibration},
+    },
+    Pose,
 };
 use tokio::sync::{broadcast, mpsc};
 
 use self::CalibrationProtocolMessage::*;
-use crate::{dashboard::DashboardMessage, server::Server};
+use crate::{client::Client, dashboard::DashboardMessage, server::Server};
 
 pub(crate) struct CalibrationProtocol {
     recv: mpsc::UnboundedReceiver<CalibrationProtocolMessage>,
@@ -70,7 +73,9 @@ async fn run(
                 client_reference,
                 data,
             } => {
-                finish(tx.clone(), data).await;
+                let Some(client_target) = server.get_client(client_target.0).await else { continue; };
+                let Some(client_reference) = server.get_client(client_reference.0).await else { continue; };
+                finish(tx.clone(), data, &client_target, &client_reference).await;
                 continue;
             }
         };
@@ -160,17 +165,34 @@ async fn run(
             }
             Err(err) => println!("Failed to serialize calibration data: {:?}", err),
         };
-        finish(tx.clone(), calibration).await;
+        finish(tx.clone(), calibration, &client_target, &client_reference).await;
     }
     Ok(())
 }
 
-async fn finish(tx: broadcast::Sender<DashboardMessage>, input: CalibrationInput) {
+async fn finish(
+    tx: broadcast::Sender<DashboardMessage>,
+    input: CalibrationInput,
+    target: &Client,
+    reference: &Client,
+) {
     let result = netvr_calibrate::calibrate(&input);
     println!("Calibration result: {:?}", result);
     let _ = tx.send(DashboardMessage::Info {
         message: format!("Calibration finished: {:?}", result),
     });
+    let Ok(data) = result else { return;
+    };
+    if let Err(res) = target.send_configuration_down(StagePose(Pose {
+        position: netvr_data::Vec3 {
+            x: data.translation.x,
+            y: data.translation.y,
+            z: data.translation.z,
+        },
+        orientation: data.rotation,
+    })) {
+        println!("Failed to send stage pose to target: {:?}", res);
+    }
 }
 
 async fn collect_samples(
