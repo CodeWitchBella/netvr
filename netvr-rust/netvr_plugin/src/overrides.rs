@@ -13,8 +13,8 @@ use xr_layer::{
     log::{LogError, LogInfo, LogTrace, LogWarn},
     raw,
     safe_openxr::{self, InstanceExtensions},
-    sys::{self, ReferenceSpaceType},
-    Entry, FnPtr, UnsafeFrom, XrDebug, XrStructChain,
+    sys::{self, CompositionLayerBaseHeader, ReferenceSpaceType},
+    Entry, FnPtr, SizedArrayValueIterator, UnsafeFrom, XrDebug, XrStructChain,
 };
 
 use crate::{
@@ -1131,10 +1131,50 @@ simple_s!(begin_frame(
     session: sys::Session,
     frame_begin_info: *const sys::FrameBeginInfo,
 ));
-simple_s!(end_frame(
-    session: sys::Session,
-    frame_end_info: *const sys::FrameEndInfo,
-));
+extern "system" fn end_frame(
+    session_handle: sys::Session,
+    frame_end_info_ptr: *const sys::FrameEndInfo,
+) -> sys::Result {
+    wrap(|layer| {
+        let _span = trace_span!(stringify!(end_frame)).entered();
+        let instance = subresource_read_instance(layer, |l| &l.sessions, session_handle)?;
+        let frame_end_info = unsafe { *frame_end_info_ptr };
+
+        let Some(session) = instance.sessions.get(&session_handle) else {
+            return sys::Result::ERROR_HANDLE_INVALID.into_result();
+        };
+
+        let mut orig = vec![];
+        let layers_iter = unsafe {
+            SizedArrayValueIterator::new(frame_end_info.layer_count, frame_end_info.layers)
+        };
+        for layer in layers_iter {
+            let layer = unsafe {
+                &mut *std::mem::transmute::<
+                    *const CompositionLayerBaseHeader,
+                    *mut CompositionLayerBaseHeader,
+                >(layer)
+            };
+            orig.push(layer.space);
+            rewrite_space(session, &mut layer.space);
+        }
+        let result =
+            unsafe { (instance.fp().end_frame)(session_handle, &frame_end_info) }.into_result();
+        let layers_iter = unsafe {
+            SizedArrayValueIterator::new(frame_end_info.layer_count, frame_end_info.layers)
+        };
+        for layer in layers_iter {
+            let layer = unsafe {
+                &mut *std::mem::transmute::<
+                    *const CompositionLayerBaseHeader,
+                    *mut CompositionLayerBaseHeader,
+                >(layer)
+            };
+            layer.space = orig.pop().unwrap();
+        }
+        result
+    })
+}
 simple_s!(stop_haptic_feedback(
     session: sys::Session,
     haptic_action_info: *const sys::HapticActionInfo,

@@ -15,7 +15,9 @@ impl<T> SizedArrayValueIterator<T>
 where
     T: Copy,
 {
-    pub(crate) unsafe fn new(count: u32, ptr: *const T) -> Self {
+    /// # Safety
+    /// `ptr` must be a valid pointer to `count` elements of type `T`.
+    pub unsafe fn new(count: u32, ptr: *const T) -> Self {
         Self { count, ptr }
     }
 }
