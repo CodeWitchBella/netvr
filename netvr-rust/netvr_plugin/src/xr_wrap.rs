@@ -1,16 +1,15 @@
 use core::ffi::FromBytesUntilNulError;
-#[cfg(not(target_os = "android"))]
-use std::sync::{Arc, Mutex};
-use std::{alloc::LayoutError, panic, sync::PoisonError};
+use std::{
+    alloc::LayoutError,
+    panic,
+    sync::{Arc, Mutex, PoisonError},
+};
 
 use netvr_data::bincode;
 use thiserror::Error;
 use tracing::{dispatcher, span::EnteredSpan, Dispatch, Level, Span};
-#[cfg(not(target_os = "android"))]
 use tracing_chrome::{ChromeLayerBuilder, FlushGuard};
-#[cfg(not(target_os = "android"))]
-use tracing_subscriber::prelude::*;
-use tracing_subscriber::FmtSubscriber;
+use tracing_subscriber::{prelude::*, FmtSubscriber};
 use xr_layer::{
     log::{LogError, LogPanic},
     sys,
@@ -136,8 +135,7 @@ where
 #[derive(Clone)]
 pub(crate) struct Trace {
     pub(self) dispatch: tracing::Dispatch,
-    #[cfg(not(target_os = "android"))]
-    pub(self) _flush_guard: Arc<Mutex<FlushGuard>>,
+    pub(self) _flush_guard: Arc<Option<Mutex<FlushGuard>>>,
 }
 
 impl Trace {
@@ -149,7 +147,11 @@ impl Trace {
             // completes the builder.
             .finish();
         #[cfg(not(target_os = "android"))]
-        {
+        let write_trace = false;
+        #[cfg(target_os = "android")]
+        let write_trace = false;
+
+        if write_trace {
             let (chrome_layer, trace_flush_guard) = ChromeLayerBuilder::new()
                 .include_args(true)
                 //.trace_style(tracing_chrome::TraceStyle::Async)
@@ -166,13 +168,13 @@ impl Trace {
             let dispatch = Dispatch::new(subscriber.with(chrome_layer));
             Self {
                 dispatch,
-                _flush_guard: Arc::new(Mutex::new(trace_flush_guard)),
+                _flush_guard: Arc::new(Some(Mutex::new(trace_flush_guard))),
             }
-        }
-
-        #[cfg(target_os = "android")]
-        Self {
-            dispatch: Dispatch::new(subscriber),
+        } else {
+            Self {
+                dispatch: Dispatch::new(subscriber),
+                _flush_guard: Arc::new(None),
+            }
         }
     }
 
