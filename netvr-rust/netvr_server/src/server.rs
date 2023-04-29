@@ -136,6 +136,15 @@ impl Server {
             .cloned()
     }
 
+    pub async fn get_clients(&self) -> Vec<(u32, Client)> {
+        self.clients
+            .lock()
+            .await
+            .iter()
+            .map(|(k, v)| (k.to_owned(), v.to_owned()))
+            .collect()
+    }
+
     #[allow(dead_code)]
     pub async fn get_client(&self, id: ClientId) -> Option<Client> {
         self.clients.lock().await.get(&id).cloned()

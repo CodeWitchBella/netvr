@@ -1,62 +1,37 @@
 // @ts-nocheck
 import { notNull } from '@isbl/ts-utils'
 import { useState } from 'react'
-import {
-  ClientBinaryData,
-  mapData,
-  ConfigurationSnapshotSet,
-} from '../protocol/data'
 import * as sentMessages from '../protocol/sent-messages'
+import { DatagramState } from './merge-data'
 
 type Props = {
-  clients: readonly ClientBinaryData[]
-  serverState: ConfigurationSnapshotSet
-  sendMessage: (message: any) => void
+  state: DatagramState
+  sendMessage: sentMessages.SendMessage
 }
 
-export function useSyncClientsByHeadset({
-  clients,
-  serverState,
-  sendMessage,
-}: Props) {
+export function useSyncClientsByHeadset({ state, sendMessage }: Props) {
   const [message, setMessage] = useState('')
   return { onClick: syncClientsByHeadset, message }
 
   function syncClientsByHeadset() {
     setMessage('')
-    const headsets = clients
-      .map((c) => {
+    const headsets = Object.entries(state)
+      .map(([clientId, c]) => {
         console.log(c)
-        const headInfo = serverState.clients[c.clientId]?.devices?.find(
-          (d) =>
-            d.characteristics.includes('HeadMounted') &&
-            d.characteristics.includes('TrackedDevice'),
-        )
-        if (!headInfo) return null
-        const headData = c.devices.find((d) => d.deviceId === headInfo.localId)
-        if (!headData) return null
-        const data = mapData(headData, headInfo).data
+
+        const data = c.snapshot
         const posRotMask = 3 /* position 1 | rotation 2 */
         if (
-          data.trackingState &&
-          (data.trackingState.value & posRotMask) !== posRotMask
+          data.view.position &&
+          data.view.orientation &&
+          (data.view.position.x !== 0 ||
+            data.view.position.z !== 0 ||
+            data.view.orientation.y !== 0)
         ) {
-          // tracking state is available but either position or rotation
-          // is not being tracked
-          return null
-        }
-        if (data.centerEyeRotation && data.centerEyePosition) {
           return {
-            clientId: c.clientId,
-            position: data.centerEyePosition.value,
-            rotation: data.centerEyeRotation.value,
-          }
-        }
-        if (data.deviceRotation && data.devicePosition) {
-          return {
-            clientId: c.clientId,
-            position: data.devicePosition.value,
-            rotation: data.deviceRotation.value,
+            clientId: clientId,
+            position: data.view.position,
+            rotation: data.view.orientation,
           }
         }
         return null
@@ -67,6 +42,7 @@ export function useSyncClientsByHeadset({
       setMessage('Not enough tracked headsets')
       return
     }
+    sendMessage({ type: 'CalibrateByHeadsetPosition' })
     sendMessage(
       sentMessages.setCalibration(
         headsets.map((headset) => {

@@ -21,7 +21,7 @@ use warp::{
 
 use crate::{
     calibration_protocol::{
-        CalibrationProtocolMessage::{Begin, Reapply},
+        CalibrationProtocolMessage::{Begin, ByHeadset, Reapply},
         CalibrationSender,
     },
     server::Server,
@@ -174,16 +174,16 @@ async fn dashboard_receive(
         match val {
             DashboardMessageRecv::MoveSomeClients => {
                 if let Some(client) = server.get_first_client().await {
-                    if let Err(err) = client.send_configuration_down(ConfigurationDown::StagePose(
-                        netvr_data::Pose {
+                    if let Err(err) = client.send_configuration_down(
+                        ConfigurationDown::SetServerSpacePose(netvr_data::Pose {
                             position: netvr_data::Vec3 {
                                 x: 0.,
                                 y: 0.,
                                 z: 1.,
                             },
                             orientation: netvr_data::Quaternion::default(),
-                        },
-                    )) {
+                        }),
+                    ) {
                         println!("Failed to send configuration down: {}", err);
                     }
                 } else {
@@ -231,16 +231,18 @@ async fn dashboard_receive(
                 }
             }
             DashboardMessageRecv::CalibrateByHeadsetPosition => {
-                println!("TODO: sync by head position")
+                if let Err(err) = calibration_sender.send(ByHeadset) {
+                    println!("Failed to send by headset calibration request: {}", err);
+                }
             }
             DashboardMessageRecv::ResetCalibration { client_id } => {
                 if let Some(client) = server.get_client(client_id).await {
-                    if let Err(err) = client.send_configuration_down(ConfigurationDown::StagePose(
-                        netvr_data::Pose {
+                    if let Err(err) = client.send_configuration_down(
+                        ConfigurationDown::SetServerSpacePose(netvr_data::Pose {
                             position: netvr_data::Vec3::default(),
                             orientation: netvr_data::Quaternion::default(),
-                        },
-                    )) {
+                        }),
+                    ) {
                         println!("Failed to send configuration down: {}", err);
                     }
                 } else {

@@ -1,16 +1,26 @@
-use std::{fs::File, io::Write, time::SystemTime, vec};
+use std::{
+    fs::File,
+    io::Write,
+    time::{Duration, SystemTime},
+    vec,
+};
 
 use anyhow::{anyhow, Result};
 use chrono::{DateTime, Utc};
-use netvr_calibrate::CalibrationInput;
+use netvr_calibrate::{invert_y_rotation, CalibrationInput};
 use netvr_data::{
     net::{
-        CalibrationConfiguration, CalibrationSample, ClientId,
-        ConfigurationDown::{StagePose, StopCalibration, TriggerCalibration},
+        BaseSpace, CalibrationConfiguration, CalibrationSample, ClientId,
+        ConfigurationDown::{
+            RequestSample, SetServerSpacePose, StopCalibration, TriggerCalibration,
+        },
     },
-    Pose,
+    Pose, Vec3,
 };
-use tokio::sync::{broadcast, mpsc};
+use tokio::{
+    select,
+    sync::{broadcast, mpsc},
+};
 
 use self::CalibrationProtocolMessage::*;
 use crate::{client::Client, dashboard::DashboardMessage, server::Server};
@@ -37,6 +47,7 @@ pub(crate) enum CalibrationProtocolMessage {
         client_reference: (ClientId, String),
         data: CalibrationInput,
     },
+    ByHeadset,
 }
 
 impl CalibrationProtocol {
@@ -76,6 +87,15 @@ async fn run(
                 let Some(client_target) = server.get_client(client_target.0).await else { continue; };
                 let Some(client_reference) = server.get_client(client_reference.0).await else { continue; };
                 finish(tx.clone(), data, &client_target, &client_reference).await;
+                continue;
+            }
+            ByHeadset => {
+                let clients = server.get_clients().await;
+                match calibrate_by_headset(clients, &mut recv).await {
+                    Ok(_) => println!("Calibrated by headset"),
+                    Err(err) => println!("Failed to calibrate by headset: {:?}", err),
+                }
+
                 continue;
             }
         };
@@ -170,6 +190,44 @@ async fn run(
     Ok(())
 }
 
+async fn calibrate_by_headset(
+    clients: Vec<(u32, Client)>,
+    recv: &mut mpsc::UnboundedReceiver<CalibrationProtocolMessage>,
+) -> Result<()> {
+    for (client_id, client) in clients {
+        client
+            .send_configuration_down(RequestSample("/user/head".to_string(), BaseSpace::Stage))?;
+        let Some(sample) = select!(
+            sample = recv_sample(client_id, recv) => sample,
+            _ = tokio::time::sleep(Duration::from_secs(1)) => None,
+        ) else { continue; };
+        client.send_configuration_down(SetServerSpacePose(Pose {
+            position: Vec3 {
+                y: 0.0,
+                ..sample.pose.position
+            },
+            orientation: invert_y_rotation(sample.pose.orientation),
+        }))?;
+    }
+    Ok(())
+}
+
+async fn recv_sample(
+    client_id: ClientId,
+    recv: &mut mpsc::UnboundedReceiver<CalibrationProtocolMessage>,
+) -> Option<CalibrationSample> {
+    loop {
+        let message = recv.recv().await;
+        let Some(message) = message else { break; };
+        if let CalibrationProtocolMessage::Sample { client, sample } = message {
+            if client == client_id {
+                return Some(sample);
+            }
+        };
+    }
+    None
+}
+
 async fn finish(
     tx: broadcast::Sender<DashboardMessage>,
     input: CalibrationInput,
@@ -181,9 +239,8 @@ async fn finish(
     let _ = tx.send(DashboardMessage::Info {
         message: format!("Calibration finished: {:?}", result),
     });
-    let Ok(data) = result else { return;
-    };
-    if let Err(res) = target.send_configuration_down(StagePose(Pose {
+    let Ok(data) = result else { return; };
+    if let Err(res) = target.send_configuration_down(SetServerSpacePose(Pose {
         position: netvr_data::Vec3 {
             x: data.translation.x,
             y: data.translation.y,

@@ -116,12 +116,20 @@ impl Session {
             }
         }
 
+        for client_id in merged.clients.keys().cloned().collect::<Vec<_>>() {
+            if !config.clients.contains_key(&client_id) {
+                merged.clients.remove(&client_id);
+            }
+        }
+
         for (client_id, client) in &mut merged.clients {
             let old_config = client.configuration.clone();
             let old_state = client.state.clone();
 
             let new_config = config.clients[client_id].clone();
-            let new_state = state.clients[client_id].clone();
+            let new_state = state.clients.get(client_id).cloned();
+
+            let Some(new_state) = new_state else { continue; };
 
             #[allow(clippy::comparison_chain)]
             if old_config.version == new_config.version {
