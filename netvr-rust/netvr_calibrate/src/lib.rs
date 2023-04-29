@@ -334,7 +334,7 @@ pub fn calibrate(samples: &CalibrationInput) -> Result<CalibrationResult> {
 pub fn invert_y_rotation(quat: netvr_data::Quaternion) -> netvr_data::Quaternion {
     let quat = convert_quaternion(quat);
     let euler = quat.euler_angles();
-    let quat = UnitQuaternion::from_euler_angles(0.0, euler.1, 0.0).cast::<f32>();
+    let quat = UnitQuaternion::from_euler_angles(0.0, -euler.1, 0.0).cast::<f32>();
 
     netvr_data::Quaternion {
         x: quat.i,
