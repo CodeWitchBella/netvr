@@ -19,13 +19,17 @@ export function QuickActionsPane(props: {
         >
           Sync Devices by headset position
         </Button>
-      </div>
-      <div>
         <Button
           type="button"
           onClick={() => void sendMessage({ type: 'MoveSomeClients' })}
         >
           Move some clients
+        </Button>
+        <Button
+          type="button"
+          onClick={() => void sendMessage({ type: 'ResetAllCalibrations' })}
+        >
+          Reset all calibrations
         </Button>
       </div>
       <form

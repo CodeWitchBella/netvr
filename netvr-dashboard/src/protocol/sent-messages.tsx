@@ -9,6 +9,7 @@ export type DashboardMessageUp =
         | 'KeepAlive'
         | 'Init'
         | 'CalibrateByHeadsetPosition'
+        | 'ResetAllCalibrations'
     }
   | { type: 'ResetCalibration'; clientId: ClientId }
   | {

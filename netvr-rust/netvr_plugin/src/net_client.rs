@@ -447,7 +447,7 @@ fn collect_state(
 fn collect_state_impl(instance: &Instance, session: &Session) -> Option<StateSnapshot> {
     let time = instance.instance.now().ok()?;
     let space_server = session.space_server.read().ok()?;
-    let location = session.space_view.locate(&space_server, time).ok()?;
+    let view_location = session.space_view.locate(&space_server, time).ok()?;
     let active_profiles = session.active_interaction_profiles.read().ok()?;
     let conf = session.local_configuration.borrow();
     // TODO: collect full state
@@ -481,7 +481,7 @@ fn collect_state_impl(instance: &Instance, session: &Session) -> Option<StateSna
 
     Some(StateSnapshot {
         controllers,
-        view: location.pose.into(),
+        view: view_location.pose.into(),
         required_configuration: conf.version,
     })
 }

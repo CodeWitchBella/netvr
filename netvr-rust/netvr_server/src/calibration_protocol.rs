@@ -206,7 +206,7 @@ async fn calibrate_by_headset(
                 y: 0.0,
                 ..sample.pose.position
             },
-            orientation: invert_y_rotation(sample.pose.orientation),
+            orientation: sample.pose.orientation,
         }))?;
     }
     Ok(())

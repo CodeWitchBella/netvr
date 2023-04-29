@@ -62,6 +62,7 @@ pub(crate) enum DashboardMessage {
 #[serde(tag = "type")]
 pub(crate) enum DashboardMessageRecv {
     MoveSomeClients,
+    ResetAllCalibrations,
     KeepAlive,
     Init,
     CalibrateByHeadsetPosition,
@@ -188,6 +189,16 @@ async fn dashboard_receive(
                     }
                 } else {
                     println!("... no clients");
+                }
+            }
+            DashboardMessageRecv::ResetAllCalibrations => {
+                let clients = server.get_clients().await;
+                for (_client_id, client) in clients {
+                    if let Err(err) = client.send_configuration_down(
+                        ConfigurationDown::SetServerSpacePose(Default::default()),
+                    ) {
+                        println!("Failed to reset calibration: {}", err);
+                    }
                 }
             }
             DashboardMessageRecv::KeepAlive => {}
