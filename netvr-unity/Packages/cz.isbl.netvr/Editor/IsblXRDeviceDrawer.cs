@@ -51,6 +51,8 @@ namespace Isbl.NetVR.Editor
             else
             {
                 DrawField("Id", device.Id);
+                DrawField("Interaction Profile", device.InteractionProfile);
+                DrawField("Subaction Path", device.SubactionPath);
             }
             return result;
         }

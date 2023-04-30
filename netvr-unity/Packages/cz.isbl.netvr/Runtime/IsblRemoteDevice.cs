@@ -11,8 +11,8 @@ namespace Isbl.NetVR
     public class IsblRemoteDevice : MonoBehaviour
     {
         public UInt32 Id { get; internal set; }
-        public string InteractionProfile;
-        public string SubactionPath;
+        public string InteractionProfile { get; internal set; }
+        public string SubactionPath { get; internal set; }
 
 #if UNITY_EDITOR
     public class SelfPropertyAttribute : PropertyAttribute { };

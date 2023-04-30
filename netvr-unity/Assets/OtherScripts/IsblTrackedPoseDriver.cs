@@ -59,7 +59,7 @@ public class IsblTrackedPoseDriver : MonoBehaviour
         OnDeviceDisconnected?.Invoke(this);
     }
 
-    static async Task<GltfImport> LoadModel(IsblDeviceModel info, string controllerName)
+    static internal async Task<GltfImport> LoadModel(IsblDeviceModel info, string controllerName)
     {
         if (info == null)
         {
