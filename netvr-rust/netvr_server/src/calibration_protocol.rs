@@ -7,7 +7,7 @@ use std::{
 
 use anyhow::{anyhow, Result};
 use chrono::{DateTime, Utc};
-use netvr_calibrate::{invert_y_rotation, CalibrationInput};
+use netvr_calibrate::CalibrationInput;
 use netvr_data::{
     net::{
         BaseSpace, CalibrationConfiguration, CalibrationSample, ClientId,
@@ -106,18 +106,22 @@ async fn run(
 
         let Some(client_target) = server.get_client(client_target.0).await else { continue; };
         let Some(client_reference) = server.get_client(client_reference.0).await else { continue; };
-        if let Err(err) =
-            client_target.send_configuration_down(TriggerCalibration(client_target_path, conf))
-        {
+        if let Err(err) = client_target.send_configuration_down(TriggerCalibration(
+            client_target_path,
+            conf,
+            BaseSpace::Stage,
+        )) {
             println!(
                 "Failed to send trigger calibration to client {:?}: {:?}",
                 client_target_id, err
             );
             continue;
         }
-        if let Err(err) = client_reference
-            .send_configuration_down(TriggerCalibration(client_reference_path, conf))
-        {
+        if let Err(err) = client_reference.send_configuration_down(TriggerCalibration(
+            client_reference_path,
+            conf,
+            BaseSpace::Server,
+        )) {
             println!(
                 "Failed to send trigger calibration to client {:?}: {:?}",
                 client_reference_id, err

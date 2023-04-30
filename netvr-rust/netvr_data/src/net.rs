@@ -33,7 +33,7 @@ pub enum BaseSpace {
 pub enum ConfigurationDown {
     Snapshot(ConfigurationSnapshotSet),
     SetServerSpacePose(Pose),
-    TriggerCalibration(String, CalibrationConfiguration),
+    TriggerCalibration(String, CalibrationConfiguration, BaseSpace),
     RequestSample(String, BaseSpace),
     StopCalibration,
     ChangeName(String),
@@ -127,7 +127,6 @@ pub struct CalibrationSample {
 pub struct CalibrationConfiguration {
     pub sample_count: usize,
     pub sample_interval_nanos: i64,
-    pub base_space: BaseSpace,
 }
 
 pub type ClientId = u32;

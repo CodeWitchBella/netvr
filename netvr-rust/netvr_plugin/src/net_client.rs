@@ -31,7 +31,7 @@ macro_rules! map_err {
 
 #[derive(Debug)]
 enum CalibrationTrigger {
-    Start(String, CalibrationConfiguration),
+    Start(String, CalibrationConfiguration, BaseSpace),
     RequestSample(String, BaseSpace),
     Stop,
 }
@@ -185,7 +185,7 @@ async fn run_calibration_sender(
             continue;
         }
 
-        let CalibrationTrigger::Start(subaction_path, conf) = trigger else { continue; };
+        let CalibrationTrigger::Start(subaction_path, conf, base_space) = trigger else { continue; };
         let duration = std::time::Duration::from_nanos(u64::try_from(conf.sample_interval_nanos)?);
         let duration_nanos = i64::try_from(duration.as_nanos())?;
         let mut interval = time::interval(duration);
@@ -200,7 +200,7 @@ async fn run_calibration_sender(
                     subaction_path.as_str(),
                     sample_time,
                     prev_time,
-                    conf.base_space,
+                    base_space,
                 )?)
                 .await?;
             prev_time = Some(sample_time);
@@ -393,9 +393,9 @@ async fn run_receive_configuration(
                     ))
                     .await?;
             }
-            net::ConfigurationDown::TriggerCalibration(value, conf) => {
+            net::ConfigurationDown::TriggerCalibration(value, conf, base_space) => {
                 calibration_trigger
-                    .send(CalibrationTrigger::Start(value, conf))
+                    .send(CalibrationTrigger::Start(value, conf, base_space))
                     .await?;
             }
             net::ConfigurationDown::StopCalibration => {
