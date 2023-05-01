@@ -1,18 +1,14 @@
-use std::{
-    collections::{HashMap, HashSet},
-    ptr,
-    time::Duration,
-};
+use std::{collections::HashSet, ptr, time::Duration};
 
 use anyhow::{anyhow, Result};
 use netvr_data::{
-    app::{AppDatagramUp::SetPose, AppUp},
+    app::{AppDatagramUp::SetPose, AppDown, AppUp},
     bincode,
     net::{
         self, ActionType, BaseSpace, CalibrationConfiguration, CalibrationSample, ConfigurationUp,
         DatagramDown, DatagramUp, StateSnapshot,
     },
-    Pose, SendFrames,
+    RecvFrames, SendFrames,
 };
 use tokio::{select, spawn, sync::mpsc, time};
 use xr_layer::{
@@ -93,6 +89,7 @@ pub(crate) async fn run_net_client(
         connection.app_up_stream,
         connection.connection.clone(),
     );
+    let recv_app = run_recv_app(instance_handle, session_handle, connection.app_down_stream);
     select! {
         value = transmit_conf => value,
         value = transmit_snap => value,
@@ -100,6 +97,33 @@ pub(crate) async fn run_net_client(
         value = recv_conf => value,
         value = calibration_sender => value?,
         value = send_app => value,
+        value = recv_app => value,
+    }
+}
+
+async fn run_recv_app(
+    instance_handle: sys::Instance,
+    session_handle: sys::Session,
+    mut app_down: RecvFrames<AppDown>,
+) -> Result<()> {
+    loop {
+        let message = app_down.read().await?;
+        match message {
+            AppDown::Release(object_id) => {
+                with_layer(instance_handle, |instance| {
+                    let session = instance
+                        .sessions
+                        .get(&session_handle)
+                        .ok_or(anyhow!("Failed to read session from instance"))?;
+                    let mut local_app_overrides = session
+                        .local_app_overrides
+                        .write()
+                        .map_err(|err| anyhow!("Failed to read grabbed: {:?}", err))?;
+                    local_app_overrides.remove(&usize::try_from(object_id)?);
+                    Ok(())
+                })?;
+            }
+        }
     }
 }
 

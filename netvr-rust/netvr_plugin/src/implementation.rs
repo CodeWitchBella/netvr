@@ -1,3 +1,5 @@
+use std::collections::hash_map::Entry::Occupied;
+
 use anyhow::{anyhow, Result};
 use netvr_data::{
     app, GrabInput, InitRemoteObjectsInput, InstanceAndSession, Nothing, ReadRemoteDevicesOutput,
@@ -133,12 +135,27 @@ pub(crate) fn grab(input: GrabInput) -> Result<Nothing> {
             .sessions
             .get(&input.session)
             .ok_or(anyhow!("Session not found"))?;
-        let mut lock = session
+        let pose = {
+            session
+                .remote_app_state
+                .read()
+                .map_err(|err| anyhow!("{:?}", err))?
+                .objects
+                .get(usize::try_from(input.object_id)?)
+                .ok_or(anyhow!("Object not found"))?
+                .clone()
+        };
+        let mut grabbed = session
             .grabbed
             .write()
             .map_err(|err| anyhow!("{:?}", err))?;
         LogTrace::string(format!("grab {:?}", input.object_id));
-        lock.insert(input.object_id);
+        grabbed.insert(input.object_id);
+        let mut local_app_overrides = session
+            .local_app_overrides
+            .write()
+            .map_err(|err| anyhow!("{:?}", err))?;
+        local_app_overrides.insert(usize::try_from(input.object_id)?, pose);
         Ok(Nothing::default())
     })
 }
@@ -149,12 +166,12 @@ pub(crate) fn release(input: GrabInput) -> Result<Nothing> {
             .sessions
             .get(&input.session)
             .ok_or(anyhow!("Session not found"))?;
-        let mut lock = session
+        let mut local_app_overrides = session
             .local_app_overrides
             .write()
             .map_err(|err| anyhow!("{:?}", err))?;
         LogTrace::string(format!("release {:?}", input.object_id));
-        lock.remove(&usize::try_from(input.object_id)?);
+        local_app_overrides.remove(&usize::try_from(input.object_id)?);
         Ok(Nothing::default())
     })
 }
@@ -165,7 +182,7 @@ pub(crate) fn object_set_pose(input: SetPoseInput) -> Result<Nothing> {
             .sessions
             .get(&input.session)
             .ok_or(anyhow!("Session not found"))?;
-        let mut lock = session
+        let mut local_app_overrides = session
             .local_app_overrides
             .write()
             .map_err(|err| anyhow!("{:?}", err))?;
@@ -173,7 +190,9 @@ pub(crate) fn object_set_pose(input: SetPoseInput) -> Result<Nothing> {
             "object_set_pose {:?} {:?}",
             input.object_id, input.pose
         ));
-        lock.insert(usize::try_from(input.object_id)?, input.pose);
+        if let Occupied(mut e) = local_app_overrides.entry(usize::try_from(input.object_id)?) {
+            e.insert(input.pose);
+        }
         Ok(Nothing::default())
     })
 }
