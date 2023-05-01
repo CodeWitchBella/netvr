@@ -7,7 +7,7 @@ use std::{
 
 use anyhow::{anyhow, Result};
 use chrono::{DateTime, Utc};
-use netvr_calibrate::CalibrationInput;
+use netvr_calibrate::{invert_quaternion, rotate_vector, CalibrationInput};
 use netvr_data::{
     net::{
         BaseSpace, CalibrationConfiguration, CalibrationSample, ClientId,
@@ -72,6 +72,7 @@ async fn run(
 ) -> Result<()> {
     loop {
         let Some(instruction) = recv.recv().await else { break; };
+        println!("Received calibration instruction {:?}", instruction);
         let (client_target, client_reference, conf) = match instruction {
             Begin {
                 client_target,
@@ -191,6 +192,7 @@ async fn run(
         };
         finish(tx.clone(), calibration, &client_target, &client_reference).await;
     }
+    println!("Calibration protocol stopped");
     Ok(())
 }
 
@@ -245,12 +247,15 @@ async fn finish(
     });
     let Ok(data) = result else { return; };
     if let Err(res) = target.send_configuration_down(SetServerSpacePose(Pose {
-        position: netvr_data::Vec3 {
-            x: data.translation.x,
-            y: data.translation.y,
-            z: data.translation.z,
-        },
-        orientation: data.rotation,
+        position: rotate_vector(
+            Vec3 {
+                x: -data.translation.x,
+                y: -data.translation.y,
+                z: -data.translation.z,
+            },
+            invert_quaternion(data.rotation.clone()),
+        ),
+        orientation: invert_quaternion(data.rotation),
     })) {
         println!("Failed to send stage pose to target: {:?}", res);
     }

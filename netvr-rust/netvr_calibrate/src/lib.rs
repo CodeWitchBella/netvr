@@ -343,3 +343,29 @@ pub fn invert_y_rotation(quat: netvr_data::Quaternion) -> netvr_data::Quaternion
         w: quat.w,
     }
 }
+
+pub fn invert_quaternion(quat: netvr_data::Quaternion) -> netvr_data::Quaternion {
+    let quat = convert_quaternion(quat);
+    let quat = quat.inverse();
+    let quat = quat.cast::<f32>();
+
+    netvr_data::Quaternion {
+        x: quat.i,
+        y: quat.j,
+        z: quat.k,
+        w: quat.w,
+    }
+}
+
+pub fn rotate_vector(vec3: netvr_data::Vec3, quat: netvr_data::Quaternion) -> netvr_data::Vec3 {
+    let quat = convert_quaternion(quat);
+    let vec3 = convert_vector(vec3);
+    let vec3 = quat * vec3;
+    let vec3 = vec3.cast::<f32>();
+
+    netvr_data::Vec3 {
+        x: vec3.x,
+        y: vec3.y,
+        z: vec3.z,
+    }
+}
