@@ -8,6 +8,7 @@ use std::{
 
 use error::Error;
 use netvr_data::{
+    app::{AppDown, AppUp},
     bincode,
     net::{self, CalibrationSample, ConfigurationDown, ConfigurationUp, Heartbeat},
     RecvFrames, SendFrames,
@@ -24,6 +25,8 @@ pub struct NetVRConnection {
     pub configuration_up: SendFrames<ConfigurationUp>,
     pub configuration_down: RecvFrames<ConfigurationDown>,
     pub calibration_up: SendFrames<CalibrationSample>,
+    pub app_up_stream: SendFrames<AppUp>,
+    pub app_down_stream: RecvFrames<AppDown>,
 }
 
 /// Performs server discovery and returns a socket bound to correct address and
@@ -78,6 +81,10 @@ async fn setup_connection(
     log("Configuration down channel opened.".to_string());
     let calibration_up = SendFrames::open(&connection, b"calibrat").await?;
     log("Calibration up channel opened.".to_string());
+    let app_up_stream: SendFrames<AppUp> = SendFrames::open(&connection, b"app_up__").await?;
+    log("App up channel opened.".to_string());
+    let app_down_stream: RecvFrames<AppDown> = RecvFrames::open(&connection, b"app_down").await?;
+    log("App down channel opened.".to_string());
 
     log("Channels opened.".to_string());
 
@@ -88,5 +95,7 @@ async fn setup_connection(
         configuration_up,
         configuration_down,
         calibration_up,
+        app_up_stream,
+        app_down_stream,
     })
 }

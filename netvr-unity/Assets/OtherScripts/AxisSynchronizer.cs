@@ -12,7 +12,7 @@ public class AxisSynchronizer : MonoBehaviour
     {
         _min = transform.parent.Find(gameObject.name.Replace("_value", "_min"));
         _max = transform.parent.Find(gameObject.name.Replace("_value", "_max"));
-        _meshRenderer = FindObjectOfType<MeshRenderer>();
+        _meshRenderer = transform.GetComponentInChildren<MeshRenderer>();
     }
 
     void Update()

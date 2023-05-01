@@ -45,6 +45,7 @@ impl<T: serde::de::DeserializeOwned> RecvFrames<T> {
         })
     }
 
+    // todo rename to recv
     pub async fn read(&mut self) -> Result<T, FramingError> {
         let mut buf = [0u8; 8];
         self.inner.read_exact(&mut buf).await?;

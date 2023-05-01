@@ -2,7 +2,12 @@ use std::sync::Arc;
 
 use anyhow::Result;
 use calibration_protocol::CalibrationProtocol;
-use tokio::{net::UdpSocket, spawn, sync::broadcast};
+use netvr_data::net::DatagramDown;
+use tokio::{
+    net::UdpSocket,
+    spawn,
+    sync::{broadcast, mpsc},
+};
 
 use crate::{
     accept_connection::accept_connection,
@@ -14,6 +19,7 @@ use crate::{
 };
 
 mod accept_connection;
+mod app;
 mod calibration_protocol;
 mod client;
 mod dashboard;
@@ -35,6 +41,7 @@ async fn main() -> Result<()> {
     let discovery_server = init_discovery_server().await?;
     let discovery = spawn(run_discovery_server(server_udp.clone(), discovery_server));
     let server = Server::start().await;
+    let (mut app, app_channel) = app::AppServer::start(server.clone());
     let dashboard = spawn(serve_dashboard(
         dashboard_tx.clone(),
         server.clone(),
@@ -48,6 +55,7 @@ async fn main() -> Result<()> {
             if let Some(connecting) = endpoint.accept().await {
                 let dashboard_tx = dashboard_tx.clone();
                 let server = server.clone();
+                let app_channel = app_channel.clone();
                 id_generator += 1;
                 spawn(accept_connection(
                     connecting,
@@ -55,6 +63,7 @@ async fn main() -> Result<()> {
                     dashboard_tx,
                     id_generator,
                     calibration_sender.clone(),
+                    app_channel,
                 ));
             }
         }
@@ -67,6 +76,14 @@ async fn main() -> Result<()> {
         }
     });
 
+    let app_task = spawn(async move {
+        match app.run().await {
+            Ok(_) => (),
+            Err(e) => println!("AppServer error: {:?}", e),
+        }
+    });
+
+    app_task.await?;
     calibration.await?;
     dashboard.await?;
     discovery.await?;

@@ -9,7 +9,7 @@ sealed class IsblDeviceModel
         LEFT, RIGHT, BOTH
     }
 
-    IsblDeviceModel(string name, string dir, string file, string interactionProfile, InputDeviceCharacteristics requiredCharacteristics = InputDeviceCharacteristics.None, Vector3? position = null, Vector3? rotation = null, float? scale = null, string rootNode = "", string folder = "Controllers", Vector3? positionOffset = null)
+    IsblDeviceModel(string name, string dir, string file, string interactionProfile, InputDeviceCharacteristics requiredCharacteristics = InputDeviceCharacteristics.None, Vector3? position = null, Vector3? rotation = null, float? scale = null, string rootNode = "", string folder = "Controllers", Vector3? positionOffset = null, Vector3? grabPoint = null)
     {
         Name = name;
         RequiredCharacteristics = requiredCharacteristics;
@@ -20,6 +20,7 @@ sealed class IsblDeviceModel
         Rotation = rotation;
         Scale = scale;
         RootNode = rootNode;
+        GrabPoint = grabPoint ?? Vector3.zero;
     }
     public Vector3? Position { get; }
     public Vector3 PositionOffset { get; }
@@ -30,6 +31,7 @@ sealed class IsblDeviceModel
     public InputDeviceCharacteristics RequiredCharacteristics { get; }
     public string RootNode { get; }
     public string InteractionProfile { get; }
+    public Vector3 GrabPoint { get; }
 
     static IsblDeviceModel[] _database;
 
@@ -61,11 +63,13 @@ sealed class IsblDeviceModel
                     "/interaction_profiles/valve/index_controller",
                     requiredCharacteristics: InputDeviceCharacteristics.Left,
                     positionOffset: new Vector3(0, 0, 0.0246f),
+                    grabPoint: new Vector3(0.00939999986f,-0.0472000018f,0.116099998f),
                     rootNode: "valve_index_left"),
                 new IsblDeviceModel("Index Controller OpenXR", "valve-index", "right.glb",
                     "/interaction_profiles/valve/index_controller",
                     requiredCharacteristics: InputDeviceCharacteristics.Right,
                     positionOffset: new Vector3(0, 0, 0.0246f),
+                    grabPoint: new Vector3(-0.00939999986f,-0.0472000018f,0.116099998f),
                     rootNode: "valve_index_right"),
                 new IsblDeviceModel("Head Tracking - OpenXR", "htc-vive", "headset.glb",
                     "generic_hmd",

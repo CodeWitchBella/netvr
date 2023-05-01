@@ -5,7 +5,10 @@ extern crate lazy_static;
 
 use std::{backtrace::Backtrace, panic};
 
-use implementation::{read_remote_devices, start};
+use implementation::{
+    grab, init_remote_objects, object_set_pose, read_remote_devices, read_remote_objects, release,
+    start,
+};
 use xr_layer::{
     log::{self, LogPanic},
     pfn,
@@ -70,4 +73,9 @@ pub use bincode_abi::netvr_cleanup;
 bincode_expose!(
     expose read_remote_devices as ReadRemoteDevices taking InstanceAndSession and outputting ReadRemoteDevicesOutput,
     expose start as Start taking StartInput and outputting Nothing,
+    expose read_remote_objects as ReadRemoteObjects taking InstanceAndSession and outputting Snapshot,
+    expose init_remote_objects as InitRemoteObjects taking InitRemoteObjectsInput and outputting Nothing,
+    expose grab as Grab taking GrabInput and outputting Nothing,
+    expose release as Release taking GrabInput and outputting Nothing,
+    expose object_set_pose as ObjectSetPose taking SetPoseInput and outputting Nothing,
 );

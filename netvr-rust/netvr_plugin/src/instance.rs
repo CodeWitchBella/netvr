@@ -6,8 +6,9 @@ use std::{
 
 use anyhow::{anyhow, Result};
 use netvr_data::{
+    app,
     net::{self, ConfigurationSnapshotSet, RemoteStateSnapshotSet},
-    RemoteSnapshot,
+    Pose, RemoteSnapshot,
 };
 use tokio::sync::watch;
 use tokio_util::sync::CancellationToken;
@@ -42,6 +43,10 @@ pub(crate) struct Session {
     /// available to the application.
     pub(crate) remote_state: Arc<RwLock<RemoteStateSnapshotSet>>,
     pub(crate) remote_configuration: Arc<RwLock<ConfigurationSnapshotSet>>,
+
+    pub(crate) remote_app_state: Arc<RwLock<app::Snapshot>>,
+    pub(crate) local_app_overrides: Arc<RwLock<HashMap<usize, Pose>>>,
+    pub(crate) grabbed: Arc<RwLock<HashSet<u32>>>,
 
     pub(crate) remote_merged: Arc<RwLock<RemoteSnapshot>>,
     _span: Span,
@@ -81,6 +86,11 @@ impl Session {
             remote_state: Arc::default(),
             remote_configuration: Arc::default(),
             remote_merged: Arc::default(),
+
+            remote_app_state: Arc::default(),
+            local_app_overrides: Arc::default(),
+            grabbed: Arc::default(),
+
             _span: trace.wrap(|| span!(Level::TRACE, "Instance")),
         })
     }

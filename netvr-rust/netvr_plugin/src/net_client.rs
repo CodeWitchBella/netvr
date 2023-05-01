@@ -1,13 +1,18 @@
-use std::ptr;
+use std::{
+    collections::{HashMap, HashSet},
+    ptr,
+    time::Duration,
+};
 
 use anyhow::{anyhow, Result};
 use netvr_data::{
+    app::{AppDatagramUp::SetPose, AppUp},
     bincode,
     net::{
         self, ActionType, BaseSpace, CalibrationConfiguration, CalibrationSample, ConfigurationUp,
-        StateSnapshot,
+        DatagramDown, DatagramUp, StateSnapshot,
     },
-    SendFrames,
+    Pose, SendFrames,
 };
 use tokio::{select, spawn, sync::mpsc, time};
 use xr_layer::{
@@ -64,7 +69,7 @@ pub(crate) async fn run_net_client(
         instance_handle,
         session_handle,
     );
-    let receive = run_receive_snapshots(
+    let receive = run_receive_datagrams(
         connection.connection.clone(),
         instance_handle,
         session_handle,
@@ -82,12 +87,77 @@ pub(crate) async fn run_net_client(
         connection.calibration_up,
         calibration_trigger.1,
     ));
+    let send_app = run_send_app(
+        instance_handle,
+        session_handle,
+        connection.app_up_stream,
+        connection.connection.clone(),
+    );
     select! {
         value = transmit_conf => value,
         value = transmit_snap => value,
         value = receive => value,
         value = recv_conf => value,
         value = calibration_sender => value?,
+        value = send_app => value,
+    }
+}
+
+async fn run_send_app(
+    instance_handle: sys::Instance,
+    session_handle: sys::Session,
+    mut app_up: SendFrames<AppUp>,
+    connection: quinn::Connection,
+) -> Result<()> {
+    let snap = with_layer(instance_handle, |instance| {
+        let session = instance
+            .sessions
+            .get(&session_handle)
+            .ok_or(anyhow!("Failed to read session from instance"))?;
+        let lock = session
+            .remote_app_state
+            .read()
+            .map_err(|err| anyhow!("Failed to read remote app state: {:?}", err))?;
+
+        Ok(lock.clone())
+    })?;
+    app_up.write(&AppUp::Init(snap)).await?;
+
+    let mut interval = tokio::time::interval(Duration::from_millis(20));
+    loop {
+        interval.tick().await;
+        let (overrides, grabbed) = with_layer(instance_handle, |instance| {
+            let session = instance
+                .sessions
+                .get(&session_handle)
+                .ok_or(anyhow!("Failed to read session from instance"))?;
+            let overrides = {
+                session
+                    .local_app_overrides
+                    .read()
+                    .map_err(|err| anyhow!("Failed to read remote app state: {:?}", err))?
+                    .clone()
+            };
+            let grabbed = {
+                let mut lock = session
+                    .grabbed
+                    .write()
+                    .map_err(|err| anyhow!("Failed to read grabbed: {:?}", err))?;
+                let grabbed = lock.clone();
+                *lock = HashSet::new();
+                grabbed
+            };
+
+            Ok((overrides, grabbed))
+        })?;
+        for g in grabbed {
+            app_up.write(&AppUp::Grab(g)).await?;
+        }
+
+        for (id, pose) in &overrides {
+            let bytes = bincode::serialize(&DatagramUp::App(SetPose(*id, pose.clone())))?;
+            connection.send_datagram(bytes.into())?;
+        }
     }
 }
 
@@ -132,32 +202,47 @@ async fn run_transmit_configuration(
     }
 }
 
-async fn run_receive_snapshots(
+async fn run_receive_datagrams(
     connection: quinn::Connection,
     instance_handle: sys::Instance,
     session_handle: sys::Session,
 ) -> Result<()> {
     loop {
         let datagram = connection.read_datagram().await?;
-        let value: netvr_data::net::RemoteStateSnapshotSet = bincode::deserialize(&datagram)?;
+        let value: netvr_data::net::DatagramDown = bincode::deserialize(&datagram)?;
 
         with_layer(instance_handle, |instance| {
             let session = instance
                 .sessions
                 .get(&session_handle)
                 .ok_or(anyhow!("Failed to read session from instance"))?;
-            {
-                let mut remote_state = session
-                    .remote_state
-                    .write()
-                    .map_err(map_err!("Failed to acquire write lock on remote_state"))?;
-                if value.order > remote_state.order {
-                    remote_state.clone_from(&value);
+
+            match value {
+                DatagramDown::App(value) => {
+                    let mut state = session
+                        .remote_app_state
+                        .write()
+                        .map_err(map_err!("Failed to acquire write lock on remote_app_state"))?;
+                    if !value.objects.is_empty() {
+                        *state = value;
+                    }
+                    Ok(())
+                }
+                DatagramDown::State(value) => {
+                    {
+                        let mut remote_state = session
+                            .remote_state
+                            .write()
+                            .map_err(map_err!("Failed to acquire write lock on remote_state"))?;
+                        if value.order > remote_state.order {
+                            remote_state.clone_from(&value);
+                        }
+                    }
+                    session.update_merged()?;
+
+                    Ok(())
                 }
             }
-            session.update_merged()?;
-
-            Ok(())
         })?;
     }
 }
@@ -417,7 +502,7 @@ async fn run_transmit_snapshots(
 ) -> Result<()> {
     loop {
         if let Some(value) = collect_state(instance_handle, session_handle)? {
-            connection.send_datagram(bincode::serialize(&value)?.into())?;
+            connection.send_datagram(bincode::serialize(&DatagramUp::State(value))?.into())?;
         }
 
         time::sleep(std::time::Duration::from_millis(20)).await;

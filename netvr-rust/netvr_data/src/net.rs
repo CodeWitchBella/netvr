@@ -2,7 +2,10 @@ use std::{collections::HashMap, fmt::Debug};
 
 use serde::{Deserialize, Serialize};
 
-use crate::Pose;
+use crate::{
+    app::{self, AppDatagramUp},
+    Pose,
+};
 
 #[derive(Serialize, Deserialize)]
 pub struct DiscoveryResponse {
@@ -137,6 +140,18 @@ pub struct RemoteStateSnapshotSet {
     /// order.
     pub order: usize,
     pub clients: HashMap<ClientId, StateSnapshot>,
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub enum DatagramDown {
+    App(app::Snapshot),
+    State(RemoteStateSnapshotSet),
+}
+
+#[derive(Serialize, Deserialize, Clone, Debug)]
+pub enum DatagramUp {
+    State(StateSnapshot),
+    App(app::AppDatagramUp),
 }
 
 #[derive(Serialize, Deserialize, Clone, Debug)]

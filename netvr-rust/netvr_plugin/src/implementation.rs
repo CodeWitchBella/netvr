@@ -1,8 +1,11 @@
 use anyhow::{anyhow, Result};
-use netvr_data::{InstanceAndSession, Nothing, ReadRemoteDevicesOutput, RemoteDevice, StartInput};
+use netvr_data::{
+    app, GrabInput, InitRemoteObjectsInput, InstanceAndSession, Nothing, ReadRemoteDevicesOutput,
+    RemoteDevice, SetPoseInput, StartInput,
+};
 use tokio::select;
 use tracing::info;
-use xr_layer::log::LogInfo;
+use xr_layer::log::{LogInfo, LogTrace};
 
 use crate::{net_client::run_net_client, overrides::with_layer};
 
@@ -77,5 +80,100 @@ pub(crate) fn read_remote_devices(
             }
         }
         Ok(devices)
+    })
+}
+
+pub(crate) fn read_remote_objects(input: InstanceAndSession) -> Result<app::Snapshot> {
+    with_layer(input.instance, |instance| {
+        let session = instance
+            .sessions
+            .get(&input.session)
+            .ok_or(anyhow!("Session not found"))?;
+
+        let mut remote_app_state = {
+            session
+                .remote_app_state
+                .read()
+                .map_err(|err| anyhow!("{:?}", err))?
+                .clone()
+        };
+        let local_app_overrides = session
+            .local_app_overrides
+            .read()
+            .map_err(|err| anyhow!("{:?}", err))?;
+        for (id, o) in &*local_app_overrides {
+            remote_app_state.objects[*id] = o.clone();
+        }
+
+        Ok(remote_app_state)
+    })
+}
+
+pub(crate) fn init_remote_objects(input: InitRemoteObjectsInput) -> Result<Nothing> {
+    with_layer(input.instance, |instance| {
+        let session = instance
+            .sessions
+            .get(&input.session)
+            .ok_or(anyhow!("Session not found"))?;
+        let mut lock = session
+            .remote_app_state
+            .write()
+            .map_err(|err| anyhow!("{:?}", err))?;
+        LogTrace::string(format!("init_remote_objects {:?}", input.snapshot));
+        if lock.objects.is_empty() {
+            *lock = input.snapshot;
+        }
+        Ok(Nothing::default())
+    })
+}
+
+pub(crate) fn grab(input: GrabInput) -> Result<Nothing> {
+    with_layer(input.instance, |instance| {
+        let session = instance
+            .sessions
+            .get(&input.session)
+            .ok_or(anyhow!("Session not found"))?;
+        let mut lock = session
+            .grabbed
+            .write()
+            .map_err(|err| anyhow!("{:?}", err))?;
+        LogTrace::string(format!("grab {:?}", input.object_id));
+        lock.insert(input.object_id);
+        Ok(Nothing::default())
+    })
+}
+
+pub(crate) fn release(input: GrabInput) -> Result<Nothing> {
+    with_layer(input.instance, |instance| {
+        let session = instance
+            .sessions
+            .get(&input.session)
+            .ok_or(anyhow!("Session not found"))?;
+        let mut lock = session
+            .local_app_overrides
+            .write()
+            .map_err(|err| anyhow!("{:?}", err))?;
+        LogTrace::string(format!("release {:?}", input.object_id));
+        lock.remove(&usize::try_from(input.object_id)?);
+        Ok(Nothing::default())
+    })
+}
+
+pub(crate) fn object_set_pose(input: SetPoseInput) -> Result<Nothing> {
+    with_layer(input.instance, |instance| {
+        let session = instance
+            .sessions
+            .get(&input.session)
+            .ok_or(anyhow!("Session not found"))?;
+        let mut lock = session
+            .local_app_overrides
+            .write()
+            .map_err(|err| anyhow!("{:?}", err))?;
+        LogTrace::string(format!(
+            "object_set_pose {:?} {:?}",
+            input.object_id, input.pose
+        ));
+        lock.insert(usize::try_from(input.object_id)?, input.pose);
+        Ok(Nothing::default())
     })
 }

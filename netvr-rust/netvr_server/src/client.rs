@@ -2,8 +2,8 @@ use std::sync::Arc;
 
 use anyhow::{Ok, Result};
 use netvr_data::{
-    bincode,
-    net::{ClientId, ConfigurationDown, ConfigurationUp, StateSnapshot},
+    app, bincode,
+    net::{ClientId, ConfigurationDown, ConfigurationUp, DatagramDown, StateSnapshot},
 };
 use quinn::Connection;
 use tokio::sync::{broadcast, mpsc};
@@ -17,6 +17,8 @@ struct InnerClient {
     token: CancellationToken,
     server: Server,
     configuration_down_queue: mpsc::UnboundedSender<ConfigurationDown>,
+    app_down_queue: mpsc::UnboundedSender<app::AppDown>,
+    connection: Connection,
 }
 
 #[derive(Clone)]
@@ -31,6 +33,8 @@ impl Client {
         server: Server,
         id: ClientId,
         configuration_down_queue: mpsc::UnboundedSender<ConfigurationDown>,
+        app_down_queue: mpsc::UnboundedSender<app::AppDown>,
+        connection: Connection,
     ) -> Self {
         Self {
             inner: Arc::new(InnerClient {
@@ -39,6 +43,8 @@ impl Client {
                 token,
                 server,
                 configuration_down_queue,
+                app_down_queue,
+                connection,
             }),
         }
     }
@@ -47,20 +53,15 @@ impl Client {
         println!("Received configuration up {:?}", message);
     }
 
-    pub async fn handle_recv_snapshot(
-        &self,
-        message: StateSnapshot,
-        connection: &Connection,
-    ) -> Result<()> {
+    pub async fn handle_recv_snapshot(&self, message: StateSnapshot) -> Result<()> {
         // println!("Received datagram {:?}", message);
         let _ = self.ws().send(DashboardMessage::DatagramUp {
             id: self.id(),
             message,
         });
         let snapshots = self.inner.server.read_latest_snapshots().await;
-        // TODO: snaphots.remove(&self.id());
-        // TODO: transform snaphots by Matrix
-        connection.send_datagram(bincode::serialize(&snapshots)?.into())?;
+        // TODO: snapshots.remove(&self.id());
+        self.send_datagram(&DatagramDown::State(snapshots))?;
         Ok(())
     }
 
@@ -71,6 +72,18 @@ impl Client {
 
     pub(crate) fn send_configuration_down(&self, message: ConfigurationDown) -> Result<()> {
         self.inner.configuration_down_queue.send(message)?;
+        Ok(())
+    }
+
+    pub(crate) fn send_app_down(&self, message: app::AppDown) -> Result<()> {
+        self.inner.app_down_queue.send(message)?;
+        Ok(())
+    }
+
+    pub(crate) fn send_datagram(&self, datagram: &DatagramDown) -> Result<()> {
+        self.inner
+            .connection
+            .send_datagram(bincode::serialize(&datagram)?.into())?;
         Ok(())
     }
 

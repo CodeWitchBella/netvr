@@ -18,6 +18,8 @@ public class IsblTrackedPoseDriver : MonoBehaviour
 
     bool _isLocalHMD;
     GameObject _modelWrapper;
+    GameObject _grabPoint;
+    public Vector3 GrabPoint => _grabPoint?.transform.position ?? transform.position;
 
 #if UNITY_EDITOR
     public class SelfPropertyAttribute : PropertyAttribute { };
@@ -132,6 +134,12 @@ public class IsblTrackedPoseDriver : MonoBehaviour
             if (builder.Scale != null) root.localScale = Vector3.one * (builder.Scale ?? 1f);
 
             ConnectAxes(_modelWrapper.transform);
+
+            var grabPoint = Instantiate(Resources.Load<GameObject>("Grab Point"));
+            grabPoint.transform.parent = _modelWrapper.transform;
+            grabPoint.transform.localPosition = builder.GrabPoint;
+            grabPoint.transform.localRotation = Quaternion.identity;
+            _grabPoint = grabPoint;
         }
     }
 

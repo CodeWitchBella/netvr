@@ -115,12 +115,16 @@ namespace Isbl.NetVR
             return true;
         }
 
+        public delegate void OnSessionBeginHandler();
+        public OnSessionBeginHandler onSessionBegin;
+
         protected override void OnSessionBegin(ulong xrSession)
         {
             XrSession = xrSession;
             var dir = GetDataDirectory();
             try { if (!Directory.Exists(dir)) Directory.CreateDirectory(dir); } catch (Exception e) { Utils.LogError($"Failed to create data directory: {e}"); }
             RPC?.Start(new(XrInstance, XrSession, dir));
+            onSessionBegin?.Invoke();
         }
 
         protected override void OnSessionEnd(ulong xrSession)

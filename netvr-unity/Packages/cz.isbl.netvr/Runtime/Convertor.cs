@@ -17,9 +17,20 @@ namespace Isbl.NetVR
             //return new Vector3(-v.x, v.y, v.z);
         }
 
+        internal static Isbl.NetVR.Binary.Vec3 Vector3(Vector3 v)
+        {
+            return new(v.x, v.y, -v.z);
+            //return new Vector3(-v.x, v.y, v.z);
+        }
+
         internal static Quaternion Quaternion(Isbl.NetVR.Binary.Quaternion v)
         {
             return new Quaternion(-v.x, -v.y, v.z, v.w);
+        }
+
+        internal static Isbl.NetVR.Binary.Quaternion Quaternion(Quaternion v)
+        {
+            return new(-v.x, -v.y, v.z, v.w);
         }
     }
 }

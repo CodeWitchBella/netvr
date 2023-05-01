@@ -1,3 +1,4 @@
+pub mod app;
 mod framing;
 pub mod handle_serializer;
 
@@ -6,7 +7,7 @@ use std::collections::HashMap;
 use net::{ClientId, RemoteConfigurationSnapshot, StateSnapshot};
 use serde::{Deserialize, Serialize};
 
-#[derive(Serialize, Deserialize, Default, Clone, Debug)]
+#[derive(Serialize, Deserialize, Default, Clone, Debug, PartialEq)]
 pub struct Vec3 {
     pub x: f32,
     pub y: f32,
@@ -33,7 +34,7 @@ impl From<Vec3> for openxr_sys::Vector3f {
     }
 }
 
-#[derive(Serialize, Deserialize, Clone, Debug)]
+#[derive(Serialize, Deserialize, Clone, Debug, PartialEq)]
 pub struct Quaternion {
     pub x: f32,
     pub y: f32,
@@ -85,7 +86,7 @@ pub struct RemoteDevice {
     pub interaction_profile: String,
 }
 
-#[derive(Serialize, Deserialize, Default, Clone, Debug)]
+#[derive(Serialize, Deserialize, Default, Clone, Debug, PartialEq)]
 pub struct Pose {
     pub position: Vec3,
     pub orientation: Quaternion,
@@ -151,6 +152,34 @@ pub struct RemoteSnapshot {
 #[derive(Serialize, Deserialize, Default)]
 pub struct Nothing(u8);
 
+#[derive(Serialize, Deserialize)]
+pub struct InitRemoteObjectsInput {
+    #[serde(with = "handle_serializer::instance")]
+    pub instance: openxr_sys::Instance,
+    #[serde(with = "handle_serializer::session")]
+    pub session: openxr_sys::Session,
+    pub snapshot: app::Snapshot,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct GrabInput {
+    #[serde(with = "handle_serializer::instance")]
+    pub instance: openxr_sys::Instance,
+    #[serde(with = "handle_serializer::session")]
+    pub session: openxr_sys::Session,
+    pub object_id: u32,
+}
+
+#[derive(Serialize, Deserialize)]
+pub struct SetPoseInput {
+    #[serde(with = "handle_serializer::instance")]
+    pub instance: openxr_sys::Instance,
+    #[serde(with = "handle_serializer::session")]
+    pub session: openxr_sys::Session,
+    pub object_id: u32,
+    pub pose: Pose,
+}
+
 /// This structure is not meant to be used directly but rather as a holder for
 /// all other structures that are used for serialization. This is to make sure
 /// that required code is generated for all structures without having to update
@@ -163,9 +192,14 @@ pub struct CodegenRoot(
     pub InstanceAndSession,
     pub RemoteSnapshot,
     pub StartInput,
+    pub Snapshot,
+    pub InitRemoteObjectsInput,
+    pub GrabInput,
+    pub SetPoseInput,
 );
 
 pub mod net;
+pub use app::Snapshot;
 pub use bincode;
 pub use framing::*;
 pub use serde;
