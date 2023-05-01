@@ -59,8 +59,8 @@ impl Client {
             id: self.id(),
             message,
         });
-        let snapshots = self.inner.server.read_latest_snapshots().await;
-        // TODO: snapshots.remove(&self.id());
+        let mut snapshots = self.inner.server.read_latest_snapshots().await;
+        snapshots.clients.remove(&self.id());
         self.send_datagram(&DatagramDown::State(snapshots))?;
         Ok(())
     }
