@@ -98,6 +98,11 @@ impl Client {
     }
 
     #[allow(dead_code)]
+    pub(crate) fn cancel(&self) {
+        self.inner.token.cancel()
+    }
+
+    #[allow(dead_code)]
     pub(crate) fn id(&self) -> ClientId {
         self.inner.id
     }

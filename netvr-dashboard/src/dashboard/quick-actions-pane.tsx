@@ -10,7 +10,9 @@ export function QuickActionsPane(props: {
 
   return (
     <Pane title="Quick actions" id="quick-actions">
-      <div css={{ display: 'flex', gap: 6, marginBlockEnd: 8 }}>
+      <div
+        css={{ display: 'flex', gap: 6, marginBlockEnd: 8, flexWrap: 'wrap' }}
+      >
         <Button
           type="button"
           onClick={() => {
@@ -31,28 +33,13 @@ export function QuickActionsPane(props: {
         >
           Reset all calibrations
         </Button>
+        <Button
+          type="button"
+          onClick={() => void sendMessage({ type: 'ForceDisconnectAll' })}
+        >
+          Disconnect all clients
+        </Button>
       </div>
-      <form
-        css={{ display: 'flex', gap: 4 }}
-        onSubmit={(evt) => {
-          evt.preventDefault()
-          const name: string = new FormData(evt.currentTarget).get(
-            'name',
-          ) as any
-          if (name) localStorage.setItem('deviceName', name)
-          else localStorage.removeItem('deviceName')
-          closeSocket()
-        }}
-      >
-        <label>
-          deviceName:{' '}
-          <Input
-            defaultValue={localStorage.getItem('deviceName') ?? ''}
-            name="name"
-          />
-        </label>
-        <Button>Change</Button>
-      </form>
     </Pane>
   )
 }

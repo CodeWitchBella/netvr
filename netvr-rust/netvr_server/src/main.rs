@@ -5,7 +5,7 @@ use calibration_protocol::CalibrationProtocol;
 use netvr_data::net::DatagramDown;
 use tokio::{
     net::UdpSocket,
-    spawn,
+    select, spawn,
     sync::{broadcast, mpsc},
 };
 
@@ -83,10 +83,23 @@ async fn main() -> Result<()> {
         }
     });
 
-    app_task.await?;
-    calibration.await?;
-    dashboard.await?;
-    discovery.await?;
-    connections.await?;
+    select! {
+        res =   dashboard => {
+            println!("dashboard finished: {:?}", res);
+        },
+        res =  calibration => {
+            println!("calibration finished: {:?}", res);
+        },
+        res =   app_task => {
+            println!("app_task finished: {:?}", res);
+        },
+        res =   discovery => {
+            println!("discovery finished: {:?}", res);
+        },
+        res =  connections => {
+            println!("connections finished: {:?}", res);
+        },
+    };
+
     Ok(())
 }

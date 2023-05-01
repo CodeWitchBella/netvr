@@ -33,6 +33,7 @@ pub(crate) struct Session {
     pub(crate) space_view: safe_openxr::Space,
     pub(crate) space_server: Arc<RwLock<safe_openxr::Space>>,
     pub(crate) predicted_display_time: sys::Time,
+    pub(crate) token: CancellationToken,
 
     /// Maps user paths (eg. /user/hand/left) to active interaction profile for
     /// it (eg. /interaction_profiles/khr/simple_controller).
@@ -82,6 +83,7 @@ impl Session {
             predicted_display_time: sys::Time::from_nanos(-1),
             active_interaction_profiles: Arc::default(),
             local_configuration: watch::channel(Default::default()).0,
+            token: CancellationToken::new(),
 
             remote_state: Arc::default(),
             remote_configuration: Arc::default(),

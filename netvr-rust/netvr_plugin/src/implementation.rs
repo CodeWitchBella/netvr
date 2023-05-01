@@ -15,8 +15,13 @@ use crate::{net_client::run_net_client, overrides::with_layer};
 pub(crate) fn start(input: StartInput) -> Result<Nothing> {
     with_layer(input.instance, |instance| {
         info!("start {:?}", instance.instance.as_raw());
+        let token = instance
+            .sessions
+            .get(&input.session)
+            .ok_or(anyhow!("Session not found"))?
+            .token
+            .clone();
 
-        let token = instance.token.clone();
         instance.tokio.spawn(async move {
             loop {
                 select! {

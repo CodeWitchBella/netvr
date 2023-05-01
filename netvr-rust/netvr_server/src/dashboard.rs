@@ -97,6 +97,7 @@ pub(crate) enum DashboardMessageRecv {
         name: String,
         client_id: ClientId,
     },
+    ForceDisconnectAll,
 }
 
 async fn dashboard_send(
@@ -172,6 +173,7 @@ async fn dashboard_receive(
                 continue;
             }
         };
+        println!("Received message: {:?}", val);
         match val {
             DashboardMessageRecv::MoveSomeClients => {
                 if let Some(client) = server.get_first_client().await {
@@ -282,6 +284,12 @@ async fn dashboard_receive(
                     let Ok(_) = reply.send(DashboardMessage::Info {
                         message: "Set name: Client not found".to_owned(),
                     }) else { return; };
+                }
+            }
+            DashboardMessageRecv::ForceDisconnectAll => {
+                let clients = server.get_clients().await;
+                for (client_id, client) in clients {
+                    client.cancel()
                 }
             }
         }

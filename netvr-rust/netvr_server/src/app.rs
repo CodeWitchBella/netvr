@@ -101,7 +101,9 @@ impl AppServer {
                 UpMessage::Grab(client_id, object_id) => {
                     if let Some(ref mut entry) = self.state.get_mut(object_id as usize) {
                         if let Some(client) = self.server.get_client(entry.owner).await {
-                            client.send_app_down(AppDown::Release(object_id))?;
+                            if let Err(e) = client.send_app_down(AppDown::Release(object_id)) {
+                                println!("Failed to send release to client: {}", e);
+                            }
                         }
                         entry.owner = client_id;
                     } else {
@@ -116,7 +118,9 @@ impl AppServer {
                     let clients = self.server.get_clients().await;
                     let message = App(snapshot.clone());
                     for (client_id, client) in clients.iter() {
-                        client.send_datagram(&message)?;
+                        if let Err(e) = client.send_datagram(&message) {
+                            println!("Failed to send app datagram to client {}: {}", client_id, e)
+                        }
                     }
                 }
             };

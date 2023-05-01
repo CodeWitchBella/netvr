@@ -589,10 +589,11 @@ extern "system" fn destroy_session(session_handle: sys::Session) -> sys::Result 
         let _span = trace_span!("destroy_session").entered();
         let instance = instance_ref_delete(layer, |l| &mut l.sessions, session_handle)?;
 
-        instance
+        let session = instance
             .sessions
             .remove(&session_handle)
             .ok_or(sys::Result::ERROR_HANDLE_INVALID)?;
+        session.token.cancel();
         Ok(())
         // already handled:
         // ```
