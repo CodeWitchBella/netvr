@@ -119,7 +119,11 @@ cargo post b --package netvr_plugin --release
 
 ## Compiling the calibration to wasm
 
+Install wasm-pack: https://rustwasm.github.io/wasm-pack/installer/
+
 ```bash
 rustup target add wasm32-unknown-unknown
-cargo build --target wasm32-unknown-unknown --release --package netvr_calibrate
+wasm-pack build netvr_calibrate --release
 ```
+
+Result will be located in netvr_calibrate/pkg and you should copy it into dashboard manually.

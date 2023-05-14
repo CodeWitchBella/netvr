@@ -1,7 +1,7 @@
 use netvr_data::{net::CalibrationSample, Quaternion, Vec3};
 use serde::{Deserialize, Serialize};
 
-#[derive(Default, Clone, Debug)]
+#[derive(Serialize, Default, Clone, Debug)]
 pub struct CalibrationResult {
     pub translation: Vec3,
     pub rotation: Quaternion,

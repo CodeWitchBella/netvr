@@ -13,6 +13,7 @@ import {
 } from '../components/theme'
 import { useWasmSuspending, type WrappedWasm } from '../wasm/wasm-wrapper'
 import { ErrorBoundary } from '../components/error-boundary'
+import { compute } from '../wasm2/netvr_calibrate'
 
 type SavedCalibration = {
   fileName: string
@@ -108,17 +109,23 @@ const preprocessors: { [key: string]: typeof preprocessFixedTimeStep } = {
 
 function Scene({ data: dataIn }: { data: SavedCalibration | null }) {
   const theme = useTheme()
-  const [{ translate, rotate, preprocess }, set] = useControls(() => ({
-    translate: [0, 0, 0],
-    rotate: [0, 0, 0],
-    file: { editable: false, value: defaultFileName },
-    preprocess: {
-      value: 'none',
-      options: Object.keys(preprocessors),
-    },
-    meanDistance: { editable: false, value: '' },
-    stdDev: { editable: false, value: '' },
-  }))
+  const [{ translate, rotate, preprocess, use: useAlg }, set] = useControls(
+    () => ({
+      translate: [0, 0, 0],
+      rotate: [0, 0, 0],
+      file: { editable: false, value: defaultFileName },
+      preprocess: {
+        value: 'none',
+        options: Object.keys(preprocessors),
+      },
+      use: {
+        value: 'netvr',
+        options: ['sc', 'netvr'],
+      },
+      meanDistance: { editable: false, value: '' },
+      stdDev: { editable: false, value: '' },
+    }),
+  )
   const target = useControls('Target', () => ({
     name: { editable: false, value: dataIn?.target_name + '' },
     color: { editable: false, value: theme.base08 },
@@ -140,11 +147,37 @@ function Scene({ data: dataIn }: { data: SavedCalibration | null }) {
   const wasm = useWasmSuspending()
   const recomputed = useMemo(() => {
     if (!wasm || !data) return
+    try {
+      const string = JSON.stringify(data)
+      console.time('computeCalibration')
+      const string2 = compute(string)
+      console.timeEnd('computeCalibration')
+      const res2: ReturnType<typeof computeCalibration> | { error: any } =
+        JSON.parse(string2)
+
+      if ('error' in res2) throw new Error(res2.error)
+      if (useAlg === 'netvr') {
+        const q = (res2 as any).rotateq
+        const rotate = new THREE.Euler()
+          .setFromQuaternion(new THREE.Quaternion(q.x, q.y, q.z, q.w))
+          .toArray()
+          .slice(0, 3) as any
+        console.log(rotate)
+        return {
+          translate: res2.translate,
+          rotate,
+        }
+      }
+    } catch (e) {
+      console.error(e)
+    }
+    console.log('Using old')
     console.time('computeCalibration')
     const res = computeCalibration(wasm, data)
+    console.log('res', res)
     console.timeEnd('computeCalibration')
     return res
-  }, [data, wasm])
+  }, [data, useAlg, wasm])
 
   useEffect(() => {
     set({ file: data?.fileName ?? defaultFileName })

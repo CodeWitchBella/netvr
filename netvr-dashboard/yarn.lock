@@ -7309,6 +7309,7 @@ __metadata:
     use-immer: ^0.7.0
     vite: ^2.9.6
     vite-plugin-shim-react-pdf: ^1.0.5
+    vite-plugin-wasm: ^3.2.2
   languageName: unknown
   linkType: soft
 
@@ -8041,6 +8042,15 @@ __metadata:
     "@react-pdf/renderer": ^2.0.0
     vite: ^2.0.0
   checksum: 876fd07fd9448a1c85e80549de899f4d002bb390dda7057a7628721dcc5597aa2cc6e93324a066a735cc7295273a4b6fc615121ee01e33116efba754b8db47be
+  languageName: node
+  linkType: hard
+
+"vite-plugin-wasm@npm:^3.2.2":
+  version: 3.2.2
+  resolution: "vite-plugin-wasm@npm:3.2.2"
+  peerDependencies:
+    vite: ^2 || ^3 || ^4
+  checksum: ed9b56b3cd47e6376c21592f4d24f818334d5796226f6c1dfca89a4f744d69a34cb85dd5e06f164a2670827113ccfa5f03d0361e51210012706123374b0f8277
   languageName: node
   linkType: hard
 

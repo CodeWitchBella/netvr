@@ -1,9 +1,11 @@
 import { defineConfig, Plugin } from 'vite'
 import react from '@vitejs/plugin-react'
 import shimReactPdf from 'vite-plugin-shim-react-pdf'
+import wasm from 'vite-plugin-wasm'
 
 export default defineConfig({
   plugins: [
+    wasm(),
     react({
       exclude: /thesis\/[^/]+.tsx?$/,
       babel: {
