@@ -116,3 +116,10 @@ cargo watch -cx "post b --package netvr_plugin"
 # Build release version and copy to unity
 cargo post b --package netvr_plugin --release
 ```
+
+## Compiling the calibration to wasm
+
+```bash
+rustup target add wasm32-unknown-unknown
+cargo build --target wasm32-unknown-unknown --release --package netvr_calibrate
+```
