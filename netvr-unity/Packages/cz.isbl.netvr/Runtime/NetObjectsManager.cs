@@ -30,6 +30,7 @@ namespace Isbl.NetVR
             if (feature == null) return;
             feature.onSessionBegin += OnSessionBegin;
             if (feature.XrSession != 0) OnSessionBegin();
+            //InvokeRepeating("OnSessionBegin", 1.0f, 1.0f);
         }
 
         void OnDisable()

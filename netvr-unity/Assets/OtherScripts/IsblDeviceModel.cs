@@ -47,6 +47,7 @@ sealed class IsblDeviceModel
                     rotation: new Vector3(354.950012f, 180, 0),
                     rootNode: "htc_vive_none"
                 ),
+
                 new IsblDeviceModel("Oculus Touch Controller OpenXR", "oculus-touch-v3", "left.glb",
                     "/interaction_profiles/oculus/touch_controller",
                     requiredCharacteristics: InputDeviceCharacteristics.Left,
@@ -73,6 +74,22 @@ sealed class IsblDeviceModel
                     positionOffset: new Vector3(0, 0, 0.0246f),
                     grabPoint: new Vector3(-0.00939999986f,-0.0472000018f,0.116099998f),
                     rootNode: "valve_index_right"),
+                new IsblDeviceModel("PICO Touch Controller OpenXR", "pico-neo3", "left.glb",
+                    "/interaction_profiles/pico/neo3_controller",
+                    requiredCharacteristics: InputDeviceCharacteristics.Left,
+                    //position: new Vector3(0.0115999999f,0.0305000003f,-0.0441000015f),
+                    //rotation: new Vector3(337.545868f,185.253372f,359.655273f),
+                    rootNode: "pico_neo3_left",
+                    grabPoint: new Vector3(-0.00410000002f,0.0241f,0.0916000009f)
+                ),
+                new IsblDeviceModel("PICO Touch Controller OpenXR", "pico-neo3", "right.glb",
+                    "/interaction_profiles/pico/neo3_controller",
+                    requiredCharacteristics: InputDeviceCharacteristics.Right,
+                    //position: new Vector3(0.0115999999f,0.0305000003f,-0.0441000015f),
+                    //rotation: new Vector3(337.545868f,185.253372f,359.655273f),
+                    rootNode: "pico_neo3_right",
+                    grabPoint: new Vector3(0.00410000002f,0.0241f,0.0916000009f)
+                ),
                 new IsblDeviceModel("Head Tracking - OpenXR", "htc-vive", "headset.glb",
                     "generic_hmd",
                     requiredCharacteristics: InputDeviceCharacteristics.HeadMounted,
