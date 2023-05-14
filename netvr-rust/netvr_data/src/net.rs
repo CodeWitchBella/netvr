@@ -2,10 +2,7 @@ use std::{collections::HashMap, fmt::Debug};
 
 use serde::{Deserialize, Serialize};
 
-use crate::{
-    app::{self, AppDatagramUp},
-    Pose,
-};
+use crate::{app, Pose};
 
 #[derive(Serialize, Deserialize)]
 pub struct DiscoveryResponse {

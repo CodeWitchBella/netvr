@@ -1,14 +1,16 @@
 #![allow(non_snake_case)]
+#![allow(dead_code)]
+#![allow(unreachable_code)]
 
-mod input;
 use std::cmp::min;
 
 use anyhow::{anyhow, Result};
-pub use input::*;
 use nalgebra::{
     Const, Dyn, Matrix3, OMatrix, Quaternion, Rotation3, RowVector3, UnitQuaternion, Vector3,
 };
 use netvr_data::{net::CalibrationSample, Vec3};
+
+use crate::input::*;
 
 #[derive(Debug, Default, Clone, Copy)]
 struct PoseF64 {
