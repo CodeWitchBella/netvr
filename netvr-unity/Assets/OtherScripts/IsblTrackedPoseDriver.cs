@@ -125,6 +125,7 @@ public class IsblTrackedPoseDriver : MonoBehaviour
             var model = _modelWrapper.transform.GetChild(0);
             model.localEulerAngles = new Vector3(0f, 180f, 0f);
             var root = model.Find(builder.RootNode);
+
             root.parent = _modelWrapper.transform;
             Destroy(model.gameObject);
 
@@ -242,6 +243,9 @@ public class IsblTrackedPoseDriver : MonoBehaviour
             InitializeModelIfNeeded();
             gameObject.transform.localPosition = NetDevice.DevicePosition;
             gameObject.transform.localRotation = NetDevice.DeviceRotation;
+            // TODO: PICO?
+            // gameObject.transform.localPosition = NetDevice.PointerPositionAvailable ? NetDevice.PointerPosition : NetDevice.DevicePosition;
+            // gameObject.transform.localRotation = NetDevice.PointerRotationAvailable ? NetDevice.PointerRotation : NetDevice.DeviceRotation;
         }
     }
 }
