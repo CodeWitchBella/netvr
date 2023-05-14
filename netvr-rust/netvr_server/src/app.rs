@@ -8,6 +8,7 @@ use tokio::{select, sync::mpsc, time::Interval};
 
 use crate::server::Server;
 
+#[derive(Clone, Debug)]
 struct AppObject {
     owner: ClientId,
     pose: Pose,
@@ -15,6 +16,7 @@ struct AppObject {
 
 pub(crate) struct AppServer {
     channel: mpsc::UnboundedReceiver<AppServerMessage>,
+    initial_state: Vec<AppObject>,
     state: Vec<AppObject>,
     server: Server,
 }
@@ -24,12 +26,14 @@ enum UpMessage {
     SetPose(ClientId, usize, Pose),
     Init(Snapshot),
     Grab(ClientId, u32),
+    ResetObjects,
 }
 
 #[derive(Debug)]
 pub(crate) enum AppServerMessage {
     Datagram(ClientId, AppDatagramUp),
     AppUp(ClientId, AppUp),
+    ResetObjects,
 }
 
 pub(crate) type AppChannel = mpsc::UnboundedSender<AppServerMessage>;
@@ -41,6 +45,7 @@ impl AppServer {
         (
             Self {
                 channel: channel.1,
+                initial_state: Default::default(),
                 state: Default::default(),
                 server,
             },
@@ -61,6 +66,9 @@ impl AppServer {
                         AppUp::Init(snaphot) => UpMessage::Init(snaphot),
                         AppUp::Grab(object_id) => UpMessage::Grab(client_id, object_id),
                     },
+                    AppServerMessage::ResetObjects => {
+                        UpMessage::ResetObjects
+                    }
                 },
                 None => Err(anyhow::anyhow!("AppServer channel closed"))?,
             },
@@ -88,15 +96,16 @@ impl AppServer {
                     }
                 }
                 UpMessage::Init(snapshot) => {
-                    if !self.state.is_empty() {
+                    if !self.initial_state.is_empty() {
                         continue;
                     }
                     for pose in snapshot.objects.iter() {
-                        self.state.push(AppObject {
+                        self.initial_state.push(AppObject {
                             owner: 0,
                             pose: pose.to_owned(),
                         });
                     }
+                    self.state = self.initial_state.clone();
                 }
                 UpMessage::Grab(client_id, object_id) => {
                     if let Some(ref mut entry) = self.state.get_mut(object_id as usize) {
@@ -122,6 +131,9 @@ impl AppServer {
                             println!("Failed to send app datagram to client {}: {}", client_id, e)
                         }
                     }
+                }
+                UpMessage::ResetObjects => {
+                    self.state = self.initial_state.clone();
                 }
             };
         }

@@ -98,6 +98,7 @@ pub(crate) enum DashboardMessageRecv {
         client_id: ClientId,
     },
     ForceDisconnectAll,
+    ResetObjects,
 }
 
 async fn dashboard_send(
@@ -291,6 +292,9 @@ async fn dashboard_receive(
                 for (client_id, client) in clients {
                     client.cancel()
                 }
+            }
+            DashboardMessageRecv::ResetObjects => {
+                // TODO: forward to app_channel server.
             }
         }
     }
