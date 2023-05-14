@@ -2,6 +2,7 @@
 
 macro_rules! handle {
     ($mod:ident, $id:ident) => {
+        #[cfg(any(NonWeb))]
         pub mod $mod {
             use serde::{self, Deserialize, Deserializer, Serializer};
 

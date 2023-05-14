@@ -1,3 +1,5 @@
+#![cfg(feature = "nonweb")]
+
 use quinn::Connection;
 use thiserror::Error;
 

@@ -64,6 +64,7 @@ pub enum ActionType {
     Unknown,
 }
 
+#[cfg(any(NonWeb))]
 impl From<openxr_sys::ActionType> for ActionType {
     fn from(action_type: openxr_sys::ActionType) -> Self {
         match action_type {
