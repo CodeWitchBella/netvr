@@ -12,7 +12,7 @@ public class IsblLocalXRDeviceManager : MonoBehaviour
 
     void OnEnable()
     {
-        IsblNet.Instance.DeviceManager = this;
+
 
         InputDevices.deviceConnected += DeviceConnected;
         InputDevices.deviceDisconnected += DeviceDisconnected;
@@ -78,7 +78,6 @@ public class IsblLocalXRDeviceManager : MonoBehaviour
         while (Devices.Count > 0)
             DeviceDisconnected(Devices[0].LocalDevice.Device);
 
-        if (IsblNet.Instance?.DeviceManager == this) IsblNet.Instance.DeviceManager = null;
     }
 
     void DeviceDisconnected(InputDevice obj)
@@ -130,35 +129,5 @@ public class IsblLocalXRDeviceManager : MonoBehaviour
         DeviceInfoChanged = true;
     }
 
-    void Update()
-    {
-        var net = IsblNet.Instance;
-        if (net == null) return;
 
-        // TODO: only do this on calibration config change
-        if (net.ServerState.Clients.TryGetValue(net.SelfId, out var self))
-        {
-            transform.localPosition = self.Calibration.Translate;
-            transform.localRotation = self.Calibration.Rotate;
-            transform.localScale = self.Calibration.Scale;
-        }
-    }
-
-    public bool TryFindDevice(UInt16 id, out IsblTrackedPoseDriver outDevice)
-    {
-        var deviceIdx = Devices.FindIndex(d => d.NetDevice.LocallyUniqueId == id);
-        if (deviceIdx >= 0)
-        {
-            outDevice = Devices[deviceIdx];
-            return true;
-        }
-        outDevice = new();
-        return false;
-    }
-
-    public int CalculateSerializationSize()
-    {
-        return Isbl.NetUtils.Count7BitEncodedIntBytes(Devices.Count(d => d.NetDevice.HasData)) /* Device count */
-            + (from d in Devices where d.NetDevice.HasData select d.NetDevice.CalculateSerializationSize()).Sum() /* devices array */;
-    }
 }

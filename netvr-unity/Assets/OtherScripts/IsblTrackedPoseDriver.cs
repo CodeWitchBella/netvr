@@ -40,22 +40,9 @@ public class IsblTrackedPoseDriver : MonoBehaviour
         Devices.Add(this);
     }
 
-    void CleanUpFile()
-    {
-        if (_file != null)
-        {
-            _gzip.Close();
-            _file.Close();
-            _gzip.Dispose();
-            _file.Dispose();
-            _file = null;
-            _gzip = null;
-        }
-    }
 
     void OnDisable()
     {
-        CleanUpFile();
         CleanUp();
         Devices.Remove(this);
         OnDeviceDisconnected?.Invoke(this);
@@ -210,31 +197,11 @@ public class IsblTrackedPoseDriver : MonoBehaviour
      */
     float Convert2DAxisValue(float value) => (value + 1) * .5f;
 
-    FileStream _file;
-    GZipStream _gzip;
     void Update()
     {
         if (LocalDevice != null)
         {
             NetDevice.UpdateFromDevice(LocalDevice);
-            if (IsblConfig.Instance.LogLocalData)
-            {
-                if (_file == null)
-                {
-                    Directory.CreateDirectory(Isbl.Persistent.DataDirectory.Name);
-                    string logDir = $"{DateTime.UtcNow:o}".Replace(":", "-")[..17];
-                    Directory.CreateDirectory(Path.Combine(Isbl.Persistent.DataDirectory.Name, logDir));
-                    _file = File.OpenWrite(Path.Combine(Isbl.Persistent.DataDirectory.Name, logDir, $"controller-{NetDevice.LocallyUniqueId}-{DateTime.UtcNow:o}.csv.gz".Replace(":", "-")));
-                    _gzip = new(_file, System.IO.Compression.CompressionLevel.Optimal);
-                    _gzip.Write(System.Text.Encoding.UTF8.GetBytes("#" + JsonSerializer.Serialize(NetDevice.SerializeConfiguration()) + "\n"));
-                    _gzip.Write(System.Text.Encoding.UTF8.GetBytes("iso time;timestamp;" + NetDevice.CSVHeader + "\n"));
-                }
-                var now = DateTime.UtcNow;
-                _gzip.Write(System.Text.Encoding.UTF8.GetBytes(
-                    $"{now:o};{new DateTimeOffset(now).ToUnixTimeMilliseconds()};{NetDevice.SerializeDataAsCsv()}\n"
-                    ));
-            }
-            else { CleanUpFile(); }
         }
 
         // Do not track local HMD, leave that to unity so that it's setup correctly

@@ -15,7 +15,6 @@ public class Grabbable : MonoBehaviour
 
     void Update()
     {
-        var maxPortion = 0f;
         foreach (var dev in IsblTrackedPoseDriver.Devices)
         {
             if (!dev.NetDevice.TriggerAvailable) continue;

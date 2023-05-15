@@ -129,185 +129,6 @@ public class IsblStaticXRDevice
     public Action DeviceInfoChanged;
     #endregion
 
-    // HAND_NETCODE: increment by one
-    // EYES_NETCODE: increment by one
-    // ADDING_NEW_TYPE:
-    // Increment this by one
-    const int TypeCount = 6;
-
-    #region (De)Serialization
-    public int CalculateSerializationSize(bool contentOnly = false)
-    {
-        if (_dataQuaternion == null) return TypeCount;
-        var contentBytes =
-            Isbl.NetUtils.Count7BitEncodedIntBytes(LocallyUniqueId)
-            + Isbl.NetUtils.CountArrayEncodingBytes(_dataQuaternion.Length, 4 * 3)
-            + Isbl.NetUtils.CountArrayEncodingBytes(_dataVector3.Length, 4 * 3)
-            + Isbl.NetUtils.CountArrayEncodingBytes(_dataVector2.Length, 4 * 2)
-            + Isbl.NetUtils.CountArrayEncodingBytes(_dataFloat.Length, 4)
-            + Isbl.NetUtils.CountArrayEncodingBytes(_dataBool.Length, 1)
-            + Isbl.NetUtils.CountArrayEncodingBytes(_dataUint.Length, 4)
-            // HAND_NETCODE: add size calculation
-            // EYES_NETCODE: add size calculation
-            // ADDING_NEW_TYPE:
-            // add line for calculating serialization size above this comment
-            ;
-        if (contentOnly) return contentBytes;
-        return Isbl.NetUtils.Count7BitEncodedIntBytes(contentBytes) + contentBytes;
-    }
-
-    public int DeSerializeData(byte[] source, int offset)
-    {
-        MemoryStream stream = new(source);
-        stream.Position = offset;
-        BinaryReader reader = new(stream);
-
-        {
-            var len = Isbl.NetUtils.Read7BitEncodedInt(reader);
-            if (_dataQuaternion?.Length == len)
-                for (int i = 0; i < len; ++i) _dataQuaternion[i] = Quaternion.Euler((float)(reader.ReadSingle() / Math.PI * 180f), (float)(reader.ReadSingle() / Math.PI * 180f), (float)(reader.ReadSingle() / Math.PI * 180f));
-            else reader.BaseStream.Seek(len * 4 * 3, SeekOrigin.Current);
-        }
-
-        {
-            var len = Isbl.NetUtils.Read7BitEncodedInt(reader);
-            if (_dataVector3?.Length == len)
-                for (int i = 0; i < len; ++i) _dataVector3[i] = new Vector3(reader.ReadSingle(), reader.ReadSingle(), reader.ReadSingle());
-            else reader.BaseStream.Seek(len * 4 * 3, SeekOrigin.Current);
-        }
-
-        {
-            var len = Isbl.NetUtils.Read7BitEncodedInt(reader);
-            if (_dataVector2?.Length == len)
-                for (int i = 0; i < len; ++i) _dataVector2[i] = new Vector2(reader.ReadSingle(), reader.ReadSingle());
-            else reader.BaseStream.Seek(len * 4 * 2, SeekOrigin.Current);
-        }
-
-        {
-            var len = Isbl.NetUtils.Read7BitEncodedInt(reader);
-            if (_dataFloat?.Length == len)
-                for (int i = 0; i < len; ++i) _dataFloat[i] = reader.ReadSingle();
-            else reader.BaseStream.Seek(len * 4, SeekOrigin.Current);
-        }
-
-        {
-            var len = Isbl.NetUtils.Read7BitEncodedInt(reader);
-            if (_dataBool?.Length == len)
-                for (int i = 0; i < len; ++i) _dataBool[i] = reader.ReadBoolean();
-            else reader.BaseStream.Seek(len * 1, SeekOrigin.Current);
-        }
-
-        {
-            var len = Isbl.NetUtils.Read7BitEncodedInt(reader);
-            if (_dataUint?.Length == len)
-                for (int i = 0; i < len; ++i) _dataUint[i] = reader.ReadUInt32();
-            else reader.BaseStream.Seek(len * 4, SeekOrigin.Current);
-        }
-
-        // HAND_NETCODE: add deserialization block
-        // EYES_NETCODE: add deserialization block
-
-        // ADDING_NEW_TYPE:
-        // Add deserialization code above this comment
-
-        return (int)stream.Position - offset;
-    }
-
-    public int SerializeData(byte[] target, int offset)
-    {
-        MemoryStream stream = new(target);
-        stream.Position = offset;
-        BinaryWriter writer = new(stream);
-        Isbl.NetUtils.Write7BitEncodedInt(writer, CalculateSerializationSize(contentOnly: true));
-        Isbl.NetUtils.Write7BitEncodedInt(writer, LocallyUniqueId);
-        if (_dataQuaternion == null)
-        {
-            throw new Exception("You should not serialize empty devices");
-        }
-
-        Isbl.NetUtils.Write7BitEncodedInt(writer, _dataQuaternion.Length);
-        foreach (var el in _dataQuaternion)
-        {
-            writer.Write((float)(el.eulerAngles.x / 180.0 * Math.PI));
-            writer.Write((float)(el.eulerAngles.y / 180.0 * Math.PI));
-            writer.Write((float)(el.eulerAngles.z / 180.0 * Math.PI));
-        }
-
-        Isbl.NetUtils.Write7BitEncodedInt(writer, _dataVector3.Length);
-        foreach (var el in _dataVector3)
-        {
-            writer.Write(el.x);
-            writer.Write(el.y);
-            writer.Write(el.z);
-        }
-
-        Isbl.NetUtils.Write7BitEncodedInt(writer, _dataVector2.Length);
-        foreach (var el in _dataVector2)
-        {
-            writer.Write(el.x);
-            writer.Write(el.y);
-        }
-
-        Isbl.NetUtils.Write7BitEncodedInt(writer, _dataFloat.Length);
-        foreach (var el in _dataFloat) writer.Write(el);
-
-        Isbl.NetUtils.Write7BitEncodedInt(writer, _dataBool.Length);
-        foreach (var el in _dataBool) writer.Write(el);
-
-        Isbl.NetUtils.Write7BitEncodedInt(writer, _dataUint.Length);
-        foreach (var el in _dataUint) writer.Write(el);
-
-        // HAND_NETCODE: add serialization block
-        // EYES_NETCODE: add serialization block
-
-        // ADDING_NEW_TYPE:
-        // Add serialization code above this comment
-
-        return (int)stream.Position - offset;
-    }
-
-    public string CSVHeader { get; private set; }
-
-    public string SerializeDataAsCsv()
-    {
-        System.Text.StringBuilder builder = new();
-        StringWriter writer = new(builder, System.Globalization.CultureInfo.InvariantCulture);
-
-        foreach (var el in _dataQuaternion)
-        {
-            writer.Write((float)(el.eulerAngles.x / 180.0 * Math.PI)); writer.Write(";");
-            writer.Write((float)(el.eulerAngles.y / 180.0 * Math.PI)); writer.Write(";");
-            writer.Write((float)(el.eulerAngles.z / 180.0 * Math.PI)); writer.Write(";");
-        }
-
-        foreach (var el in _dataVector3)
-        {
-            writer.Write(el.x); writer.Write(";");
-            writer.Write(el.y); writer.Write(";");
-            writer.Write(el.z); writer.Write(";");
-        }
-
-        foreach (var el in _dataVector2)
-        {
-            writer.Write(el.x); writer.Write(";");
-            writer.Write(el.y); writer.Write(";");
-        }
-
-        foreach (var el in _dataFloat) { writer.Write(el); writer.Write(";"); }
-
-        foreach (var el in _dataBool) { writer.Write(el); writer.Write(";"); }
-
-        foreach (var el in _dataUint) { writer.Write(el); writer.Write(";"); }
-
-        // HAND_NETCODE: add serialization block
-        // EYES_NETCODE: add serialization block
-
-        // ADDING_NEW_TYPE:
-        // Add serialization code above this comment
-
-        return builder.ToString();
-    }
-
     public JsonElement SerializeConfiguration()
     {
         List<string> characteristics = new();
@@ -328,14 +149,14 @@ public class IsblStaticXRDevice
         Check(InputDeviceCharacteristics.Right, "Right");
         Check(InputDeviceCharacteristics.Simulated6DOF, "Simulated6DOF");
 
-        return Isbl.NetUtils.JsonFromObject(new
+        return JsonUtils.JsonFromObject(new
         {
-            locations = Isbl.NetUtils.ToJsonCamelCase(_locations),
+            locations = JsonUtils.ToJsonCamelCase(_locations),
             name = Name,
             characteristics,
             localId = LocallyUniqueId,
             serialNumber = SerialNumber,
-            haptics = Haptics != null ? Isbl.NetUtils.ToJsonCamelCase(Haptics) : null,
+            haptics = Haptics != null ? JsonUtils.ToJsonCamelCase(Haptics) : null,
             lengths = new
             {
                 quaternion = _dataQuaternion?.Length ?? 0,
@@ -352,54 +173,6 @@ public class IsblStaticXRDevice
         });
     }
 
-    public void DeSerializeConfiguration(JsonElement message)
-    {
-        Characteristics = 0;
-        foreach (var c in message.GetProperty("characteristics").EnumerateArray())
-        {
-            Characteristics |= c.GetString() switch
-            {
-                "HeadMounted" => InputDeviceCharacteristics.HeadMounted,
-                "Camera" => InputDeviceCharacteristics.Camera,
-                "HeldInHand" => InputDeviceCharacteristics.HeldInHand,
-                "HandTracking" => InputDeviceCharacteristics.HandTracking,
-                "EyeTracking" => InputDeviceCharacteristics.EyeTracking,
-                "TrackedDevice" => InputDeviceCharacteristics.TrackedDevice,
-                "Controller" => InputDeviceCharacteristics.Controller,
-                "TrackingReference" => InputDeviceCharacteristics.TrackingReference,
-                "Left" => InputDeviceCharacteristics.Left,
-                "Right" => InputDeviceCharacteristics.Right,
-                "Simulated6DOF" => InputDeviceCharacteristics.Simulated6DOF,
-                _ => 0,
-            };
-        }
-
-        if (message.TryGetProperty("haptics", out var haptics))
-        {
-            Haptics = new StaticHaptics(haptics);
-        }
-        else
-        {
-            Haptics = null;
-        }
-
-        _locations = Isbl.NetUtils.FromJsonElementCamelCase<Locations>(message.GetProperty("locations"));
-        Name = message.GetProperty("name").GetString();
-        LocallyUniqueId = message.GetProperty("localId").GetUInt16();
-        SerialNumber = message.GetProperty("serialNumber").GetString();
-        var lengths = message.GetProperty("lengths");
-        _dataQuaternion = new Quaternion[lengths.GetProperty("quaternion").GetInt32()];
-        _dataVector3 = new Vector3[lengths.GetProperty("vector3").GetInt32()];
-        _dataVector2 = new Vector2[lengths.GetProperty("vector2").GetInt32()];
-        _dataFloat = new float[lengths.GetProperty("float").GetInt32()];
-        _dataBool = new bool[lengths.GetProperty("bool").GetInt32()];
-        _dataUint = new uint[lengths.GetProperty("uint").GetInt32()];
-        _dataHand = new Hand[lengths.GetProperty("hand").GetInt32()]; // HAND_NETCODE: already implemented
-        _dataEyes = new Eyes[lengths.GetProperty("eyes").GetInt32()]; // EYES_NETCODE: already implemented
-        // ADDING_NEW_TYPE:
-        // Add line here
-    }
-    #endregion
 
     public bool HasData => _dataQuaternion != null;
     /// <summary>
@@ -915,7 +688,6 @@ public class IsblStaticXRDevice
                 else if (name == "LeftEyeRotation") _locations.LeftEyeRotation = i;
                 else if (name == "RightEyeRotation") _locations.RightEyeRotation = i;
                 else Debug.Log($"Unknown usage device of type Quaternion with name {name} on device {device.Name}");
-                CSVHeader += $"q.{name}.x;q.{name}.y;q.{name}.z;";
             }
 
             for (var i = 0; i < device.Vector3.Length; ++i)
@@ -950,7 +722,6 @@ public class IsblStaticXRDevice
                 else if (name == "RightEyePosition") _locations.RightEyePosition = i;
                 else if (name == "RightEyeVelocity") _locations.RightEyeVelocity = i;
                 else Debug.Log($"Unknown usage device of type Vector3 with name {name} on device {device.Name}");
-                CSVHeader += $"v3.{name}.x;v3.{name}.y;v3.{name}.z;";
             }
 
             for (var i = 0; i < device.Vector2.Length; ++i)
@@ -959,7 +730,6 @@ public class IsblStaticXRDevice
                 if (name == "Primary2DAxis") _locations.Primary2DAxis = i;
                 else if (name == "Secondary2DAxis") _locations.Secondary2DAxis = i;
                 else Debug.Log($"Unknown usage device of type Vector2 with name {name} on device {device.Name}");
-                CSVHeader += $"v2.{name}.x;v2.{name}.y;";
             }
             for (var i = 0; i < device.Float.Length; ++i)
             {
@@ -970,7 +740,6 @@ public class IsblStaticXRDevice
                 else if (name == "GripForce") _locations.GripForce = i;
                 else if (name == "Secondary2DAxisForce") _locations.Secondary2DAxisForce = i;
                 else Debug.Log($"Unknown usage device of type float with name {name} on device {device.Name}");
-                CSVHeader += $"f.{name};";
             }
             for (var i = 0; i < device.Bool.Length; ++i)
             {
@@ -993,21 +762,18 @@ public class IsblStaticXRDevice
                 else if (name == "Secondary2DAxisTouch") _locations.Secondary2DAxisTouch = i;
                 else if (name == "UserPresence") _locations.UserPresence = i;
                 else Debug.Log($"Unknown usage device of type bool with name {name} on device {device.Name}");
-                CSVHeader += $"b.{name};";
             }
             for (var i = 0; i < device.Uint.Length; ++i)
             {
                 var name = device.Uint[i].name;
                 if (name == "TrackingState") _locations.TrackingState = i;
                 else Debug.Log($"Unknown usage device of type uint with name {name} on device {device.Name}");
-                CSVHeader += $"u.{name};";
             }
 
             for (var i = 0; i < device.Bone.Length; ++i)
             {
                 var name = device.Bone[i].name;
                 Debug.Log($"Unknown usage device of type Bone with name {name} on device {device.Name}");
-                CSVHeader += $"bone.{name};";
             }
 
             for (var i = 0; i < device.Hand.Length; ++i)
@@ -1015,14 +781,12 @@ public class IsblStaticXRDevice
                 var name = device.Hand[i].name;
                 if (name == "HandData") _locations.HandData = i;
                 Debug.Log($"Unknown usage device of type Hand with name {name} on device {device.Name}");
-                CSVHeader += $"hand.{name};";
             }
 
             for (var i = 0; i < device.ByteArray.Length; ++i)
             {
                 var name = device.ByteArray[i].name;
                 Debug.Log($"Unknown usage device of type Byte with name {name} on device {device.Name}");
-                CSVHeader += $"byteArray.{name};";
             }
 
             for (var i = 0; i < device.Eyes.Length; ++i)
@@ -1030,7 +794,6 @@ public class IsblStaticXRDevice
                 var name = device.Eyes[i].name;
                 if (name == "EyesData") _locations.EyesData = i;
                 Debug.Log($"Unknown usage device of type Eyes with name {name} on device {device.Name}");
-                CSVHeader += $"eyes.{name};";
             }
         }
 

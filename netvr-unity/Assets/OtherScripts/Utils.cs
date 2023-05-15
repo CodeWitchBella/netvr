@@ -5,64 +5,15 @@ using UnityEngine;
 
 static class Utils
 {
-    struct LogEntry
-    {
-        [JsonInclude]
-        [JsonPropertyName("text")]
-        public string Text;
 
-        [JsonInclude]
-        [JsonPropertyName("json")]
-        public string Json;
-
-        [JsonInclude]
-        [JsonPropertyName("type")]
-        [JsonConverter(typeof(Isbl.Json.EnumToStringConverter))]
-        public LogType Type;
-    }
-
-    const int Length = 1024;
-    static readonly LogEntry[] _log = new LogEntry[Length];
-    static int _index = 0;
-    static bool _wrapped = false;
-
-    public static object ReadLog()
-    {
-        if (!_wrapped)
-        {
-            LogEntry[] res = new LogEntry[_index];
-            for (int i = 0; i < _index; ++i)
-                res[i] = _log[i];
-            return res;
-        }
-        else
-        {
-            LogEntry[] res = new LogEntry[Length];
-            for (int i = 0; i < Length; ++i)
-                res[i] = _log[(i + _index) % Length];
-            return res;
-        }
-    }
-
-    private static void AppendEntry(LogEntry entry)
-    {
-        _log[_index] = entry;
-        ++_index;
-        if (_index >= Length)
-        {
-            _index = 0;
-            _wrapped = false;
-        }
-    }
 
     /**
      * Like Debug.Log but only appends stacktrace if in editor so that plaintext
-     * logs are readable. Also appends to senable log.
+     * logs are readable.
      */
     public static void Log(string text)
     {
         text = text.Replace("\n", "\n    ");
-        AppendEntry(new LogEntry() { Text = text, Type = LogType.Log });
 
 #if UNITY_EDITOR
         Debug.LogFormat(LogType.Log, LogOption.None, null, "{0}", text);
@@ -72,36 +23,12 @@ static class Utils
     }
 
     /**
-     * Logs json in such a way that it could be syntax haighlighted in the GUI
-     */
-    public static void LogJson(string label, string json)
-    {
-        AppendEntry(new LogEntry() { Text = label, Json = json, Type = LogType.Log });
-
-#if UNITY_EDITOR
-        Debug.LogFormat(LogType.Log, LogOption.None, null, "{0} {1}", label, json);
-#else
-        Debug.LogFormat(LogType.Log, LogOption.NoStacktrace, null, "{0} {1}", label, json);
-#endif
-    }
-
-    /**
-    * Logs json in such a way that it could be syntax haighlighted in the GUI
-    */
-    public static void LogJson(string label, object obj)
-    {
-        string json = System.Text.Json.JsonSerializer.Serialize(obj);
-        LogJson(label, json);
-    }
-
-    /**
-     * Like Debug.LogException but also appends to sendable log.
+     * Like Debug.LogException
      */
     public static void LogException(Exception error)
     {
         var text = error.Message + "\n" + error.StackTrace;
         text = text.Replace("\n", "\n    ");
-        AppendEntry(new LogEntry() { Text = text, Type = LogType.Exception });
 
 #if UNITY_EDITOR
         Debug.LogException(error);
@@ -113,12 +40,12 @@ static class Utils
 
     /**
     * Like Debug.LogWarning but only appends stacktrace if in editor so that
-    * plaintext logs are readable. Also appends to sendable log.
+    * plaintext logs are readable.
     */
     public static void LogWarning(string text)
     {
         text = text.Replace("\n", "\n    ");
-        AppendEntry(new LogEntry() { Text = text, Type = LogType.Warning });
+
 
 #if UNITY_EDITOR
         Debug.LogWarning(text);
@@ -129,12 +56,12 @@ static class Utils
 
     /**
     * Like Debug.LogError but only appends stacktrace if in editor so that
-    * plaintext logs are readable. Also appends to sendable log.
+    * plaintext logs are readable.
     */
     public static void LogError(string text)
     {
         text = text.Replace("\n", "\n    ");
-        AppendEntry(new LogEntry() { Text = text, Type = LogType.Error });
+
 
 #if UNITY_EDITOR
         Debug.LogError(text);
