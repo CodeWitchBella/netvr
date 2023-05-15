@@ -127,13 +127,11 @@ async fn run_recv_app(
     }
 }
 
-async fn run_send_app(
+fn collect_snap(
     instance_handle: sys::Instance,
     session_handle: sys::Session,
-    mut app_up: SendFrames<AppUp>,
-    connection: quinn::Connection,
-) -> Result<()> {
-    let snap = with_layer(instance_handle, |instance| {
+) -> Result<netvr_data::Snapshot> {
+    with_layer(instance_handle, |instance| {
         let session = instance
             .sessions
             .get(&session_handle)
@@ -144,12 +142,29 @@ async fn run_send_app(
             .map_err(|err| anyhow!("Failed to read remote app state: {:?}", err))?;
 
         Ok(lock.clone())
-    })?;
+    })
+}
+
+async fn run_send_app(
+    instance_handle: sys::Instance,
+    session_handle: sys::Session,
+    mut app_up: SendFrames<AppUp>,
+    connection: quinn::Connection,
+) -> Result<()> {
+    let snap = collect_snap(instance_handle, session_handle)?;
+    let mut was_empty = snap.objects.is_empty();
     app_up.write(&AppUp::Init(snap)).await?;
 
     let mut interval = tokio::time::interval(Duration::from_millis(20));
     loop {
         interval.tick().await;
+        if was_empty {
+            let snap = collect_snap(instance_handle, session_handle)?;
+            if !snap.objects.is_empty() {
+                app_up.write(&AppUp::Init(snap)).await?;
+                was_empty = false;
+            }
+        }
         let (overrides, grabbed) = with_layer(instance_handle, |instance| {
             let session = instance
                 .sessions

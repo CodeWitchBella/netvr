@@ -29,8 +29,7 @@ namespace Isbl.NetVR
             var feature = IsblXRFeature.Instance;
             if (feature == null) return;
             feature.onSessionBegin += OnSessionBegin;
-            if (feature.XrSession != 0) OnSessionBegin();
-            //InvokeRepeating("OnSessionBegin", 1.0f, 1.0f);
+            if (feature.XrSession != 0) Invoke("OnSessionBegin", 1.0f);
         }
 
         void OnDisable()
@@ -46,7 +45,6 @@ namespace Isbl.NetVR
             if (feature == null) return;
             var rpc = feature.RPC;
             if (rpc == null) return;
-
 
             rpc.InitRemoteObjects(new(
                 feature.XrInstance,

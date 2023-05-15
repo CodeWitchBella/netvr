@@ -39,6 +39,7 @@ sealed class IsblDeviceModel
     {
         if (_database == null)
         {
+            Debug.Log($"Initializing device database on {SystemInfo.deviceModel}");
             _database = new IsblDeviceModel[]
             {
                 new IsblDeviceModel("HTC Vive Controller OpenXR", "htc-vive", "none.glb",
