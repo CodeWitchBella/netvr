@@ -11,8 +11,8 @@ use netvr_data::{
     app::{AppDown, AppUp},
     bincode,
     net::{self, CalibrationSample, ConfigurationDown, ConfigurationUp, Heartbeat},
-    RecvFrames, SendFrames,
 };
+pub use netvr_data::{RecvFrames, SendFrames};
 use quinn::{Connection, Endpoint};
 use tokio::{net::UdpSocket, select};
 

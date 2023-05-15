@@ -2,7 +2,7 @@
 
 macro_rules! handle {
     ($mod:ident, $id:ident) => {
-        #[cfg(any(NonWeb))]
+        #[cfg(not(target_arch = "wasm32"))]
         pub mod $mod {
             use serde::{self, Deserialize, Deserializer, Serializer};
 

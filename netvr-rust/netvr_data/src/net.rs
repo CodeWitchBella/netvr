@@ -64,7 +64,7 @@ pub enum ActionType {
     Unknown,
 }
 
-#[cfg(any(NonWeb))]
+#[cfg(not(target_arch = "wasm32"))]
 impl From<openxr_sys::ActionType> for ActionType {
     fn from(action_type: openxr_sys::ActionType) -> Self {
         match action_type {

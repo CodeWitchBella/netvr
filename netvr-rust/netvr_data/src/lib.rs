@@ -7,10 +7,6 @@ use std::collections::HashMap;
 use net::{ClientId, RemoteConfigurationSnapshot, StateSnapshot};
 use serde::{Deserialize, Serialize};
 
-#[cfg(not(target_arch = "wasm32"))]
-#[allow(dead_code)]
-pub(crate) type NonWeb = ();
-
 #[derive(Serialize, Deserialize, Default, Clone, Debug, PartialEq)]
 pub struct Vec3 {
     pub x: f32,
@@ -18,7 +14,7 @@ pub struct Vec3 {
     pub z: f32,
 }
 
-#[cfg(any(NonWeb))]
+#[cfg(not(target_arch = "wasm32"))]
 impl From<openxr_sys::Vector3f> for Vec3 {
     fn from(v: openxr_sys::Vector3f) -> Self {
         Self {
@@ -29,7 +25,7 @@ impl From<openxr_sys::Vector3f> for Vec3 {
     }
 }
 
-#[cfg(any(NonWeb))]
+#[cfg(not(target_arch = "wasm32"))]
 impl From<Vec3> for openxr_sys::Vector3f {
     fn from(v: Vec3) -> Self {
         Self {
@@ -59,7 +55,7 @@ impl Default for Quaternion {
     }
 }
 
-#[cfg(any(NonWeb))]
+#[cfg(not(target_arch = "wasm32"))]
 impl From<openxr_sys::Quaternionf> for Quaternion {
     fn from(v: openxr_sys::Quaternionf) -> Self {
         Self {
@@ -71,7 +67,7 @@ impl From<openxr_sys::Quaternionf> for Quaternion {
     }
 }
 
-#[cfg(any(NonWeb))]
+#[cfg(not(target_arch = "wasm32"))]
 impl From<Quaternion> for openxr_sys::Quaternionf {
     fn from(v: Quaternion) -> Self {
         Self {
@@ -100,7 +96,7 @@ pub struct Pose {
     pub orientation: Quaternion,
 }
 
-#[cfg(any(NonWeb))]
+#[cfg(not(target_arch = "wasm32"))]
 impl From<openxr_sys::Posef> for Pose {
     fn from(v: openxr_sys::Posef) -> Self {
         Self {
@@ -110,7 +106,7 @@ impl From<openxr_sys::Posef> for Pose {
     }
 }
 
-#[cfg(any(NonWeb))]
+#[cfg(not(target_arch = "wasm32"))]
 impl From<Pose> for openxr_sys::Posef {
     fn from(v: Pose) -> Self {
         Self {
@@ -125,14 +121,14 @@ pub struct ReadRemoteDevicesOutput {
     pub devices: Vec<RemoteDevice>,
 }
 
-#[cfg(any(NonWeb))]
+#[cfg(not(target_arch = "wasm32"))]
 #[derive(Serialize, Deserialize)]
 pub struct JustInstance {
     #[serde(with = "handle_serializer::instance")]
     pub instance: openxr_sys::Instance,
 }
 
-#[cfg(any(NonWeb))]
+#[cfg(not(target_arch = "wasm32"))]
 #[derive(Serialize, Deserialize)]
 pub struct InstanceAndSession {
     #[serde(with = "handle_serializer::instance")]
@@ -141,7 +137,7 @@ pub struct InstanceAndSession {
     pub session: openxr_sys::Session,
 }
 
-#[cfg(any(NonWeb))]
+#[cfg(not(target_arch = "wasm32"))]
 #[derive(Serialize, Deserialize)]
 pub struct StartInput {
     #[serde(with = "handle_serializer::instance")]
@@ -165,7 +161,7 @@ pub struct RemoteSnapshot {
 #[derive(Serialize, Deserialize, Default)]
 pub struct Nothing(u8);
 
-#[cfg(any(NonWeb))]
+#[cfg(not(target_arch = "wasm32"))]
 #[derive(Serialize, Deserialize)]
 pub struct InitRemoteObjectsInput {
     #[serde(with = "handle_serializer::instance")]
@@ -175,7 +171,7 @@ pub struct InitRemoteObjectsInput {
     pub snapshot: app::Snapshot,
 }
 
-#[cfg(any(NonWeb))]
+#[cfg(not(target_arch = "wasm32"))]
 #[derive(Serialize, Deserialize)]
 pub struct GrabInput {
     #[serde(with = "handle_serializer::instance")]
@@ -185,7 +181,7 @@ pub struct GrabInput {
     pub object_id: u32,
 }
 
-#[cfg(any(NonWeb))]
+#[cfg(not(target_arch = "wasm32"))]
 #[derive(Serialize, Deserialize)]
 pub struct SetPoseInput {
     #[serde(with = "handle_serializer::instance")]
@@ -200,7 +196,7 @@ pub struct SetPoseInput {
 /// all other structures that are used for serialization. This is to make sure
 /// that required code is generated for all structures without having to update
 /// the list in build.rs.
-#[cfg(any(NonWeb))]
+#[cfg(not(target_arch = "wasm32"))]
 #[derive(Serialize, Deserialize)]
 pub struct CodegenRoot(
     pub ReadRemoteDevicesOutput,
@@ -218,6 +214,6 @@ pub struct CodegenRoot(
 pub mod net;
 pub use app::Snapshot;
 pub use bincode;
-#[cfg(any(NonWeb))]
+#[cfg(not(target_arch = "wasm32"))]
 pub use framing::*;
 pub use serde;

@@ -1,4 +1,4 @@
-#![cfg(feature = "nonweb")]
+#![cfg(not(target_arch = "wasm32"))]
 
 use quinn::Connection;
 use thiserror::Error;

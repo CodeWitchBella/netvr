@@ -2,12 +2,8 @@ mod calibrate;
 mod input;
 
 #[cfg(not(target_arch = "wasm32"))]
-#[allow(dead_code)]
-type NonWeb = ();
-
-#[cfg(any(NonWeb))]
 pub use calibrate::*;
-#[cfg(any(NonWeb))]
+#[cfg(not(target_arch = "wasm32"))]
 pub use input::*;
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen::prelude::*;
