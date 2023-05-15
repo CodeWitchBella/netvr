@@ -243,9 +243,6 @@ public class IsblTrackedPoseDriver : MonoBehaviour
             InitializeModelIfNeeded();
             gameObject.transform.localPosition = NetDevice.DevicePosition;
             gameObject.transform.localRotation = NetDevice.DeviceRotation;
-            // TODO: PICO?
-            // gameObject.transform.localPosition = NetDevice.PointerPositionAvailable ? NetDevice.PointerPosition : NetDevice.DevicePosition;
-            // gameObject.transform.localRotation = NetDevice.PointerRotationAvailable ? NetDevice.PointerRotation : NetDevice.DeviceRotation;
         }
     }
 }
