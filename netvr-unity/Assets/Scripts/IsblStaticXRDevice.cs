@@ -129,7 +129,7 @@ public class IsblStaticXRDevice
     public Action DeviceInfoChanged;
     #endregion
 
-    public JsonElement SerializeConfiguration()
+    public List<String> SerializeCharacteristics()
     {
         List<string> characteristics = new();
         void Check(InputDeviceCharacteristics reference, string text)
@@ -148,6 +148,12 @@ public class IsblStaticXRDevice
         Check(InputDeviceCharacteristics.Left, "Left");
         Check(InputDeviceCharacteristics.Right, "Right");
         Check(InputDeviceCharacteristics.Simulated6DOF, "Simulated6DOF");
+        return characteristics;
+    }
+
+    public JsonElement SerializeConfiguration()
+    {
+        var characteristics = SerializeCharacteristics();
 
         return JsonUtils.JsonFromObject(new
         {

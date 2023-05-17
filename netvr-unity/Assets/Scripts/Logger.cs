@@ -57,6 +57,7 @@ public class Logger : MonoBehaviour
         {
             log += "\tlocal";
             log += "\t" + device.NetDevice.LocallyUniqueId;
+            log += "\t" + System.String.Join(",", device.NetDevice.SerializeCharacteristics());
             log += "\t" + device.NetDevice.DevicePosition;
             log += "\t" + device.NetDevice.DeviceRotation;
             log += "\t" + device.NetDevice.DeviceRotation.eulerAngles;

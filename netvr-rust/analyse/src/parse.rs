@@ -88,7 +88,7 @@ fn quat(input: Input) -> Result<(f32, f32, f32, f32)> {
     )(input)
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Clone)]
 pub struct Sample {
     pub position: (f32, f32, f32),
     pub rotation: (f32, f32, f32, f32),
@@ -107,19 +107,35 @@ impl Sample {
     }
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Clone)]
 pub struct LocalSample {
     pub id: u32,
+    pub characteristics: String,
     pub sample: Sample,
+}
+
+fn characteristics(input: Input) -> Result<&str> {
+    recognize(many1(one_of(
+        "abcdefghijklmnopqrstuvwxyz,ABCDEFGHIJKLMNOPQRSTUVWXYZ",
+    )))(input)
 }
 
 impl LocalSample {
     fn parse(input: Input) -> Result<Self> {
         map(
-            tuple((tag("local"), multispace1, id, multispace1, Sample::parse)),
+            tuple((
+                tag("local"),
+                multispace1,
+                id,
+                multispace1,
+                characteristics,
+                multispace1,
+                Sample::parse,
+            )),
             |v| LocalSample {
                 id: v.2,
-                sample: v.4,
+                characteristics: v.4.to_string(),
+                sample: v.6,
             },
         )(input)
     }
@@ -131,7 +147,7 @@ impl From<LocalSample> for Sample {
     }
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Clone)]
 pub struct RemoteSample {
     pub id: u32,
     pub interaction_profile: String,
@@ -173,7 +189,7 @@ impl From<RemoteSample> for Sample {
     }
 }
 
-#[derive(Debug, Serialize)]
+#[derive(Debug, Serialize, Clone)]
 pub struct Line {
     pub time: f32,
     pub local: HashMap<u32, LocalSample>,
@@ -199,6 +215,7 @@ impl Line {
     }
 }
 
+#[derive(Debug, Serialize, Clone)]
 pub struct LogFile {
     pub lines: Vec<Line>,
 }
@@ -209,5 +226,35 @@ impl LogFile {
             many0(map(tuple((Line::parse, multispace0)), |r| r.0)),
             |lines| Self { lines },
         )(input)
+    }
+
+    pub fn local_ids(&self) -> Vec<u32> {
+        self.lines
+            .iter()
+            .flat_map(|l| l.local.keys().copied())
+            .collect()
+    }
+
+    pub fn local(&self, id: u32) -> Vec<Sample> {
+        self.lines
+            .iter()
+            .filter_map(|l| l.local.get(&id))
+            .map(|s| s.sample.clone())
+            .collect()
+    }
+
+    pub fn remote_ids(&self) -> Vec<u32> {
+        self.lines
+            .iter()
+            .flat_map(|l| l.remote.keys().copied())
+            .collect()
+    }
+
+    pub fn remote(&self, id: u32) -> Vec<Sample> {
+        self.lines
+            .iter()
+            .filter_map(|l| l.remote.get(&id.clone()))
+            .map(|s| s.sample.clone())
+            .collect()
     }
 }
