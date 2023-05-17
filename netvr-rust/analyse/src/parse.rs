@@ -93,14 +93,16 @@ pub struct Device {
     pub rotation_euler: (f32, f32, f32),
 }
 
-fn device(input: Input) -> Result<Device> {
-    map(tuple((vec3, multispace1, quat, multispace1, vec3)), |v| {
-        Device {
-            position: v.0,
-            rotation: v.2,
-            rotation_euler: v.4,
-        }
-    })(input)
+impl Device {
+    fn parse(input: Input) -> Result<Self> {
+        map(tuple((vec3, multispace1, quat, multispace1, vec3)), |v| {
+            Device {
+                position: v.0,
+                rotation: v.2,
+                rotation_euler: v.4,
+            }
+        })(input)
+    }
 }
 
 #[derive(Debug, Serialize)]
@@ -109,14 +111,16 @@ pub struct LocalDevice {
     pub device: Device,
 }
 
-fn local_device(input: Input) -> Result<LocalDevice> {
-    map(
-        tuple((tag("local"), multispace1, id, multispace1, device)),
-        |v| LocalDevice {
-            id: v.2,
-            device: v.4,
-        },
-    )(input)
+impl LocalDevice {
+    fn parse(input: Input) -> Result<Self> {
+        map(
+            tuple((tag("local"), multispace1, id, multispace1, Device::parse)),
+            |v| LocalDevice {
+                id: v.2,
+                device: v.4,
+            },
+        )(input)
+    }
 }
 
 #[derive(Debug, Serialize)]
@@ -131,26 +135,28 @@ fn pseudopath(input: Input) -> Result<&str> {
     recognize(many1(one_of("abcdefghijklmnopqrstuvwxyz/_")))(input)
 }
 
-fn remote_device(input: Input) -> Result<RemoteDevice> {
-    map(
-        tuple((
-            tag("remote"),
-            multispace1,
-            id,
-            multispace1,
-            pseudopath,
-            multispace1,
-            pseudopath,
-            multispace1,
-            device,
-        )),
-        |v| RemoteDevice {
-            id: v.2,
-            interaction_profile: v.4.to_string(),
-            subaction_path: v.6.to_string(),
-            device: v.8,
-        },
-    )(input)
+impl RemoteDevice {
+    fn parse(input: Input) -> Result<Self> {
+        map(
+            tuple((
+                tag("remote"),
+                multispace1,
+                id,
+                multispace1,
+                pseudopath,
+                multispace1,
+                pseudopath,
+                multispace1,
+                Device::parse,
+            )),
+            |v| Self {
+                id: v.2,
+                interaction_profile: v.4.to_string(),
+                subaction_path: v.6.to_string(),
+                device: v.8,
+            },
+        )(input)
+    }
 }
 
 #[derive(Debug, Serialize)]
@@ -166,9 +172,9 @@ impl Line {
             tuple((
                 float_comma,
                 multispace1,
-                separated_list0(multispace1, local_device),
+                separated_list0(multispace1, LocalDevice::parse),
                 multispace1,
-                separated_list0(multispace1, remote_device),
+                separated_list0(multispace1, RemoteDevice::parse),
             )),
             |v| Self {
                 time: v.0,
