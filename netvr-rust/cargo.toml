@@ -1,6 +1,7 @@
 [workspace]
 
 members = [
+    "analyse",
     "codegen",
     "netvr_calibrate",
     "netvr_client",

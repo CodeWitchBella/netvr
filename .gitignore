@@ -14,6 +14,8 @@ deno-dist
 yarn-error.log
 trace-*.json
 .DS_Store
+log
+
 
 # This .gitignore file should be placed at the root of your Unity project directory
 #

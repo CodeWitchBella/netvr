@@ -11,6 +11,7 @@ namespace Isbl.NetVR
     public class IsblRemoteDeviceManager : MonoBehaviour
     {
         readonly Dictionary<UInt32, IsblRemoteDevice> _devices = new();
+        public IEnumerable<IsblRemoteDevice> Devices => _devices.Values;
         public GameObject DevicePrefab;
 
         void Update()
