@@ -1,4 +1,5 @@
 mod parse;
+mod plot;
 
 use anyhow::Result;
 use parse::{LogFile, Sample};
@@ -91,15 +92,26 @@ fn main() -> Result<()> {
             }),
     )?;
 
+    plot::plot(plot::PlotInput {
+        times: file.lines.iter().map(|l| l.time).collect(),
+        local: local_distances,
+        remote: remote_distances,
+        out_file_name: std::path::Path::new(filename)
+            .with_extension("png")
+            .to_str()
+            .unwrap()
+            .to_string(),
+    })?;
+
     Ok(())
 }
 
-fn map_to_distance_from_start(samples: &[Sample]) -> Vec<f32> {
+fn map_to_distance_from_start(samples: &[Sample]) -> Vec<f64> {
     let start = samples[0].clone();
     samples.iter().map(|s| distance(s, &start)).collect()
 }
 
-fn distance_traveled(samples: &[Sample]) -> f32 {
+fn distance_traveled(samples: &[Sample]) -> f64 {
     samples
         .iter()
         .zip(samples.iter().skip(1))
@@ -107,7 +119,7 @@ fn distance_traveled(samples: &[Sample]) -> f32 {
         .sum()
 }
 
-fn distance(a: &Sample, b: &Sample) -> f32 {
+fn distance(a: &Sample, b: &Sample) -> f64 {
     let dx = b.position.0 - a.position.0;
     let dy = b.position.1 - a.position.1;
     let dz = b.position.2 - a.position.2;

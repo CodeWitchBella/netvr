@@ -21,7 +21,7 @@ fn id(input: Input) -> Result<u32> {
     map_res(decimal, |r| r.parse::<u32>())(input)
 }
 
-fn float_comma(input: Input) -> Result<f32> {
+fn float_comma(input: Input) -> Result<f64> {
     map_res(
         recognize(tuple((
             opt(one_of("+-")),
@@ -32,11 +32,11 @@ fn float_comma(input: Input) -> Result<f32> {
                 recognize(tuple((decimal, char(','), opt(decimal)))),
             )),
         ))),
-        |s| s.replace(',', ".").replace('_', "").as_str().parse::<f32>(),
+        |s| s.replace(',', ".").replace('_', "").as_str().parse::<f64>(),
     )(input)
 }
 
-fn float_dot(input: Input) -> Result<f32> {
+fn float_dot(input: Input) -> Result<f64> {
     map_res(
         recognize(tuple((
             opt(one_of("+-")),
@@ -47,11 +47,11 @@ fn float_dot(input: Input) -> Result<f32> {
                 recognize(tuple((decimal, char('.'), opt(decimal)))),
             )),
         ))),
-        |s| s.replace('_', "").as_str().parse::<f32>(),
+        |s| s.replace('_', "").as_str().parse::<f64>(),
     )(input)
 }
 
-fn vec3(input: Input) -> Result<(f32, f32, f32)> {
+fn vec3(input: Input) -> Result<(f64, f64, f64)> {
     map(
         tuple((
             char('('),
@@ -68,7 +68,7 @@ fn vec3(input: Input) -> Result<(f32, f32, f32)> {
     )(input)
 }
 
-fn quat(input: Input) -> Result<(f32, f32, f32, f32)> {
+fn quat(input: Input) -> Result<(f64, f64, f64, f64)> {
     map(
         tuple((
             char('('),
@@ -90,9 +90,9 @@ fn quat(input: Input) -> Result<(f32, f32, f32, f32)> {
 
 #[derive(Debug, Serialize, Clone)]
 pub struct Sample {
-    pub position: (f32, f32, f32),
-    pub rotation: (f32, f32, f32, f32),
-    pub rotation_euler: (f32, f32, f32),
+    pub position: (f64, f64, f64),
+    pub rotation: (f64, f64, f64, f64),
+    pub rotation_euler: (f64, f64, f64),
 }
 
 impl Sample {
@@ -191,7 +191,7 @@ impl From<RemoteSample> for Sample {
 
 #[derive(Debug, Serialize, Clone)]
 pub struct Line {
-    pub time: f32,
+    pub time: f64,
     pub local: HashMap<u32, LocalSample>,
     pub remote: HashMap<u32, RemoteSample>,
 }
