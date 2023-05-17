@@ -1,3 +1,5 @@
+use std::collections::HashMap;
+
 use nom::{
     branch::alt,
     bytes::complete::tag,
@@ -87,16 +89,16 @@ fn quat(input: Input) -> Result<(f32, f32, f32, f32)> {
 }
 
 #[derive(Debug, Serialize)]
-pub struct Device {
+pub struct Sample {
     pub position: (f32, f32, f32),
     pub rotation: (f32, f32, f32, f32),
     pub rotation_euler: (f32, f32, f32),
 }
 
-impl Device {
+impl Sample {
     fn parse(input: Input) -> Result<Self> {
         map(tuple((vec3, multispace1, quat, multispace1, vec3)), |v| {
-            Device {
+            Sample {
                 position: v.0,
                 rotation: v.2,
                 rotation_euler: v.4,
@@ -106,36 +108,42 @@ impl Device {
 }
 
 #[derive(Debug, Serialize)]
-pub struct LocalDevice {
+pub struct LocalSample {
     pub id: u32,
-    pub device: Device,
+    pub sample: Sample,
 }
 
-impl LocalDevice {
+impl LocalSample {
     fn parse(input: Input) -> Result<Self> {
         map(
-            tuple((tag("local"), multispace1, id, multispace1, Device::parse)),
-            |v| LocalDevice {
+            tuple((tag("local"), multispace1, id, multispace1, Sample::parse)),
+            |v| LocalSample {
                 id: v.2,
-                device: v.4,
+                sample: v.4,
             },
         )(input)
     }
 }
 
+impl From<LocalSample> for Sample {
+    fn from(val: LocalSample) -> Self {
+        val.sample
+    }
+}
+
 #[derive(Debug, Serialize)]
-pub struct RemoteDevice {
+pub struct RemoteSample {
     pub id: u32,
     pub interaction_profile: String,
     pub subaction_path: String,
-    pub device: Device,
+    pub sample: Sample,
 }
 
 fn pseudopath(input: Input) -> Result<&str> {
     recognize(many1(one_of("abcdefghijklmnopqrstuvwxyz/_")))(input)
 }
 
-impl RemoteDevice {
+impl RemoteSample {
     fn parse(input: Input) -> Result<Self> {
         map(
             tuple((
@@ -147,23 +155,29 @@ impl RemoteDevice {
                 multispace1,
                 pseudopath,
                 multispace1,
-                Device::parse,
+                Sample::parse,
             )),
             |v| Self {
                 id: v.2,
                 interaction_profile: v.4.to_string(),
                 subaction_path: v.6.to_string(),
-                device: v.8,
+                sample: v.8,
             },
         )(input)
+    }
+}
+
+impl From<RemoteSample> for Sample {
+    fn from(val: RemoteSample) -> Self {
+        val.sample
     }
 }
 
 #[derive(Debug, Serialize)]
 pub struct Line {
     pub time: f32,
-    pub local: Vec<LocalDevice>,
-    pub remote: Vec<RemoteDevice>,
+    pub local: HashMap<u32, LocalSample>,
+    pub remote: HashMap<u32, RemoteSample>,
 }
 
 impl Line {
@@ -172,19 +186,28 @@ impl Line {
             tuple((
                 float_comma,
                 multispace1,
-                separated_list0(multispace1, LocalDevice::parse),
+                separated_list0(multispace1, LocalSample::parse),
                 multispace1,
-                separated_list0(multispace1, RemoteDevice::parse),
+                separated_list0(multispace1, RemoteSample::parse),
             )),
             |v| Self {
                 time: v.0,
-                local: v.2,
-                remote: v.4,
+                local: HashMap::from_iter(v.2.into_iter().map(|d| (d.id, d))),
+                remote: HashMap::from_iter(v.4.into_iter().map(|d| (d.id, d))),
             },
         )(input)
     }
 }
 
-pub fn file(input: Input) -> Result<Vec<Line>> {
-    many0(map(tuple((Line::parse, multispace0)), |r| r.0))(input)
+pub struct LogFile {
+    pub lines: Vec<Line>,
+}
+
+impl LogFile {
+    pub fn parse(input: Input) -> Result<Self> {
+        map(
+            many0(map(tuple((Line::parse, multispace0)), |r| r.0)),
+            |lines| Self { lines },
+        )(input)
+    }
 }
