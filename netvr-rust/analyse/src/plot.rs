@@ -15,7 +15,7 @@ fn f64_cmp(a: &&f64, b: &&f64) -> std::cmp::Ordering {
 }
 
 pub fn plot(input: PlotInput) -> Result<()> {
-    let root = BitMapBackend::new(&input.out_file_name, (1024, 768)).into_drawing_area();
+    let root = SVGBackend::new(&input.out_file_name, (1024, 768)).into_drawing_area();
 
     root.fill(&WHITE)?;
 
@@ -48,22 +48,20 @@ pub fn plot(input: PlotInput) -> Result<()> {
         //.y_desc("")
         .draw()?;
 
-    chart.draw_series(LineSeries::new(
+    chart.draw_series(
         input
             .local
             .iter()
             .enumerate()
-            .map(|(i, v)| (input.times[i], *v)),
-        &BLUE,
-    ))?;
-    chart.draw_series(LineSeries::new(
+            .map(|(i, v)| Circle::new((input.times[i], *v), 3, BLUE.filled())),
+    )?;
+    chart.draw_series(
         input
             .remote
             .iter()
             .enumerate()
-            .map(|(i, v)| (input.times[i], *v)),
-        &GREEN,
-    ))?;
+            .map(|(i, v)| Circle::new((input.times[i], *v), 3, GREEN.filled())),
+    )?;
 
     println!("Result has been saved to {}", input.out_file_name);
     Ok(())

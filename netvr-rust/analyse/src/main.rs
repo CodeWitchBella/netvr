@@ -97,7 +97,7 @@ fn main() -> Result<()> {
         local: local_distances,
         remote: remote_distances,
         out_file_name: std::path::Path::new(filename)
-            .with_extension("png")
+            .with_extension("svg")
             .to_str()
             .unwrap()
             .to_string(),
