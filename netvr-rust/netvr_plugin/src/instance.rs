@@ -1,7 +1,7 @@
 use std::{
     collections::{HashMap, HashSet},
     fmt::Debug,
-    sync::{mpsc, Arc, Mutex, RwLock},
+    sync::{atomic::AtomicBool, mpsc, Arc, Mutex, RwLock},
 };
 
 use anyhow::{anyhow, Result};
@@ -34,6 +34,7 @@ pub(crate) struct Session {
     pub(crate) space_server: Arc<RwLock<safe_openxr::Space>>,
     pub(crate) predicted_display_time: sys::Time,
     pub(crate) token: CancellationToken,
+    pub(crate) started_session: AtomicBool,
 
     /// Maps user paths (eg. /user/hand/left) to active interaction profile for
     /// it (eg. /interaction_profiles/khr/simple_controller).
@@ -59,7 +60,6 @@ impl Session {
         session: safe_openxr::Session<safe_openxr::AnyGraphics>,
         trace: &Trace,
     ) -> Result<Self> {
-        // TODO: add server space
         let stage = session.create_reference_space(
             safe_openxr::ReferenceSpaceType::STAGE,
             safe_openxr::Posef::IDENTITY,
@@ -84,6 +84,7 @@ impl Session {
             active_interaction_profiles: Arc::default(),
             local_configuration: watch::channel(Default::default()).0,
             token: CancellationToken::new(),
+            started_session: AtomicBool::new(false),
 
             remote_state: Arc::default(),
             remote_configuration: Arc::default(),

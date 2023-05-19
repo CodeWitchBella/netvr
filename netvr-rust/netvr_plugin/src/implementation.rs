@@ -1,4 +1,4 @@
-use std::collections::hash_map::Entry::Occupied;
+use std::{collections::hash_map::Entry::Occupied, sync::atomic::Ordering};
 
 use anyhow::{anyhow, Result};
 use netvr_data::{
@@ -15,12 +15,20 @@ use crate::{net_client::run_net_client, overrides::with_layer};
 pub(crate) fn start(input: StartInput) -> Result<Nothing> {
     with_layer(input.instance, |instance| {
         info!("start {:?}", instance.instance.as_raw());
-        let token = instance
+        let session = instance
             .sessions
             .get(&input.session)
-            .ok_or(anyhow!("Session not found"))?
-            .token
-            .clone();
+            .ok_or(anyhow!("Session not found"))?;
+
+        // try to prevent double-start
+        if session
+            .started_session
+            .compare_exchange(true, true, Ordering::SeqCst, Ordering::SeqCst)
+            .is_err()
+        {
+            return Err(anyhow!("Session already started"));
+        }
+        let token = session.token.clone();
 
         instance.tokio.spawn(async move {
             loop {
