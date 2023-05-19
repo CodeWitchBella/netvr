@@ -553,12 +553,13 @@ async fn run_transmit_snapshots(
     instance_handle: sys::Instance,
     session_handle: sys::Session,
 ) -> Result<()> {
+    let mut interval = tokio::time::interval(Duration::from_micros(11_111));
     loop {
         if let Some(value) = collect_state(instance_handle, session_handle)? {
             connection.send_datagram(bincode::serialize(&DatagramUp::State(value))?.into())?;
         }
 
-        time::sleep(std::time::Duration::from_millis(20)).await;
+        interval.tick().await;
     }
 }
 
