@@ -1,5 +1,6 @@
 mod parse;
 mod plot;
+mod plot_positions;
 
 use anyhow::Result;
 use parse::{LogFile, Sample};
@@ -94,13 +95,25 @@ fn main() -> Result<()> {
 
     plot::plot(plot::PlotInput {
         times: file.lines.iter().map(|l| l.time).collect(),
-        local: local_distances,
-        remote: remote_distances,
+        local: local_distances.clone(),
+        remote: remote_distances.clone(),
         out_file_name: std::path::Path::new(filename)
             .with_extension("svg")
             .to_str()
             .unwrap()
             .to_string(),
+    })?;
+
+    plot_positions::plot(plot_positions::PlotInput {
+        times: file.lines.iter().map(|l| l.time).collect(),
+        local: local.iter().map(|l| l.position).collect(),
+        remote: remote.iter().map(|l| l.position).collect(),
+        out_file_name: std::path::Path::new(filename)
+            .with_extension("3d.svg")
+            .to_str()
+            .unwrap()
+            .to_string(),
+        recenter: false,
     })?;
 
     Ok(())
