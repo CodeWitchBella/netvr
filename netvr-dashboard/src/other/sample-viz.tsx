@@ -2,19 +2,17 @@
 import { OrbitControls } from '@react-three/drei'
 import { Canvas } from '@react-three/fiber'
 import { useControls } from 'leva'
-import { Suspense, useEffect, useMemo, useRef, useState } from 'react'
+import { Suspense, useEffect, useMemo, useState } from 'react'
 import { useDropzone } from 'react-dropzone'
 import * as THREE from 'three'
-import { InstancedMesh } from 'three'
 import {
   ReprovideTheme,
   useReprovideTheme,
   useTheme,
 } from '../components/theme'
 import { useWasmSuspending, type WrappedWasm } from '../wasm/wasm-wrapper'
-import { ErrorBoundary } from '../components/error-boundary'
 import { compute } from '../wasm2/netvr_calibrate'
-import { SpinningCube } from './shared'
+import { Connections, PolyLine, SpinningCube, Segment, dist } from './shared'
 
 type SavedCalibration = {
   fileName: string
@@ -304,113 +302,6 @@ function Scene({ data: dataIn }: { data: SavedCalibration | null }) {
   )
 }
 
-function Segment({
-  from,
-  to,
-  color,
-  thickness,
-}: {
-  from: [number, number, number]
-  to: [number, number, number]
-  color: string
-  thickness?: number
-}) {
-  return <PolyLine points={[from, to]} color={color} thickness={thickness} />
-}
-
-function PolyLine(props: {
-  points: readonly (readonly [number, number, number])[]
-  color: any
-  thickness?: number
-}) {
-  return (
-    <ErrorBoundary fallback={null}>
-      <PolyLineInner {...props} />
-    </ErrorBoundary>
-  )
-}
-
-function PolyLineInner({
-  points,
-  color,
-  thickness = 0.001,
-}: {
-  points: readonly (readonly [number, number, number])[]
-  color: any
-  thickness?: number
-}) {
-  const ref = useRef<InstancedMesh | undefined>()
-  useEffect(() => {
-    const mesh = ref.current
-    if (!mesh) return
-    const temp = new THREE.Object3D()
-    for (let id = 0; id < points.length - 1; ++id) {
-      temp.position.set(...points[id])
-      const d = dist(points[id], points[id + 1])
-      temp.scale.set(thickness, thickness, d)
-      temp.lookAt(...points[id + 1])
-      temp.translateZ(d / 2)
-      temp.updateMatrix()
-      mesh.setMatrixAt(id, temp.matrix)
-    }
-    mesh.instanceMatrix.needsUpdate = true
-  }, [points, thickness])
-  return (
-    <instancedMesh
-      ref={ref as any}
-      args={[undefined, undefined, points.length - 1]}
-    >
-      <boxGeometry />
-      <meshStandardMaterial color={color} />
-    </instancedMesh>
-  )
-}
-
-function Connections({
-  points1,
-  points2,
-  color,
-}: {
-  points1: readonly (readonly [number, number, number])[]
-  points2: readonly (readonly [number, number, number])[]
-  color: any
-}) {
-  const ref = useRef<InstancedMesh | undefined>()
-  const count = Math.min(points1.length, points2.length)
-  useEffect(() => {
-    const mesh = ref.current
-    if (!mesh) return
-    const temp = new THREE.Object3D()
-    for (let id = 0; id < count; ++id) {
-      temp.position.set(...points1[id])
-      const d = dist(points1[id], points2[id])
-      temp.scale.set(0.001, 0.001, d)
-      temp.lookAt(...points2[id])
-      temp.translateZ(d / 2)
-      temp.updateMatrix()
-      mesh.setMatrixAt(id, temp.matrix)
-    }
-    mesh.instanceMatrix.needsUpdate = true
-  }, [count, points1, points2])
-  return (
-    <instancedMesh ref={ref as any} args={[undefined, undefined, count]}>
-      <boxGeometry />
-      <meshStandardMaterial color={color} />
-    </instancedMesh>
-  )
-}
-
-function dist(
-  a: readonly [number, number, number],
-  b: readonly [number, number, number],
-) {
-  const x = a[0] - b[0]
-  const y = a[1] - b[1]
-  const z = a[2] - b[2]
-
-  return Math.sqrt(x * x + y * y + z * z)
-}
-
 function plus(
   a: readonly [number, number, number],
   b: readonly [number, number, number],
@@ -576,8 +467,8 @@ function slerp(
 ): { x: number; y: number; z: number; w: number } {
   const qa = new THREE.Quaternion().set(a.x, a.y, a.z, a.w)
   const qb = new THREE.Quaternion().set(b.x, b.y, b.z, b.w)
-  const mixed = qa.slerp(qb, ratio)
-  const res = new THREE.Euler().setFromQuaternion(mixed)
+  const res = qa.slerp(qb, ratio)
+  //const res = new THREE.Euler().setFromQuaternion(mixed)
   return { x: res.x, y: res.y, z: res.z, w: res.w }
 }
 
