@@ -23,10 +23,11 @@ pub(crate) fn start(input: StartInput) -> Result<Nothing> {
         // try to prevent double-start
         if session
             .started_session
-            .compare_exchange(true, true, Ordering::SeqCst, Ordering::SeqCst)
+            .compare_exchange(false, true, Ordering::SeqCst, Ordering::SeqCst)
             .is_err()
         {
-            return Err(anyhow!("Session already started"));
+            LogInfo::str("start: already started");
+            return Ok(Nothing::default());
         }
         let token = session.token.clone();
 
