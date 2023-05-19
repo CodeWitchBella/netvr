@@ -8,7 +8,7 @@ use netvr_data::{
         self, ActionType, BaseSpace, CalibrationConfiguration, CalibrationSample, ConfigurationUp,
         DatagramDown, DatagramUp, StateSnapshot,
     },
-    RecvFrames, SendFrames,
+    Pose, RecvFrames, SendFrames,
 };
 use tokio::{select, spawn, sync::mpsc, time};
 use xr_layer::{
@@ -47,6 +47,11 @@ pub(crate) async fn run_net_client(
     LogTrace::str("connecting to netvr server...");
     let config = Config::load(data_directory).await;
     set_local_configuration_name(instance_handle, session_handle, config.name.clone())?;
+    set_space_server_pose(
+        instance_handle,
+        session_handle,
+        config.server_space_pose.clone(),
+    )?;
 
     let connection =
         netvr_client::connect(|text| LogTrace::string(format!("[conn] {}", text))).await?;
@@ -486,28 +491,9 @@ async fn run_receive_configuration(
                 Ok(())
             })?,
             net::ConfigurationDown::SetServerSpacePose(pose) => {
-                with_layer(instance_handle, |instance| {
-                    let session = instance
-                        .sessions
-                        .get(&session_handle)
-                        .ok_or(anyhow!("Failed to read session from instance"))?;
-                    {
-                        let posef: sys::Posef = pose.into();
-                        let space_server = session.session.create_reference_space(
-                            safe_openxr::ReferenceSpaceType::STAGE,
-                            posef,
-                        )?;
-                        let mut lock = session
-                            .space_server
-                            .write()
-                            .map_err(map_err!("Failed to acquire write lock on space_server"))?;
-                        *lock = space_server;
-                        LogTrace::string(format!("Updated space_server: {:?}", posef));
-                    }
-                    session.update_merged()?;
-
-                    Ok(())
-                })?
+                config.server_space_pose = pose.clone();
+                set_space_server_pose(instance_handle, session_handle, pose)?;
+                config.write().await;
             }
             net::ConfigurationDown::RequestSample(subaction_path, base_space) => {
                 calibration_trigger
@@ -532,6 +518,34 @@ async fn run_receive_configuration(
             }
         };
     }
+}
+
+fn set_space_server_pose(
+    instance_handle: sys::Instance,
+    session_handle: sys::Session,
+    pose: Pose,
+) -> Result<(), anyhow::Error> {
+    with_layer(instance_handle, |instance| {
+        let session = instance
+            .sessions
+            .get(&session_handle)
+            .ok_or(anyhow!("Failed to read session from instance"))?;
+        {
+            let posef: sys::Posef = pose.into();
+            let space_server = session
+                .session
+                .create_reference_space(safe_openxr::ReferenceSpaceType::STAGE, posef)?;
+            let mut lock = session
+                .space_server
+                .write()
+                .map_err(map_err!("Failed to acquire write lock on space_server"))?;
+            *lock = space_server;
+            LogTrace::string(format!("Updated space_server: {:?}", posef));
+        }
+        session.update_merged()?;
+
+        Ok(())
+    })
 }
 
 async fn run_transmit_snapshots(

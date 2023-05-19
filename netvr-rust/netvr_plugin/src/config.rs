@@ -1,5 +1,6 @@
 use std::path::Path;
 
+use netvr_data::Pose;
 use serde::{Deserialize, Serialize};
 use tokio::fs;
 use xr_layer::log::LogWarn;
@@ -7,6 +8,8 @@ use xr_layer::log::LogWarn;
 #[derive(Serialize, Deserialize, Debug, Default)]
 pub(crate) struct Config {
     pub name: String,
+    #[serde(default)]
+    pub server_space_pose: Pose,
 
     #[serde(skip)]
     data_directory: String,
