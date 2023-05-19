@@ -52,13 +52,20 @@ export default function DelayVizRoute() {
 }
 
 function Help({ fileName }: { fileName?: string }) {
+  const theme = useTheme()
   const [, set] = useControls(() => ({
     file: { editable: false, value: defaultFileName },
+    local: { editable: false, value: theme.base08 },
+    remote: { editable: false, value: theme.base0B },
   }))
 
   useEffect(() => {
-    set({ file: fileName ?? defaultFileName })
-  }, [fileName, set])
+    set({
+      file: fileName ?? defaultFileName,
+      local: theme.base08,
+      remote: theme.base0B,
+    })
+  }, [fileName, set, theme.base08, theme.base0B])
   return null
 }
 
@@ -184,7 +191,23 @@ function Scene({ data: dataIn }: { data: FileData }) {
     [dataIn],
   )
 
-  const mov = data.local[0]
+  const all = [...data.local, ...data.remote]
+  const min = [
+    all.reduce((acc, v) => Math.min(acc, v[0]), Infinity),
+    all.reduce((acc, v) => Math.min(acc, v[1]), Infinity),
+    all.reduce((acc, v) => Math.min(acc, v[2]), Infinity),
+  ]
+  const max = [
+    all.reduce((acc, v) => Math.max(acc, v[0]), -Infinity),
+    all.reduce((acc, v) => Math.max(acc, v[1]), -Infinity),
+    all.reduce((acc, v) => Math.max(acc, v[2]), -Infinity),
+  ]
+
+  const mov = [
+    (min[0] + max[0]) / 2,
+    (min[1] + max[1]) / 2,
+    (min[2] + max[2]) / 2,
+  ]
   return (
     <group position={mov ? [-mov[0], -mov[1], -mov[2]] : undefined}>
       <pointLight position={[10, 10, 10]} />
