@@ -109,12 +109,14 @@ impl AppServer {
                 }
                 UpMessage::Grab(client_id, object_id) => {
                     if let Some(ref mut entry) = self.state.get_mut(object_id as usize) {
-                        if let Some(client) = self.server.get_client(entry.owner).await {
-                            if let Err(e) = client.send_app_down(AppDown::Release(object_id)) {
-                                println!("Failed to send release to client: {}", e);
+                        if entry.owner != client_id {
+                            if let Some(client) = self.server.get_client(entry.owner).await {
+                                if let Err(e) = client.send_app_down(AppDown::Release(object_id)) {
+                                    println!("Failed to send release to client: {}", e);
+                                }
                             }
+                            entry.owner = client_id;
                         }
-                        entry.owner = client_id;
                     } else {
                         println!("Received grab for unknown object {}", object_id);
                     }
