@@ -36,7 +36,6 @@
         packages = with pkgs; [
           rust-toolchain
           wasm-pack
-          
         ];
       in {
         devShells.default = pkgs.devshell.mkShell {

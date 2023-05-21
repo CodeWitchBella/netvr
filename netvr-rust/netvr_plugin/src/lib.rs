@@ -1,5 +1,3 @@
-#![feature(array_chunks)]
-#![feature(const_option)]
 #[macro_use]
 extern crate lazy_static;
 
