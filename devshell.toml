@@ -1,0 +1,11 @@
+# https://numtide.github.io/devshell
+[[commands]]
+name = "dev-server"
+command = "yarn dev"
+help = "Start dev server"
+category = "new to project? run me first"
+
+[devshell]
+packages = [
+  "nodejs",
+]

@@ -16,6 +16,7 @@ trace-*.json
 .DS_Store
 log
 
+.direnv
 
 # This .gitignore file should be placed at the root of your Unity project directory
 #
