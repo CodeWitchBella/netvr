@@ -15,6 +15,7 @@ yarn-error.log
 trace-*.json
 .DS_Store
 log
+*.zip
 
 .direnv
 

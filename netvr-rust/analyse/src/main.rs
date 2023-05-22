@@ -6,6 +6,8 @@ use anyhow::Result;
 use parse::{LogFile, Sample};
 use serde_json::json;
 
+use crate::parse::Line;
+
 fn main() -> Result<()> {
     // read file from argv
     let args: Vec<String> = std::env::args().collect();
@@ -14,6 +16,17 @@ fn main() -> Result<()> {
 
     // parse contents using nom
     let (_, file) = LogFile::parse(&contents)?;
+    let start_time = file.lines[0].time;
+    let file = LogFile {
+        lines: file
+            .lines
+            .into_iter()
+            .map(|l| Line {
+                time: l.time - start_time,
+                ..l
+            })
+            .collect(),
+    };
 
     if false {
         std::fs::write(

@@ -161,6 +161,9 @@ pub struct RemoteSnapshot {
 #[derive(Serialize, Deserialize, Default)]
 pub struct Nothing(u8);
 
+#[derive(Serialize, Deserialize, Default)]
+pub struct OnlyString(pub String);
+
 #[cfg(not(target_arch = "wasm32"))]
 #[derive(Serialize, Deserialize)]
 pub struct InitRemoteObjectsInput {
@@ -209,6 +212,7 @@ pub struct CodegenRoot(
     pub InitRemoteObjectsInput,
     pub GrabInput,
     pub SetPoseInput,
+    pub OnlyString,
 );
 
 pub mod net;

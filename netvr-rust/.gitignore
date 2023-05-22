@@ -4,3 +4,4 @@ target
 *.dll
 .cargo/config.toml
 calibration-data*.json
+upload

@@ -4,8 +4,8 @@ extern crate lazy_static;
 use std::{backtrace::Backtrace, panic};
 
 use implementation::{
-    grab, init_remote_objects, object_set_pose, read_remote_devices, read_remote_objects, release,
-    start,
+    get_server_address, grab, init_remote_objects, object_set_pose, read_remote_devices,
+    read_remote_objects, release, start,
 };
 use xr_layer::{
     log::{self, LogPanic},
@@ -76,4 +76,5 @@ bincode_expose!(
     expose grab as Grab taking GrabInput and outputting Nothing,
     expose release as Release taking GrabInput and outputting Nothing,
     expose object_set_pose as ObjectSetPose taking SetPoseInput and outputting Nothing,
+    expose get_server_address as GetServerAddress taking InstanceAndSession and outputting OnlyString,
 );

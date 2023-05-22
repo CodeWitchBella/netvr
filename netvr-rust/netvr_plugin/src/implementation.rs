@@ -2,8 +2,8 @@ use std::{collections::hash_map::Entry::Occupied, sync::atomic::Ordering};
 
 use anyhow::{anyhow, Result};
 use netvr_data::{
-    app, GrabInput, InitRemoteObjectsInput, InstanceAndSession, Nothing, ReadRemoteDevicesOutput,
-    RemoteDevice, SetPoseInput, StartInput,
+    app, GrabInput, InitRemoteObjectsInput, InstanceAndSession, Nothing, OnlyString,
+    ReadRemoteDevicesOutput, RemoteDevice, SetPoseInput, StartInput,
 };
 use tokio::select;
 use tracing::info;
@@ -208,5 +208,25 @@ pub(crate) fn object_set_pose(input: SetPoseInput) -> Result<Nothing> {
             e.insert(input.pose);
         }
         Ok(Nothing::default())
+    })
+}
+
+pub(crate) fn get_server_address(input: InstanceAndSession) -> Result<OnlyString> {
+    with_layer(input.instance, |instance| {
+        let session = instance
+            .sessions
+            .get(&input.session)
+            .ok_or(anyhow!("Session not found"))?;
+
+        let lock = session.server_address.read().map_err(|err| {
+            anyhow!(format!(
+                "Failed to acquire read lock on space_server: {:?}",
+                err
+            ))
+        })?;
+        Ok(OnlyString(match (*lock).clone() {
+            Some(address) => address,
+            None => "".to_string(),
+        }))
     })
 }

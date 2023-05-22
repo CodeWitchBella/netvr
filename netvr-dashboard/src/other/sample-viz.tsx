@@ -47,6 +47,7 @@ export default function SampleVizRoute() {
       })
     },
   })
+  const theme = useTheme()
   return (
     <div
       css={{
@@ -59,7 +60,7 @@ export default function SampleVizRoute() {
       {...dropzone.getRootProps()}
     >
       <input {...dropzone.getInputProps()} css={{ display: 'none' }} />
-      <Canvas style={{ height: 'auto' }}>
+      <Canvas style={{ height: 'auto', background: theme.base00 }}>
         <ReprovideTheme value={useReprovideTheme()}>
           <Suspense fallback={<SpinningCube />}>
             <Scene data={savedCalibration} />

@@ -55,6 +55,23 @@ pub(crate) async fn run_net_client(
 
     let connection =
         netvr_client::connect(|text| LogTrace::string(format!("[conn] {}", text))).await?;
+    let remote_address = connection.connection.remote_address().to_string();
+    with_layer(instance_handle, |instance| {
+        let session = instance
+            .sessions
+            .get(&session_handle)
+            .ok_or(anyhow!("Session not found"))?;
+
+        let mut lock = session.server_address.write().map_err(|err| {
+            anyhow!(format!(
+                "Failed to acquire read lock on space_server: {:?}",
+                err
+            ))
+        })?;
+        lock.replace(remote_address);
+        Ok(())
+    })?;
+
     LogTrace::string(format!(
         "Connected to netvr server: {:?}",
         connection.connection.remote_address()

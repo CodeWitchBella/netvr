@@ -171,6 +171,11 @@ namespace Isbl.NetVR
         });
     }
 #endif
+
+        public string GetServerAddress()
+        {
+            return RPC?.GetServerAddress(new(XrInstance, XrSession)).value ?? "";
+        }
     }
 
 } // namespace Isbl.NetVR

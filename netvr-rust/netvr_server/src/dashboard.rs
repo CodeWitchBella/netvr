@@ -1,6 +1,7 @@
 use std::{env, net::SocketAddr};
 
 use anyhow::{anyhow, Result};
+use bytes::Bytes;
 use futures_util::{
     stream::{SplitSink, SplitStream},
     SinkExt, StreamExt,
@@ -15,6 +16,7 @@ use netvr_data::{
 };
 use tokio::sync::{broadcast, mpsc};
 use warp::{
+    http::{self, Response},
     ws::{Message, WebSocket},
     Filter,
 };
@@ -335,11 +337,27 @@ async fn dashboard_connected(
     }
 }
 
+fn get_upload_dir() -> std::path::PathBuf {
+    let mut upload_dir = env::current_dir().unwrap();
+    upload_dir.push("upload");
+    upload_dir
+}
+
 pub(crate) async fn serve_dashboard(
     tx: broadcast::Sender<DashboardMessage>,
     server: Server,
     calibration_sender: CalibrationSender,
-) {
+) -> anyhow::Result<()> {
+    match tokio::fs::create_dir(&get_upload_dir()).await {
+        Ok(_) => {}
+        Err(e) => match e.kind() {
+            std::io::ErrorKind::AlreadyExists => {}
+            _ => {
+                return Err(anyhow!("Failed to create upload dir: {e}"));
+            }
+        },
+    };
+
     let exe_parent: Result<_> = match std::env::current_exe() {
         Ok(p) => match p.parent() {
             Some(p) => anyhow::Result::Ok(p.to_owned()),
@@ -383,7 +401,32 @@ pub(crate) async fn serve_dashboard(
     let files = warp::filters::fs::dir(dashboard.clone());
     let mut index = dashboard.clone();
     index.push("index.html");
-    let routes = ws.or(files).or(warp::fs::file(index));
+    let upload_route = warp::put()
+        .and(warp::path("upload"))
+        .and(warp::path::param())
+        .and(warp::body::bytes())
+        .and_then(handle_upload);
+
+    let routes = ws.or(files).or(warp::fs::file(index).or(upload_route));
     warp::serve(routes).run(([0, 0, 0, 0], 13161)).await;
     println!("serving dashboard from {:?}", dashboard);
+    Ok(())
+}
+
+async fn handle_upload(
+    filename: String,
+    bytes: Bytes,
+) -> std::result::Result<impl warp::Reply, warp::Rejection> {
+    let fname = get_upload_dir().join(filename);
+    println!("Uploading {:?}...", fname);
+    if let Err(err) = tokio::fs::write(fname.clone(), bytes).await {
+        return Ok(warp::reply::with_status(
+            format!("Failed to write file {:?}\n", err),
+            http::StatusCode::INTERNAL_SERVER_ERROR,
+        ));
+    };
+    Ok(warp::reply::with_status(
+        format!("Uploaded {:?}\n", fname),
+        http::StatusCode::OK,
+    ))
 }
