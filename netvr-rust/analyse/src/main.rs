@@ -4,7 +4,6 @@ mod plot_positions;
 
 use anyhow::Result;
 use parse::{LogFile, Sample};
-use serde_json::json;
 
 use crate::parse::Line;
 
@@ -15,7 +14,10 @@ fn main() -> Result<()> {
     let contents = std::fs::read_to_string(filename)?;
 
     // parse contents using nom
-    let (_, file) = LogFile::parse(&contents)?;
+    let (rest, file) = LogFile::parse(&contents)?;
+    if !rest.is_empty() {
+        println!("Warning: unparsed data: {:?}", rest);
+    }
     let start_time = file.lines[0].time;
     let file = LogFile {
         lines: file
@@ -34,6 +36,7 @@ fn main() -> Result<()> {
             serde_json::to_string(&serde_json::to_value(file.clone())?)?,
         )?;
     }
+    println!("Lines: {}", file.lines.len());
 
     let (local_id, local) = file
         .local_ids()
@@ -80,21 +83,6 @@ fn main() -> Result<()> {
     let local_distances = map_to_distance_from_start(&local);
     let remote_distances = map_to_distance_from_start(&remote);
 
-    // write to filename
-    // replace ext from filename with .anal
-    std::fs::write(
-        std::path::Path::new(filename).with_extension("anal"),
-        serde_json::to_string_pretty(&json!({
-            "local_id": local_id,
-            "local_characteristics": local_info.characteristics,
-            "remote_id": remote_id,
-            "remote_interaction_profile": remote_info.interaction_profile,
-            "remote_subaction_path": remote_info.subaction_path,
-            "local": local.iter().map(|s| s.position).collect::<Vec<_>>(),
-            "remote": remote.iter().map(|s| s.position).collect::<Vec<_>>(),
-        }))?,
-    )?;
-
     std::fs::write(
         std::path::Path::new(filename).with_extension("csv"),
         local_distances
@@ -128,6 +116,25 @@ fn main() -> Result<()> {
             .to_string(),
         recenter: false,
     })?;
+
+    std::fs::write(
+        std::path::Path::new(filename).with_extension("dat"),
+        local_distances
+            .iter()
+            .zip(remote_distances.iter())
+            .fold("local\tremote\n".to_string(), |acc, (l, r)| {
+                format!("{acc}{l}\t{r}\n")
+            }),
+    )?;
+    std::fs::write(
+        std::path::Path::new(filename).with_extension("dat.csv"),
+        local_distances
+            .iter()
+            .zip(remote_distances.iter())
+            .fold("local;remote\n".to_string(), |acc, (l, r)| {
+                format!("{acc}{l};{r}\n")
+            }),
+    )?;
 
     Ok(())
 }

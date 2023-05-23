@@ -1,7 +1,7 @@
 use std::cmp::{max_by, min_by, Ordering::Equal};
 
 use anyhow::Result;
-use plotters::prelude::*;
+use plotters::{define_color, prelude::*};
 
 pub struct PlotInput {
     pub times: Vec<f64>,
@@ -15,7 +15,7 @@ fn f64_cmp(a: &&f64, b: &&f64) -> std::cmp::Ordering {
 }
 
 pub fn plot(input: PlotInput) -> Result<()> {
-    let root = SVGBackend::new(&input.out_file_name, (1024, 768)).into_drawing_area();
+    let root = SVGBackend::new(&input.out_file_name, (800, 400)).into_drawing_area();
 
     root.fill(&WHITE)?;
 
@@ -33,7 +33,7 @@ pub fn plot(input: PlotInput) -> Result<()> {
 
     let mut chart = ChartBuilder::on(&root)
         .margin(10)
-        .caption("Distance from start over time", ("sans-serif", 40))
+        //.caption("Distance from start over time", ("sans-serif", 40))
         .set_label_area_size(LabelAreaPosition::Left, 60)
         .set_label_area_size(LabelAreaPosition::Right, 60)
         .set_label_area_size(LabelAreaPosition::Bottom, 40)
@@ -45,7 +45,8 @@ pub fn plot(input: PlotInput) -> Result<()> {
         .disable_y_mesh()
         .x_labels(30)
         .max_light_lines(4)
-        //.y_desc("")
+        .x_desc("time (s)")
+        .y_desc("distance (m)")
         .draw()?;
 
     chart.draw_series(
@@ -53,16 +54,19 @@ pub fn plot(input: PlotInput) -> Result<()> {
             .local
             .iter()
             .enumerate()
-            .map(|(i, v)| Circle::new((input.times[i], *v), 3, BLUE.filled())),
+            .map(|(i, v)| Circle::new((input.times[i], *v), 2, LOCAL.filled())),
     )?;
     chart.draw_series(
         input
             .remote
             .iter()
             .enumerate()
-            .map(|(i, v)| Circle::new((input.times[i], *v), 3, GREEN.filled())),
+            .map(|(i, v)| Circle::new((input.times[i], *v), 2, REMOTE.filled())),
     )?;
 
     println!("Result has been saved to {}", input.out_file_name);
     Ok(())
 }
+
+const LOCAL: RGBColor = RGBColor(255, 46, 180);
+const REMOTE: RGBColor = RGBColor(0, 0xbd, 0x0c);
