@@ -23,6 +23,7 @@ export default defineConfig({
   },
   build: {
     polyfillModulePreload: false,
+    target: 'esnext',
   },
 })
 
