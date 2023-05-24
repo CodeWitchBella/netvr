@@ -8,7 +8,9 @@ public class Logger : MonoBehaviour
 {
     string log = "";
     bool logging = false;
+    bool non_continuous = false;
     bool wasPressed = false;
+    bool wasBothPressed = false;
 
     IsblLocalXRDeviceManager local;
     Isbl.NetVR.IsblRemoteDeviceManager remote;
@@ -24,8 +26,23 @@ public class Logger : MonoBehaviour
         if (logging) Log();
 
         bool isPressed = local.Devices.Exists(d => d.NetDevice.PrimaryButton || d.NetDevice.SecondaryButton);
-        if (isPressed && !wasPressed) OnPress();
+        bool bothPressed = local.Devices.Exists(d => d.NetDevice.PrimaryButton && d.NetDevice.SecondaryButton);
+        if (non_continuous)
+        {
+            if (isPressed) Log();
+            if (bothPressed && !wasBothPressed) FinishNonContinuous();
+        }
+        else if (bothPressed)
+        {
+            non_continuous = true;
+            log = "";
+        }
+        else if (isPressed && !wasPressed)
+        {
+            OnPress();
+        }
         wasPressed = isPressed;
+        wasBothPressed = bothPressed;
     }
 
     private static string GetLogDirectory()
@@ -38,27 +55,35 @@ public class Logger : MonoBehaviour
     {
         if (logging)
         {
-            // create directory if not exists
-            string dir = GetLogDirectory();
-            if (!System.IO.Directory.Exists(dir)) System.IO.Directory.CreateDirectory(dir);
-            // Write to file
-            string fname = $"{System.DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss")}.txt";
-            string path = $"{dir}/{fname}";
-            System.IO.File.WriteAllText(path, log);
-            Debug.Log("Wrote to " + path);
-            StartCoroutine(Upload(log, fname));
+            StartCoroutine(WriteAndUpload(log));
             log = "";
         }
         logging = !logging;
     }
 
-    IEnumerator Upload(string data, string fname)
+
+    void FinishNonContinuous()
     {
+        StartCoroutine(WriteAndUpload(log));
+        log = "";
+    }
+
+    IEnumerator WriteAndUpload(string data)
+    {
+        // create directory if not exists
+        string dir = GetLogDirectory();
+        if (!System.IO.Directory.Exists(dir)) System.IO.Directory.CreateDirectory(dir);
+        // Write to file
+        string fname = $"{System.DateTime.Now.ToString("yyyy-MM-dd_HH-mm-ss")}.txt";
+        string path = $"{dir}/{fname}";
+        System.IO.File.WriteAllText(path, log);
+        Debug.Log("Wrote to " + path);
+        // Upload
         var feature = Isbl.NetVR.IsblXRFeature.Instance;
         var serverAddress = feature.GetServerAddress().Split(':')[0];
-        var path = $"http://{serverAddress}:13161/upload/{fname}";
-        Debug.Log($"Uploading to {path}");
-        UnityWebRequest www = UnityWebRequest.Put(path, log);
+        var serverPath = $"http://{serverAddress}:13161/upload/{fname}";
+        Debug.Log($"Uploading to {serverPath}");
+        UnityWebRequest www = UnityWebRequest.Put(serverPath, log);
         yield return www.SendWebRequest();
 
         if (www.result != UnityWebRequest.Result.Success) Debug.Log(www.error);
