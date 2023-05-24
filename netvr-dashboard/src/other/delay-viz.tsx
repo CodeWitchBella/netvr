@@ -11,11 +11,14 @@ import {
 } from '../components/theme'
 import {
   Axes,
+  CameraControls,
   Connections,
   PolyLine,
   Segment,
   SpinningCube,
   dist,
+  mul,
+  plus,
 } from './shared'
 
 type FileData = {
@@ -200,27 +203,33 @@ function Scene({ data: dataIn }: { data: FileData }) {
   )
 
   const all = [...data.local, ...data.remote]
-  const min = [
+  const sampleMin = [
     all.reduce((acc, v) => Math.min(acc, v[0]), Infinity),
     all.reduce((acc, v) => Math.min(acc, v[1]), Infinity),
     all.reduce((acc, v) => Math.min(acc, v[2]), Infinity),
-  ]
-  const max = [
+  ] as const
+  const sampleMax = [
     all.reduce((acc, v) => Math.max(acc, v[0]), -Infinity),
     all.reduce((acc, v) => Math.max(acc, v[1]), -Infinity),
     all.reduce((acc, v) => Math.max(acc, v[2]), -Infinity),
-  ]
+  ] as const
 
   const mov = [
-    (min[0] + max[0]) / 2,
-    (min[1] + max[1]) / 2,
-    (min[2] + max[2]) / 2,
+    (sampleMin[0] + sampleMax[0]) / 2,
+    (sampleMin[1] + sampleMax[1]) / 2,
+    (sampleMin[2] + sampleMax[2]) / 2,
   ] as const
+
+  const center =
+    sampleMin && sampleMax ? mul(0.5, plus(sampleMin, sampleMax)) : undefined
+
+  const axisMov = plus(sampleMin, [-0.1, -0.1, -0.1])
   return (
-    <group position={mov ? [-mov[0], -mov[1], -mov[2]] : undefined}>
+    <group position={mul(-1, center)}>
       <pointLight position={[10, 10, 10]} />
       <ambientLight />
       <OrbitControls />
+      <CameraControls />
 
       <PolyLine points={data.local} color={theme.base08} thickness={0.002} />
       <PolyLine points={data.remote} color={theme.base0B} thickness={0.002} />
@@ -231,7 +240,7 @@ function Scene({ data: dataIn }: { data: FileData }) {
         color={theme.base03}
       />
 
-      <Axes pos={mov} />
+      <Axes pos={axisMov} />
     </group>
   )
 }
