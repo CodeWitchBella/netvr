@@ -12,7 +12,14 @@ import {
 } from '../components/theme'
 import { useWasmSuspending, type WrappedWasm } from '../wasm/wasm-wrapper'
 import { compute } from '../wasm2/netvr_calibrate'
-import { Connections, PolyLine, SpinningCube, Segment, dist } from './shared'
+import {
+  Connections,
+  PolyLine,
+  SpinningCube,
+  Segment,
+  dist,
+  Axes,
+} from './shared'
 
 type SavedCalibration = {
   fileName: string
@@ -247,6 +254,17 @@ function Scene({ data: dataIn }: { data: SavedCalibration | null }) {
   }, [timePointsTarget, timePointsReference])
 
   const mov = transformedSamples?.reference[0]
+  const axisMov =
+    transformedSamples && mov
+      ? ([
+          transformedSamples.reference.map((r) => r[0]).reduce(min, mov[0]) -
+            0.1,
+          transformedSamples.reference.map((r) => r[1]).reduce(min, mov[1]) -
+            0.1,
+          transformedSamples.reference.map((r) => r[2]).reduce(min, mov[2]) -
+            0.1,
+        ] as const)
+      : undefined
   return (
     <group position={mov ? [-mov[0], -mov[1], mov[2]] : undefined}>
       <pointLight position={[10, 10, 10]} />
@@ -291,16 +309,13 @@ function Scene({ data: dataIn }: { data: SavedCalibration | null }) {
           />
         </>
       ) : null}
-      <Segment from={[0, 0, 0]} to={[1, 0, 0]} color="red" thickness={0.004} />
-      <Segment
-        from={[0, 0, 0]}
-        to={[0, 1, 0]}
-        color="green"
-        thickness={0.004}
-      />
-      <Segment from={[0, 0, 0]} to={[0, 0, 1]} color="blue" thickness={0.004} />
+      <Axes pos={axisMov} />
     </group>
   )
+}
+
+function min(a: number, b: number) {
+  return Math.min(a, b)
 }
 
 function plus(

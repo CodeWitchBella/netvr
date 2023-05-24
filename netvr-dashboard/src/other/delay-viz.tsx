@@ -9,7 +9,14 @@ import {
   useReprovideTheme,
   useTheme,
 } from '../components/theme'
-import { Connections, PolyLine, Segment, SpinningCube, dist } from './shared'
+import {
+  Axes,
+  Connections,
+  PolyLine,
+  Segment,
+  SpinningCube,
+  dist,
+} from './shared'
 
 type FileData = {
   fileName: string
@@ -208,7 +215,7 @@ function Scene({ data: dataIn }: { data: FileData }) {
     (min[0] + max[0]) / 2,
     (min[1] + max[1]) / 2,
     (min[2] + max[2]) / 2,
-  ]
+  ] as const
   return (
     <group position={mov ? [-mov[0], -mov[1], -mov[2]] : undefined}>
       <pointLight position={[10, 10, 10]} />
@@ -224,14 +231,7 @@ function Scene({ data: dataIn }: { data: FileData }) {
         color={theme.base03}
       />
 
-      <Segment from={[0, 0, 0]} to={[1, 0, 0]} color="red" thickness={0.004} />
-      <Segment
-        from={[0, 0, 0]}
-        to={[0, 1, 0]}
-        color="green"
-        thickness={0.004}
-      />
-      <Segment from={[0, 0, 0]} to={[0, 0, 1]} color="blue" thickness={0.004} />
+      <Axes pos={mov} />
     </group>
   )
 }

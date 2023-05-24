@@ -1,6 +1,7 @@
 /** @jsxImportSource @emotion/react */
 import { useFrame } from '@react-three/fiber'
-import { useEffect, useRef } from 'react'
+import { Text, useCamera } from '@react-three/drei'
+import { Fragment, useEffect, useRef } from 'react'
 import * as THREE from 'three'
 import { useTheme } from '../components/theme'
 import { ErrorBoundary } from '../components/error-boundary'
@@ -93,6 +94,145 @@ function PolyLineInner({
       <meshStandardMaterial color={color} />
     </instancedMesh>
   )
+}
+
+export function Axes({ pos }: { pos?: readonly [number, number, number] }) {
+  const tickLength = 0.05
+  return (
+    <group position={pos ? [pos[0], pos[1], pos[2]] : undefined}>
+      <Segment from={[0, 0, 0]} to={[1, 0, 0]} color="red" thickness={0.004} />
+      <AxisTicks
+        color="red"
+        dir={[1, 0, 0]}
+        end={[0, tickLength, 0]}
+        text={{
+          anchorX: 'left',
+          anchorY: 'middle',
+          //rotation: [0, Math.PI / 2, 0],
+          position: [0.005, 0.025, 0],
+          desc: 'x (m)',
+        }}
+      />
+      <Segment
+        from={[0, 0, 0]}
+        to={[0, 1, 0]}
+        color="green"
+        thickness={0.004}
+      />
+      <AxisTicks
+        color="green"
+        dir={[0, 1, 0]}
+        end={[0, 0, tickLength]}
+        text={{
+          anchorX: 'right',
+          anchorY: 'bottom-baseline',
+          rotation: [0, Math.PI / 2, 0],
+          position: [-0.005, 0.005, 0],
+        }}
+      />
+      <AxisTicks
+        color="green"
+        dir={[0, 1, 0]}
+        end={[tickLength, 0, 0]}
+        text={{
+          anchorX: 'left',
+          anchorY: 'bottom-baseline',
+          position: [0.005, 0.005, 0],
+        }}
+      />
+      <Segment from={[0, 0, 0]} to={[0, 0, 1]} color="blue" thickness={0.004} />
+      <AxisTicks
+        color="blue"
+        dir={[0, 0, 1]}
+        end={[0, tickLength, 0]}
+        text={{
+          anchorX: 'right',
+          anchorY: 'middle',
+          rotation: [0, Math.PI / 2, 0],
+          position: [0, 0.025, 0.005],
+          desc: 'z (m)',
+        }}
+      />
+    </group>
+  )
+}
+
+function AxisTicks({
+  color,
+  dir,
+  end,
+  text = {},
+}: {
+  color: string
+  dir: readonly [number, number, number]
+  end: readonly [number, number, number]
+  text: {
+    anchorX?: 'left' | 'right' | 'center'
+    anchorY?: 'bottom' | 'top' | 'bottom-baseline' | 'middle' | 'top-baseline'
+    position?: readonly [number, number, number]
+    rotation?: readonly [number, number, number]
+    desc?: string
+  }
+}) {
+  return (
+    <>
+      {Array.from({ length: 10 }, (_, i) => {
+        const k = (i + 1) / 10
+        const from: [number, number, number] = [
+          dir[0] * k,
+          dir[1] * k,
+          dir[2] * k,
+        ]
+        return (
+          <Fragment key={i}>
+            <Segment
+              from={from}
+              to={[from[0] + end[0], from[1] + end[1], from[2] + end[2]]}
+              color={color}
+              thickness={0.002}
+            />
+            <Text
+              color="black"
+              anchorX={text.anchorX}
+              anchorY={text.anchorY}
+              position={plus(from, text.position)}
+              scale={0.4}
+              rotation={plus(text.rotation)}
+            >
+              {k.toFixed(1)}
+            </Text>
+          </Fragment>
+        )
+      })}
+      <Text
+        color="black"
+        anchorX="center"
+        anchorY="top-baseline"
+        position={plus(mul(0.5, dir), mul(-1, end))}
+        scale={0.4}
+        rotation={plus(text.rotation)}
+      >
+        {text.desc ?? ''}
+      </Text>
+    </>
+  )
+}
+
+function plus(
+  ...a: readonly (readonly [number, number, number] | undefined)[]
+): [number, number, number] {
+  return [
+    a.map((v) => v?.[0] ?? 0).reduce((a, b) => a + b, 0),
+    a.map((v) => v?.[1] ?? 0).reduce((a, b) => a + b, 0),
+    a.map((v) => v?.[2] ?? 0).reduce((a, b) => a + b, 0),
+  ]
+}
+
+function mul(
+  k: number,
+  v: readonly [number, number, number],
+): [number, number, number] {
+  return [v[0] * k, v[1] * k, v[2] * k]
 }
 
 export function Connections({
