@@ -1,5 +1,5 @@
 /** @jsxImportSource @emotion/react */
-import { OrbitControls } from '@react-three/drei'
+import { OrbitControls, OrthographicCamera } from '@react-three/drei'
 import { Canvas } from '@react-three/fiber'
 import { useControls } from 'leva'
 import { Suspense, useEffect, useMemo, useState } from 'react'
@@ -19,6 +19,9 @@ import {
   Segment,
   dist,
   Axes,
+  plus,
+  mul,
+  CameraControls,
 } from './shared'
 
 type SavedCalibration = {
@@ -242,34 +245,44 @@ function Scene({ data: dataIn }: { data: SavedCalibration | null }) {
     }),
     [data],
   )
-  useEffect(() => {
-    if (!timePointsTarget || !timePointsReference) return
-    const averageTarget =
-      timePointsTarget?.map((v) => v[1]).reduce((a, b) => a + b, 0) /
-      timePointsTarget?.length
-    const averageReference =
-      timePointsReference?.map((v) => v[1]).reduce((a, b) => a + b, 0) /
-      timePointsReference?.length
-    console.log({ averageTarget, averageReference })
-  }, [timePointsTarget, timePointsReference])
 
-  const mov = transformedSamples?.reference[0]
-  const axisMov =
-    transformedSamples && mov
-      ? ([
-          transformedSamples.reference.map((r) => r[0]).reduce(min, mov[0]) -
-            0.1,
-          transformedSamples.reference.map((r) => r[1]).reduce(min, mov[1]) -
-            0.1,
-          transformedSamples.reference.map((r) => r[2]).reduce(min, mov[2]) -
-            0.1,
-        ] as const)
-      : undefined
+  const sampleMin = transformedSamples
+    ? ([
+        transformedSamples.reference
+          .map((r) => r[0])
+          .reduce(min, Number.MAX_SAFE_INTEGER),
+        transformedSamples.reference
+          .map((r) => r[1])
+          .reduce(min, Number.MAX_SAFE_INTEGER),
+        transformedSamples.reference
+          .map((r) => r[2])
+          .reduce(min, Number.MAX_SAFE_INTEGER),
+      ] as const)
+    : undefined
+  const sampleMax = transformedSamples
+    ? ([
+        transformedSamples.reference
+          .map((r) => r[0])
+          .reduce(max, Number.MIN_SAFE_INTEGER),
+        transformedSamples.reference
+          .map((r) => r[1])
+          .reduce(max, Number.MIN_SAFE_INTEGER),
+        transformedSamples.reference
+          .map((r) => r[2])
+          .reduce(max, Number.MIN_SAFE_INTEGER),
+      ] as const)
+    : undefined
+  const center =
+    sampleMin && sampleMax ? mul(0.5, plus(sampleMin, sampleMax)) : undefined
+
+  const axisMov = plus(sampleMin, [-0.1, -0.1, -0.1])
   return (
-    <group position={mov ? [-mov[0], -mov[1], mov[2]] : undefined}>
+    <group position={mul(-1, center)}>
       <pointLight position={[10, 10, 10]} />
       <ambientLight />
-      <OrbitControls />
+
+      <OrbitControls enablePan={false} />
+      <CameraControls />
       {transformedSamples ? (
         <>
           <PolyLine
@@ -318,11 +331,8 @@ function min(a: number, b: number) {
   return Math.min(a, b)
 }
 
-function plus(
-  a: readonly [number, number, number],
-  b: readonly [number, number, number],
-): [number, number, number] {
-  return [a[0] + b[0], a[1] + b[1], a[2] + b[2]]
+function max(a: number, b: number) {
+  return Math.max(a, b)
 }
 
 function vecToArray(v: {

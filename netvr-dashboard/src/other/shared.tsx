@@ -6,6 +6,7 @@ import * as THREE from 'three'
 import { useTheme } from '../components/theme'
 import { ErrorBoundary } from '../components/error-boundary'
 import { InstancedMesh } from 'three'
+import { button, useControls } from 'leva'
 
 export function SpinningCube() {
   const theme = useTheme()
@@ -218,7 +219,7 @@ function AxisTicks({
   )
 }
 
-function plus(
+export function plus(
   ...a: readonly (readonly [number, number, number] | undefined)[]
 ): [number, number, number] {
   return [
@@ -228,11 +229,38 @@ function plus(
   ]
 }
 
-function mul(
+export function mul(
   k: number,
-  v: readonly [number, number, number],
+  v: readonly [number, number, number] | undefined,
 ): [number, number, number] {
-  return [v[0] * k, v[1] * k, v[2] * k]
+  return [(v?.[0] ?? 0) * k, (v?.[1] ?? 0) * k, (v?.[2] ?? 0) * k]
+}
+
+export function CameraControls() {
+  const position = useRef<null | readonly [number, number, number]>(null)
+  useFrame((state) => {
+    if (position.current) {
+      state.camera.position.set(
+        ...mul(state.camera.position.length(), position.current),
+      )
+      state.camera.lookAt(0, 0, 0)
+      if (position.current[1]) state.camera.up.set(-1, 0, 0)
+      else state.camera.up.set(0, 1, 0)
+      position.current = null
+    }
+  })
+  useControls({
+    yz: button(() => {
+      position.current = [1, 0, 0]
+    }),
+    xz: button(() => {
+      position.current = [0, 1, 0]
+    }),
+    xy: button(() => {
+      position.current = [0, 0, 1]
+    }),
+  })
+  return null
 }
 
 export function Connections({
