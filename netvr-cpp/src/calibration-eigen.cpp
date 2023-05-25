@@ -212,6 +212,12 @@ namespace
 
 // END: OVR Space Calibrator code
 
+/**
+ * @brief Compute the calibration result from a set of samples
+ *
+ * @param matches
+ * @return CalibrationResult
+ */
 CalibrationResult calibrate(const std::vector<Sample> &matches)
 {
     // Notes from original code:

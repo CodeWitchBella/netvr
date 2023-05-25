@@ -11,4 +11,7 @@
 
 #include "../includes/netvr.h"
 
+/**
+ * Logs a message to the unity console.
+ */
 extern void (*unity_log)(const char *);

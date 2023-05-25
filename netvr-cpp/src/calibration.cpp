@@ -7,6 +7,10 @@
 #include <unordered_map>
 #include <memory>
 
+/**
+ * @brief List of samples (pairs of poses) to be used for calibration.
+ *
+ */
 struct Calibration
 {
     std::vector<Sample> samples;
@@ -15,6 +19,7 @@ struct Calibration
 int map_counter = 0;
 std::unordered_map<int, std::unique_ptr<Calibration>> map;
 
+// see netvr.h for docs
 ISBL_NETVR_FUNC int isbl_netvr_calibration_create()
 {
     int handle = ++map_counter;
@@ -22,11 +27,13 @@ ISBL_NETVR_FUNC int isbl_netvr_calibration_create()
     return handle;
 }
 
+// see netvr.h for docs
 ISBL_NETVR_FUNC void isbl_netvr_calibration_destroy(int handle)
 {
     map.erase(handle);
 }
 
+// see netvr.h for docs
 ISBL_NETVR_FUNC void
 isbl_netvr_calibration_add_pair(int handle,
                                 double x1, double y1, double z1, double qx1, double qy1, double qz1, double qw1,
@@ -41,6 +48,7 @@ isbl_netvr_calibration_add_pair(int handle,
         Pose{x2, y2, z2, qx2, qy2, qz2, qw2}});
 }
 
+// see netvr.h for docs
 ISBL_NETVR_FUNC void isbl_netvr_calibration_compute(int handle, double *output)
 {
     if (map.find(handle) == map.end())
