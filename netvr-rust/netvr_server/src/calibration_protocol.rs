@@ -87,18 +87,12 @@ async fn run(
                 client_target,
                 client_reference,
             } => {
-                let conf = CalibrationConfiguration {
-                    sample_count: 50 * 3600,
-                    sample_interval_nanos: 20_000_000,
-                };
-                run_calibration(
+                run_hijack(
                     &mut recv,
                     client_target,
                     client_reference,
                     server.clone(),
                     tx.clone(),
-                    conf,
-                    false,
                 )
                 .await;
                 continue;
@@ -112,7 +106,7 @@ async fn run(
             } => {
                 let Some(client_target) = server.get_client(client_target.0).await else { continue; };
                 let Some(client_reference) = server.get_client(client_reference.0).await else { continue; };
-                finish(tx.clone(), data, &client_target, &client_reference, true).await;
+                finish(tx.clone(), data, &client_target, &client_reference).await;
                 continue;
             }
             ByHeadset => {
@@ -132,7 +126,6 @@ async fn run(
             server.clone(),
             tx.clone(),
             conf,
-            true,
         )
         .await;
     }
@@ -147,7 +140,6 @@ async fn run_calibration(
     server: Server,
     tx: broadcast::Sender<DashboardMessage>,
     conf: CalibrationConfiguration,
-    apply: bool,
 ) {
     let client_target_id = client_target.0;
     let client_reference_id = client_reference.0;
@@ -239,14 +231,118 @@ async fn run_calibration(
         }
         Err(err) => println!("Failed to serialize calibration data: {:?}", err),
     };
-    finish(
-        tx.clone(),
-        calibration,
-        &client_target,
-        &client_reference,
-        apply,
+    finish(tx.clone(), calibration, &client_target, &client_reference).await;
+}
+
+async fn run_hijack(
+    recv: &mut mpsc::UnboundedReceiver<CalibrationProtocolMessage>,
+    client_target: (ClientId, String),
+    client_reference: (ClientId, String),
+    server: Server,
+    tx: broadcast::Sender<DashboardMessage>,
+) {
+    let conf = CalibrationConfiguration {
+        sample_count: 50 * 3600,
+        sample_interval_nanos: 20_000_000,
+    };
+
+    let client_target_id = client_target.0;
+    let client_reference_id = client_reference.0;
+    let client_target_path = client_target.1;
+    let client_reference_path = client_reference.1;
+
+    let Some(client_target) = server.get_client(client_target.0).await else { return ; };
+    let Some(client_reference) = server.get_client(client_reference.0).await else { return ; };
+    if let Err(err) = client_target.send_configuration_down(TriggerCalibration(
+        client_target_path,
+        conf,
+        BaseSpace::Stage,
+    )) {
+        println!(
+            "Failed to send trigger calibration to client {:?}: {:?}",
+            client_target_id, err
+        );
+        return;
+    }
+    if let Err(err) = client_reference.send_configuration_down(TriggerCalibration(
+        client_reference_path,
+        conf,
+        BaseSpace::Server,
+    )) {
+        println!(
+            "Failed to send trigger calibration to client {:?}: {:?}",
+            client_reference_id, err
+        );
+        let _ = client_target.send_configuration_down(StopCalibration);
+        return;
+    }
+
+    let samples_result = collect_samples_hijack(
+        conf.sample_count,
+        client_target_id,
+        client_reference_id,
+        recv,
     )
     .await;
+    // Send end to clients
+    for id in [client_target_id, client_reference_id] {
+        if let Some(client) = server.get_client(id).await {
+            if let Err(err) = client.send_configuration_down(StopCalibration) {
+                println!(
+                    "Failed to send stop calibration to client {:?}: {:?}",
+                    id, err
+                );
+            }
+        }
+    }
+    let (samples_target, samples_reference) = match samples_result {
+        Ok(v) => v,
+        Err(err) => {
+            println!("Calibration failed: {:?}", err);
+            return;
+        }
+    };
+
+    // Samples collected. Calibrate and apply
+    println!("samples_target: {:?}", samples_target.len());
+    println!("samples_reference: {:?}", samples_target.len());
+    let configuration = server.latest_configuration().await;
+    let configuration = configuration.borrow();
+    let calibration = CalibrationInput {
+        target: samples_target,
+        target_name: configuration
+            .clients
+            .get(&client_target_id)
+            .map(|v| v.name.clone())
+            .unwrap_or_default(),
+        reference: samples_reference,
+        reference_name: configuration
+            .clients
+            .get(&client_reference_id)
+            .map(|v| v.name.clone())
+            .unwrap_or_default(),
+    };
+    match serde_json::to_string(&calibration) {
+        Ok(data) => {
+            let dt: DateTime<Utc> = SystemTime::now().into();
+            let fname = format!("calibration-data-{}.json", dt.format("%Y-%m-%dT%H-%M-%S"));
+            match File::create(fname.clone()) {
+                Ok(mut f) => match f.write_all(data.as_bytes()) {
+                    Ok(()) => println!("Calibration data written to file: {}", fname),
+                    Err(err) => println!("Failed to write calibration data to file: {:?}", err),
+                },
+                Err(err) => println!("Failed to create calibration file: {:?}", err),
+            }
+        }
+        Err(err) => println!("Failed to serialize calibration data: {:?}", err),
+    };
+    let _ = tx.send(DashboardMessage::Info {
+        message: format!(
+            "Data collection finished: {:?}, {:?}",
+            calibration.reference.len(),
+            calibration.target.len()
+        ),
+    });
 }
 
 async fn calibrate_by_headset(
@@ -292,7 +388,6 @@ async fn finish(
     input: CalibrationInput,
     target: &Client,
     reference: &Client,
-    apply: bool,
 ) {
     let result = netvr_calibrate::calibrate(&input);
     println!("Calibration result: {:?}", result);
@@ -300,20 +395,18 @@ async fn finish(
         message: format!("Calibration finished: {:?}", result),
     });
     let Ok(data) = result else { return; };
-    if apply {
-        if let Err(res) = target.send_configuration_down(SetServerSpacePose(Pose {
-            position: rotate_vector(
-                Vec3 {
-                    x: -data.translation.x,
-                    y: -data.translation.y,
-                    z: -data.translation.z,
-                },
-                invert_quaternion(data.rotation.clone()),
-            ),
-            orientation: invert_quaternion(data.rotation),
-        })) {
-            println!("Failed to send stage pose to target: {:?}", res);
-        }
+    if let Err(res) = target.send_configuration_down(SetServerSpacePose(Pose {
+        position: rotate_vector(
+            Vec3 {
+                x: -data.translation.x,
+                y: -data.translation.y,
+                z: -data.translation.z,
+            },
+            invert_quaternion(data.rotation.clone()),
+        ),
+        orientation: invert_quaternion(data.rotation),
+    })) {
+        println!("Failed to send stage pose to target: {:?}", res);
     }
 }
 
@@ -342,6 +435,29 @@ async fn collect_samples(
         }
         if time_start.elapsed().as_secs() > 60 {
             Err(anyhow!("Timed out waiting for samples"))?
+        }
+    }
+    Ok((samples_target, samples_reference))
+}
+
+async fn collect_samples_hijack(
+    sample_count: usize,
+    client_target: ClientId,
+    client_reference: ClientId,
+    recv: &mut mpsc::UnboundedReceiver<CalibrationProtocolMessage>,
+) -> Result<(Vec<CalibrationSample>, Vec<CalibrationSample>)> {
+    let mut samples_target = vec![];
+    let mut samples_reference = vec![];
+    loop {
+        let Some(sample) = recv.recv().await else { break; };
+        if let FinishCalibration = sample {
+            break;
+        }
+        let Sample { client, sample } = sample else { continue; };
+        if client == client_target {
+            samples_target.push(sample);
+        } else if client == client_reference {
+            samples_reference.push(sample);
         }
     }
     Ok((samples_target, samples_reference))
