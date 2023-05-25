@@ -26,6 +26,14 @@ export type DashboardMessageUp =
       }
     }
   | {
+      type: 'StartHijack'
+      targetId: ClientId
+      targetSubactionPath: string
+      referenceId: ClientId
+      referenceSubactionPath: string
+    }
+  | { type: 'FinishCalibration' }
+  | {
       type: 'ReapplyCalibration'
       targetId: ClientId
       targetSubactionPath: string

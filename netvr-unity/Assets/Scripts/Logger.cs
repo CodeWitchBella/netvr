@@ -23,23 +23,32 @@ public class Logger : MonoBehaviour
 
     void Update()
     {
-        if (logging) Log();
-
         bool isPressed = local.Devices.Exists(d => d.NetDevice.PrimaryButton || d.NetDevice.SecondaryButton);
         bool bothPressed = local.Devices.Exists(d => d.NetDevice.PrimaryButton && d.NetDevice.SecondaryButton);
         if (non_continuous)
         {
+            if (isPressed && !wasPressed) Debug.Log("Non continuous resume");
+            if (!isPressed && wasPressed) Debug.Log("Non continuous pause");
             if (isPressed) Log();
-            if (bothPressed && !wasBothPressed) FinishNonContinuous();
+            if (bothPressed && !wasBothPressed)
+            {
+                Debug.Log("Non continuous finish");
+                FinishNonContinuous();
+            }
         }
         else if (bothPressed)
         {
+            Debug.Log("Non continuous start");
             non_continuous = true;
             log = "";
         }
         else if (isPressed && !wasPressed)
         {
             OnPress();
+        }
+        else if (logging)
+        {
+            Log();
         }
         wasPressed = isPressed;
         wasBothPressed = bothPressed;
@@ -87,7 +96,11 @@ public class Logger : MonoBehaviour
         yield return www.SendWebRequest();
 
         if (www.result != UnityWebRequest.Result.Success) Debug.Log(www.error);
-        else Debug.Log("Upload complete!");
+        else
+        {
+            Debug.Log("Upload complete!");
+            Debug.Log(www.downloadHandler.text);
+        }
     }
 
     void Log()

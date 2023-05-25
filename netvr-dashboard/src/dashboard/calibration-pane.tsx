@@ -86,6 +86,7 @@ export function CalibrationPane({
       })
     },
   })
+  const hijack = useRef(false)
   return (
     <div {...dropzone.getRootProps()}>
       <Pane title="Calibration" id="calibration">
@@ -109,19 +110,33 @@ export function CalibrationPane({
               return v
             }
             const num = (v: unknown) => +str(v)
-            sendMessage({
-              type: 'StartCalibration',
-              targetId: num(formData.get('targetId')),
-              targetSubactionPath: str(formData.get('targetSubactionPath')),
-              referenceId: num(formData.get('referenceId')),
-              referenceSubactionPath: str(
-                formData.get('referenceSubactionPath'),
-              ),
-              conf: {
-                sample_count: 500,
-                sample_interval_nanos: 1000 * 1000 * 20,
-              },
-            })
+
+            if (hijack.current) {
+              sendMessage({
+                type: 'StartHijack',
+                targetId: num(formData.get('targetId')),
+                targetSubactionPath: str(formData.get('targetSubactionPath')),
+                referenceId: num(formData.get('referenceId')),
+                referenceSubactionPath: str(
+                  formData.get('referenceSubactionPath'),
+                ),
+              })
+            } else {
+              sendMessage({
+                type: 'StartCalibration',
+                targetId: num(formData.get('targetId')),
+                targetSubactionPath: str(formData.get('targetSubactionPath')),
+                referenceId: num(formData.get('referenceId')),
+                referenceSubactionPath: str(
+                  formData.get('referenceSubactionPath'),
+                ),
+                conf: {
+                  sample_count: 500,
+                  sample_interval_nanos: 1000 * 1000 * 20,
+                },
+              })
+            }
+            hijack.current = false
 
             const msg = 'Calibration triggered ' + JSON.stringify(data)
             setMessage(msg)
@@ -183,6 +198,20 @@ export function CalibrationPane({
           <Button type="submit">
             <span className="highlight">[</span>T
             <span className="highlight">]</span>rigger Calibration
+          </Button>
+          <Button
+            onClick={() => {
+              hijack.current = true
+            }}
+            type="submit"
+          >
+            Data collection
+          </Button>
+          <Button
+            onClick={() => sendMessage({ type: 'FinishCalibration' })}
+            type="button"
+          >
+            Data collection finish
           </Button>
           {message}
         </form>

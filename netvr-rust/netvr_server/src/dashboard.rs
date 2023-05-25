@@ -23,7 +23,7 @@ use warp::{
 
 use crate::{
     calibration_protocol::{
-        CalibrationProtocolMessage::{Begin, ByHeadset, Reapply},
+        CalibrationProtocolMessage::{Begin, ByHeadset, FinishCalibration, Hijack, Reapply},
         CalibrationSender,
     },
     server::Server,
@@ -86,6 +86,15 @@ pub(crate) enum DashboardMessageRecv {
 
         conf: CalibrationConfiguration,
     },
+    #[serde(rename_all = "camelCase")]
+    StartHijack {
+        target_id: ClientId,
+        target_subaction_path: String,
+        reference_id: ClientId,
+        reference_subaction_path: String,
+    },
+    #[serde(rename_all = "camelCase")]
+    FinishCalibration,
     #[serde(rename_all = "camelCase")]
     ReapplyCalibration {
         target_id: ClientId,
@@ -243,6 +252,24 @@ async fn dashboard_receive(
                     client_reference: (reference_id, reference_subaction_path),
                     conf,
                 }) {
+                    println!("Failed to send calibration request: {}", err);
+                }
+            }
+            DashboardMessageRecv::StartHijack {
+                target_id,
+                target_subaction_path,
+                reference_id,
+                reference_subaction_path,
+            } => {
+                if let Err(err) = calibration_sender.send(Hijack {
+                    client_target: (target_id, target_subaction_path),
+                    client_reference: (reference_id, reference_subaction_path),
+                }) {
+                    println!("Failed to send calibration request: {}", err);
+                }
+            }
+            DashboardMessageRecv::FinishCalibration => {
+                if let Err(err) = calibration_sender.send(FinishCalibration) {
                     println!("Failed to send calibration request: {}", err);
                 }
             }
@@ -407,7 +434,7 @@ pub(crate) async fn serve_dashboard(
         .and(warp::body::bytes())
         .and_then(handle_upload);
 
-    let routes = ws.or(files).or(warp::fs::file(index).or(upload_route));
+    let routes = ws.or(files).or(upload_route).or(warp::fs::file(index));
     warp::serve(routes).run(([0, 0, 0, 0], 13161)).await;
     println!("serving dashboard from {:?}", dashboard);
     Ok(())
