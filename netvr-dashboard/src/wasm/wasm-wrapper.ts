@@ -29,6 +29,11 @@ function loadWasm():
   return { status: 'loading', value: cachePromise }
 }
 
+/**
+ * Loads C++ wasm module and returns its exported functions. Suspends react tree
+ * until the module is loaded, so you probably want to wrap it in <Suspense/>.
+ * @returns
+ */
 export function useWasmSuspending() {
   const wasm = loadWasm()
   if (wasm.status === 'loading') throw wasm.value

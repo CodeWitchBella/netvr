@@ -14,7 +14,6 @@ import {
   CameraControls,
   Connections,
   PolyLine,
-  Segment,
   SpinningCube,
   dist,
   mul,
@@ -26,6 +25,10 @@ type FileData = {
   text: string
 }
 
+/**
+ * Vizualizes the delay data from .txt file. Data for this route is generated
+ * by Logger.cs.
+ */
 export default function DelayVizRoute() {
   const [fileData, setFileData] = useState<FileData | null>(null)
   const dropzone = useDropzone({

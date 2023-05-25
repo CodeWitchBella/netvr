@@ -23,6 +23,11 @@ function useFullscreen() {
   }
 }
 
+/**
+ * Button which switches you to fullscreen. Also detects if you are already in
+ * fullscreen so that it can change the icon accordingly.
+ * @returns
+ */
 export function FullscreenButton() {
   const fullscreen = useFullscreen()
   return (

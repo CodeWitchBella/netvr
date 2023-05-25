@@ -60,6 +60,10 @@ const defaultState: State = {
   keyGen: 1,
 }
 
+/**
+ * controls how the message log works, and returns the log and a dispatch function
+ * to add messages to the log. Does not render anything.
+ */
 export function useLog({ showDatagrams }: { showDatagrams: boolean }) {
   const [log, dispatch] = useReducer(logReducer, defaultState)
   return [
@@ -71,6 +75,9 @@ export function useLog({ showDatagrams }: { showDatagrams: boolean }) {
   ] as const
 }
 
+/**
+ * Renders a single message in the log.
+ */
 export const Message = memo(function Message({
   message,
   timestamp,

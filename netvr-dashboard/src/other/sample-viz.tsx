@@ -45,6 +45,10 @@ type Sample = {
   now_nanos: number
 }
 
+/**
+ * Vizualizes the calibration data from .json file. Or the server-based data
+ * collection in the same format.
+ */
 export default function SampleVizRoute() {
   const [savedCalibration, setSavedCalibration] =
     useState<SavedCalibration | null>(null)

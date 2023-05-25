@@ -9,6 +9,11 @@ type Props = {
   sendMessage: sentMessages.SendMessage
 }
 
+/**
+ * Triggers the simple calibration algorithm which uses the headset position.
+ * @param param0
+ * @returns
+ */
 export function useSyncClientsByHeadset({ state, sendMessage }: Props) {
   const [message, setMessage] = useState('')
   return { onClick: syncClientsByHeadset, message }

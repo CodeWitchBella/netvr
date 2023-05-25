@@ -3,12 +3,18 @@ import { css } from '@emotion/react'
 import React, { PropsWithChildren, useId, useState } from 'react'
 import { ErrorBoundary } from './error-boundary'
 
+/**
+ * Styles to be applied to all focusable elements.
+ */
 export const focusableStyles = css({
   ':focus-visible': {
     outline: '2px solid var(--base-e)',
   },
 })
 
+/**
+ * Styles to be applied to the root so that selection follows the theme.
+ */
 export const selectionStyle = css({
   '::selection': {
     background: 'var(--base-d)',
@@ -16,6 +22,13 @@ export const selectionStyle = css({
   },
 })
 
+/**
+ * How a Pane should look and work. Stores its open state in local storage based
+ * on the id.
+ *
+ * @param param0
+ * @returns
+ */
 export function Pane({
   children,
   title,
@@ -170,6 +183,13 @@ export function Pane({
   )
 }
 
+/**
+ * A button that follows the theme. This is here so that I don't have to style
+ * every damn button manually.
+ *
+ * @param props
+ * @returns
+ */
 export function Button(
   props: React.DetailedHTMLProps<
     React.ButtonHTMLAttributes<HTMLButtonElement>,
@@ -204,6 +224,11 @@ export function Button(
   )
 }
 
+/**
+ * Select element that follows the theme.
+ * @param props
+ * @returns
+ */
 export function Select(
   props: React.DetailedHTMLProps<
     React.SelectHTMLAttributes<HTMLSelectElement>,
@@ -240,6 +265,11 @@ export function Select(
   )
 }
 
+/**
+ * Input element that follows the theme.
+ * @param props
+ * @returns
+ */
 export function Input(
   props: React.DetailedHTMLProps<
     React.InputHTMLAttributes<HTMLInputElement>,

@@ -5,6 +5,13 @@ import { RemoteConfigurationSnapshot, StateSnapshot } from '../protocol/data'
 import * as sentMessages from '../protocol/sent-messages'
 import { ClientId } from '../protocol/recieved-messages'
 
+/**
+ * Shows information about a client which is connected to the server.
+ *
+ *
+ * @param param0
+ * @returns
+ */
 export function ClientPane({
   client,
   clientId,

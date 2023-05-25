@@ -11,6 +11,12 @@ import { JSONView } from '../components/json-view'
 import { useLocalStorage } from '../utils'
 import { useDropzone } from 'react-dropzone'
 
+/**
+ * Pane for triggering calibration and choosing target and reference devices.
+ *
+ * @param param0
+ * @returns
+ */
 export function CalibrationPane({
   sendMessage,
   serverState,

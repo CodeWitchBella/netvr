@@ -18,6 +18,11 @@ const theme = [...'0123456789ABCDEF'].reduce((object, l) => {
   return object
 }, {} as any)
 
+/**
+ * Component for displaying JSON data in a tree view.
+ * @param param0
+ * @returns
+ */
 export function JSONView({ data, shouldExpandNode, name }: Props) {
   return (
     <JSONTree
@@ -101,6 +106,11 @@ export function JSONView({ data, shouldExpandNode, name }: Props) {
   )
 }
 
+/**
+ * Pane for displaying JSON data in a tree view.
+ * @param param0
+ * @returns
+ */
 export function JSONPane({
   title,
   id,

@@ -9,6 +9,9 @@ import { lazy } from 'react'
 const SampleViz = lazy(() => import('./other/sample-viz'))
 const DelayViz = lazy(() => import('./other/delay-viz'))
 
+/**
+ * Entry point for the dashboard mounting it to the DOM.
+ */
 export async function run() {
   const events = document.querySelector('#events')!
   if (!events) throw new Error('Cant find #events')

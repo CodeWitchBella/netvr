@@ -36,6 +36,12 @@ function useSendKeepAlive(socket: WebSocket) {
   }, [socket])
 }
 
+/**
+ * Main component representing the dashboard. Connects to the server via websocket
+ * on socketUrl.
+ * @param param0
+ * @returns
+ */
 export function Dashboard({ socketUrl }: { socketUrl: string }) {
   const [key, setKey] = useState(0)
   return (

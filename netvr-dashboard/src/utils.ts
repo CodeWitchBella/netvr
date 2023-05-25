@@ -1,5 +1,8 @@
 import { useCallback, useEffect, useState } from 'react'
 
+/**
+ * like useState, but the state is stored in localStorage
+ */
 export function useLocalStorage<Value extends string = string>(
   key: string,
   defaultValue: Value,

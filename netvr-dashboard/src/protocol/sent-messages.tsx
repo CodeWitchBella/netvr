@@ -1,7 +1,13 @@
 import type { ClientId } from './recieved-messages'
 
+/**
+ * Signature of function that sends messages to server.
+ */
 export type SendMessage = (message: DashboardMessageUp) => void
 
+/**
+ * Messages that dashboard can send to server.
+ */
 export type DashboardMessageUp =
   | {
       type:

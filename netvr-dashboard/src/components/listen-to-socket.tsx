@@ -30,6 +30,10 @@ function useListenToSocket(
   }, [socket])
 }
 
+/**
+ * Utility component for listening to a websocket and calling a callback when a message is received.
+ *
+ */
 export const ListenToSocket = memo(function ListenToSocket({
   socket,
   onMessage,
@@ -147,6 +151,11 @@ function useSocketState(url: string, onDisconnected: () => void) {
 }
 
 const ctx = createContext<WebSocket | null>(null)
+/**
+ * Put this in the root so that you can use `useSocket` anywhere in the app.
+ * @param param0
+ * @returns
+ */
 export function SocketProvider({
   children,
   url,
@@ -161,6 +170,10 @@ export function SocketProvider({
   return null
 }
 
+/**
+ * Use this to get the websocket anywhere in the app.
+ * @returns
+ */
 export function useSocket() {
   const value = useContext(ctx)
   if (!value) throw new Error('Missing SocketProvider')

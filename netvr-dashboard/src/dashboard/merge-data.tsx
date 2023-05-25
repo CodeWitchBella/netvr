@@ -1,5 +1,9 @@
 import { ConfigurationSnapshotSet, StateSnapshot } from '../protocol/data'
 
+/**
+ * State communicated via UDP to the server (dashboard gets it from the server
+ * via websocket in either case)
+ */
 export type DatagramState = {
   [key: number]: {
     id: number
@@ -8,6 +12,14 @@ export type DatagramState = {
   }
 }
 
+/**
+ * Merges datagram data with configuration snapshot, so that the dashboard can
+ * show it all in one place.
+ *
+ * @param datagramData
+ * @param configurationSnapshot
+ * @returns
+ */
 export function mergeData(
   datagramData: DatagramState,
   configurationSnapshot: ConfigurationSnapshotSet | null,
@@ -44,4 +56,7 @@ export function mergeData(
       .map(({ id, ...rest }) => [id, rest]),
   )
 }
+/**
+ * Type representing the merged data. This describes the full state.
+ */
 export type MergedData = ReturnType<typeof mergeData>

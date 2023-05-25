@@ -23,6 +23,10 @@ const showErrorOverlay = (err: Error) => {
   document.body.appendChild(overlay)
 }
 
+/**
+ * Just an error boundary with the added twist that it can trigger a display of
+ * vites overlay and also that it can recover from errors in certain cases.
+ */
 type State = { hasError: boolean; key: number }
 export class ErrorBoundary extends Component<
   { children: React.ReactNode; fallback?: React.ReactNode },

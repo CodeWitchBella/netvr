@@ -1,3 +1,6 @@
+/**
+ * unused
+ */
 export const locationMap = {
   isTracked: 'bool',
   devicePosition: 'vector3',

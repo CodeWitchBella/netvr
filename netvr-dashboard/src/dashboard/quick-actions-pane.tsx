@@ -2,6 +2,12 @@
 import { Pane, Button, Input } from '../components/design'
 import * as sentMessages from '../protocol/sent-messages'
 
+/**
+ * A pane that contains quick actions that can be performed by pushing a single
+ * button without having to select anything.
+ * @param props
+ * @returns
+ */
 export function QuickActionsPane(props: {
   sendMessage: sentMessages.SendMessage
   closeSocket: () => void

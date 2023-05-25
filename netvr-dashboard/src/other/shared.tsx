@@ -8,6 +8,9 @@ import { ErrorBoundary } from '../components/error-boundary'
 import { InstancedMesh } from 'three'
 import { button, useControls } from 'leva'
 
+/**
+ * Model of a spinning cube to be displayed as a loading indicator.
+ */
 export function SpinningCube() {
   const theme = useTheme()
   const boxRef = useRef<THREE.Mesh>(null)
@@ -35,6 +38,9 @@ export function SpinningCube() {
   )
 }
 
+/**
+ * Line from point A to point B.
+ */
 export function Segment({
   from,
   to,
@@ -49,6 +55,9 @@ export function Segment({
   return <PolyLine points={[from, to]} color={color} thickness={thickness} />
 }
 
+/**
+ * A string of lines. More efficient than using multiple <Segment />s.
+ */
 export function PolyLine(props: {
   points: readonly (readonly [number, number, number])[]
   color: any
@@ -97,6 +106,9 @@ function PolyLineInner({
   )
 }
 
+/**
+ * Axis of a coordinate system. Also draws ticks and distance labels.
+ */
 export function Axes({ pos }: { pos?: readonly [number, number, number] }) {
   const tickLength = 0.05
   return (
@@ -219,6 +231,9 @@ function AxisTicks({
   )
 }
 
+/**
+ * Function adding multiple 3d vectors
+ */
 export function plus(
   ...a: readonly (readonly [number, number, number] | undefined)[]
 ): [number, number, number] {
@@ -229,6 +244,9 @@ export function plus(
   ]
 }
 
+/**
+ * Multiply 3d vector by a scalar
+ */
 export function mul(
   k: number,
   v: readonly [number, number, number] | undefined,
@@ -236,6 +254,9 @@ export function mul(
   return [(v?.[0] ?? 0) * k, (v?.[1] ?? 0) * k, (v?.[2] ?? 0) * k]
 }
 
+/**
+ * Adds camera control buttons to the leva panel
+ */
 export function CameraControls() {
   const position = useRef<null | readonly [number, number, number]>(null)
   useFrame((state) => {
@@ -263,6 +284,12 @@ export function CameraControls() {
   return null
 }
 
+/**
+ * Shows connections between two sets of points. Way more efficient than using
+ * multiple <Segment/> components. As in, if you tried to draw it with segments
+ * you would get very low FPS and this draws at 60 FPS no problem (at least in
+ * my tests).
+ */
 export function Connections({
   points1,
   points2,
@@ -297,6 +324,9 @@ export function Connections({
   )
 }
 
+/**
+ * Distance between two 3d points
+ */
 export function dist(
   a: readonly [number, number, number],
   b: readonly [number, number, number],

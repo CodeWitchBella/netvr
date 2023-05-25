@@ -75,6 +75,11 @@ function useThemeData() {
   ])
 }
 
+/**
+ * Sets the basic styles according to the set theme.
+ * @param param0
+ * @returns
+ */
 export function ThemeRoot({ children }: PropsWithChildren<{}>) {
   const data = useThemeData()
   return (
@@ -105,11 +110,21 @@ export function ThemeRoot({ children }: PropsWithChildren<{}>) {
 
 const opaque = Symbol()
 
+/**
+ * Used for passing the theme to the `ReprovideTheme` component. Usefull for
+ * react-three-fiber.
+ * @returns
+ */
 export function useReprovideTheme() {
   const theme = useThemeInternal()
   return { [opaque]: theme }
 }
 
+/**
+ * Useful for react-three-fiber. Use in conjunction with `useReprovideTheme`.
+ * @param props
+ * @returns
+ */
 export function ReprovideTheme(props: {
   children: React.ReactNode
   value: ReturnType<typeof useReprovideTheme>
@@ -125,10 +140,17 @@ function useThemeInternal() {
   return theme
 }
 
+/**
+ * use this hook to get the theme anywhere in the app.
+ * @returns
+ */
 export function useTheme() {
   return useThemeInternal().resolved
 }
 
+/**
+ * UI for selecting the theme.
+ */
 export const ThemeSelector = memo(function ThemeSelector() {
   const theme = useThemeInternal()
   return (
