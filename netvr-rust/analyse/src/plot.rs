@@ -14,6 +14,7 @@ fn f64_cmp(a: &&f64, b: &&f64) -> std::cmp::Ordering {
     a.partial_cmp(b).unwrap_or(Equal)
 }
 
+/// plots stuff and writes to file
 pub fn plot(input: PlotInput) -> Result<()> {
     let root = SVGBackend::new(&input.out_file_name, (800, 400)).into_drawing_area();
 

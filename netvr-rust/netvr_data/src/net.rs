@@ -4,6 +4,7 @@ use serde::{Deserialize, Serialize};
 
 use crate::{app, Pose};
 
+/// Response from discovery server
 #[derive(Serialize, Deserialize)]
 pub struct DiscoveryResponse {
     header: [u8; 5],
@@ -23,12 +24,14 @@ impl Default for DiscoveryResponse {
     }
 }
 
+/// Space to be used for calibration sample collection
 #[derive(Serialize, Deserialize, Debug, Clone, Copy)]
 pub enum BaseSpace {
     Server,
     Stage,
 }
 
+/// What is sent for changing calibration from server to clients
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub enum ConfigurationDown {
     Snapshot(ConfigurationSnapshotSet),
@@ -39,6 +42,7 @@ pub enum ConfigurationDown {
     ChangeName(String),
 }
 
+/// Controller data
 #[derive(Serialize, Deserialize, Default, Clone, Debug)]
 pub struct Controller {
     pub interaction_profile: u8,
@@ -46,6 +50,7 @@ pub struct Controller {
     pub pose: Pose,
 }
 
+/// State snapshot
 #[derive(Serialize, Deserialize, Default, Clone, Debug)]
 pub struct StateSnapshot {
     pub controllers: Vec<Controller>,
@@ -53,6 +58,7 @@ pub struct StateSnapshot {
     pub required_configuration: u32,
 }
 
+/// Type of OpenXR acction but serializable
 #[derive(Serialize, Deserialize, Default, Clone, Debug)]
 pub enum ActionType {
     Boolean = 1,
@@ -78,6 +84,7 @@ impl From<openxr_sys::ActionType> for ActionType {
     }
 }
 
+/// Remote OpenXR action data
 #[derive(Serialize, Deserialize, Default, Clone, Debug)]
 pub struct RemoteAction {
     #[serde(rename = "type")]
@@ -87,12 +94,14 @@ pub struct RemoteAction {
     pub binding: String,
 }
 
+/// Remote interaction profile data
 #[derive(Serialize, Deserialize, Default, Clone, Debug)]
 pub struct RemoteInteractionProfile {
     pub path: String,
     pub bindings: Vec<RemoteAction>,
 }
 
+/// Data of a remote configuration.
 #[derive(Serialize, Deserialize, Default, Clone, Debug)]
 pub struct RemoteConfigurationSnapshot {
     pub version: u32,
@@ -101,17 +110,20 @@ pub struct RemoteConfigurationSnapshot {
     pub name: String,
 }
 
+/// Data of all remote configurations.
 #[derive(Serialize, Deserialize, Default, Clone, Debug)]
 pub struct ConfigurationSnapshotSet {
     pub clients: HashMap<ClientId, RemoteConfigurationSnapshot>,
 }
 
+/// What is sent when local configuration changes to notify the server
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub enum ConfigurationUp {
     Hello,
     ConfigurationSnapshot(RemoteConfigurationSnapshot),
 }
 
+/// Sample used for calibration
 #[derive(Serialize, Deserialize, Debug, Clone)]
 pub struct CalibrationSample {
     pub flags: u64,
@@ -124,14 +136,17 @@ pub struct CalibrationSample {
     pub now_nanos: i64,
 }
 
+/// Configratiuon options for calibration
 #[derive(Serialize, Deserialize, Debug, Clone, Copy)]
 pub struct CalibrationConfiguration {
     pub sample_count: usize,
     pub sample_interval_nanos: i64,
 }
 
+/// Id of a client
 pub type ClientId = u32;
 
+/// All remote snapshots + order to make sure stale snapshots are not applied.
 #[derive(Serialize, Deserialize, Default, Clone, Debug)]
 pub struct RemoteStateSnapshotSet {
     /// Makes sure that we do not apply older snapshots, if they arrive out of
@@ -140,18 +155,22 @@ pub struct RemoteStateSnapshotSet {
     pub clients: HashMap<ClientId, StateSnapshot>,
 }
 
+/// What is sent from server to client over unrealiable channel
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub enum DatagramDown {
     App(app::Snapshot),
     State(RemoteStateSnapshotSet),
 }
 
+/// Whati s sent from client to server over unrealiable channel
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub enum DatagramUp {
     State(StateSnapshot),
     App(app::AppDatagramUp),
 }
 
+/// Sent periodically to check that connection is still alive
+/// ... this was triumph, I'm making a note here: huge success
 #[derive(Serialize, Deserialize, Clone, Debug)]
 pub struct Heartbeat {
     _buf: [u8; 5],

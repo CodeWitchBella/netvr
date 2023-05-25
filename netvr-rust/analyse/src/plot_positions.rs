@@ -44,6 +44,7 @@ fn expand_range(range: &std::ops::Range<f64>, target_size: f64) -> std::ops::Ran
     range.start - diff / 2.0..range.end + diff / 2.0
 }
 
+/// plots positions and saves to file
 pub fn plot(input: PlotInput) -> Result<()> {
     let area = SVGBackend::new(&input.out_file_name, (1024, 760)).into_drawing_area();
 

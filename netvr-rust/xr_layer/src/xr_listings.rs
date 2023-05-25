@@ -42,6 +42,7 @@ macro_rules! implement {
     }
 }
 
+/// Generate the wrappers for the functions
 implement!(
     //#[cfg(target_os = "android")]
     //SetAndroidApplicationThreadKHR,

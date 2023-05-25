@@ -28,6 +28,7 @@ mod my_socket;
 mod quinn_server;
 mod server;
 
+/// Main entry point of netvr_server
 #[tokio::main(flavor = "multi_thread")]
 async fn main() -> Result<()> {
     let server_udp = Arc::new(UdpSocket::bind("0.0.0.0:0").await?);

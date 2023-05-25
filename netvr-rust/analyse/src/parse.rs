@@ -10,17 +10,22 @@ use nom::{
 };
 use serde::Serialize;
 
+/// parser input
 pub type Input<'a> = &'a str;
+/// parser result
 pub type Result<'a, T> = nom::IResult<Input<'a>, T, ()>;
 
+/// parse a integer
 fn decimal(input: Input) -> Result<&str> {
     recognize(many1(terminated(one_of("0123456789"), many0(char('_')))))(input)
 }
 
+/// parse u32. This is what ids look like.
 fn id(input: Input) -> Result<u32> {
     map_res(decimal, |r| r.parse::<u32>())(input)
 }
 
+/// parse a float which uses a comma as decimal separator
 fn float_comma(input: Input) -> Result<f64> {
     map_res(
         recognize(tuple((
@@ -36,6 +41,7 @@ fn float_comma(input: Input) -> Result<f64> {
     )(input)
 }
 
+/// parse a float which uses a dot as decimal separator
 fn float_dot(input: Input) -> Result<f64> {
     map_res(
         recognize(tuple((
@@ -51,6 +57,7 @@ fn float_dot(input: Input) -> Result<f64> {
     )(input)
 }
 
+/// parse a 3d vector in the form of (0, 0, 0)
 fn vec3(input: Input) -> Result<(f64, f64, f64)> {
     map(
         tuple((
@@ -68,6 +75,7 @@ fn vec3(input: Input) -> Result<(f64, f64, f64)> {
     )(input)
 }
 
+/// parse a quaternion in the form of (0, 0, 0, 0)
 fn quat(input: Input) -> Result<(f64, f64, f64, f64)> {
     map(
         tuple((
@@ -88,6 +96,8 @@ fn quat(input: Input) -> Result<(f64, f64, f64, f64)> {
     )(input)
 }
 
+/// sample for a single controller/device at a single point in time on a remote
+/// machine
 #[derive(Debug, Serialize, Clone)]
 pub struct Sample {
     pub position: (f64, f64, f64),
@@ -107,6 +117,8 @@ impl Sample {
     }
 }
 
+/// a local sample is a sample which is recorded on the same machine as the
+/// logger is running on
 #[derive(Debug, Serialize, Clone)]
 pub struct LocalSample {
     pub id: u32,
@@ -114,6 +126,7 @@ pub struct LocalSample {
     pub sample: Sample,
 }
 
+/// parse characteristics string representation
 fn characteristics(input: Input) -> Result<&str> {
     recognize(many1(one_of(
         "abcdefghijklmnopqrstuvwxyz,ABCDEFGHIJKLMNOPQRSTUVWXYZ",
@@ -147,6 +160,7 @@ impl From<LocalSample> for Sample {
     }
 }
 
+/// a remote sample is a sample which is recorded for a remote machine
 #[derive(Debug, Serialize, Clone)]
 pub struct RemoteSample {
     pub id: u32,
@@ -155,6 +169,8 @@ pub struct RemoteSample {
     pub sample: Sample,
 }
 
+/// parse a path, or rather a pseudopath, which is a path with less validations
+/// (all paths are pseudopaths, but not all pseudopaths are paths)
 fn pseudopath(input: Input) -> Result<&str> {
     recognize(many1(one_of("abcdefghijklmnopqrstuvwxyz/_")))(input)
 }
@@ -189,6 +205,8 @@ impl From<RemoteSample> for Sample {
     }
 }
 
+/// represents data that are stored on a signle line in the log file
+/// (i.e. a single point in time)
 #[derive(Debug, Serialize, Clone)]
 pub struct Line {
     pub time: f64,
@@ -215,12 +233,14 @@ impl Line {
     }
 }
 
+/// the log file itself as parsed by the parser
 #[derive(Debug, Serialize, Clone)]
 pub struct LogFile {
     pub lines: Vec<Line>,
 }
 
 impl LogFile {
+    /// parses the log file
     pub fn parse(input: Input) -> Result<Self> {
         map(
             many0(map(tuple((Line::parse, multispace0)), |r| r.0)),
@@ -228,6 +248,7 @@ impl LogFile {
         )(input)
     }
 
+    /// utility for getting all ids of all local devices that are recorded in the log
     pub fn local_ids(&self) -> Vec<u32> {
         self.lines
             .iter()
@@ -235,6 +256,7 @@ impl LogFile {
             .collect()
     }
 
+    /// utility for getting all samples for a specific local device
     pub fn local(&self, id: u32) -> Vec<Sample> {
         self.lines
             .iter()
@@ -243,6 +265,7 @@ impl LogFile {
             .collect()
     }
 
+    /// utility for getting all ids of all remote devices that are recorded in the log
     pub fn remote_ids(&self) -> Vec<u32> {
         self.lines
             .iter()
@@ -250,6 +273,7 @@ impl LogFile {
             .collect()
     }
 
+    /// utility for getting all samples for a specific remote device
     pub fn remote(&self, id: u32) -> Vec<Sample> {
         self.lines
             .iter()

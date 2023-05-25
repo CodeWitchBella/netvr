@@ -175,6 +175,9 @@ where
     })
 }
 
+/// To be returned from the hook. This is the main workhorse of the layer as it
+/// is the function that is called by the runtime when it wants to call any
+/// other function from openxr and this allows use to do our magic.
 extern "system" fn get_instance_proc_addr(
     instance: sys::Instance,
     name: *const c_char,
@@ -212,6 +215,8 @@ extern "system" fn get_instance_proc_addr(
     })
 }
 
+/// Our implementation of this openxr function. Does our magic and then calls
+/// the runtime's implementation, if appropriate.
 extern "system" fn create_instance(
     create_info_ptr: *const sys::InstanceCreateInfo,
     instance_ptr: *mut sys::Instance,
@@ -285,7 +290,8 @@ extern "system" fn create_instance(
         result.into_result()
     })
 }
-
+/// Our implementation of this openxr function. Does our magic and then calls
+/// the runtime's implementation, if appropriate.
 extern "system" fn destroy_instance(instance_handle: sys::Instance) -> sys::Result {
     wrap_mut(|layer| {
         let _span = trace_span!("destroy_instance").entered();
@@ -362,6 +368,8 @@ fn instance_ref_delete<T: std::hash::Hash + std::cmp::Eq>(
     read_instance_mut(&mut layer.instances, instance_handle)
 }
 
+/// Our implementation of this openxr function. Does our magic and then calls
+/// the runtime's implementation, if appropriate.
 extern "system" fn poll_event(
     instance_handle: sys::Instance,
     event_data: *mut sys::EventDataBuffer,
@@ -396,6 +404,8 @@ extern "system" fn poll_event(
     })
 }
 
+/// Our implementation of this openxr function. Does our magic and then calls
+/// the runtime's implementation, if appropriate.
 extern "system" fn create_action_set(
     instance_handle: sys::Instance,
     info: *const sys::ActionSetCreateInfo,
@@ -424,6 +434,8 @@ extern "system" fn create_action_set(
     })
 }
 
+/// Our implementation of this openxr function. Does our magic and then calls
+/// the runtime's implementation, if appropriate.
 extern "system" fn destroy_action_set(action_set: sys::ActionSet) -> sys::Result {
     wrap_mut(|layer| {
         let _span = trace_span!("create_action_set").entered();
@@ -438,6 +450,8 @@ extern "system" fn destroy_action_set(action_set: sys::ActionSet) -> sys::Result
     })
 }
 
+/// Our implementation of this openxr function. Does our magic and then calls
+/// the runtime's implementation, if appropriate.
 extern "system" fn create_action(
     action_set_handle: sys::ActionSet,
     info_in: *const sys::ActionCreateInfo,
@@ -475,6 +489,8 @@ extern "system" fn create_action(
     })
 }
 
+/// Our implementation of this openxr function. Does our magic and then calls
+/// the runtime's implementation, if appropriate.
 extern "system" fn string_to_path(
     instance_handle: sys::Instance,
     path_string_raw: *const c_char,
@@ -500,6 +516,8 @@ extern "system" fn string_to_path(
     })
 }
 
+/// Our implementation of this openxr function. Does our magic and then calls
+/// the runtime's implementation, if appropriate.
 extern "system" fn suggest_interaction_profile_bindings(
     instance_handle: sys::Instance,
     suggested_bindings: *const sys::InteractionProfileSuggestedBinding,
@@ -544,6 +562,8 @@ extern "system" fn suggest_interaction_profile_bindings(
     })
 }
 
+/// Our implementation of this openxr function. Does our magic and then calls
+/// the runtime's implementation, if appropriate.
 extern "system" fn create_session(
     instance_handle: sys::Instance,
     create_info_ptr: *const sys::SessionCreateInfo,
@@ -584,6 +604,8 @@ extern "system" fn create_session(
     })
 }
 
+/// Our implementation of this openxr function. Does our magic and then calls
+/// the runtime's implementation, if appropriate.
 extern "system" fn destroy_session(session_handle: sys::Session) -> sys::Result {
     wrap_mut(|layer| {
         let _span = trace_span!("destroy_session").entered();
@@ -603,6 +625,8 @@ extern "system" fn destroy_session(session_handle: sys::Session) -> sys::Result 
     })
 }
 
+/// Our implementation of this openxr function. Does our magic and then calls
+/// the runtime's implementation, if appropriate.
 extern "system" fn begin_session(
     session_handle: sys::Session,
     begin_info_ptr: *const sys::SessionBeginInfo,
@@ -627,6 +651,8 @@ extern "system" fn begin_session(
     })
 }
 
+/// Our implementation of this openxr function. Does our magic and then calls
+/// the runtime's implementation, if appropriate.
 extern "system" fn get_current_interaction_profile(
     session_handle: sys::Session,
     top_level_user_path: sys::Path,
@@ -665,6 +691,8 @@ extern "system" fn get_current_interaction_profile(
     })
 }
 
+/// Our implementation of this openxr function. Does our magic and then calls
+/// the runtime's implementation, if appropriate.
 extern "system" fn sync_actions(
     session_handle: sys::Session,
     sync_info: *const sys::ActionsSyncInfo,
@@ -691,6 +719,8 @@ extern "system" fn sync_actions(
     })
 }
 
+/// Our implementation of this openxr function. Does our magic and then calls
+/// the runtime's implementation, if appropriate.
 extern "system" fn get_action_state_boolean(
     session_handle: sys::Session,
     get_info_ptr: *const sys::ActionStateGetInfo,
@@ -715,6 +745,8 @@ extern "system" fn get_action_state_boolean(
     })
 }
 
+/// Our implementation of this openxr function. Does our magic and then calls
+/// the runtime's implementation, if appropriate.
 extern "system" fn get_action_state_vector2f(
     session_handle: sys::Session,
     get_info: *const sys::ActionStateGetInfo,
@@ -730,6 +762,8 @@ extern "system" fn get_action_state_vector2f(
     })
 }
 
+/// Our implementation of this openxr function. Does our magic and then calls
+/// the runtime's implementation, if appropriate.
 extern "system" fn get_action_state_pose(
     session_handle: sys::Session,
     get_info: *const sys::ActionStateGetInfo,
@@ -745,6 +779,8 @@ extern "system" fn get_action_state_pose(
     })
 }
 
+/// Our implementation of this openxr function. Does our magic and then calls
+/// the runtime's implementation, if appropriate.
 extern "system" fn apply_haptic_feedback(
     session_handle: sys::Session,
     haptic_action_info: *const sys::HapticActionInfo,
@@ -765,6 +801,7 @@ extern "system" fn apply_haptic_feedback(
     })
 }
 
+/// Utility function for getting the layer data for a given instance.
 pub(crate) fn with_layer<T, R>(handle: sys::Instance, cb: T) -> anyhow::Result<R>
 where
     T: FnOnce(&Instance) -> anyhow::Result<R>,
@@ -777,6 +814,8 @@ where
     layer.trace.wrap(|| cb(instance))
 }
 
+/// Our implementation of this openxr function. Does our magic and then calls
+/// the runtime's implementation, if appropriate.
 extern "system" fn wait_frame(
     session_handle: sys::Session,
     frame_wait_info: *const sys::FrameWaitInfo,
@@ -801,6 +840,8 @@ extern "system" fn wait_frame(
     })
 }
 
+/// Our implementation of this openxr function. Does our magic and then calls
+/// the runtime's implementation, if appropriate.
 macro_rules! simple_s {
     ($id: ident ($farg: ident: $fty: ty, $($arg: ident: $ty: ty, ) *)) => {
         extern "system" fn $id(
@@ -818,6 +859,8 @@ macro_rules! simple_s {
     };
 }
 
+/// Our implementation of this openxr function. Does our magic and then calls
+/// the runtime's implementation, if appropriate.
 macro_rules! simple_i {
     ($id: ident ($farg: ident: $fty: ty, $($arg: ident: $ty: ty), *,)) => {
         #[allow(dead_code)]
@@ -836,6 +879,8 @@ macro_rules! simple_i {
     };
 }
 
+/// Our implementation of this openxr function. Does our magic and then calls
+/// the runtime's implementation, if appropriate.
 extern "system" fn locate_views(
     session_handle: sys::Session,
     view_locate_info: *const sys::ViewLocateInfo,
@@ -868,6 +913,8 @@ extern "system" fn locate_views(
     })
 }
 
+/// Main workhorse of calibration application. If it detects Stage space it
+/// rewrites it to be the Server space.
 fn rewrite_space(session: &Session, space: &mut sys::Space) {
     if let Ok(spaces) = session.application_stage_spaces.read() {
         if spaces.contains(space) {
@@ -889,6 +936,8 @@ simple_s!(get_action_state_float(
     state: *mut sys::ActionStateFloat,
 ));
 
+/// Our implementation of this openxr function. Does our magic and then calls
+/// the runtime's implementation, if appropriate.
 extern "system" fn attach_session_action_sets(
     session_handle: sys::Session,
     attach_info: *const sys::SessionActionSetsAttachInfo,
@@ -994,38 +1043,56 @@ fn util_create_action_space(
     Ok(space)
 }
 
+/// Our implementation of this openxr function. Does our magic and then calls
+/// the runtime's implementation, if appropriate.
 simple_i!(result_to_string(
     instance: sys::Instance,
     value: sys::Result,
     buffer: *mut c_char,
 ));
+/// Our implementation of this openxr function. Does our magic and then calls
+/// the runtime's implementation, if appropriate.
 simple_i!(structure_type_to_string(
     instance: sys::Instance,
     value: sys::StructureType,
     buffer: *mut c_char,
 ));
+/// Our implementation of this openxr function. Does our magic and then calls
+/// the runtime's implementation, if appropriate.
 simple_i!(get_instance_properties(
     instance: sys::Instance,
     instance_properties: *mut sys::InstanceProperties,
 ));
+/// Our implementation of this openxr function. Does our magic and then calls
+/// the runtime's implementation, if appropriate.
 simple_i!(get_system(
     instance: sys::Instance,
     get_info: *const sys::SystemGetInfo,
     system_id: *mut sys::SystemId,
 ));
+/// Our implementation of this openxr function. Does our magic and then calls
+/// the runtime's implementation, if appropriate.
 simple_i!(get_system_properties(
     instance: sys::Instance,
     system_id: sys::SystemId,
     properties: *mut sys::SystemProperties,
 ));
+/// Our implementation of this openxr function. Does our magic and then calls
+/// the runtime's implementation, if appropriate.
 simple_s!(end_session(session: sys::Session,));
+/// Our implementation of this openxr function. Does our magic and then calls
+/// the runtime's implementation, if appropriate.
 simple_s!(request_exit_session(session: sys::Session,));
+/// Our implementation of this openxr function. Does our magic and then calls
+/// the runtime's implementation, if appropriate.
 simple_s!(enumerate_reference_spaces(
     session: sys::Session,
     space_capacity_input: u32,
     space_count_output: *mut u32,
     spaces: *mut sys::ReferenceSpaceType,
 ));
+/// Our implementation of this openxr function. Does our magic and then calls
+/// the runtime's implementation, if appropriate.
 extern "system" fn create_reference_space(
     session: sys::Session,
     create_info: *const sys::ReferenceSpaceCreateInfo,
@@ -1067,6 +1134,8 @@ extern "system" fn create_reference_space(
         result
     })
 }
+/// Our implementation of this openxr function. Does our magic and then calls
+/// the runtime's implementation, if appropriate.
 extern "system" fn create_action_space(
     session: sys::Session,
     create_info: *const sys::ActionSpaceCreateInfo,
@@ -1099,6 +1168,8 @@ extern "system" fn create_action_space(
         result
     })
 }
+/// Our implementation of this openxr function. Does our magic and then calls
+/// the runtime's implementation, if appropriate.
 simple_i!(enumerate_view_configurations(
     instance: sys::Instance,
     system_id: sys::SystemId,
@@ -1106,6 +1177,8 @@ simple_i!(enumerate_view_configurations(
     view_configuration_type_count_output: *mut u32,
     view_configuration_types: *mut sys::ViewConfigurationType,
 ));
+/// Our implementation of this openxr function. Does our magic and then calls
+/// the runtime's implementation, if appropriate.
 simple_i!(enumerate_environment_blend_modes(
     instance: sys::Instance,
     system_id: sys::SystemId,
@@ -1114,12 +1187,16 @@ simple_i!(enumerate_environment_blend_modes(
     environment_blend_mode_count_output: *mut u32,
     environment_blend_modes: *mut sys::EnvironmentBlendMode,
 ));
+/// Our implementation of this openxr function. Does our magic and then calls
+/// the runtime's implementation, if appropriate.
 simple_i!(get_view_configuration_properties(
     instance: sys::Instance,
     system_id: sys::SystemId,
     view_configuration_type: sys::ViewConfigurationType,
     configuration_properties: *mut sys::ViewConfigurationProperties,
 ));
+/// Our implementation of this openxr function. Does our magic and then calls
+/// the runtime's implementation, if appropriate.
 simple_i!(enumerate_view_configuration_views(
     instance: sys::Instance,
     system_id: sys::SystemId,
@@ -1128,10 +1205,14 @@ simple_i!(enumerate_view_configuration_views(
     view_count_output: *mut u32,
     views: *mut sys::ViewConfigurationView,
 ));
+/// Our implementation of this openxr function. Does our magic and then calls
+/// the runtime's implementation, if appropriate.
 simple_s!(begin_frame(
     session: sys::Session,
     frame_begin_info: *const sys::FrameBeginInfo,
 ));
+/// Our implementation of this openxr function. Does our magic and then calls
+/// the runtime's implementation, if appropriate.
 extern "system" fn end_frame(
     session_handle: sys::Session,
     frame_end_info_ptr: *const sys::FrameEndInfo,
@@ -1176,10 +1257,14 @@ extern "system" fn end_frame(
         result
     })
 }
+/// Our implementation of this openxr function. Does our magic and then calls
+/// the runtime's implementation, if appropriate.
 simple_s!(stop_haptic_feedback(
     session: sys::Session,
     haptic_action_info: *const sys::HapticActionInfo,
 ));
+/// Our implementation of this openxr function. Does our magic and then calls
+/// the runtime's implementation, if appropriate.
 simple_i!(path_to_string(
     instance: sys::Instance,
     path: sys::Path,
@@ -1187,11 +1272,15 @@ simple_i!(path_to_string(
     buffer_count_output: *mut u32,
     buffer: *mut c_char,
 ));
+/// Our implementation of this openxr function. Does our magic and then calls
+/// the runtime's implementation, if appropriate.
 simple_s!(get_reference_space_bounds_rect(
     session: sys::Session,
     reference_space_type: sys::ReferenceSpaceType,
     bounds: *mut sys::Extent2Df,
 ));
+/// Our implementation of this openxr function. Does our magic and then calls
+/// the runtime's implementation, if appropriate.
 simple_s!(get_input_source_localized_name(
     session: sys::Session,
     get_info: *const sys::InputSourceLocalizedNameGetInfo,
@@ -1199,6 +1288,8 @@ simple_s!(get_input_source_localized_name(
     buffer_count_output: *mut u32,
     buffer: *mut c_char,
 ));
+/// Our implementation of this openxr function. Does our magic and then calls
+/// the runtime's implementation, if appropriate.
 simple_s!(enumerate_bound_sources_for_action(
     session_handle: sys::Session,
     enumerate_info: *const sys::BoundSourcesForActionEnumerateInfo,
@@ -1207,6 +1298,8 @@ simple_s!(enumerate_bound_sources_for_action(
     sources: *mut sys::Path,
 ));
 
+/// Our implementation of this openxr function. Does our magic and then calls
+/// the runtime's implementation, if appropriate.
 extern "system" fn locate_space(
     space: sys::Space,
     base_space: sys::Space,

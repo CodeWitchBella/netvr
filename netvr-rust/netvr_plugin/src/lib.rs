@@ -68,6 +68,7 @@ pub extern "C" fn netvr_set_logger(func: log::LoggerFn) {
 
 pub use bincode_abi::netvr_cleanup;
 
+/// Exposes the functions to C#
 bincode_expose!(
     expose read_remote_devices as ReadRemoteDevices taking InstanceAndSession and outputting ReadRemoteDevicesOutput,
     expose start as Start taking StartInput and outputting Nothing,

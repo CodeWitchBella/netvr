@@ -21,12 +21,14 @@ struct InnerClient {
     connection: Connection,
 }
 
+/// Represnets one connected client
 #[derive(Clone)]
 pub(crate) struct Client {
     inner: Arc<InnerClient>,
 }
 
 impl Client {
+    /// Crreate a new client
     pub(crate) fn new(
         ws: broadcast::Sender<DashboardMessage>,
         token: CancellationToken,
@@ -49,10 +51,12 @@ impl Client {
         }
     }
 
+    /// Call on configuration message
     pub async fn handle_configuration_up(&self, message: ConfigurationUp) {
         println!("Received configuration up {:?}", message);
     }
 
+    /// Call on datagram
     pub async fn handle_recv_snapshot(&self, message: StateSnapshot) -> Result<()> {
         // println!("Received datagram {:?}", message);
         let _ = self.ws().send(DashboardMessage::DatagramUp {
@@ -65,21 +69,25 @@ impl Client {
         Ok(())
     }
 
+    /// Dead code
     #[allow(dead_code)]
     pub(crate) fn ws(&self) -> &broadcast::Sender<DashboardMessage> {
         &self.inner.ws
     }
 
+    /// Call when you want to send something to a client
     pub(crate) fn send_configuration_down(&self, message: ConfigurationDown) -> Result<()> {
         self.inner.configuration_down_queue.send(message)?;
         Ok(())
     }
 
+    /// Call when you want to send something to a client
     pub(crate) fn send_app_down(&self, message: app::AppDown) -> Result<()> {
         self.inner.app_down_queue.send(message)?;
         Ok(())
     }
 
+    /// Call when you want to send something to a client
     pub(crate) fn send_datagram(&self, datagram: &DatagramDown) -> Result<()> {
         self.inner
             .connection
@@ -87,21 +95,25 @@ impl Client {
         Ok(())
     }
 
+    /// Wait until the client is cancelled
     #[allow(dead_code)]
     pub(crate) fn cancelled(&self) -> tokio_util::sync::WaitForCancellationFuture {
         self.inner.token.cancelled()
     }
 
+    /// Check if the client is cancelled
     #[allow(dead_code)]
     pub(crate) fn is_cancelled(&self) -> bool {
         self.inner.token.is_cancelled()
     }
 
+    /// Cancel the client
     #[allow(dead_code)]
     pub(crate) fn cancel(&self) {
         self.inner.token.cancel()
     }
 
+    /// Get the client's id
     #[allow(dead_code)]
     pub(crate) fn id(&self) -> ClientId {
         self.inner.id

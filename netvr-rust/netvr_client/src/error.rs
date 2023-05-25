@@ -1,6 +1,7 @@
 use netvr_data::bincode;
 use tokio::io;
 
+/// Error type for netvr_client
 #[derive(thiserror::Error, Debug)]
 pub enum Error {
     #[error("netvr connection encountered IO problem")]

@@ -64,6 +64,7 @@ fn _string(level: Level, text: String) {
     _cstr(level, cstr.as_ptr());
 }
 
+/// Creates a exported object for logging at a specific level.
 macro_rules! implement {
     ($id:ident, $level:expr) => {
         pub struct $id {}
@@ -89,6 +90,7 @@ implement!(LogWarn, Level::Warn);
 implement!(LogError, Level::Error);
 implement!(LogPanic, Level::Panic);
 
+/// Change the global logger used by the above functions.
 pub fn set_logger(func: LoggerFn) {
     println!("Hello world from Rust!");
     {

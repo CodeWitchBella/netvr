@@ -282,6 +282,8 @@ fn match_samples(input: &CalibrationInput) -> Vec<SamplePairF64> {
     matches
 }
 
+/// Compute the calibration from the pairs of samples.
+/// Port of the original C++ code from OpenVR Space Calibrator.
 pub fn calibrate(samples: &CalibrationInput) -> Result<CalibrationResult> {
     // Notes from original code:
     // - it applies rotation right when it determines it
@@ -333,6 +335,7 @@ pub fn calibrate(samples: &CalibrationInput) -> Result<CalibrationResult> {
     })
 }
 
+/// Utility function for inverting the Y rotation of a quaternion.
 pub fn invert_y_rotation(quat: netvr_data::Quaternion) -> netvr_data::Quaternion {
     let quat = convert_quaternion(quat);
     let euler = quat.euler_angles();
@@ -346,6 +349,7 @@ pub fn invert_y_rotation(quat: netvr_data::Quaternion) -> netvr_data::Quaternion
     }
 }
 
+/// Inverts a quaternion.
 pub fn invert_quaternion(quat: netvr_data::Quaternion) -> netvr_data::Quaternion {
     let quat = convert_quaternion(quat);
     let quat = quat.inverse();
@@ -359,6 +363,7 @@ pub fn invert_quaternion(quat: netvr_data::Quaternion) -> netvr_data::Quaternion
     }
 }
 
+///Rotates a vector by a quaternion.
 pub fn rotate_vector(vec3: netvr_data::Vec3, quat: netvr_data::Quaternion) -> netvr_data::Vec3 {
     let quat = convert_quaternion(quat);
     let vec3 = convert_vector(vec3);

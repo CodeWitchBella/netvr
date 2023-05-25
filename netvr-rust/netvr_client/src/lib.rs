@@ -65,6 +65,7 @@ pub async fn connect(log: fn(String) -> ()) -> Result<NetVRConnection, Error> {
     }
 }
 
+/// Sets up a connection to the server.
 async fn setup_connection(
     log: fn(String) -> (),
     addr: SocketAddr,

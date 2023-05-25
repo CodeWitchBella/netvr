@@ -17,6 +17,7 @@ use crate::{
     server::Server,
 };
 
+/// Accepts a connection and runs it until it is closed.
 pub(crate) async fn accept_connection(
     connecting: Connecting,
     server: Server,
@@ -51,6 +52,7 @@ pub(crate) async fn accept_connection(
     server.remove_client(id).await;
 }
 
+/// Handles the connection from start to end
 async fn run_connection(
     connecting: Connecting,
     token: CancellationToken,

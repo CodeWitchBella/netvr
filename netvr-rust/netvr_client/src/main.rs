@@ -3,6 +3,7 @@ use std::time::Duration;
 use netvr_client::connect;
 use quinn::VarInt;
 
+/// Utility for verifying that the connection code still works.
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error>> {
     println!("Hello there! I'm looking for NetVR devices...");

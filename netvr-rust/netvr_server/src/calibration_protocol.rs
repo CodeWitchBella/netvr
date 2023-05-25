@@ -24,12 +24,15 @@ use tokio::{
 use self::CalibrationProtocolMessage::*;
 use crate::{client::Client, dashboard::DashboardMessage, server::Server};
 
+/// Calibration protocol subsystem data
 pub(crate) struct CalibrationProtocol {
     recv: mpsc::UnboundedReceiver<CalibrationProtocolMessage>,
 }
 
+/// Channel for passing messages instructing what to do in the calibration subsystem
 pub(crate) type CalibrationSender = mpsc::UnboundedSender<CalibrationProtocolMessage>;
 
+/// All the things that could be done in the calibration subsystem
 #[derive(Debug, Clone)]
 pub(crate) enum CalibrationProtocolMessage {
     Begin {
@@ -69,6 +72,7 @@ impl CalibrationProtocol {
     }
 }
 
+/// Runs the calibration subsystem loop
 async fn run(
     mut recv: mpsc::UnboundedReceiver<CalibrationProtocolMessage>,
     server: Server,
@@ -133,6 +137,7 @@ async fn run(
     Ok(())
 }
 
+/// Does one calibration
 async fn run_calibration(
     recv: &mut mpsc::UnboundedReceiver<CalibrationProtocolMessage>,
     client_target: (ClientId, String),
@@ -234,6 +239,7 @@ async fn run_calibration(
     finish(tx.clone(), calibration, &client_target, &client_reference).await;
 }
 
+/// Does one pseudo-calibration for logging data about the connected devices
 async fn run_hijack(
     recv: &mut mpsc::UnboundedReceiver<CalibrationProtocolMessage>,
     client_target: (ClientId, String),

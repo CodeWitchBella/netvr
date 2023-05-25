@@ -1,5 +1,7 @@
 use std::{env, time::SystemTime};
 
+/// Called when xr_layer is built. This makes sure that stuff is rebuilt in some
+/// cases where it otherwise wouldn't be.
 fn main() {
     let profile = env::var("PROFILE").unwrap();
 

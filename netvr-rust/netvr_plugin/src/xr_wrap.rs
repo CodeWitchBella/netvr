@@ -183,6 +183,7 @@ impl Trace {
     }
 }
 
+/// Useful for debugging and can be used for printing stuff more easily.
 pub(crate) trait RecordDebug {
     fn record_debug<T>(&self, field: &'static str, debug: T)
     where

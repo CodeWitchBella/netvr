@@ -7,6 +7,8 @@ use quinn::{ClientConfig, Connection, Endpoint};
 
 use crate::error::Error;
 
+/// Connects the the server and returns the endpoint and connection.
+/// Makes sure that certificates are ignored.
 pub(crate) async fn quinn_connect(
     server_addr: SocketAddr,
 ) -> Result<(Endpoint, Connection), Error> {

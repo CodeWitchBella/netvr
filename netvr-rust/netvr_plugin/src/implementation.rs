@@ -47,6 +47,7 @@ pub(crate) fn start(input: StartInput) -> Result<Nothing> {
     })
 }
 
+/// Reads information about the remote devices.
 pub(crate) fn read_remote_devices(
     input: InstanceAndSession,
 ) -> Result<netvr_data::ReadRemoteDevicesOutput> {
@@ -99,6 +100,7 @@ pub(crate) fn read_remote_devices(
     })
 }
 
+/// Sets poses of all objects.
 pub(crate) fn read_remote_objects(input: InstanceAndSession) -> Result<app::Snapshot> {
     with_layer(input.instance, |instance| {
         let session = instance
@@ -125,6 +127,7 @@ pub(crate) fn read_remote_objects(input: InstanceAndSession) -> Result<app::Snap
     })
 }
 
+/// Sets poses of remote objects if no other client did it yet.
 pub(crate) fn init_remote_objects(input: InitRemoteObjectsInput) -> Result<Nothing> {
     with_layer(input.instance, |instance| {
         let session = instance
@@ -143,6 +146,7 @@ pub(crate) fn init_remote_objects(input: InitRemoteObjectsInput) -> Result<Nothi
     })
 }
 
+/// Takes ownership of an object so that htis client can move it.
 pub(crate) fn grab(input: GrabInput) -> Result<Nothing> {
     with_layer(input.instance, |instance| {
         let session = instance
@@ -174,6 +178,7 @@ pub(crate) fn grab(input: GrabInput) -> Result<Nothing> {
     })
 }
 
+/// Revokes ownership of an object so that we don't have to send its pose anymore.
 pub(crate) fn release(input: GrabInput) -> Result<Nothing> {
     with_layer(input.instance, |instance| {
         let session = instance
@@ -190,6 +195,7 @@ pub(crate) fn release(input: GrabInput) -> Result<Nothing> {
     })
 }
 
+/// Set pose of an object.
 pub(crate) fn object_set_pose(input: SetPoseInput) -> Result<Nothing> {
     with_layer(input.instance, |instance| {
         let session = instance
@@ -211,6 +217,8 @@ pub(crate) fn object_set_pose(input: SetPoseInput) -> Result<Nothing> {
     })
 }
 
+/// Returns the server address of the server so that you can upload files if you
+/// want to.
 pub(crate) fn get_server_address(input: InstanceAndSession) -> Result<OnlyString> {
     with_layer(input.instance, |instance| {
         let session = instance

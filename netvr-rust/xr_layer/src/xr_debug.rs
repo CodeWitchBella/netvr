@@ -14,7 +14,7 @@ impl<'a, T: XrDebug> fmt::Debug for XrDebugValue<'a, T> {
 }
 
 /// Allows object to be debugged with extra information obtained from OpenXR
-/// runtime.
+/// runtime. Implemented for a bunch of OpenXR types.
 pub trait XrDebug {
     /// Acts similarly to std::fmt::Debug::fmt but may call OpenXR function to
     /// reveal further detail about given object.

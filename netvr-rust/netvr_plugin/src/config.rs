@@ -5,6 +5,7 @@ use serde::{Deserialize, Serialize};
 use tokio::fs;
 use xr_layer::log::LogWarn;
 
+/// Stored data to be recovered on app restarts
 #[derive(Serialize, Deserialize, Debug, Default)]
 pub(crate) struct Config {
     pub name: String,

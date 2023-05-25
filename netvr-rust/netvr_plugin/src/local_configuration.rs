@@ -5,6 +5,7 @@ use netvr_data::net::{
 };
 use xr_layer::sys;
 
+/// Local info for this OpenXR structure
 #[derive(Default, Clone, Debug)]
 pub(crate) struct Action {
     pub ty: ActionType,
@@ -26,6 +27,7 @@ impl From<Action> for RemoteAction {
     }
 }
 
+/// Local info for this OpenXR structure
 #[derive(Default, Clone, Debug)]
 pub(crate) struct InteractionProfile {
     pub path: String,
@@ -42,6 +44,7 @@ impl From<InteractionProfile> for RemoteInteractionProfile {
     }
 }
 
+/// All local configuration to be synchronized with the server
 #[derive(Default, Clone, Debug)]
 pub(crate) struct LocalConfigurationSnapshot {
     pub version: u32,

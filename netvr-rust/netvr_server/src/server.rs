@@ -27,6 +27,7 @@ type ServerChannel = tokio::sync::mpsc::Sender<ServerChange>;
 type LatestSnaphots = Arc<RwLock<RemoteStateSnapshotSet>>;
 type LatestConfigurations = Arc<RwLock<watch::Sender<ConfigurationSnapshotSet>>>;
 
+/// Ful server state
 #[derive(Clone)]
 pub(crate) struct Server {
     clients: Arc<Mutex<HashMap<ClientId, Client>>>,
@@ -36,6 +37,7 @@ pub(crate) struct Server {
 }
 
 impl Server {
+    /// Prepare the server to be run
     pub async fn start() -> Self {
         let latest_snapshots: LatestSnaphots = Arc::default();
         let latest_configurations: LatestConfigurations =
@@ -101,10 +103,12 @@ impl Server {
         snapshot_channel
     }
 
+    /// Get the latest configuration snapshots
     pub async fn latest_configuration(&self) -> watch::Receiver<ConfigurationSnapshotSet> {
         self.latest_configurations.read().await.subscribe()
     }
 
+    /// Set the latest state snapshot to a client
     pub async fn apply_snapshot(&self, id: ClientId, snapshot: StateSnapshot) {
         if let Err(err) = self
             .channel
@@ -115,6 +119,7 @@ impl Server {
         }
     }
 
+    /// called when a new client connects
     pub async fn add_client(&self, client: Client) -> Result<()> {
         let mut clients = self.clients.lock().await;
         self.channel
@@ -124,6 +129,7 @@ impl Server {
         Ok(())
     }
 
+    /// Gets a random client (not really random, but only used for some debug stuff)
     pub async fn get_first_client(&self) -> Option<Client> {
         self.clients
             .lock()
@@ -136,6 +142,7 @@ impl Server {
             .cloned()
     }
 
+    /// Gets all the clients
     pub async fn get_clients(&self) -> Vec<(u32, Client)> {
         self.clients
             .lock()
@@ -145,11 +152,13 @@ impl Server {
             .collect()
     }
 
+    // Gets a client by id
     #[allow(dead_code)]
     pub async fn get_client(&self, id: ClientId) -> Option<Client> {
         self.clients.lock().await.get(&id).cloned()
     }
 
+    /// Deletes a client
     pub async fn remove_client(&self, id: ClientId) {
         let mut clients = self.clients.lock().await;
         if let Err(err) = self.channel.send(ServerChange::RemoveClient(id)).await {
@@ -158,6 +167,7 @@ impl Server {
         clients.remove(&id);
     }
 
+    /// Applies a configuration to a client
     pub async fn apply_configuration(&self, id: ClientId, config: RemoteConfigurationSnapshot) {
         if let Err(err) = self
             .channel
@@ -168,6 +178,7 @@ impl Server {
         }
     }
 
+    /// Gets all the latest state snapshots
     pub async fn read_latest_snapshots(&self) -> RemoteStateSnapshotSet {
         self.latest_snapshots.read().await.clone()
     }

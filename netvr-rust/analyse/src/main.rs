@@ -7,6 +7,13 @@ use parse::{LogFile, Sample};
 
 use crate::parse::Line;
 
+/**
+ * The entrypoint of the analyse program. This is basically a script and python
+ * with matplotlib would probably be a better choice, but I wanted to try using
+ * rust for this.
+ *
+ * The nom library is nice for parsing stuff though.
+ */
 fn main() -> Result<()> {
     // read file from argv
     let args: Vec<String> = std::env::args().collect();

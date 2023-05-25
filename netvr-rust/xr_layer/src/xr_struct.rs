@@ -9,12 +9,14 @@ use thiserror::Error;
 
 use crate::{SizedArrayValueIterator, XrDebug};
 
+/// Utility struct for reading various OpenXR structs safely by checking the ty.
 #[derive(Clone)]
 pub struct XrStruct {
     pub ty: openxr_sys::StructureType,
     data: *const openxr_sys::BaseInStructure,
 }
 
+/// All of it looks the same, so let's make a macro.
 macro_rules! implement_struct {
     ($($id: ident), *,) => {
         $(
@@ -181,6 +183,7 @@ impl XrStruct {
     }
 }
 
+/// Error in parsing a string from OpenXR.
 #[derive(Debug, Error)]
 pub enum StringParseError {
     #[error("String is not null terminated")]

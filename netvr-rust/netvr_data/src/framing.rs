@@ -3,6 +3,7 @@
 use quinn::Connection;
 use thiserror::Error;
 
+/// Error type for when framing fails
 #[derive(Debug, Error)]
 pub enum FramingError {
     #[error("failed to read from stream")]
@@ -19,6 +20,7 @@ pub enum FramingError {
     ConnectionError(#[from] quinn::ConnectionError),
 }
 
+/// Converts a stream to Frames. You can read from this.
 pub struct RecvFrames<T: serde::de::DeserializeOwned> {
     __marker: std::marker::PhantomData<T>,
     inner: quinn::RecvStream,
@@ -58,6 +60,7 @@ impl<T: serde::de::DeserializeOwned> RecvFrames<T> {
     }
 }
 
+/// Converts a stream to Frames. You can write into this.
 pub struct SendFrames<T: serde::ser::Serialize> {
     __marker: std::marker::PhantomData<T>,
     inner: quinn::SendStream,

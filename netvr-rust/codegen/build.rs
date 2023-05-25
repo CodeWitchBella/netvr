@@ -3,6 +3,7 @@ use std::{env, fs, path::Path};
 use netvr_plugin::codegen;
 use serde_reflection::{Tracer, TracerConfig};
 
+/// Generate the C# code for the Unity plugin on build
 fn main() -> Result<(), Box<dyn std::error::Error>> {
     let out_dir = env::var("CARGO_MANIFEST_DIR").unwrap();
     let dest_path = Path::new(&out_dir)

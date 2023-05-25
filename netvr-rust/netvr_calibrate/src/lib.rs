@@ -8,6 +8,7 @@ pub use input::*;
 #[cfg(target_arch = "wasm32")]
 use wasm_bindgen::prelude::*;
 
+/// Calibration result. Only used on the web.
 #[cfg(target_arch = "wasm32")]
 #[derive(serde::Serialize)]
 pub struct CalibrationResultCompat {
@@ -16,6 +17,7 @@ pub struct CalibrationResultCompat {
     pub rotateq: netvr_data::Quaternion,
 }
 
+/// Compute calibration from samples. Only used on the web.
 #[cfg(target_arch = "wasm32")]
 #[wasm_bindgen]
 pub fn compute(samples: &str) -> String {

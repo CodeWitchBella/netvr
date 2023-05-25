@@ -176,6 +176,7 @@ impl Debug for Session {
     }
 }
 
+/// Data stored relevant to this OpenXR object
 #[derive(Debug, Clone)]
 pub(crate) struct Action {
     pub(crate) handle: sys::Action,
@@ -200,7 +201,7 @@ impl XrDebug for Action {
             .finish()
     }
 }
-
+/// Data stored relevant to this OpenXR object
 #[derive(Debug, Clone, Default)]
 pub(crate) struct ActionSet {
     pub(crate) actions: Vec<Action>,

@@ -4,6 +4,8 @@ use openxr_sys::pfn;
 
 use crate::{log::LogWarn, sys, utils::ResultConvertible, xr_listings::FnPtr};
 
+/// Abstraction for creating OpenXR layers. Works, but is somewhat unfinished
+/// in the API design department.
 pub struct Layer {
     map: HashMap<&'static str, pfn::VoidFunction>,
     func: pfn::GetInstanceProcAddr,

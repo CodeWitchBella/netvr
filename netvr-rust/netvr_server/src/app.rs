@@ -14,6 +14,7 @@ struct AppObject {
     pose: Pose,
 }
 
+/// Holds data related to synchronized objects
 pub(crate) struct AppServer {
     channel: mpsc::UnboundedReceiver<AppServerMessage>,
     initial_state: Vec<AppObject>,
@@ -29,6 +30,7 @@ enum UpMessage {
     ResetObjects,
 }
 
+/// Message for working with synchronized objects
 #[derive(Debug)]
 pub(crate) enum AppServerMessage {
     Datagram(ClientId, AppDatagramUp),
@@ -36,9 +38,11 @@ pub(crate) enum AppServerMessage {
     ResetObjects,
 }
 
+/// Channel for passing messages instructing changes to synchronized objects
 pub(crate) type AppChannel = mpsc::UnboundedSender<AppServerMessage>;
 
 impl AppServer {
+    /// Prepare everything for running the synchronized object system
     pub(crate) fn start(server: Server) -> (Self, AppChannel) {
         let channel = mpsc::unbounded_channel::<AppServerMessage>();
 
@@ -76,6 +80,7 @@ impl AppServer {
         ))
     }
 
+    /// Actually runs the synchronized object system
     pub(crate) async fn run(&mut self) -> Result<()> {
         let mut interval = tokio::time::interval(std::time::Duration::from_millis(20));
         loop {

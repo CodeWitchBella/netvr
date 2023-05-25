@@ -1,5 +1,7 @@
 #![allow(dead_code)]
 
+/// Create a handle serializer so that raw openxr handles can be used in serde
+/// structs instead of having to drop down to u64.
 macro_rules! handle {
     ($mod:ident, $id:ident) => {
         #[cfg(not(target_arch = "wasm32"))]

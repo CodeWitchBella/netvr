@@ -1,5 +1,6 @@
 use crate::{xr_struct::XrStruct, XrDebug};
 
+/// Implements the algorithm for traversing OpenXR next chains.
 #[derive(Clone)]
 pub struct XrStructChain {
     ptr: *const openxr_sys::BaseInStructure,

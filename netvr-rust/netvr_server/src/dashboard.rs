@@ -29,6 +29,7 @@ use crate::{
     server::Server,
 };
 
+/// All the messages that could be sent to the dashboard
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(tag = "type")]
 pub(crate) enum DashboardMessage {
@@ -60,6 +61,7 @@ pub(crate) enum DashboardMessage {
     },
 }
 
+/// All the messages that could be received from the dashboard
 #[derive(Debug, Serialize, Deserialize, Clone)]
 #[serde(tag = "type")]
 pub(crate) enum DashboardMessageRecv {
@@ -112,6 +114,7 @@ pub(crate) enum DashboardMessageRecv {
     ResetObjects,
 }
 
+/// Forward messages to the dashboard
 async fn dashboard_send(
     mut ws: SplitSink<WebSocket, warp::ws::Message>,
     mut receiver: broadcast::Receiver<DashboardMessage>,
@@ -157,6 +160,7 @@ async fn dashboard_send(
     }
 }
 
+/// Handle messages from dashboard
 async fn dashboard_receive(
     mut ws: SplitStream<WebSocket>,
     server: Server,
@@ -329,6 +333,7 @@ async fn dashboard_receive(
     }
 }
 
+/// Forward configuration changes to the dashboard.
 async fn dashboard_send_configuration(
     server: Server,
     reply: mpsc::UnboundedSender<DashboardMessage>,
@@ -349,6 +354,7 @@ async fn dashboard_send_configuration(
     }
 }
 
+/// Handle when the dashboard connects.
 async fn dashboard_connected(
     ws: WebSocket,
     broadcast_receiver: broadcast::Receiver<DashboardMessage>,
@@ -370,6 +376,7 @@ fn get_upload_dir() -> std::path::PathBuf {
     upload_dir
 }
 
+/// Main entry point for the dashboard subsystem. Serves dashboard on TCP port 13161
 pub(crate) async fn serve_dashboard(
     tx: broadcast::Sender<DashboardMessage>,
     server: Server,
@@ -440,6 +447,7 @@ pub(crate) async fn serve_dashboard(
     Ok(())
 }
 
+/// Handles when a file is uploaded to the dashboard (used by logger.cs)
 async fn handle_upload(
     filename: String,
     bytes: Bytes,
